@@ -49,6 +49,7 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
     check_bundle_for_ui_gallery_code_editor_a11y_selection,
     check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
     check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present,
@@ -203,6 +204,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool =
@@ -859,6 +862,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-ui-gallery-code-editor-torture-decorations-toggle-stable-under-inline-preedit-composed" =>
             {
                 check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-decorations-toggle-a11y-composition-consistent-under-inline-preedit-composed" =>
+            {
+                check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
                     true;
                 i += 1;
             }
@@ -1830,11 +1839,17 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                     || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
@@ -1947,6 +1962,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
@@ -2163,6 +2179,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
@@ -2520,6 +2537,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
                         || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                        || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                         || check_ui_gallery_code_editor_torture_inlays_present
@@ -2613,6 +2631,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                             check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                            check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                             check_ui_gallery_code_editor_torture_inlays_present,
@@ -3953,6 +3972,7 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
@@ -4031,6 +4051,7 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
@@ -4317,6 +4338,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
                         ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
                             && !check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
+                    let suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
+                        ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
@@ -4483,6 +4507,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
                             || suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                            || suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -8688,6 +8714,19 @@ fn ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_unde
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_code_editor_torture_inlays_present_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -9227,6 +9266,7 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: bool,
     check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool,
+    check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_torture_inlays_present: bool,
@@ -9533,6 +9573,13 @@ fn apply_post_run_checks(
     if check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
     {
         check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+    {
+        check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
             bundle_path,
             warmup_frames,
         )?;

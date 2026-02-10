@@ -17082,6 +17082,451 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-torture-viewport";
+    const EXPECTED_PREEDIT: &[u8] = b"ab";
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut matching_snapshots: u64 = 0;
+    let mut matched_semantics_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine (mirrors the non-a11y toggle gate):
+    // 0: waiting for baseline snapshot (folds+inlays A)
+    // 1: waiting for folds to toggle to B (folds != A)
+    // 2: waiting for inlays to toggle to B (inlays != A)
+    // 3: waiting for both to return to A
+    // 4: success
+    let mut state: u8 = 0;
+
+    let mut baseline_folds: Option<bool> = None;
+    let mut baseline_inlays: Option<bool> = None;
+    let mut toggled_folds: Option<bool> = None;
+    let mut toggled_inlays: Option<bool> = None;
+
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "code_editor_torture" {
+                continue;
+            }
+
+            let soft_wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if soft_wrap_cols.is_none() {
+                continue;
+            }
+
+            let preedit_active = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !preedit_active {
+                continue;
+            }
+
+            let allow_decorations_under_inline_preedit = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("allow_decorations_under_inline_preedit"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !allow_decorations_under_inline_preedit {
+                continue;
+            }
+
+            let compose_inline_preedit = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("compose_inline_preedit"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !compose_inline_preedit {
+                continue;
+            }
+
+            let folds_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let inlays_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("inlays_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            matching_snapshots = matching_snapshots.saturating_add(1);
+
+            // Track the toggle state machine using the fixture booleans.
+            if state == 0 {
+                baseline_folds = Some(folds_fixture);
+                baseline_inlays = Some(inlays_fixture);
+                state = 1;
+            } else if state == 1 {
+                if let Some(base) = baseline_folds
+                    && folds_fixture != base
+                {
+                    toggled_folds = Some(folds_fixture);
+                    state = 2;
+                }
+            } else if state == 2 {
+                if let Some(base) = baseline_inlays
+                    && inlays_fixture != base
+                {
+                    toggled_inlays = Some(inlays_fixture);
+                    state = 3;
+                }
+            } else if state == 3 {
+                if baseline_folds.is_some_and(|b| folds_fixture == b)
+                    && baseline_inlays.is_some_and(|b| inlays_fixture == b)
+                {
+                    state = 4;
+                }
+            }
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                last_observed = Some(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "selected_page": selected_page,
+                    "soft_wrap_cols": soft_wrap_cols,
+                    "folds_fixture": folds_fixture,
+                    "inlays_fixture": inlays_fixture,
+                    "preedit_active": preedit_active,
+                    "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                    "compose_inline_preedit": compose_inline_preedit,
+                    "state": state,
+                    "semantics": "missing_viewport_node",
+                }));
+                continue;
+            };
+            matched_semantics_snapshots = matched_semantics_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let value = text_field
+                .get("value")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let value_bytes = value.as_bytes();
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    if let Some((a, b)) = obj
+                        .get("anchor")
+                        .and_then(|a| Some((a.as_u64()?, obj.get("focus")?.as_u64()?)))
+                    {
+                        return Some((a, b));
+                    }
+                    if let Some((a, b)) = obj
+                        .get("start")
+                        .and_then(|a| Some((a.as_u64()?, obj.get("end")?.as_u64()?)))
+                    {
+                        return Some((a, b));
+                    }
+                }
+                None
+            });
+
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+            let sel_norm = selection.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "selected_page": selected_page,
+                "soft_wrap_cols": soft_wrap_cols,
+                "folds_fixture": folds_fixture,
+                "inlays_fixture": inlays_fixture,
+                "preedit_active": preedit_active,
+                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                "compose_inline_preedit": compose_inline_preedit,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "value_len_bytes": value_bytes.len(),
+                "text_selection": sel_norm.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": comp_norm.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((sel_lo, sel_hi)) = sel_norm else {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "missing_text_selection",
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            };
+            if sel_lo != sel_hi {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "selection_not_collapsed",
+                        "selection": [sel_lo, sel_hi],
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            }
+
+            let Some((comp_lo, comp_hi)) = comp_norm else {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "missing_text_composition",
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            };
+            let value_len = value_bytes.len() as u64;
+            if comp_hi > value_len || comp_lo > comp_hi {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "composition_out_of_bounds",
+                        "composition": [comp_lo, comp_hi],
+                        "value_len_bytes": value_len,
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            }
+
+            let comp_len = (comp_hi - comp_lo) as usize;
+            if comp_len != EXPECTED_PREEDIT.len() {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "composition_len_mismatch",
+                        "expected_len": EXPECTED_PREEDIT.len(),
+                        "composition_len": comp_len,
+                        "composition": [comp_lo, comp_hi],
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            }
+
+            let lo = comp_lo as usize;
+            let hi = comp_hi as usize;
+            if hi > value_bytes.len() || &value_bytes[lo..hi] != EXPECTED_PREEDIT {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "composition_text_mismatch",
+                        "expected_preedit_utf8": std::str::from_utf8(EXPECTED_PREEDIT).unwrap_or(""),
+                        "observed_preedit_bytes": value_bytes.get(lo..hi).map(|s| s.to_vec()),
+                        "composition": [comp_lo, comp_hi],
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            }
+
+            if sel_lo != comp_hi {
+                if violation.is_none() {
+                    violation = Some(serde_json::json!({
+                        "reason": "selection_not_at_composition_end",
+                        "selection": [sel_lo, sel_hi],
+                        "composition": [comp_lo, comp_hi],
+                        "last_observed": last_observed,
+                    }));
+                }
+                continue;
+            }
+
+            if state == 4 && violation.is_none() {
+                break;
+            }
+        }
+        if state == 4 && violation.is_none() {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(
+        "check.ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed.json",
+    );
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "matching_snapshots": matching_snapshots,
+        "matched_semantics_snapshots": matched_semantics_snapshots,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_preedit_utf8": std::str::from_utf8(EXPECTED_PREEDIT).unwrap_or(""),
+        "state": state,
+        "baseline": {
+            "folds_fixture": baseline_folds,
+            "inlays_fixture": baseline_inlays,
+        },
+        "toggled": {
+            "folds_fixture": toggled_folds,
+            "inlays_fixture": toggled_inlays,
+        },
+        "violation": violation,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor composed decorations toggle a11y gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matching_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor composed decorations toggle a11y gate requires soft_wrap_cols != null and torture.preedit_active=true and torture.allow_decorations_under_inline_preedit=true and torture.compose_inline_preedit=true after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matched_semantics_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor composed decorations toggle a11y gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 && violation.is_none() && toggled_folds.is_some() && toggled_inlays.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor composed decorations toggle a11y gate failed (expected: folds_fixture and inlays_fixture both toggle at least once while compose_inline_preedit=true, and TextField text_composition always points at the expected preedit text)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(
     bundle_path: &Path,
     warmup_frames: u64,

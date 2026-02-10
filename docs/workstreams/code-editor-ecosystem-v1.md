@@ -723,7 +723,8 @@ Evidence anchors:
   - Implemented (staged): semantics export (a11y) consumes the same composed mapping when the composed preedit path is enabled.
   - Done: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence under the composed mapping surface.
     - Evidence: `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json` + `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`).
-  - Remaining DOD: broaden the composed baseline into explicit mapping-drift + a11y assertions (beyond “toggle stability”).
+  - Done: broaden the composed baseline into explicit mapping-drift + a11y assertions (beyond “toggle stability”).
+    - Evidence: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed`).
 
 ### 9) Retained host / composable rows (only if required)
 

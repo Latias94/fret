@@ -321,9 +321,11 @@ Evidence anchors:
   - [x] Add a dedicated UI Gallery baseline + gate for “soft wrap + folds + inlays + preedit (composed)”.
     - Script:
       - `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
-    - Gate:
+    - Gates:
       - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`):
         toggling folds/inlays while inline preedit is active must not change buffer revision, text length, or selection anchor/caret (stability under composed mapping).
+      - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed`):
+        while toggling folds/inlays, `TextField.text_composition` must always point at the expected preedit text ("ab") inside `TextField.value`, and the collapsed selection must sit at the composition end (ADR 0071).
   - [ ] (Optional) Split the combined baseline into two narrower baselines (folds-only / inlays-only) if we need more targeted repros.
     - Candidate scripts:
       - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json`.
