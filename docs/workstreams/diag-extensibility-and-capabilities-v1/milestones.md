@@ -63,7 +63,7 @@ Definition of done:
 - [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
   - [x] `diag run` (filesystem transport),
   - [x] `diag suite` (filesystem transport),
-  - [ ] `diag repro` (filesystem transport).
+  - [x] `diag repro` (filesystem transport).
 - [x] Emit `check.capabilities.json` evidence file on gating failure.
 
 Definition of done:

@@ -2453,6 +2453,16 @@ See: `docs/tracy.md`.\n";
                 timeout_ms,
                 poll_ms,
             )?;
+
+            let mut required_caps: Vec<String> = Vec::new();
+            for src in scripts.iter() {
+                required_caps.extend(script_required_capabilities(src));
+            }
+            required_caps.sort();
+            required_caps.dedup();
+            let available_caps = read_filesystem_capabilities(&resolved_out_dir);
+            let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
+
             let mut repro_process_footprint: Option<serde_json::Value> = None;
             let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
             let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
@@ -2463,7 +2473,20 @@ See: `docs/tracy.md`.\n";
             let mut overall_error: Option<String> = None;
             let mut pack_items: Vec<ReproPackItem> = Vec::new();
 
+            if !required_caps.is_empty() {
+                if let Err(err) = gate_required_capabilities(
+                    &capabilities_check_path,
+                    &required_caps,
+                    &available_caps,
+                ) {
+                    overall_error = Some(err);
+                }
+            }
+
             for src in scripts {
+                if overall_error.is_some() {
+                    break;
+                }
                 let mut result = run_script_and_wait(
                     &src,
                     &resolved_script_path,
@@ -2968,6 +2991,11 @@ See: `docs/tracy.md`.\n";
                 "generated_unix_ms": now_unix_ms(),
                 "out_dir": resolved_out_dir.display().to_string(),
                 "suite": suite_name,
+                "capabilities": serde_json::json!({
+                    "required": required_caps,
+                    "available": available_caps,
+                    "check_file": if capabilities_check_path.is_file() { Some("check.capabilities.json") } else { None },
+                }),
                 "scripts": run_rows,
                 "selected_bundle_json": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
                 "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),

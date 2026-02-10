@@ -38,7 +38,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 - [ ] Tooling gating:
   - [x] fail fast when required capabilities are missing,
   - [x] emit evidence file `check.capabilities.json` (machine-readable),
-  - [ ] `diag repro` includes gating failures in `repro.summary.json`.
+  - [x] `diag repro` includes gating failures in `repro.summary.json`.
 
 ## Evidence & trace (debuggability surfaces)
 
