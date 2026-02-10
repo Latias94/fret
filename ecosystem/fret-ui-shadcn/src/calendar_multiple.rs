@@ -23,7 +23,10 @@ use crate::calendar::{
 };
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
-use fret_ui_headless::calendar::{CalendarMonth, month_grid_compact, week_number};
+use fret_ui_headless::calendar::{
+    CalendarMonth, SelectionUpdate, day_picker_select_multi, month_grid, month_grid_compact,
+    week_number,
+};
 
 #[derive(Clone)]
 pub struct CalendarMultiple {
@@ -34,8 +37,10 @@ pub struct CalendarMultiple {
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
     required: bool,
+    min: Option<usize>,
     max: Option<usize>,
     week_start: Weekday,
+    fixed_weeks: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
     show_week_number: bool,
@@ -58,8 +63,10 @@ impl std::fmt::Debug for CalendarMultiple {
             .field("month_bounds", &self.month_bounds)
             .field("disable_navigation", &self.disable_navigation)
             .field("required", &self.required)
+            .field("min", &self.min)
             .field("max", &self.max)
             .field("week_start", &self.week_start)
+            .field("fixed_weeks", &self.fixed_weeks)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
             .field("disabled", &self.disabled.is_some())
@@ -79,8 +86,10 @@ impl CalendarMultiple {
             month_bounds: None,
             disable_navigation: false,
             required: false,
+            min: None,
             max: None,
             week_start: Weekday::Monday,
+            fixed_weeks: false,
             show_outside_days: true,
             disable_outside_days: true,
             show_week_number: false,
@@ -96,6 +105,14 @@ impl CalendarMultiple {
 
     pub fn week_start(mut self, week_start: Weekday) -> Self {
         self.week_start = week_start;
+        self
+    }
+
+    /// Mirrors the upstream DayPicker `fixedWeeks` prop.
+    ///
+    /// When enabled, the calendar grid always contains 6 weeks (42 days).
+    pub fn fixed_weeks(mut self, fixed: bool) -> Self {
+        self.fixed_weeks = fixed;
         self
     }
 
@@ -125,6 +142,11 @@ impl CalendarMultiple {
 
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    pub fn min(mut self, min: usize) -> Self {
+        self.min = Some(min);
         self
     }
 
@@ -200,8 +222,10 @@ impl CalendarMultiple {
         let month_bounds = self.month_bounds;
         let disable_navigation = self.disable_navigation;
         let required = self.required;
+        let min = self.min;
         let max = self.max;
         let week_start = self.week_start;
+        let fixed_weeks = self.fixed_weeks;
         let show_outside_days = self.show_outside_days;
         let disable_outside_days = self.disable_outside_days;
         let show_week_number = self.show_week_number;
@@ -265,11 +289,19 @@ impl CalendarMultiple {
             region_props,
             move |cx, region_id| {
                 let is_row = if number_of_months > 1 {
+                    // Container queries are read from last-committed bounds. In single-pass layout
+                    // environments (e.g. snapshot tests), the region width can be temporarily
+                    // unknown. Fall back to the viewport width so the initial layout matches the
+                    // web Tailwind breakpoint behavior when the calendar is effectively
+                    // unconstrained by a smaller container.
+                    let default_when_unknown =
+                        cx.environment_viewport_width(Invalidation::Layout).0
+                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
                     fret_ui_kit::declarative::container_width_at_least(
                         cx,
                         region_id,
                         Invalidation::Layout,
-                        false,
+                        default_when_unknown,
                         fret_ui_kit::declarative::container_queries::tailwind::MD,
                         fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
                     )
@@ -304,6 +336,7 @@ impl CalendarMultiple {
                         month_bounds,
                         disable_navigation,
                         week_start,
+                        fixed_weeks,
                         selected.clone(),
                         today,
                         show_outside_days,
@@ -314,6 +347,7 @@ impl CalendarMultiple {
                         day_grid_width,
                         week_row_gap,
                         required,
+                        min,
                         max,
                         disabled_predicate.clone(),
                         close_on_select.clone(),
@@ -339,6 +373,7 @@ fn calendar_multi_month_view<H: UiHost>(
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
     week_start: Weekday,
+    fixed_weeks: bool,
     selected: Vec<Date>,
     today: Date,
     show_outside_days: bool,
@@ -349,6 +384,7 @@ fn calendar_multi_month_view<H: UiHost>(
     day_grid_width: Px,
     week_row_gap: Px,
     required: bool,
+    min: Option<usize>,
     max: Option<usize>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     close_on_select: Option<Model<bool>>,
@@ -450,6 +486,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         locale,
                         month_bounds,
                         week_start,
+                        fixed_weeks,
                         selected.clone(),
                         today,
                         show_outside_days,
@@ -461,6 +498,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         week_row_gap,
                         selected_model.clone(),
                         required,
+                        min,
                         max,
                         disabled_predicate.clone(),
                         close_on_select.clone(),
@@ -487,6 +525,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         locale,
                         month_bounds,
                         week_start,
+                        fixed_weeks,
                         selected.clone(),
                         today,
                         show_outside_days,
@@ -498,6 +537,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         week_row_gap,
                         selected_model.clone(),
                         required,
+                        min,
                         max,
                         disabled_predicate.clone(),
                         close_on_select.clone(),
@@ -529,6 +569,7 @@ fn calendar_month_view<H: UiHost>(
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     week_start: Weekday,
+    fixed_weeks: bool,
     selected: Vec<Date>,
     today: Date,
     show_outside_days: bool,
@@ -540,13 +581,18 @@ fn calendar_month_view<H: UiHost>(
     week_row_gap: Px,
     selected_model: Model<Vec<Date>>,
     required: bool,
+    min: Option<usize>,
     max: Option<usize>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
 ) -> AnyElement {
-    let grid = month_grid_compact(month, week_start);
+    let grid = if fixed_weeks {
+        month_grid(month, week_start).to_vec()
+    } else {
+        month_grid_compact(month, week_start)
+    };
     let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
 
     let mut disabled = Vec::with_capacity(grid.len());
@@ -754,6 +800,7 @@ fn calendar_month_view<H: UiHost>(
                     week_row_gap,
                     &selected_model,
                     required,
+                    min,
                     max,
                     close_on_select.clone(),
                     disabled_predicate.clone(),
@@ -973,6 +1020,7 @@ fn calendar_multi_day_cell<H: UiHost>(
     week_row_gap: Px,
     selected_model: &Model<Vec<Date>>,
     required: bool,
+    min: Option<usize>,
     max: Option<usize>,
     close_on_select: Option<Model<bool>>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
@@ -1041,20 +1089,13 @@ fn calendar_multi_day_cell<H: UiHost>(
 
             let mut changed = false;
             let _ = host.models_mut().update(&selected_model, |v| {
-                if let Some(pos) = v.iter().position(|d| *d == date) {
-                    if required && v.len() == 1 {
-                        return;
+                match day_picker_select_multi(date, v.as_slice(), required, min, max) {
+                    SelectionUpdate::NoChange => {}
+                    SelectionUpdate::Set(next) => {
+                        *v = next;
+                        changed = true;
                     }
-                    v.remove(pos);
-                    changed = true;
-                    return;
                 }
-                if max.is_some_and(|m| v.len() >= m) {
-                    return;
-                }
-                v.push(date);
-                v.sort();
-                changed = true;
             });
 
             if changed && let Some(open) = close_on_select.as_ref() {
