@@ -6,6 +6,7 @@
 //! - Standard variant is a docked container surface (non-overlay), suitable for scaffold-like layouts.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
@@ -22,6 +23,12 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use crate::foundation::surface::material_surface_style;
 use crate::motion;
 use crate::tokens::sheet_bottom as sheet_tokens;
+
+fn default_modal_bottom_sheet_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-modal-bottom-sheet"))
+        .clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DockedBottomSheetVariant {
@@ -136,9 +143,26 @@ impl DockedBottomSheet {
 
             let test_id_for_children = test_id.clone();
             let content_el = cx.flex(column, move |cx| {
+                #[derive(Default)]
+                struct DerivedDragHandleTestId {
+                    base: Option<Arc<str>>,
+                    drag_handle: Option<Arc<str>>,
+                }
+
+                let drag_handle_test_id = cx.with_state(DerivedDragHandleTestId::default, |st| {
+                    if st.base.as_deref() != test_id_for_children.as_deref() {
+                        st.base = test_id_for_children.clone();
+                        st.drag_handle = st
+                            .base
+                            .as_ref()
+                            .map(|id| Arc::from(format!("{id}-drag-handle")));
+                    }
+                    st.drag_handle.clone()
+                });
+
                 let mut out: Vec<AnyElement> = Vec::new();
                 if drag_handle {
-                    out.push(drag_handle_element(cx, test_id_for_children.as_ref()));
+                    out.push(drag_handle_element(cx, drag_handle_test_id.as_ref()));
                 }
                 out.extend(content(cx));
                 out
@@ -311,8 +335,23 @@ impl ModalBottomSheet {
                 });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}-scrim")));
-                let sheet_test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}-sheet")));
+                #[derive(Default)]
+                struct DerivedTestIds {
+                    base: Option<Arc<str>>,
+                    scrim: Option<Arc<str>>,
+                    sheet: Option<Arc<str>>,
+                }
+
+                let (scrim_test_id, sheet_test_id) = cx.with_state(DerivedTestIds::default, |st| {
+                    if st.base.as_deref() != test_id.as_deref() {
+                        st.base = test_id.clone();
+                        st.scrim =
+                            st.base.as_ref().map(|id| Arc::from(format!("{id}-scrim")));
+                        st.sheet =
+                            st.base.as_ref().map(|id| Arc::from(format!("{id}-sheet")));
+                    }
+                    (st.scrim.clone(), st.sheet.clone())
+                });
 
                 let overlay_root = cx.named("modal_bottom_sheet_root", |cx| {
                     let mut layout = LayoutStyle::default();
@@ -392,7 +431,7 @@ impl ModalBottomSheet {
                                     .variant(DockedBottomSheetVariant::Modal)
                                     .drag_handle(drag_handle)
                                     .test_id(sheet_test_id.clone().unwrap_or_else(|| {
-                                        Arc::<str>::from("material3-modal-bottom-sheet")
+                                        default_modal_bottom_sheet_test_id()
                                     }));
 
                                 let content_el = docked.into_element(cx, move |cx| content(cx));
@@ -438,7 +477,7 @@ impl ModalBottomSheet {
 
 fn drag_handle_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    sheet_test_id: Option<&Arc<str>>,
+    drag_handle_test_id: Option<&Arc<str>>,
 ) -> AnyElement {
     let (width, height, color) = {
         let theme = Theme::global(&*cx.app);
@@ -480,7 +519,7 @@ fn drag_handle_element<H: UiHost>(
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Generic,
-            test_id: sheet_test_id.map(|id| Arc::from(format!("{}-drag-handle", id.as_ref()))),
+            test_id: drag_handle_test_id.cloned(),
             ..Default::default()
         },
         move |cx| {

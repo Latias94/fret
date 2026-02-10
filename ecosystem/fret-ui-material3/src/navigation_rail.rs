@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
@@ -180,7 +181,7 @@ fn navigation_rail_impl<H: UiHost>(
 
         let selected = cx
             .get_model_cloned(&model, Invalidation::Layout)
-            .unwrap_or_else(|| Arc::<str>::from(""));
+            .unwrap_or_else(empty_arc_str);
         let selected_idx = items
             .iter()
             .position(|it| it.value.as_ref() == selected.as_ref());
