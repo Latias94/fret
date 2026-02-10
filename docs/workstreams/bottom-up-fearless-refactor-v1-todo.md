@@ -56,6 +56,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/harness.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/assertions.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/input.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/listbox.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/probes.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/shadow.rs`
