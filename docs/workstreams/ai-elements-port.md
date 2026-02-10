@@ -124,6 +124,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
   - `AI environment variables (demo)` (`ai_environment_variables_demo`): show/hide toggle + copy feedback gate:
     - `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
+  - `AI plan (demo)` (`ai_plan_demo`): collapsible open/close (header trigger) gate:
+    - `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
@@ -672,7 +674,7 @@ Legend:
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestions.rs` | Done | Suggestions row + pill surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`). |
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Prototype | Auto-open while streaming (unless `default_open=false`), auto-close once (1s after stream end), duration accounting, markdown content. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
-| `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Defer | Could be a markdown-like block with disclosure; wait for consumer. |
+| `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Done | Collapsible plan container + shimmer for streaming title/description; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`. |
 | `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
 | `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
 | `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
