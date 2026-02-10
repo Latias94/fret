@@ -34,6 +34,20 @@ ADR or adding a new ADR) before scaling feature surface area.
     `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
 
+- **Paint/Brush primitives (gradients, procedural patterns)**
+  - Proposed: `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
+  - Decide: minimal paint vocabulary (solid/gradients), coordinate + color space rules, and how this
+    layers into controlled `MaterialId` extensibility (ADR 0125).
+
+- **Imported render targets + external texture imports (staged, capability-gated)**
+  - Proposed: `docs/adr/1173-imported-render-targets-and-external-texture-imports-v1.md`
+  - Decide: end-to-end “contract path” validation, per-frame keepalive/lifetime rules, and how
+    capability-gated zero-copy imports layer in without leaking backend handles (ADR 0124 / ADR 0121).
+
+- **Controlled materials registry (Tier B procedural paints)**
+  - Proposed: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
+  - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
+
 - **User-facing effect recipes and tier selection (Tier A vs Tier B)**
   - Proposed: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
   - Decide: recommended user story for postprocessing, and the stable recipe authoring pattern for `fret-ui-kit`.
