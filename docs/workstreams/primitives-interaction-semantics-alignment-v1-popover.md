@@ -38,6 +38,7 @@ Scripted repros (existing; not exhaustive):
 
 - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`
+- `tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (popover open snapshot)
 
 ---
@@ -60,4 +61,4 @@ Invariants:
 ## Audit checklist (dimension-driven)
 
 - [ ] `M` Document dismiss + focus restore outcomes, including `preventDefault`-style hooks.
-- [ ] `G` Keep at least one diag script gating: clamp under scroll + escape/outside dismiss.
+- [x] `G` Keep at least one diag script gating: click-through outside press does not steal focus.
