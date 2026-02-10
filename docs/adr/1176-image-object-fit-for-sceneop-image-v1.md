@@ -1,4 +1,6 @@
-Status: Proposed
+# ADR 1176: Image Object-Fit for `SceneOp::Image` (v1)
+
+Status: Accepted
 
 ## Context
 

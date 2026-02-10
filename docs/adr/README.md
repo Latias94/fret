@@ -34,6 +34,35 @@ ADR or adding a new ADR) before scaling feature surface area.
     `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
 
+- **Paint/Brush primitives (gradients, procedural patterns)**
+  - Proposed: `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
+  - Decide: minimal paint vocabulary (solid/gradients), coordinate + color space rules, and how this
+    layers into controlled `MaterialId` extensibility (ADR 0125).
+
+- **Imported render targets + external texture imports (staged, capability-gated)**
+  - Proposed: `docs/adr/1173-imported-render-targets-and-external-texture-imports-v1.md`
+  - Decide: end-to-end “contract path” validation, per-frame keepalive/lifetime rules, and how
+    capability-gated zero-copy imports layer in without leaking backend handles (ADR 0124 / ADR 0121).
+
+- **Controlled materials registry (Tier B procedural paints)**
+  - Proposed: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
+  - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
+
+- **Pointer coordinate spaces (window-local vs element-local, transform-aware)**
+  - Proposed: `docs/adr/1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`
+  - Decide: the canonical coordinate spaces exposed to widgets, capture semantics, and a minimal
+    mechanism helper surface to avoid ad-hoc `position - bounds.origin` math across the ecosystem.
+
+- **Mask layers (alpha masks beyond rect/rrect clipping)**
+  - Proposed: `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
+  - Decide: v1 mask stack shape, gradient-only portable sources, hit-testing semantics (mask is
+    paint-only), and deterministic degradation under budgets.
+
+- **Frame clock and reduced-motion gates (animation time base)**
+  - Proposed: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
+  - Decide: monotonic per-frame clock exposure without poisoning view-cache keys, and the canonical
+    reduced-motion response pattern for ecosystem components.
+
 - **User-facing effect recipes and tier selection (Tier A vs Tier B)**
   - Proposed: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
   - Decide: recommended user story for postprocessing, and the stable recipe authoring pattern for `fret-ui-kit`.
@@ -75,6 +104,10 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0077-resizable-panel-groups-and-docking-split-sizing.md` (Accepted)
   - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
   - Implement: docking host rendering in `ecosystem/fret-docking`, runtime substrate in `crates/fret-ui`.
+
+- **Effect vocabulary extensions (color matrix + alpha threshold)**
+  - Proposed: `docs/adr/1175-effect-steps-color-matrix-and-alpha-threshold-v1.md`
+  - Decide: minimal postprocessing steps needed for SVG-filter-class recipes without going full material graphs.
 
 - **Text input semantics for multiline + IME composition ranges**
   - Update: `docs/adr/0071-text-input-multiline-composition-contract.md` (Accepted)
