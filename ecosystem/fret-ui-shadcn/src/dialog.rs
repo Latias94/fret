@@ -317,7 +317,7 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));

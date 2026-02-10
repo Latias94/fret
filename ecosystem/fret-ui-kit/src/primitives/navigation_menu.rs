@@ -597,7 +597,11 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             );
         }
 
-        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin);
+        let outer = overlay::outer_bounds_with_window_margin_for_environment(
+            cx,
+            fret_ui::Invalidation::Layout,
+            args.window_margin,
+        );
         let popper_layout = popper::popper_content_layout_unclamped(
             outer,
             placement_anchor,

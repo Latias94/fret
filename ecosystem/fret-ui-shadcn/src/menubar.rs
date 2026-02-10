@@ -1404,7 +1404,11 @@ impl MenubarMenuEntries {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                             return (Vec::new(), None);
                         };
-                        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                        let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                            cx,
+                            fret_ui::Invalidation::Layout,
+                            window_margin,
+                        );
 
                         let mut flat: Vec<MenubarEntry> = Vec::new();
                         flatten_entries(&mut flat, entries.iter().cloned().collect());

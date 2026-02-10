@@ -71,3 +71,10 @@ ADR anchor:
 - [x] Apply safe-area + occlusion insets to “mobile shell” overlays (Drawer / Sheet) to avoid
   system UI + virtual keyboard overlap:
   - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs`
+
+## Sweep / hygiene
+
+- [x] Avoid ad-hoc viewport reads (`cx.bounds`) in overlay outer-bounds helpers: derive outer bounds
+  from the committed environment snapshot so view-cache keys/invalidation stay correct under reuse.
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay.rs` (`outer_bounds_with_window_margin_for_environment`)
+  - Evidence: `ecosystem/fret-ui-shadcn/src/*` overlay placements now call the environment helper.

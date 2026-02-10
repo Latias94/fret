@@ -620,7 +620,11 @@ fn autocomplete_into_element<H: UiHost>(
                 return trigger;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                Px(0.0),
+            );
 
             let item_height =
                 autocomplete_tokens::menu_list_item_height(&theme, autocomplete.variant.as_text_field_variant());

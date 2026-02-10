@@ -1469,7 +1469,11 @@ impl ContextMenuContentRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 let geometry_hint = has_submenu.then(|| {
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
                     let submenu_max_h = submenu_max_height_metric
                         .map(|h| Px(h.0.min(outer.size.height.0)))
                         .unwrap_or(outer.size.height);
@@ -2759,7 +2763,11 @@ impl ContextMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
 
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
@@ -3103,11 +3111,11 @@ impl ContextMenu {
                                                                 move |cx, st, item_id| {
                                                                     let geometry_hint =
                                                                         has_submenu.then(|| {
-                                                                            let outer =
-                                                                                overlay::outer_bounds_with_window_margin(
-                                                                                    cx.bounds,
-                                                                                    window_margin,
-                                                                                );
+                                                                            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                                                                                cx,
+                                                                                fret_ui::Invalidation::Layout,
+                                                                                window_margin,
+                                                                            );
                                                                             let submenu_max_h =
                                                                                 submenu_max_height_metric
                                                                                     .map(|h| {

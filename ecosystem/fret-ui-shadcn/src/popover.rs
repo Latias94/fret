@@ -851,7 +851,11 @@ impl Popover {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_shift_cross_axis(shift_cross_axis)

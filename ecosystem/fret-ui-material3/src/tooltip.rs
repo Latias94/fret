@@ -289,8 +289,11 @@ fn tooltip_policy_root<H: UiHost>(
             let estimated_size = Size::new(Px(240.0), Px(32.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
 
-            let outer =
-                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let align = match align {
                 TooltipAlign::Start => Align::Start,
@@ -450,8 +453,11 @@ fn tooltip_policy_root<H: UiHost>(
             let estimated_size = Size::new(Px(240.0), Px(32.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
 
-            let outer =
-                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let align = match align {
                 TooltipAlign::Start => Align::Start,

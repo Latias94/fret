@@ -372,7 +372,7 @@ impl Sheet {
 
                     let content = with_sheet_side_provider(cx, sheet_side, |cx| content(cx));
 
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let max_w = outer.size.width;
                     let max_h = outer.size.height;
 
