@@ -2010,6 +2010,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
