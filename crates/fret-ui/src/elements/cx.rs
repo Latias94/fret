@@ -6,7 +6,10 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{AppWindowId, Edges, EffectChain, EffectMode, NodeId, PointerType, Px, Rect};
+use fret_core::{
+    AppWindowId, ColorScheme, ContrastPreference, Edges, EffectChain, EffectMode, ForcedColorsMode,
+    NodeId, PointerType, Px, Rect,
+};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -95,12 +98,33 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         runtime.prepare_window_for_frame(window, frame_id);
 
         let window_state = runtime.for_window_mut(window);
-        let scale_factor = app
-            .global::<WindowMetricsService>()
+        let metrics = app.global::<WindowMetricsService>();
+        let scale_factor = metrics
             .and_then(|svc| svc.scale_factor(window))
             .unwrap_or(1.0);
         window_state.record_committed_viewport_bounds(bounds);
         window_state.record_committed_scale_factor(scale_factor);
+        if let Some(metrics) = metrics {
+            if metrics.prefers_reduced_motion_is_known(window) {
+                window_state
+                    .set_committed_prefers_reduced_motion(metrics.prefers_reduced_motion(window));
+            }
+            if metrics.color_scheme_is_known(window) {
+                window_state.set_committed_color_scheme(metrics.color_scheme(window));
+            }
+            if metrics.contrast_preference_is_known(window) {
+                window_state.set_committed_contrast_preference(metrics.contrast_preference(window));
+            }
+            if metrics.forced_colors_mode_is_known(window) {
+                window_state.set_committed_forced_colors_mode(metrics.forced_colors_mode(window));
+            }
+            if metrics.safe_area_insets_is_known(window) {
+                window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
+            }
+            if metrics.occlusion_insets_is_known(window) {
+                window_state.record_committed_occlusion_insets(metrics.occlusion_insets(window));
+            }
+        }
 
         Self {
             app,
@@ -552,6 +576,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.committed_scale_factor()
     }
 
+    pub fn environment_color_scheme(&mut self, invalidation: Invalidation) -> Option<ColorScheme> {
+        self.observe_environment_query(EnvironmentQueryKey::ColorScheme, invalidation);
+        self.window_state.committed_color_scheme()
+    }
+
     pub fn environment_prefers_reduced_motion(
         &mut self,
         invalidation: Invalidation,
@@ -560,9 +589,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.committed_prefers_reduced_motion()
     }
 
+    pub fn environment_prefers_contrast(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ContrastPreference> {
+        self.observe_environment_query(EnvironmentQueryKey::PrefersContrast, invalidation);
+        self.window_state.committed_contrast_preference()
+    }
+
+    pub fn environment_forced_colors_mode(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ForcedColorsMode> {
+        self.observe_environment_query(EnvironmentQueryKey::ForcedColorsMode, invalidation);
+        self.window_state.committed_forced_colors_mode()
+    }
+
     pub fn environment_safe_area_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
         self.observe_environment_query(EnvironmentQueryKey::SafeAreaInsets, invalidation);
         self.window_state.committed_safe_area_insets()
+    }
+
+    pub fn environment_occlusion_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
+        self.observe_environment_query(EnvironmentQueryKey::OcclusionInsets, invalidation);
+        self.window_state.committed_occlusion_insets()
     }
 
     pub fn environment_primary_pointer_type(&mut self, invalidation: Invalidation) -> PointerType {
@@ -3320,5 +3370,60 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::test_host::TestHost;
+    use fret_core::{Point, Size};
+
+    #[test]
+    fn element_context_commits_window_insets_from_window_metrics_service() {
+        let mut app = TestHost::new();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0)));
+
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_prefers_reduced_motion(window, Some(true));
+            svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
+            svc.set_contrast_preference(window, Some(fret_core::ContrastPreference::More));
+            svc.set_forced_colors_mode(window, Some(fret_core::ForcedColorsMode::Active));
+            svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
+            svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
+            svc.set_scale_factor(window, 2.0);
+        });
+
+        let mut runtime = ElementRuntime::default();
+        {
+            let _cx =
+                ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "test");
+        }
+
+        let state = runtime.for_window_mut(window);
+        assert_eq!(state.committed_prefers_reduced_motion(), Some(true));
+        assert_eq!(
+            state.committed_color_scheme(),
+            Some(fret_core::ColorScheme::Dark)
+        );
+        assert_eq!(
+            state.committed_contrast_preference(),
+            Some(fret_core::ContrastPreference::More)
+        );
+        assert_eq!(
+            state.committed_forced_colors_mode(),
+            Some(fret_core::ForcedColorsMode::Active)
+        );
+        assert_eq!(
+            state.committed_safe_area_insets(),
+            Some(Edges::symmetric(Px(8.0), Px(4.0)))
+        );
+        assert_eq!(
+            state.committed_occlusion_insets(),
+            Some(Edges::all(Px(16.0)))
+        );
+        assert_eq!(state.committed_scale_factor(), 2.0);
     }
 }

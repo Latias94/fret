@@ -18,6 +18,7 @@ pub mod ids;
 pub mod image;
 pub mod input;
 pub mod layout_direction;
+pub mod materials;
 pub mod panels;
 pub mod render_text;
 pub mod scene;
@@ -51,8 +52,8 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, PointerId, RenderTargetId, SvgId,
-    TextBlobId, TimerToken, ViewId,
+    ImageId, ImageUpdateToken, ImageUploadToken, MaterialId, NodeId, PathId, PointerId,
+    RenderTargetId, SvgId, TextBlobId, TimerToken, ViewId,
 };
 pub use image::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
@@ -67,12 +68,13 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
+pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
 pub use scene::{
     Color, ColorSpace, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep,
-    GradientStop, LinearGradient, MAX_STOPS, Paint, RadialGradient, Scene, SceneOp, SceneRecording,
-    SceneValidationError, SceneValidationErrorKind, TileMode, UvRect,
+    GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient, Scene, SceneOp,
+    SceneRecording, SceneValidationError, SceneValidationErrorKind, TileMode, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,
@@ -92,4 +94,7 @@ pub use vector_path::{
     StrokeStyle,
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
-pub use window::{WindowAnchor, WindowLogicalPosition, WindowMetricsService};
+pub use window::{
+    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowLogicalPosition,
+    WindowMetricsService,
+};

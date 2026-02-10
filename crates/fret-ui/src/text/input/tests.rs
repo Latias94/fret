@@ -84,6 +84,19 @@ impl fret_core::SvgService for FakeTextService {
     }
 }
 
+impl fret_core::MaterialService for FakeTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 fn event_cx<'a>(
     app: &'a mut TestHost,
     services: &'a mut dyn fret_core::UiServices,
@@ -468,6 +481,19 @@ impl fret_core::SvgService for ImeTextService {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for ImeTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         false
     }
 }

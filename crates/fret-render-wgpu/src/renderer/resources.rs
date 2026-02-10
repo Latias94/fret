@@ -375,6 +375,11 @@ impl Renderer {
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
+
+            materials: SlotMap::with_key(),
+            materials_by_desc: HashMap::new(),
+            material_paint_budget_per_frame: 50_000,
+            material_distinct_budget_per_frame: 256,
         }
     }
 

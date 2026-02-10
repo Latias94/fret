@@ -30,6 +30,11 @@ Definition of done:
   fields from it) during declarative rendering.
 - Observations participate in dependency tracking and invalidation.
 
+Notes:
+
+- This milestone is about the **mechanism seam** and does not require every runner to supply every
+  field. Runners may supply best-effort values and leave optional fields unset until supported.
+
 Evidence:
 
 - Unit tests in `crates/fret-ui` cover:
@@ -48,6 +53,10 @@ Evidence:
 
 - A diagnostics bundle contains fields under a stable schema path (e.g. `debug.environment`), and
   tests (or a scripted gate) assert the fields exist.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.environment`,
+    `ElementDiagnosticsSnapshotV1.observed_environment`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (unit test:
+    `environment_snapshot_exports_committed_preferences_and_insets`)
 
 ## M3 — Policy helpers (kit surface)
 
@@ -57,6 +66,7 @@ Definition of done:
   - viewport/device breakpoints (tokens + optional hysteresis),
   - pointer capability gates (hover vs touch-first),
   - safe-area insets (future mobile),
+  - occlusion insets (virtual keyboard / transient obstructions),
   - reduced-motion defaults (if provided by the runner/app).
 
 Evidence:
@@ -72,7 +82,13 @@ Definition of done:
   the environment query helpers.
 - Known hover-driven affordances are gated by pointer capability helpers (touch-first should not
   open hover-only UI).
+- Mobile-shell overlays (Drawer / Sheet) respect safe-area + occlusion insets by default.
 - At least one migration is gated by an automated test or `fretboard diag` script.
+
+“Done means done” checklist:
+
+- A sweep exists for shadcn recipes that still hard-code viewport breakpoints (e.g. `>=768px`), and
+  the remaining occurrences are tracked and burned down.
 
 Recommended first target:
 

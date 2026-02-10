@@ -83,6 +83,8 @@ struct Paint {
   stop_count: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
+  params2: vec4<f32>,
+  params3: vec4<f32>,
   stop_colors: array<vec4<f32>, 8>,
   stop_offsets0: vec4<f32>,
   stop_offsets1: vec4<f32>,
@@ -238,6 +240,32 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   return prev_color;
 }
 
+fn mat_hash_u32(x: u32) -> u32 {
+  var v = x;
+  v = v ^ (v >> 16u);
+  v = v * 0x7feb352du;
+  v = v ^ (v >> 15u);
+  v = v * 0x846ca68bu;
+  v = v ^ (v >> 16u);
+  return v;
+}
+
+fn mat_hash2(p: vec2<u32>, seed: u32) -> u32 {
+  let h = p.x ^ (p.y * 0x9e3779b9u) ^ (seed * 0x85ebca6bu);
+  return mat_hash_u32(h);
+}
+
+fn mat_rand01(p: vec2<u32>, seed: u32) -> f32 {
+  let h = mat_hash2(p, seed);
+  return f32(h) * (1.0 / 4294967295.0);
+}
+
+fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
+  let s = sin(a);
+  let c = cos(a);
+  return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
 fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   switch p.kind {
     // 0 = Solid
@@ -262,6 +290,135 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
       let t = length(d);
       let tt = clamp(t, 0.0, 1.0);
       return paint_sample_stops(p, tt);
+    }
+    // 3 = Material (Tier B procedural patterns)
+    case 3u: {
+      let base = p.params0;
+      let fg = p.params1;
+      let pos = local_pos + p.params3.zw;
+
+      // params2: primary (x/y), thickness/radius (z), seed (w)
+      // params3: time/phase (x), angle/softness (y), offset (z/w)
+      let spacing = max(p.params2.x, 1.0);
+      let spacing_y = max(p.params2.y, 1.0);
+      let thickness = max(p.params2.z, 0.0);
+      let seed = u32(max(p.params2.w, 0.0));
+      let t = p.params3.x;
+      let angle = p.params3.y;
+
+      // 0 DotGrid
+      if (p.tile_mode == 0u) {
+        let cell = pos / spacing;
+        let frac = fract(cell) - vec2<f32>(0.5);
+        let r = select(spacing * 0.12, thickness, thickness > 0.0);
+        let d = length(frac) * spacing;
+        let aa = max(fwidth(d), 1e-4);
+        let cov = 1.0 - smoothstep(r, r + aa, d);
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      // 1 Grid
+      if (p.tile_mode == 1u) {
+        let cell = pos / vec2<f32>(spacing, spacing_y);
+        let frac = abs(fract(cell) - vec2<f32>(0.5));
+        let dx = frac.x * spacing;
+        let dy = frac.y * spacing_y;
+        let w = select(1.0, thickness, thickness > 0.0);
+        let aa_x = max(fwidth(dx), 1e-4);
+        let aa_y = max(fwidth(dy), 1e-4);
+        let cov_x = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa_x, dx);
+        let cov_y = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa_y, dy);
+        let cov = max(cov_x, cov_y);
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      // 2 Checkerboard
+      if (p.tile_mode == 2u) {
+        let cell = vec2<u32>(
+          u32(floor(pos.x / spacing)),
+          u32(floor(pos.y / spacing_y))
+        );
+        let parity = (cell.x + cell.y) & 1u;
+        return select(base, fg, parity == 1u);
+      }
+
+      // 3 Stripe
+      if (p.tile_mode == 3u) {
+        let p2 = mat_rot(pos, angle);
+        let u = p2.x / spacing;
+        let du = abs(fract(u) - 0.5) * spacing;
+        let w = select(spacing * 0.25, thickness, thickness > 0.0);
+        let aa = max(fwidth(du), 1e-4);
+        let cov = 1.0 - smoothstep(w * 0.5, w * 0.5 + aa, du);
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      // 4 Noise (deterministic cell noise)
+      if (p.tile_mode == 4u) {
+        let scale = spacing;
+        let cell = vec2<u32>(
+          u32(floor(pos.x / scale)),
+          u32(floor(pos.y / scale))
+        );
+        let r = mat_rand01(cell, seed);
+        let intensity = clamp(p.params2.y, 0.0, 1.0);
+        let cov = intensity * r;
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      // 5 Beam (caller-driven phase via `t`)
+      if (p.tile_mode == 5u) {
+        let p2 = mat_rot(pos, angle);
+        let u = p2.x;
+        let center = t;
+        let width = max(p.params2.x, 1.0);
+        let softness = max(p.params2.y, 0.0);
+        let d = abs(u - center);
+        let aa = max(fwidth(d), 1e-4);
+        let cov = 1.0 - smoothstep(width * 0.5, width * 0.5 + softness + aa, d);
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      // 6 Sparkle (cell-based, explicit `t`, explicit `seed`)
+      if (p.tile_mode == 6u) {
+        let cell_size = max(p.params2.x, 1.0);
+        let cell = vec2<u32>(
+          u32(floor(pos.x / cell_size)),
+          u32(floor(pos.y / cell_size))
+        );
+        let r0 = mat_rand01(cell, seed);
+        let density = clamp(p.params2.y, 0.0, 1.0);
+        if (r0 > density) {
+          return base;
+        }
+        let rx = mat_rand01(cell, seed ^ 0x68bc21ebu);
+        let ry = mat_rand01(cell, seed ^ 0x02e5be93u);
+        let phase = mat_rand01(cell, seed ^ 0xa1b3c5d7u) * 6.2831853;
+        let p_cell = (fract(pos / cell_size) - vec2<f32>(rx, ry)) * cell_size;
+        let radius = select(cell_size * 0.08, thickness, thickness > 0.0);
+        let d = length(p_cell);
+        let aa = max(fwidth(d), 1e-4);
+        let cov = 1.0 - smoothstep(radius, radius + aa, d);
+        let twinkle = 0.5 + 0.5 * sin(t * 2.0 + phase);
+        let k = cov * twinkle;
+        return base * (1.0 - k) + fg * k;
+      }
+
+      // 7 ConicSweep (center in params2.xy, width in params2.z (turns), phase in params3.x (turns))
+      if (p.tile_mode == 7u) {
+        let center = p.params2.xy;
+        let v = local_pos - center;
+        let a = atan2(v.y, v.x);
+        let turns = fract(a * (1.0 / 6.2831853) + fract(p.params3.x));
+        let d = abs(fract(turns + 0.5) - 0.5);
+        let w = clamp(p.params2.z, 0.0, 0.5);
+        let soft = max(p.params3.y, 0.0);
+        let aa = max(fwidth(d), 1e-4);
+        let cov = 1.0 - smoothstep(w, w + soft + aa, d);
+        return base * (1.0 - cov) + fg * cov;
+      }
+
+      return base;
     }
     default: {
       return vec4<f32>(0.0);

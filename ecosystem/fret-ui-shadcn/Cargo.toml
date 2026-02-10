@@ -26,6 +26,7 @@ fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["icons"] }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-executor = { version = "0.1.0", path = "../fret-executor" }
 fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
 serde.workspace = true

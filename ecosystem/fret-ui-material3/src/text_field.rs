@@ -894,10 +894,11 @@ impl TextField {
                                         },
                                         move |cx, state| {
                                             if enabled {
+                                                let handler = handler.clone();
                                                 cx.pressable_on_pointer_down(Arc::new(
                                                     move |host, action_cx, down: PointerDownCx| {
                                                         host.request_focus(input_id_for_focus);
-                                                        if let Some(h) = handler.clone() {
+                                                        if let Some(ref h) = handler {
                                                             return h(host, action_cx, down);
                                                         }
                                                         PressablePointerDownResult::Continue

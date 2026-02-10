@@ -64,6 +64,7 @@ pub(in super::super) fn encode_text(
             );
             let bg = resolve_decoration_color(d.paint_span, d.color);
             super::encode_quad(
+                renderer,
                 state,
                 rect,
                 fret_core::Paint::Solid(bg),
@@ -204,6 +205,7 @@ pub(in super::super) fn encode_text(
             );
             let bg = resolve_decoration_color(d.paint_span, d.color);
             super::encode_quad(
+                renderer,
                 state,
                 rect,
                 fret_core::Paint::Solid(bg),

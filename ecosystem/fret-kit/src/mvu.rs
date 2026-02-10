@@ -347,6 +347,12 @@ pub fn app_with_hooks<P: Program>(
                 MvuWindowState<P::State, P::Message>,
             >,
         );
+    #[cfg(feature = "shadcn")]
+    let driver = driver.on_global_changes_middleware(
+        crate::shadcn_sync_theme_from_environment_on_global_changes::<
+            MvuWindowState<P::State, P::Message>,
+        >,
+    );
     let driver = configure(MvuUiAppDriver::new(UiAppDriver::new(driver))).into_inner();
     let driver = driver.into_inner();
 

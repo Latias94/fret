@@ -262,11 +262,12 @@ impl ModalBottomSheet {
                 let default_duration_ms = theme
                     .duration_ms_by_key("md.sys.motion.duration.medium2")
                     .unwrap_or(300);
-                let easing_key =
-                    easing_key.unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
+                let easing_key = easing_key
+                    .as_deref()
+                    .unwrap_or("md.sys.motion.easing.emphasized");
                 let bezier =
                     theme
-                        .easing_by_key(easing_key.as_ref())
+                        .easing_by_key(easing_key)
                         .unwrap_or(fret_ui::theme::CubicBezier {
                             x1: 0.0,
                             y1: 0.0,

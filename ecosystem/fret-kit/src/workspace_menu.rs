@@ -962,7 +962,11 @@ fn request_menu_overlay<H: UiHost>(
             let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                 return (Vec::new(), None);
             };
-            let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let desired = menu_panel_desired_size(entries, Px(220.0), row_height);
             let placement = popper::PopperContentPlacement::new(
@@ -1326,7 +1330,11 @@ fn render_menu_item<H: UiHost>(
             && item.has_submenu
         {
             let geometry_hint = menu::sub_trigger::MenuSubTriggerGeometryHint {
-                outer: overlay::outer_bounds_with_window_margin(cx.bounds, Px(8.0)),
+                outer: overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    Px(8.0),
+                ),
                 desired: Size::new(Px(180.0), Px(200.0)),
             };
             expanded = menu::sub_trigger::wire(

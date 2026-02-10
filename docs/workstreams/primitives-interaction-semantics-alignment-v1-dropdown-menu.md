@@ -32,6 +32,8 @@ Key implementation anchors (dismiss + modality-gated focus):
 - Overlay request + modal/click-through control:
   - `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`dismissible_menu_request_with_modal*`)
   - tests: `menu_modal_controls_underlay_pointer_blocking_and_click_through`
+- Close auto-focus suppression for non-modal outside-press dismissal (click-through):
+  - `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`menu_close_auto_focus_guard_hooks`)
 - Initial focus gating by last input modality:
   - `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (menu initial focus targets; test `menu_request_gates_initial_focus_by_modality`)
 
@@ -61,6 +63,7 @@ Evidence (Fret unit tests at recipe layer; fast invariants):
   - `dropdown_menu_arrow_up_opens_and_focuses_last_item`
   - `dropdown_menu_item_select_closes_and_restores_trigger_focus`
   - `dropdown_menu_outside_press_closes_without_overriding_underlay_focus`
+  - `dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger`
   - `dropdown_menu_submenu_does_not_switch_while_pointer_moves_through_safe_corridor`
   - `dropdown_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus`
   - `dropdown_menu_submenu_items_propagate_test_ids`
