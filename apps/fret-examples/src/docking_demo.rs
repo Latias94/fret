@@ -152,9 +152,10 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),
             rect: draw_rect,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::TRANSPARENT,
+
             border: Edges::all(Px(2.0)),
-            border_color,
+            border_paint: fret_core::Paint::Solid(border_color),
             corner_radii: Corners::all(Px(0.0)),
         });
     }

@@ -411,10 +411,10 @@ mod tests {
         Theme::with_global_mut(&mut app, |theme| {
             theme.apply_config(&cfg);
         });
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app);
 
         let default = item_container_shape_for_interaction(
-            &theme,
+            theme,
             false,
             true,
             ListItemInteraction::Default,
@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(default, Corners::all(Px(4.0)));
 
         let hovered = item_container_shape_for_interaction(
-            &theme,
+            theme,
             false,
             true,
             ListItemInteraction::Hovered,
@@ -432,7 +432,7 @@ mod tests {
         assert_eq!(hovered, Corners::all(Px(12.0)));
 
         let pressed = item_container_shape_for_interaction(
-            &theme,
+            theme,
             false,
             true,
             ListItemInteraction::Pressed,
@@ -441,7 +441,7 @@ mod tests {
         assert_eq!(pressed, Corners::all(Px(16.0)));
 
         let selected_default = item_container_shape_for_interaction(
-            &theme,
+            theme,
             true,
             true,
             ListItemInteraction::Default,
@@ -450,7 +450,7 @@ mod tests {
         assert_eq!(selected_default, Corners::all(Px(16.0)));
 
         let disabled = item_container_shape_for_interaction(
-            &theme,
+            theme,
             false,
             false,
             ListItemInteraction::Default,

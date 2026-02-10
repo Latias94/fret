@@ -51,16 +51,22 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
     check_bundle_for_ui_gallery_code_editor_a11y_selection,
     check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
+    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
     check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
     check_bundle_for_ui_gallery_code_editor_torture_marker_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
@@ -201,6 +207,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: bool =
         false;
+    let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: bool =
+        false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool =
         false;
@@ -209,6 +225,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: bool = false;
     let mut check_ui_gallery_code_editor_word_boundary: bool = false;
@@ -861,6 +879,34 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     true;
                 i += 1;
             }
+            "--check-ui-gallery-code-editor-torture-folds-placeholder-present-under-inline-preedit-with-decorations-composed" =>
+            {
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-decorations-toggle-stable-under-inline-preedit-composed" =>
+            {
+                check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-decorations-toggle-a11y-composition-consistent-under-inline-preedit-composed" =>
+            {
+                check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-composed-preedit-stable-after-wheel-scroll" => {
+                check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-composed-preedit-cancels-on-drag-selection" => {
+                check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
+                    true;
+                i += 1;
+            }
             "--check-ui-gallery-code-editor-torture-folds-placeholder-present" => {
                 check_ui_gallery_code_editor_torture_folds_placeholder_present = true;
                 i += 1;
@@ -887,6 +933,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-ui-gallery-code-editor-torture-inlays-present-under-inline-preedit-with-decorations" =>
             {
                 check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-inlays-present-under-inline-preedit-with-decorations-composed" =>
+            {
+                check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed =
                     true;
                 i += 1;
             }
@@ -1823,11 +1875,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                    || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                     || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
@@ -1938,12 +1998,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
                         check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection,
@@ -2151,12 +2217,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
                         check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection,
@@ -2505,12 +2577,18 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+                        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+                        || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                        || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                        || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                        || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                         || check_ui_gallery_code_editor_torture_inlays_present
                         || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
                         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+                        || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
                         || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                         || check_ui_gallery_code_editor_word_boundary
                         || check_ui_gallery_code_editor_a11y_selection
@@ -2595,12 +2673,18 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+                            check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+                            check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                            check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                            check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                            check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                             check_ui_gallery_code_editor_torture_inlays_present,
                             check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
                             check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+                            check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
                             check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                             check_ui_gallery_code_editor_word_boundary,
                             check_ui_gallery_code_editor_a11y_selection,
@@ -3932,11 +4016,17 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                    || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
                     || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
                     || check_ui_gallery_code_editor_a11y_composition
@@ -4007,8 +4097,14 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
                     || ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
@@ -4286,6 +4382,21 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
+                    let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed =
+                        ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
+                    let suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
+                        ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
+                    let suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
+                        ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
+                    let suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
+                        ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
+                    let suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
+                        ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
@@ -4304,6 +4415,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
                         ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
                             && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
+                    let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed =
+                        ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
                     let suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap =
                         ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(&src)
                             && !check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
@@ -4445,6 +4559,16 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+                            || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+                            || suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                            || suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                            || suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
+                            || suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -4457,6 +4581,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
                             || suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
+                            || suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                             || suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary
@@ -4544,6 +4670,140 @@ See: `docs/tracy.md`.\n";
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             std::process::exit(0);
         }
+        "perf-baseline-from-bundles" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
+            if rest.len() < 2 {
+                return Err(
+                    "missing script path and bundle paths (try: fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234)".to_string(),
+                );
+            }
+
+            let script_src = resolve_path(&workspace_root, PathBuf::from(&rest[0]));
+            let script_key = normalize_repo_relative_path(&workspace_root, &script_src);
+
+            let sort = sort_override.unwrap_or(BundleStatsSort::Time);
+            let out_path = perf_baseline_out
+                .clone()
+                .ok_or_else(|| "missing --perf-baseline-out <path>".to_string())
+                .map(|p| resolve_path(&workspace_root, p))?;
+
+            let mut measured_max_top_total_us: u64 = 0;
+            let mut measured_max_top_layout_us: u64 = 0;
+            let mut measured_max_top_solve_us: u64 = 0;
+            let mut measured_max_pointer_move_dispatch_us: u64 = 0;
+            let mut measured_max_pointer_move_hit_test_us: u64 = 0;
+            let mut measured_max_pointer_move_global_changes: u64 = 0;
+            let mut measured_max_run_paint_cache_hit_test_only_replay_allowed_max: u64 = 0;
+            let mut measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: u64 =
+                0;
+
+            let mut worst_bundle: Option<(u64, PathBuf)> = None;
+
+            for raw in rest.iter().skip(1) {
+                let bundle_src = resolve_path(&workspace_root, PathBuf::from(raw));
+                let bundle_path = resolve_bundle_json_path(&bundle_src);
+                if !bundle_path.is_file() {
+                    return Err(format!(
+                        "bundle path does not contain bundle.json: {}",
+                        bundle_src.display()
+                    ));
+                }
+
+                let report = bundle_stats_from_path(
+                    &bundle_path,
+                    1,
+                    sort,
+                    BundleStatsOptions { warmup_frames },
+                )?;
+
+                let top = report.top.first();
+                let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
+                let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
+
+                let pointer_move_dispatch = report.pointer_move_max_dispatch_time_us;
+                let pointer_move_hit_test = report.pointer_move_max_hit_test_time_us;
+                let pointer_move_global_changes =
+                    report.pointer_move_snapshots_with_global_changes as u64;
+                let (
+                    run_paint_cache_hit_test_only_replay_allowed_max,
+                    run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, warmup_frames)?;
+
+                measured_max_top_total_us = measured_max_top_total_us.max(top_total);
+                measured_max_top_layout_us = measured_max_top_layout_us.max(top_layout);
+                measured_max_top_solve_us = measured_max_top_solve_us.max(top_solve);
+                measured_max_pointer_move_dispatch_us =
+                    measured_max_pointer_move_dispatch_us.max(pointer_move_dispatch);
+                measured_max_pointer_move_hit_test_us =
+                    measured_max_pointer_move_hit_test_us.max(pointer_move_hit_test);
+                measured_max_pointer_move_global_changes =
+                    measured_max_pointer_move_global_changes.max(pointer_move_global_changes);
+                measured_max_run_paint_cache_hit_test_only_replay_allowed_max =
+                    measured_max_run_paint_cache_hit_test_only_replay_allowed_max
+                        .max(run_paint_cache_hit_test_only_replay_allowed_max);
+                measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                    measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
+                        .max(run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max);
+
+                if top_total > worst_bundle.as_ref().map(|(t, _)| *t).unwrap_or(0) {
+                    worst_bundle = Some((top_total, bundle_path));
+                }
+            }
+
+            let thresholds = serde_json::json!({
+                "max_top_total_us": apply_perf_baseline_headroom(measured_max_top_total_us, perf_baseline_headroom_pct),
+                "max_top_layout_us": apply_perf_baseline_headroom(measured_max_top_layout_us, perf_baseline_headroom_pct),
+                "max_top_solve_us": apply_perf_baseline_headroom(measured_max_top_solve_us, perf_baseline_headroom_pct),
+                "max_pointer_move_dispatch_us": apply_perf_baseline_headroom(measured_max_pointer_move_dispatch_us, perf_baseline_headroom_pct),
+                "max_pointer_move_hit_test_us": apply_perf_baseline_headroom(measured_max_pointer_move_hit_test_us, perf_baseline_headroom_pct),
+                "max_pointer_move_global_changes": apply_perf_baseline_headroom(measured_max_pointer_move_global_changes, perf_baseline_headroom_pct),
+                "min_run_paint_cache_hit_test_only_replay_allowed_max": apply_perf_baseline_floor(measured_max_run_paint_cache_hit_test_only_replay_allowed_max, perf_baseline_headroom_pct),
+                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": apply_perf_baseline_headroom(measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max, perf_baseline_headroom_pct),
+            });
+
+            let measured_max = serde_json::json!({
+                "top_total_time_us": measured_max_top_total_us,
+                "top_layout_time_us": measured_max_top_layout_us,
+                "top_layout_engine_solve_time_us": measured_max_top_solve_us,
+                "pointer_move_max_dispatch_time_us": measured_max_pointer_move_dispatch_us,
+                "pointer_move_max_hit_test_time_us": measured_max_pointer_move_hit_test_us,
+                "pointer_move_snapshots_with_global_changes": measured_max_pointer_move_global_changes,
+                "run_paint_cache_hit_test_only_replay_allowed_max": measured_max_run_paint_cache_hit_test_only_replay_allowed_max,
+                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": measured_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            });
+
+            let row = serde_json::json!({
+                "script": script_key,
+                "thresholds": thresholds,
+                "measured_max": measured_max,
+                "worst_bundle": worst_bundle.as_ref().map(|(us, p)| serde_json::json!({
+                    "top_total_time_us": us,
+                    "bundle": normalize_repo_relative_path(&workspace_root, p),
+                })),
+            });
+
+            let payload = serde_json::json!({
+                "schema_version": 1,
+                "generated_unix_ms": now_unix_ms(),
+                "kind": "perf_baseline",
+                "out_path": out_path.display().to_string(),
+                "warmup_frames": warmup_frames,
+                "sort": sort.as_str(),
+                "repeat": (rest.len() - 1) as u64,
+                "headroom_pct": perf_baseline_headroom_pct,
+                "rows": [row],
+            });
+
+            write_json_value(&out_path, &payload)?;
+            if !stats_json {
+                println!("wrote perf baseline: {}", out_path.display());
+            }
+
+            Ok(())
+        }
         "perf" => {
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
@@ -4564,13 +4824,65 @@ See: `docs/tracy.md`.\n";
                         .iter()
                         .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
                         .collect()
-                } else {
-                    rest.into_iter()
+                } else if name == "ui-gallery" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+                        "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+                        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+                        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                        "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+                        "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
+                        "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-stress.json",
+                    ]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+                } else if name == "ui-gallery-steady" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+                        "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+                        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+                        "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+                        "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+                        "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                    ]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+                } else if name == "ui-resize-probes" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+                    ]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+                } else if name == "ui-code-editor-resize-probes" {
+                    suite_name = Some(name.to_string());
+                    ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
+                        .into_iter()
                         .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                         .collect()
+                } else if name == "extras-marquee-steady" {
+                    suite_name = Some(name.to_string());
+                    ["tools/diag-scripts/extras-marquee-steady.json"]
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect()
+                } else {
+                    vec![resolve_path(&workspace_root, PathBuf::from(name))]
                 }
             } else {
-                rest.into_iter()
+                rest.iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
             };
@@ -4818,14 +5130,23 @@ See: `docs/tracy.md`.\n";
                             top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                         let top_view_cache_roots_reused =
                             top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                        let top_view_cache_roots_first_mount =
+                            top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                        let top_view_cache_roots_node_recreated =
+                            top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                         let top_view_cache_roots_cache_key_mismatch = top
                             .map(|r| r.view_cache_roots_cache_key_mismatch)
+                            .unwrap_or(0);
+                        let top_view_cache_roots_not_marked_reuse_root = top
+                            .map(|r| r.view_cache_roots_not_marked_reuse_root)
                             .unwrap_or(0);
                         let top_view_cache_roots_needs_rerender =
                             top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                         let top_view_cache_roots_layout_invalidated = top
                             .map(|r| r.view_cache_roots_layout_invalidated)
                             .unwrap_or(0);
+                        let top_view_cache_roots_manual =
+                            top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                         let top_cache_roots_contained_relayout =
                             top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
@@ -4963,9 +5284,13 @@ See: `docs/tracy.md`.\n";
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                                 "top_view_cache_roots_total": top_view_cache_roots_total,
                                 "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                                "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                                "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                                 "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                                "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                                 "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                                 "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                                "top_view_cache_roots_manual": top_view_cache_roots_manual,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -5474,14 +5799,23 @@ See: `docs/tracy.md`.\n";
                         top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                     let top_view_cache_roots_reused =
                         top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                    let top_view_cache_roots_first_mount =
+                        top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                    let top_view_cache_roots_node_recreated =
+                        top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                     let top_view_cache_roots_cache_key_mismatch = top
                         .map(|r| r.view_cache_roots_cache_key_mismatch)
+                        .unwrap_or(0);
+                    let top_view_cache_roots_not_marked_reuse_root = top
+                        .map(|r| r.view_cache_roots_not_marked_reuse_root)
                         .unwrap_or(0);
                     let top_view_cache_roots_needs_rerender =
                         top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                     let top_view_cache_roots_layout_invalidated = top
                         .map(|r| r.view_cache_roots_layout_invalidated)
                         .unwrap_or(0);
+                    let top_view_cache_roots_manual =
+                        top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                     let top_cache_roots_contained_relayout =
                         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
@@ -5649,9 +5983,13 @@ See: `docs/tracy.md`.\n";
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                         "top_view_cache_roots_total": top_view_cache_roots_total,
                         "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                        "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                        "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                         "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                        "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                         "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                         "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                        "top_view_cache_roots_manual": top_view_cache_roots_manual,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -6380,6 +6718,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
+            let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
             if wants_perf_thresholds {
                 let out_path = resolved_out_dir.join("check.perf_thresholds.json");
                 let payload = serde_json::json!({
@@ -6407,15 +6746,8 @@ See: `docs/tracy.md`.\n";
                 });
                 let _ = write_json_value(&out_path, &payload);
                 if !perf_threshold_failures.is_empty() {
-                    if launched_by_fretboard {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    }
-                    eprintln!(
-                        "PERF threshold gate failed (failures={}, evidence={})",
-                        perf_threshold_failures.len(),
-                        out_path.display()
-                    );
-                    std::process::exit(1);
+                    perf_threshold_failure =
+                        Some((perf_threshold_failures.len(), out_path.clone()));
                 }
             }
 
@@ -6449,6 +6781,15 @@ See: `docs/tracy.md`.\n";
                     us,
                     bundle.display()
                 );
+            }
+
+            if let Some((failures, evidence)) = perf_threshold_failure {
+                eprintln!(
+                    "PERF threshold gate failed (failures={}, evidence={})",
+                    failures,
+                    evidence.display()
+                );
+                std::process::exit(1);
             }
 
             std::process::exit(0);
@@ -7952,7 +8293,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 52] {
+fn ui_gallery_suite_scripts() -> [&'static str; 55] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -7999,17 +8340,20 @@ fn ui_gallery_suite_scripts() -> [&'static str; 52] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 40] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 43] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -8036,10 +8380,13 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 40] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
@@ -8569,6 +8916,72 @@ fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_unde
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json"
+            | "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-drag-select-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_code_editor_torture_inlays_present_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -8613,6 +9026,20 @@ fn ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_pr
     matches!(
         name,
         "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json"
+            | "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
     )
 }
 
@@ -9092,12 +9519,18 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: bool,
+    check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: bool,
+    check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool,
+    check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool,
+    check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: bool,
+    check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_torture_inlays_present: bool,
     check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: bool,
     check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: bool,
+    check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed: bool,
     check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_word_boundary: bool,
     check_ui_gallery_code_editor_a11y_selection: bool,
@@ -9387,6 +9820,39 @@ fn apply_post_run_checks(
             warmup_frames,
         )?;
     }
+    if check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+    {
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+    {
+        check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+    {
+        check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll {
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection {
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
     if check_ui_gallery_code_editor_torture_folds_placeholder_present {
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present(
             bundle_path,
@@ -9416,6 +9882,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations {
         check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed {
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed(
             bundle_path,
             warmup_frames,
         )?;
@@ -10232,6 +10704,8 @@ mod tests {
         check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json,
         check_bundle_for_ui_gallery_code_editor_a11y_selection_json,
         check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json,
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json,
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json,
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json,
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json,
         check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json,
@@ -10405,6 +10879,597 @@ mod tests {
 
         check_bundle_for_semantics_changed_repainted_json(&bundle, Path::new("bundle.json"), 0)
             .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_gate_passes() {
+        let out_dir =
+            tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, folds: bool, inlays: bool| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "folds_fixture": folds,
+                        "inlays_fixture": inlays,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "----ab----",
+                                "text_selection": [6, 6],
+                                "text_composition": [4, 6]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        snapshot(10, true, true),
+                        snapshot(11, false, true),
+                        snapshot(12, false, false),
+                        snapshot(13, true, true)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_gate_fails_on_mismatched_preedit_text()
+     {
+        let out_dir =
+            tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 10,
+                            "frame_id": 10,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 11,
+                            "frame_id": 11,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": false,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 12,
+                            "frame_id": 12,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": false,
+                                    "inlays_fixture": false,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 13,
+                            "frame_id": 13,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        assert!(
+            check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+                &bundle_path,
+                0,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_wheel_gate_passes_when_stable() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_wheel_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, rev: u64| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123,
+                            "selection": { "anchor": 4, "caret": 4 }
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [4, 4],
+                                "text_composition": [2, 4]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 10 }
+                    ],
+                    "snapshots": [
+                        snapshot(9, 1),
+                        snapshot(10, 1)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_wheel_gate_fails_when_buffer_changes() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_wheel_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, rev: u64| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [4, 4],
+                                "text_composition": [2, 4]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 10 }
+                    ],
+                    "snapshots": [
+                        snapshot(9, 1),
+                        snapshot(10, 2)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json(
+                &bundle,
+                &bundle_path,
+                0,
+            )
+            .unwrap_err();
+        assert!(err.contains("wheel gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_drag_select_gate_passes() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_drag_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64,
+                        preedit_active: bool,
+                        rev: u64,
+                        anchor: u64,
+                        caret: u64,
+                        text_composition: serde_json::Value| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": preedit_active,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123,
+                            "selection": { "anchor": anchor, "caret": caret }
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [anchor, caret],
+                                "text_composition": text_composition
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        snapshot(10, true, 1, 4, 4, json!([2,4])),
+                        snapshot(11, false, 1, 0, 4, serde_json::Value::Null)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_drag_select_gate_fails_when_buffer_changes()
+    {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_drag_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 10,
+                            "frame_id": 10,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true,
+                                        "buffer_revision": 1,
+                                        "text_len_bytes": 123,
+                                        "selection": { "anchor": 4, "caret": 4 }
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "zzab",
+                                            "text_selection": [4, 4],
+                                            "text_composition": [2, 4]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 11,
+                            "frame_id": 11,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "torture": {
+                                        "preedit_active": false,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true,
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 123,
+                                        "selection": { "anchor": 0, "caret": 4 }
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "zzab",
+                                            "text_selection": [0, 4],
+                                            "text_composition": null
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json(
+                &bundle,
+                &bundle_path,
+                0,
+            )
+            .unwrap_err();
+        assert!(err.contains("drag-select gate failed"));
     }
 
     #[test]

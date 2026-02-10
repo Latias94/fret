@@ -14,6 +14,15 @@ pub(crate) struct WrappedLayout {
     pub lines: Vec<ShapedLineLayout>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct WrappedLineSliceFromUnwrappedLtr {
+    pub(crate) range: Range<usize>,
+    pub(crate) cluster_range: Range<usize>,
+    pub(crate) glyph_range: Range<usize>,
+    pub(crate) line_start_x: f32,
+    pub(crate) width_px: f32,
+}
+
 impl WrappedLayout {
     #[allow(dead_code)]
     pub fn hit_test_x(&self, line_index: usize, x: f32) -> (usize, CaretAffinity) {
@@ -31,6 +40,124 @@ impl WrappedLayout {
         }
         (idx, affinity)
     }
+}
+
+pub(crate) fn wrap_word_slices_from_unwrapped_ltr(
+    text: &str,
+    full: &ShapedLineLayout,
+    max_width_px: f32,
+) -> Option<Vec<WrappedLineSliceFromUnwrappedLtr>> {
+    // Be conservative: only enable this path for LTR text. RTL runs can reorder visual clusters
+    // and make glyph slicing ambiguous without additional mapping.
+    if full.clusters.iter().any(|c| c.is_rtl) || full.glyphs.iter().any(|g| g.is_rtl) {
+        return None;
+    }
+
+    if full.width <= max_width_px + 0.5 {
+        return Some(vec![WrappedLineSliceFromUnwrappedLtr {
+            range: 0..text.len(),
+            cluster_range: 0..full.clusters.len(),
+            glyph_range: 0..full.glyphs.len(),
+            line_start_x: 0.0,
+            width_px: full.width.max(0.0),
+        }]);
+    }
+
+    let mut out: Vec<WrappedLineSliceFromUnwrappedLtr> = Vec::new();
+
+    let mut line_start_byte: usize = 0;
+    let mut cluster_idx: usize = 0;
+    let mut glyph_idx: usize = 0;
+
+    while line_start_byte < text.len() && cluster_idx < full.clusters.len() {
+        while cluster_idx < full.clusters.len()
+            && full.clusters[cluster_idx].text_range.end <= line_start_byte
+        {
+            cluster_idx = cluster_idx.saturating_add(1);
+        }
+        while glyph_idx < full.glyphs.len()
+            && full.glyphs[glyph_idx].text_range.end <= line_start_byte
+        {
+            glyph_idx = glyph_idx.saturating_add(1);
+        }
+        if cluster_idx >= full.clusters.len() {
+            break;
+        }
+
+        let cluster_start_idx = cluster_idx;
+        let glyph_start_idx = glyph_idx;
+
+        let line_start_x = full.clusters[cluster_start_idx].x0;
+        let cut_end = wrap_word_cut_end_from(
+            text,
+            &full.clusters,
+            cluster_start_idx,
+            line_start_byte,
+            line_start_x,
+            max_width_px,
+        );
+
+        let mut line_end_byte = clamp_to_char_boundary(text, cut_end.min(text.len()));
+        if line_end_byte <= line_start_byte {
+            line_end_byte = first_cluster_end(
+                &text[line_start_byte..],
+                &full.clusters[cluster_start_idx..],
+            )
+            .saturating_add(line_start_byte);
+            line_end_byte = clamp_to_char_boundary(text, line_end_byte.min(text.len()));
+        }
+        if line_end_byte <= line_start_byte {
+            let first = text[line_start_byte..]
+                .chars()
+                .next()
+                .map(|c| c.len_utf8())
+                .unwrap_or(0);
+            line_end_byte = clamp_to_char_boundary(
+                text,
+                line_start_byte.saturating_add(first.max(1)).min(text.len()),
+            );
+        }
+        if line_end_byte <= line_start_byte {
+            break;
+        }
+
+        let mut cluster_end_idx = cluster_start_idx;
+        while cluster_end_idx < full.clusters.len()
+            && full.clusters[cluster_end_idx].text_range.start < line_end_byte
+        {
+            cluster_end_idx = cluster_end_idx.saturating_add(1);
+        }
+
+        let mut glyph_end_idx = glyph_start_idx;
+        while glyph_end_idx < full.glyphs.len() {
+            let g = &full.glyphs[glyph_end_idx];
+            if g.text_range.start >= line_end_byte {
+                break;
+            }
+            glyph_end_idx = glyph_end_idx.saturating_add(1);
+        }
+
+        if cluster_end_idx <= cluster_start_idx {
+            break;
+        }
+
+        let width_px =
+            (full.clusters[cluster_end_idx.saturating_sub(1)].x1 - line_start_x).max(0.0);
+
+        out.push(WrappedLineSliceFromUnwrappedLtr {
+            range: line_start_byte..line_end_byte,
+            cluster_range: cluster_start_idx..cluster_end_idx,
+            glyph_range: glyph_start_idx..glyph_end_idx,
+            line_start_x,
+            width_px,
+        });
+
+        line_start_byte = line_end_byte;
+        cluster_idx = cluster_end_idx;
+        glyph_idx = glyph_end_idx;
+    }
+
+    if out.is_empty() { None } else { Some(out) }
 }
 
 pub(crate) fn wrap_with_constraints(
@@ -659,12 +786,12 @@ fn wrap_word_range(
         );
     }
 
-    if spans.is_none() && shape_once_word_wrap_enabled(end.saturating_sub(start)) {
-        if let Some(out) =
+    if spans.is_none()
+        && shape_once_word_wrap_enabled(end.saturating_sub(start))
+        && let Some(out) =
             wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
-        {
-            return out;
-        }
+    {
+        return out;
     }
 
     let mut lines: Vec<ShapedLineLayout> = Vec::new();
@@ -796,7 +923,7 @@ fn wrap_word_range_plain_shape_once(
     }
 
     if full.width <= max_width_px + 0.5 {
-        return Some((vec![start..end], vec![full]));
+        return Some((vec![Range { start, end }], vec![full]));
     }
 
     let mut lines: Vec<ShapedLineLayout> = Vec::new();
@@ -923,6 +1050,25 @@ fn wrap_word_cut_end_from(
     line_start_x: f32,
     max_width_px: f32,
 ) -> usize {
+    wrap_word_cut_end_from_with_kind(
+        text,
+        clusters,
+        cluster_idx,
+        line_start_byte,
+        line_start_x,
+        max_width_px,
+    )
+    .0
+}
+
+fn wrap_word_cut_end_from_with_kind(
+    text: &str,
+    clusters: &[ShapedCluster],
+    cluster_idx: usize,
+    line_start_byte: usize,
+    line_start_x: f32,
+    max_width_px: f32,
+) -> (usize, bool) {
     let mut last_candidate: usize = line_start_byte;
     let mut last_fit_end: usize = line_start_byte;
     let mut first_non_whitespace: Option<usize> = None;
@@ -962,10 +1108,10 @@ fn wrap_word_cut_end_from(
     }
 
     if last_candidate > line_start_byte {
-        return last_candidate;
+        return (last_candidate, true);
     }
 
-    last_fit_end
+    (last_fit_end, false)
 }
 
 fn wrap_word_range_measure_only(

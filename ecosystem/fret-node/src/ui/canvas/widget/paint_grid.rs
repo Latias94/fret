@@ -193,9 +193,11 @@ fn grid_tile_ops(
                         Point::new(Px(x - tile_origin.x.0 - 0.5 * thickness.0), Px(0.0)),
                         Size::new(thickness, Px(tile_size_canvas)),
                     ),
-                    background: color,
+                    background: fret_core::Paint::Solid(color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -213,9 +215,11 @@ fn grid_tile_ops(
                         Point::new(Px(0.0), Px(y - tile_origin.y.0 - 0.5 * thickness.0)),
                         Size::new(Px(tile_size_canvas), thickness),
                     ),
-                    background: color,
+                    background: fret_core::Paint::Solid(color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -245,9 +249,11 @@ fn grid_tile_ops(
                             Point::new(Px(x_local - r), Px(y_local - r)),
                             Size::new(Px(d), Px(d)),
                         ),
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: corner,
                     });
                 }
@@ -278,9 +284,11 @@ fn grid_tile_ops(
                             Point::new(Px(x_local - 0.5 * thickness.0), Px(y_local - half)),
                             Size::new(thickness, Px(s)),
                         ),
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                     // Horizontal segment.
@@ -290,9 +298,11 @@ fn grid_tile_ops(
                             Point::new(Px(x_local - half), Px(y_local - 0.5 * thickness.0)),
                             Size::new(Px(s), thickness),
                         ),
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }

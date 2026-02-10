@@ -1820,6 +1820,34 @@ let avatar = shadcn::Avatar::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_IMAGE_OBJECT_FIT: &str = r#"
+## Image / Object Fit
+
+This page demonstrates:
+
+- the core `SceneOp::Image { fit }` contract (Stretch / Contain / Cover),
+- the shadcn policy recipe `MediaImage`,
+- a virtualized thumbnails list surface (VirtualList),
+- and a small streaming-update harness (partial `ImageUpdateRgba8` writes).
+"#;
+
+pub(crate) const USAGE_IMAGE_OBJECT_FIT: &str = r#"
+```rust
+// Fixed-size thumbnail (default cover):
+let thumb = shadcn::MediaImage::maybe(Some(image_id))
+    .fit(fret_core::ViewportFit::Cover)
+    .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
+    .into_element(cx);
+
+// Optional intrinsic aspect ratio wrapper (policy-owned metadata store; opt-in):
+let card = shadcn::MediaImage::maybe(Some(image_id))
+    .intrinsic_aspect_ratio_from_metadata(true)
+    .fit(fret_core::ViewportFit::Contain)
+    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_TOOLTIP: &str = r#"
 ## Tooltip
 

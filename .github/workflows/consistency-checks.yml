@@ -21,21 +21,16 @@ jobs:
           toolchain: 1.92.0
 
       - name: Check ADR numbering
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_adr_numbers.ps1
+        run: python3 tools/check_adr_numbers.py
 
       - name: Check layering policy
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_layering.ps1
+        run: python3 tools/check_layering.py
 
       - name: Check execution surface
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_execution_surface.ps1
+        run: python3 tools/check_execution_surface.py
 
       - name: Check stringly command parsing
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_stringly_command_parsing.ps1
+        run: python3 tools/check_stringly_command_parsing.py
 
       - name: Check generated icon artifacts
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack all
+        run: python3 tools/check_icons_generation.py --pack all

@@ -20,7 +20,7 @@ regression testing.
 
 See `docs/shadcn-web-goldens.md:1` for the full workflow.
 
-Quickstart (PowerShell):
+Quickstart:
 
 1) Install deps:
 
@@ -49,7 +49,7 @@ Windows font files):
 
 Alternatively, use the repo helper:
 
-`powershell -File goldens/shadcn-web/scripts/serve-v4.ps1 -Port 4020`
+`python3 goldens/shadcn-web/scripts/serve-v4.py --port 4020`
 
 5) Extract JSON goldens (Terminal B):
 

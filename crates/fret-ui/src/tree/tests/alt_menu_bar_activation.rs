@@ -1,8 +1,9 @@
+#![cfg(any(target_os = "windows", target_os = "linux"))]
+
 use super::*;
 
 use fret_runtime::{CommandMeta, CommandScope, WindowMenuBarFocusService};
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
 fn alt_key_up_emits_focus_menu_bar_when_present() {
     let mut app = crate::test_host::TestHost::new();
@@ -21,7 +22,7 @@ fn alt_key_up_emits_focus_menu_bar_when_present() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;
@@ -59,7 +60,6 @@ fn alt_key_up_emits_focus_menu_bar_when_present() {
     );
 }
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
 fn alt_key_up_does_not_emit_when_canceled_by_other_key() {
     let mut app = crate::test_host::TestHost::new();
@@ -78,7 +78,7 @@ fn alt_key_up_does_not_emit_when_canceled_by_other_key() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;

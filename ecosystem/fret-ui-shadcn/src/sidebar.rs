@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
+    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -14,7 +14,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign, OpacityProps,
     Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
 };
-use fret_ui::{CommandAvailability, ElementContext, Theme, UiHost};
+use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -22,6 +22,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{
+    ViewportQueryHysteresis, viewport_tailwind, viewport_width_at_least,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -112,6 +115,43 @@ const SIDEBAR_TOGGLE_COMMAND_ID: &str = "sidebar.toggle";
 
 const SIDEBAR_COLLAPSE_OPEN_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
 const SIDEBAR_COLLAPSE_CLOSE_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
+
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct SidebarProviderOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    last_open_mobile: bool,
+}
+
+fn sidebar_provider_open_change_events(
+    state: &mut SidebarProviderOpenChangeCallbackState,
+    open: bool,
+    open_mobile: bool,
+) -> (Option<bool>, Option<bool>) {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+        state.last_open_mobile = open_mobile;
+        return (None, None);
+    }
+
+    let open_changed = if state.last_open != open {
+        state.last_open = open;
+        Some(open)
+    } else {
+        None
+    };
+    let open_mobile_changed = if state.last_open_mobile != open_mobile {
+        state.last_open_mobile = open_mobile;
+        Some(open_mobile)
+    } else {
+        None
+    };
+
+    (open_changed, open_mobile_changed)
+}
 
 fn sidebar_open_url_on_activate(
     url: Arc<str>,
@@ -288,16 +328,24 @@ impl SidebarContext {
         self.state.collapsed()
     }
 
-    pub fn set_open<H: UiHost>(&self, host: &mut H, open: bool) {
+    pub fn set_open_with<H: UiHost>(&self, host: &mut H, update: impl Fn(bool) -> bool) {
         let _ = host.models_mut().update(&self.open, |v| {
-            *v = open;
+            *v = update(*v);
+        });
+    }
+
+    pub fn set_open<H: UiHost>(&self, host: &mut H, open: bool) {
+        self.set_open_with(host, |_| open);
+    }
+
+    pub fn set_open_mobile_with<H: UiHost>(&self, host: &mut H, update: impl Fn(bool) -> bool) {
+        let _ = host.models_mut().update(&self.open_mobile, |v| {
+            *v = update(*v);
         });
     }
 
     pub fn set_open_mobile<H: UiHost>(&self, host: &mut H, open_mobile: bool) {
-        let _ = host.models_mut().update(&self.open_mobile, |v| {
-            *v = open_mobile;
-        });
+        self.set_open_mobile_with(host, |_| open_mobile);
     }
 
     pub fn toggle_sidebar<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
@@ -474,13 +522,34 @@ fn sidebar_toggle_model(
 ///
 /// Provides shared sidebar open/collapsed state and wraps descendants in `TooltipProvider`
 /// with upstream-aligned default delay (`0`).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SidebarProvider {
     open: Option<Model<bool>>,
     default_open: bool,
     open_mobile: Option<Model<bool>>,
     default_open_mobile: bool,
-    is_mobile: bool,
+    is_mobile_override: Option<bool>,
+    is_mobile_breakpoint: Px,
+    on_open_change: Option<OnOpenChange>,
+    on_open_mobile_change: Option<OnOpenChange>,
+}
+
+impl std::fmt::Debug for SidebarProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SidebarProvider")
+            .field("open", &self.open)
+            .field("default_open", &self.default_open)
+            .field("open_mobile", &self.open_mobile)
+            .field("default_open_mobile", &self.default_open_mobile)
+            .field("is_mobile_override", &self.is_mobile_override)
+            .field("is_mobile_breakpoint", &self.is_mobile_breakpoint)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_mobile_change",
+                &self.on_open_mobile_change.is_some(),
+            )
+            .finish()
+    }
 }
 
 impl SidebarProvider {
@@ -490,7 +559,10 @@ impl SidebarProvider {
             default_open: true,
             open_mobile: None,
             default_open_mobile: false,
-            is_mobile: false,
+            is_mobile_override: None,
+            is_mobile_breakpoint: viewport_tailwind::MD,
+            on_open_change: None,
+            on_open_mobile_change: None,
         }
     }
 
@@ -514,8 +586,30 @@ impl SidebarProvider {
         self
     }
 
+    /// Overrides whether the sidebar should use mobile/offcanvas behavior.
+    ///
+    /// When unset, `SidebarProvider` infers mobile mode from the committed per-window environment
+    /// snapshot (ADR 1171) using a Tailwind-aligned viewport breakpoint.
     pub fn is_mobile(mut self, is_mobile: bool) -> Self {
-        self.is_mobile = is_mobile;
+        self.is_mobile_override = Some(is_mobile);
+        self
+    }
+
+    /// Overrides the viewport breakpoint used to infer mobile mode when `is_mobile` is not set.
+    ///
+    /// This is intentionally viewport-driven (device shell), not container-query-driven.
+    pub fn is_mobile_breakpoint(mut self, breakpoint: Px) -> Self {
+        self.is_mobile_breakpoint = breakpoint;
+        self
+    }
+
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    pub fn on_open_mobile_change(mut self, on_open_mobile_change: Option<OnOpenChange>) -> Self {
+        self.on_open_mobile_change = on_open_mobile_change;
         self
     }
 
@@ -548,23 +642,50 @@ impl SidebarProvider {
         .model();
 
         let open_now = cx.watch_model(&open).layout().copied().unwrap_or(true);
+        let open_mobile_now = cx
+            .watch_model(&open_mobile)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+
+        let (open_changed, open_mobile_changed) = cx
+            .with_state(SidebarProviderOpenChangeCallbackState::default, |state| {
+                sidebar_provider_open_change_events(state, open_now, open_mobile_now)
+            });
+        if let (Some(open), Some(handler)) = (open_changed, self.on_open_change.as_ref()) {
+            handler(open);
+        }
+        if let (Some(open_mobile), Some(handler)) =
+            (open_mobile_changed, self.on_open_mobile_change.as_ref())
+        {
+            handler(open_mobile);
+        }
+
         let state = if open_now {
             SidebarState::Expanded
         } else {
             SidebarState::Collapsed
         };
 
+        let is_mobile = self.is_mobile_override.unwrap_or_else(|| {
+            !viewport_width_at_least(
+                cx,
+                Invalidation::Layout,
+                self.is_mobile_breakpoint,
+                ViewportQueryHysteresis::default(),
+            )
+        });
         let context = SidebarContext {
             state,
             open: open.clone(),
             open_mobile: open_mobile.clone(),
-            is_mobile: self.is_mobile,
+            is_mobile,
         };
 
         let toggle_command = sidebar_toggle_command_id();
         let open_for_command = open.clone();
         let open_mobile_for_command = open_mobile.clone();
-        let is_mobile_for_command = self.is_mobile;
+        let is_mobile_for_command = is_mobile;
 
         with_sidebar_provider_state(cx, context, |cx| {
             let root = cx.root_id();
@@ -686,8 +807,6 @@ impl Sidebar {
             layout,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
-
         let surface_context = SidebarSurfaceContext {
             side,
             collapsible,
@@ -697,20 +816,25 @@ impl Sidebar {
         publish_sidebar_surface_context(cx, surface_context);
 
         if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
-            let mut surface_props = decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(sidebar_bg(&theme)))
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(&theme)))
-                    .merge(chrome),
-                LayoutRefinement::default().w_full().h_full().merge(layout),
-            );
-            surface_props.layout.overflow = Overflow::Clip;
-
             let sheet_side = sidebar_sheet_side(side);
-            let sheet_size = sidebar_width_mobile(&theme);
-            let sheet_theme = theme.clone();
+            let (surface_props, sheet_size, sheet_bg, sheet_border) = {
+                let theme = Theme::global(&*cx.app);
+                let mut surface_props = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(sidebar_bg(theme)))
+                        .border_1()
+                        .border_color(ColorRef::Color(sidebar_border(theme)))
+                        .merge(chrome),
+                    LayoutRefinement::default().w_full().h_full().merge(layout),
+                );
+                surface_props.layout.overflow = Overflow::Clip;
+
+                let sheet_size = sidebar_width_mobile(theme);
+                let sheet_bg = sidebar_bg(theme);
+                let sheet_border = sidebar_border(theme);
+                (surface_props, sheet_size, sheet_bg, sheet_border)
+            };
             return Sheet::new(sidebar_ctx.open_mobile)
                 .side(sheet_side)
                 .size(sheet_size)
@@ -731,8 +855,8 @@ impl Sidebar {
                         SheetContent::new([surface])
                             .refine_style(
                                 ChromeRefinement::default()
-                                    .bg(ColorRef::Color(sidebar_bg(&sheet_theme)))
-                                    .border_color(ColorRef::Color(sidebar_border(&sheet_theme)))
+                                    .bg(ColorRef::Color(sheet_bg))
+                                    .border_color(ColorRef::Color(sheet_border))
                                     .p(Space::N0),
                             )
                             .refine_layout(
@@ -751,52 +875,56 @@ impl Sidebar {
 
         let motion = sidebar_collapse_motion(cx, collapsed);
         let expanded_progress = motion.progress;
-        let inner_w = transition_prim::lerp_px(
-            sidebar_width_icon(&theme),
-            sidebar_width(&theme),
-            expanded_progress,
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let inner_w = transition_prim::lerp_px(
+                sidebar_width_icon(theme),
+                sidebar_width(theme),
+                expanded_progress,
+            );
 
-        let variant_uses_outer_gap =
-            matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
-        let outer_gap = if variant_uses_outer_gap {
-            decl_style::space(&theme, Space::N2)
-        } else {
-            Px(0.0)
+            let variant_uses_outer_gap =
+                matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
+            let outer_gap = if variant_uses_outer_gap {
+                decl_style::space(theme, Space::N2)
+            } else {
+                Px(0.0)
+            };
+            let outer_border = if variant_uses_outer_gap {
+                Px(1.0)
+            } else {
+                Px(0.0)
+            };
+            let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+            let layout = LayoutRefinement::default()
+                .w_px(total_w)
+                .h_full()
+                .merge(layout);
+
+            let mut chrome = ChromeRefinement::default()
+                .bg(ColorRef::Color(sidebar_bg(theme)))
+                .merge(chrome);
+
+            if variant_uses_outer_gap {
+                chrome = chrome.px(Space::N2).py(Space::N2);
+            } else {
+                chrome = chrome
+                    .border_1()
+                    .border_color(ColorRef::Color(sidebar_border(theme)));
+            }
+
+            if matches!(variant, SidebarVariant::Floating) {
+                chrome = chrome
+                    .border_1()
+                    .border_color(ColorRef::Color(sidebar_border(theme)))
+                    .rounded(Radius::Lg)
+                    .shadow_sm();
+            }
+
+            let mut props = decl_style::container_props(theme, chrome, layout);
+            props.layout.overflow = Overflow::Clip;
+            props
         };
-        let outer_border = if variant_uses_outer_gap {
-            Px(1.0)
-        } else {
-            Px(0.0)
-        };
-        let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
-        let layout = LayoutRefinement::default()
-            .w_px(total_w)
-            .h_full()
-            .merge(layout);
-
-        let mut chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(sidebar_bg(&theme)))
-            .merge(chrome);
-
-        if variant_uses_outer_gap {
-            chrome = chrome.px(Space::N2).py(Space::N2);
-        } else {
-            chrome = chrome
-                .border_1()
-                .border_color(ColorRef::Color(sidebar_border(&theme)));
-        }
-
-        if matches!(variant, SidebarVariant::Floating) {
-            chrome = chrome
-                .border_1()
-                .border_color(ColorRef::Color(sidebar_border(&theme)))
-                .rounded(Radius::Lg)
-                .shadow_sm();
-        }
-
-        let mut props = decl_style::container_props(&theme, chrome, layout);
-        props.layout.overflow = Overflow::Clip;
 
         let children = with_sidebar_surface_state(cx, surface_context, |cx| {
             render_children(cx).into_iter().collect::<Vec<_>>()
@@ -818,8 +946,6 @@ impl Sidebar {
             layout,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
-
         let surface_context = SidebarSurfaceContext {
             side,
             collapsible,
@@ -829,20 +955,25 @@ impl Sidebar {
         publish_sidebar_surface_context(cx, surface_context);
 
         if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
-            let mut surface_props = decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(sidebar_bg(&theme)))
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(&theme)))
-                    .merge(chrome),
-                LayoutRefinement::default().w_full().h_full().merge(layout),
-            );
-            surface_props.layout.overflow = Overflow::Clip;
-
             let sheet_side = sidebar_sheet_side(side);
-            let sheet_size = sidebar_width_mobile(&theme);
-            let sheet_theme = theme.clone();
+            let (surface_props, sheet_size, sheet_bg, sheet_border) = {
+                let theme = Theme::global(&*cx.app);
+                let mut surface_props = decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(sidebar_bg(theme)))
+                        .border_1()
+                        .border_color(ColorRef::Color(sidebar_border(theme)))
+                        .merge(chrome),
+                    LayoutRefinement::default().w_full().h_full().merge(layout),
+                );
+                surface_props.layout.overflow = Overflow::Clip;
+
+                let sheet_size = sidebar_width_mobile(theme);
+                let sheet_bg = sidebar_bg(theme);
+                let sheet_border = sidebar_border(theme);
+                (surface_props, sheet_size, sheet_bg, sheet_border)
+            };
             return Sheet::new(sidebar_ctx.open_mobile)
                 .side(sheet_side)
                 .size(sheet_size)
@@ -862,8 +993,8 @@ impl Sidebar {
                         SheetContent::new([surface])
                             .refine_style(
                                 ChromeRefinement::default()
-                                    .bg(ColorRef::Color(sidebar_bg(&sheet_theme)))
-                                    .border_color(ColorRef::Color(sidebar_border(&sheet_theme)))
+                                    .bg(ColorRef::Color(sheet_bg))
+                                    .border_color(ColorRef::Color(sheet_border))
                                     .p(Space::N0),
                             )
                             .refine_layout(
@@ -882,52 +1013,56 @@ impl Sidebar {
 
         let motion = sidebar_collapse_motion(cx, collapsed);
         let expanded_progress = motion.progress;
-        let inner_w = transition_prim::lerp_px(
-            sidebar_width_icon(&theme),
-            sidebar_width(&theme),
-            expanded_progress,
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let inner_w = transition_prim::lerp_px(
+                sidebar_width_icon(theme),
+                sidebar_width(theme),
+                expanded_progress,
+            );
 
-        let variant_uses_outer_gap =
-            matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
-        let outer_gap = if variant_uses_outer_gap {
-            decl_style::space(&theme, Space::N2)
-        } else {
-            Px(0.0)
+            let variant_uses_outer_gap =
+                matches!(variant, SidebarVariant::Floating | SidebarVariant::Inset);
+            let outer_gap = if variant_uses_outer_gap {
+                decl_style::space(theme, Space::N2)
+            } else {
+                Px(0.0)
+            };
+            let outer_border = if variant_uses_outer_gap {
+                Px(1.0)
+            } else {
+                Px(0.0)
+            };
+            let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
+            let layout = LayoutRefinement::default()
+                .w_px(total_w)
+                .h_full()
+                .merge(layout);
+
+            let mut chrome = ChromeRefinement::default()
+                .bg(ColorRef::Color(sidebar_bg(theme)))
+                .merge(chrome);
+
+            if variant_uses_outer_gap {
+                chrome = chrome.px(Space::N2).py(Space::N2);
+            } else {
+                chrome = chrome
+                    .border_1()
+                    .border_color(ColorRef::Color(sidebar_border(theme)));
+            }
+
+            if matches!(variant, SidebarVariant::Floating) {
+                chrome = chrome
+                    .border_1()
+                    .border_color(ColorRef::Color(sidebar_border(theme)))
+                    .rounded(Radius::Lg)
+                    .shadow_sm();
+            }
+
+            let mut props = decl_style::container_props(theme, chrome, layout);
+            props.layout.overflow = Overflow::Clip;
+            props
         };
-        let outer_border = if variant_uses_outer_gap {
-            Px(1.0)
-        } else {
-            Px(0.0)
-        };
-        let total_w = Px(inner_w.0 + outer_gap.0 * 2.0 + outer_border.0 * 2.0);
-        let layout = LayoutRefinement::default()
-            .w_px(total_w)
-            .h_full()
-            .merge(layout);
-
-        let mut chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(sidebar_bg(&theme)))
-            .merge(chrome);
-
-        if variant_uses_outer_gap {
-            chrome = chrome.px(Space::N2).py(Space::N2);
-        } else {
-            chrome = chrome
-                .border_1()
-                .border_color(ColorRef::Color(sidebar_border(&theme)));
-        }
-
-        if matches!(variant, SidebarVariant::Floating) {
-            chrome = chrome
-                .border_1()
-                .border_color(ColorRef::Color(sidebar_border(&theme)))
-                .rounded(Radius::Lg)
-                .shadow_sm();
-        }
-
-        let mut props = decl_style::container_props(&theme, chrome, layout);
-        props.layout.overflow = Overflow::Clip;
 
         with_sidebar_surface_state(cx, surface_context, |cx| {
             shadcn_layout::container_flow(cx, props, children)
@@ -1122,8 +1257,6 @@ impl SidebarRail {
         let collapsible = surface_ctx.map(|ctx| ctx.collapsible).unwrap_or_default();
         let variant = surface_ctx.map(|ctx| ctx.variant).unwrap_or_default();
 
-        let theme = Theme::global(&*cx.app).clone();
-
         let rail_layout = {
             let mut layout = LayoutRefinement::default()
                 .absolute()
@@ -1175,30 +1308,42 @@ impl SidebarRail {
                 }))
             };
 
-        let layout = decl_style::layout_style(&theme, rail_layout.merge(self.layout));
         let disabled = self.disabled
             || command
                 .as_ref()
                 .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-        let mut props = PressableProps {
-            layout,
-            enabled: !disabled,
-            focusable: false,
-            ..Default::default()
-        };
-        props.a11y.role = Some(SemanticsRole::Button);
-        props.a11y.label = Some(Arc::from("Toggle Sidebar"));
+
+        let mut rail = Button::new("Toggle Sidebar")
+            .variant(ButtonVariant::Ghost)
+            .size(ButtonSize::IconSm)
+            .on_hover_change(Arc::new(move |host, acx, hovered| {
+                if hovered {
+                    host.push_effect(Effect::CursorSetIcon {
+                        window: acx.window,
+                        icon: CursorIcon::ColResize,
+                    });
+                }
+            }))
+            .disabled(disabled)
+            .refine_style(
+                ChromeRefinement::default()
+                    .p(Space::N0)
+                    .rounded(Radius::Md)
+                    .merge(self.chrome),
+            )
+            .refine_layout(rail_layout.merge(self.layout));
+
+        if let Some(command) = command {
+            rail = rail.on_click(command);
+        }
+        if let Some(on_activate) = toggle_on_activate {
+            rail = rail.on_activate(on_activate);
+        }
         if let Some(test_id) = self.test_id {
-            props.a11y.test_id = Some(test_id);
+            rail = rail.test_id(test_id);
         }
 
-        cx.pressable(props, move |cx, _st| {
-            cx.pressable_dispatch_command_if_enabled_opt(command);
-            if let Some(on_activate) = toggle_on_activate.clone() {
-                cx.pressable_on_activate(on_activate);
-            }
-            Vec::new()
-        })
+        rail.into_element(cx)
     }
 }
 
@@ -1230,7 +1375,6 @@ impl SidebarInset {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let sidebar_ctx = use_sidebar(cx);
         let surface_ctx = use_sidebar_surface(cx);
         let inset_variant = surface_ctx
@@ -1240,8 +1384,8 @@ impl SidebarInset {
             .as_ref()
             .is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
 
-        let mut chrome =
-            ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("background")));
+        let background = Theme::global(&*cx.app).color_required("background");
+        let mut chrome = ChromeRefinement::default().bg(ColorRef::Color(background));
         let mut layout = LayoutRefinement::default().w_full().h_full().flex_1();
 
         if inset_variant {
@@ -1255,7 +1399,10 @@ impl SidebarInset {
 
         chrome = chrome.merge(self.chrome);
         layout = layout.merge(self.layout);
-        let props = decl_style::container_props(&theme, chrome, layout);
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(theme, chrome, layout)
+        };
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }
@@ -1323,14 +1470,11 @@ impl SidebarInput {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let background = Theme::global(&*cx.app).color_required("background");
 
         let mut input = Input::new(self.model)
             .disabled(self.disabled)
-            .style(
-                ShadcnInputStyle::default()
-                    .background(ColorRef::Color(theme.color_required("background"))),
-            )
+            .style(ShadcnInputStyle::default().background(ColorRef::Color(background)))
             .refine_style(self.chrome)
             .refine_layout(
                 LayoutRefinement::default()
@@ -1381,17 +1525,21 @@ impl SidebarSeparator {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let thickness = theme
-            .metric_by_key("component.separator.px")
-            .unwrap_or(Px(1.0));
-        let margin_x = decl_style::space(&theme, Space::N2);
-        let mut layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .mx_px(margin_x)
-                .merge(self.layout),
-        );
+        let (thickness, mut layout, background) = {
+            let theme = Theme::global(&*cx.app);
+            let thickness = theme
+                .metric_by_key("component.separator.px")
+                .unwrap_or(Px(1.0));
+            let margin_x = decl_style::space(theme, Space::N2);
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .mx_px(margin_x)
+                    .merge(self.layout),
+            );
+            let background = sidebar_border(theme);
+            (thickness, layout, background)
+        };
 
         match self.orientation {
             SeparatorOrientation::Horizontal => {
@@ -1417,7 +1565,7 @@ impl SidebarSeparator {
         cx.container(
             fret_ui::element::ContainerProps {
                 layout,
-                background: Some(sidebar_border(&theme)),
+                background: Some(background),
                 ..Default::default()
             },
             |_cx| Vec::new(),
@@ -1437,12 +1585,14 @@ impl SidebarHeader {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default().p(Space::N2),
-            LayoutRefinement::default(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default().p(Space::N2),
+                LayoutRefinement::default(),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
     }
@@ -1460,12 +1610,14 @@ impl SidebarFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default().p(Space::N2),
-            LayoutRefinement::default(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default().p(Space::N2),
+                LayoutRefinement::default(),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
     }
@@ -1494,7 +1646,10 @@ impl SidebarContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
-        let theme = Theme::global(&*cx.app).clone();
+        let gap = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::space(theme, Space::N2)
+        };
 
         let mut layout = LayoutRefinement::default().min_h_0().flex_1().w_full();
         if collapsed {
@@ -1503,7 +1658,6 @@ impl SidebarContent {
 
         let children = self.children;
         decl_scroll::overflow_scrollbar(cx, layout, move |cx| {
-            let gap = decl_style::space(&theme, Space::N2);
             let col = FlexProps {
                 direction: fret_core::Axis::Vertical,
                 gap,
@@ -1535,13 +1689,15 @@ impl SidebarGroup {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let chrome = ChromeRefinement::default().p(Space::N2);
-        let props = decl_style::container_props(
-            &theme,
-            chrome,
-            LayoutRefinement::default().w_full().min_w_0().relative(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                chrome,
+                LayoutRefinement::default().w_full().min_w_0().relative(),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_vstack(
             cx,
@@ -1576,7 +1732,6 @@ impl SidebarGroupLabel {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
-        let theme = Theme::global(&*cx.app).clone();
         let motion = sidebar_collapse_motion(cx, collapsed);
         if !motion.present {
             return cx.spacer(fret_ui::element::SpacerProps {
@@ -1585,16 +1740,18 @@ impl SidebarGroupLabel {
             });
         }
 
-        let fg = sidebar_fg(&theme);
-        let mut fg = fg;
-        fg.a = (fg.a * 0.7).clamp(0.0, 1.0);
-
-        let size = theme
-            .metric_by_key("component.sidebar.group_label_px")
-            .unwrap_or(Px(12.0));
-        let line_height = theme
-            .metric_by_key("component.sidebar.group_label_line_height")
-            .unwrap_or(Px(16.0));
+        let (fg, size, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let mut fg = sidebar_fg(theme);
+            fg.a = (fg.a * 0.7).clamp(0.0, 1.0);
+            let size = theme
+                .metric_by_key("component.sidebar.group_label_px")
+                .unwrap_or(Px(12.0));
+            let line_height = theme
+                .metric_by_key("component.sidebar.group_label_line_height")
+                .unwrap_or(Px(16.0));
+            (fg, size, line_height)
+        };
 
         let text = ui::text(cx, self.text)
             .text_size_px(size)
@@ -1721,24 +1878,27 @@ impl SidebarGroupAction {
             });
         }
 
-        let theme = Theme::global(&*cx.app).clone();
-        let top = theme
-            .metric_by_key("component.sidebar.group_action.top")
-            .unwrap_or(Px(14.0));
-        let right = theme
-            .metric_by_key("component.sidebar.group_action.right")
-            .unwrap_or(Px(12.0));
-        let size = theme
-            .metric_by_key("component.sidebar.group_action.size")
-            .unwrap_or(Px(20.0));
-
         let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
-        let hit_expand = if is_mobile {
-            theme
-                .metric_by_key("component.sidebar.group_action.mobile_hit_expand")
-                .unwrap_or(Px(8.0))
-        } else {
-            Px(0.0)
+        let (top, right, size, hit_expand) = {
+            let theme = Theme::global(&*cx.app);
+            let top = theme
+                .metric_by_key("component.sidebar.group_action.top")
+                .unwrap_or(Px(14.0));
+            let right = theme
+                .metric_by_key("component.sidebar.group_action.right")
+                .unwrap_or(Px(12.0));
+            let size = theme
+                .metric_by_key("component.sidebar.group_action.size")
+                .unwrap_or(Px(20.0));
+
+            let hit_expand = if is_mobile {
+                theme
+                    .metric_by_key("component.sidebar.group_action.mobile_hit_expand")
+                    .unwrap_or(Px(8.0))
+            } else {
+                Px(0.0)
+            };
+            (top, right, size, hit_expand)
         };
         let hit_size = Px(size.0 + hit_expand.0 * 2.0);
         let hit_top = Px(top.0 - hit_expand.0);
@@ -1772,12 +1932,17 @@ impl SidebarGroupAction {
             || on_click
                 .as_ref()
                 .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-        let radius = decl_style::radius(&theme, Radius::Md);
-        let ring = sidebar_ring(&theme, radius);
+        let (ring, action_layout_style) = {
+            let theme = Theme::global(&*cx.app);
+            let radius = decl_style::radius(theme, Radius::Md);
+            let ring = sidebar_ring(theme, radius);
+            let action_layout_style = decl_style::layout_style(theme, action_layout);
+            (ring, action_layout_style)
+        };
         let pressable = PressableProps {
             enabled: !disabled,
             focus_ring: Some(ring),
-            layout: decl_style::layout_style(&theme, action_layout),
+            layout: action_layout_style,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(label),
@@ -1793,16 +1958,16 @@ impl SidebarGroupAction {
                 cx.pressable_on_activate(on_activate);
             }
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app);
             let fg = if disabled {
-                alpha_mul(sidebar_fg(&theme), 0.5)
+                alpha_mul(sidebar_fg(theme), 0.5)
             } else if st.hovered || st.pressed {
-                sidebar_accent_fg(&theme)
+                sidebar_accent_fg(theme)
             } else {
-                sidebar_fg(&theme)
+                sidebar_fg(theme)
             };
             let bg = if st.hovered || st.pressed {
-                sidebar_accent(&theme)
+                sidebar_accent(theme)
             } else {
                 Color::TRANSPARENT
             };
@@ -1814,7 +1979,7 @@ impl SidebarGroupAction {
                 chrome = chrome.bg(ColorRef::Color(bg));
             }
             let props = decl_style::container_props(
-                &theme,
+                theme,
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
@@ -1851,12 +2016,14 @@ impl SidebarGroupContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            self.chrome,
-            LayoutRefinement::default().w_full().merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                self.chrome,
+                LayoutRefinement::default().w_full().merge(self.layout),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }
@@ -2001,16 +2168,18 @@ impl SidebarMenuItem {
         F: Fn(&mut ElementContext<'_, H>) -> Vec<AnyElement> + Clone,
     {
         let open = self.open;
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default()
-                .relative()
-                .w_full()
-                .min_w_0()
-                .merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default()
+                    .relative()
+                    .w_full()
+                    .min_w_0()
+                    .merge(self.layout),
+            )
+        };
 
         let mut semantics = SemanticsDecoration::default().role(SemanticsRole::ListItem);
         if let Some(test_id) = self.test_id {
@@ -2044,16 +2213,18 @@ impl SidebarMenuItem {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open;
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default()
-                .relative()
-                .w_full()
-                .min_w_0()
-                .merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default()
+                    .relative()
+                    .w_full()
+                    .min_w_0()
+                    .merge(self.layout),
+            )
+        };
 
         let mut semantics = SemanticsDecoration::default().role(SemanticsRole::ListItem);
         if let Some(test_id) = self.test_id {
@@ -2219,22 +2390,24 @@ impl SidebarMenuAction {
             }
         }
 
-        let theme = Theme::global(&*cx.app).clone();
         let top = sidebar_menu_affordance_top(self.size);
-        let right = theme
-            .metric_by_key("component.sidebar.menu_action.right")
-            .unwrap_or(Px(4.0));
-        let size = theme
-            .metric_by_key("component.sidebar.menu_action.size")
-            .unwrap_or(Px(20.0));
-
         let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.is_mobile);
-        let hit_expand = if is_mobile {
-            theme
-                .metric_by_key("component.sidebar.menu_action.mobile_hit_expand")
-                .unwrap_or(Px(8.0))
-        } else {
-            Px(0.0)
+        let (right, size, hit_expand) = {
+            let theme = Theme::global(&*cx.app);
+            let right = theme
+                .metric_by_key("component.sidebar.menu_action.right")
+                .unwrap_or(Px(4.0));
+            let size = theme
+                .metric_by_key("component.sidebar.menu_action.size")
+                .unwrap_or(Px(20.0));
+            let hit_expand = if is_mobile {
+                theme
+                    .metric_by_key("component.sidebar.menu_action.mobile_hit_expand")
+                    .unwrap_or(Px(8.0))
+            } else {
+                Px(0.0)
+            };
+            (right, size, hit_expand)
         };
         let hit_size = Px(size.0 + hit_expand.0 * 2.0);
         let hit_top = Px(top.0 - hit_expand.0);
@@ -2268,12 +2441,17 @@ impl SidebarMenuAction {
             || on_click
                 .as_ref()
                 .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-        let radius = decl_style::radius(&theme, Radius::Md);
-        let ring = sidebar_ring(&theme, radius);
+        let (ring, action_layout_style) = {
+            let theme = Theme::global(&*cx.app);
+            let radius = decl_style::radius(theme, Radius::Md);
+            let ring = sidebar_ring(theme, radius);
+            let action_layout_style = decl_style::layout_style(theme, action_layout);
+            (ring, action_layout_style)
+        };
         let pressable = PressableProps {
             enabled: !disabled,
             focus_ring: Some(ring),
-            layout: decl_style::layout_style(&theme, action_layout),
+            layout: action_layout_style,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(label),
@@ -2289,16 +2467,16 @@ impl SidebarMenuAction {
                 cx.pressable_on_activate(on_activate);
             }
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app);
             let fg = if disabled {
-                alpha_mul(sidebar_fg(&theme), 0.5)
+                alpha_mul(sidebar_fg(theme), 0.5)
             } else if st.hovered || st.pressed {
-                sidebar_accent_fg(&theme)
+                sidebar_accent_fg(theme)
             } else {
-                sidebar_fg(&theme)
+                sidebar_fg(theme)
             };
             let bg = if st.hovered || st.pressed {
-                sidebar_accent(&theme)
+                sidebar_accent(theme)
             } else {
                 Color::TRANSPARENT
             };
@@ -2310,7 +2488,7 @@ impl SidebarMenuAction {
                 chrome = chrome.bg(ColorRef::Color(bg));
             }
             let props = decl_style::container_props(
-                &theme,
+                theme,
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
@@ -2377,45 +2555,49 @@ impl SidebarMenuBadge {
             });
         }
 
-        let theme = Theme::global(&*cx.app).clone();
         let top = sidebar_menu_affordance_top(self.size);
-        let right = theme
-            .metric_by_key("component.sidebar.menu_badge.right")
-            .unwrap_or(Px(4.0));
-        let h = theme
-            .metric_by_key("component.sidebar.menu_badge.h")
-            .unwrap_or(Px(20.0));
-        let min_w = theme
-            .metric_by_key("component.sidebar.menu_badge.min_w")
-            .unwrap_or(Px(20.0));
-        let text_px = theme
-            .metric_by_key("component.sidebar.menu_badge.text_px")
-            .unwrap_or(Px(12.0));
-        let text_lh = theme
-            .metric_by_key("component.sidebar.menu_badge.line_height")
-            .unwrap_or(Px(16.0));
+        let (props, text_px, text_lh, fg) = {
+            let theme = Theme::global(&*cx.app);
+            let right = theme
+                .metric_by_key("component.sidebar.menu_badge.right")
+                .unwrap_or(Px(4.0));
+            let h = theme
+                .metric_by_key("component.sidebar.menu_badge.h")
+                .unwrap_or(Px(20.0));
+            let min_w = theme
+                .metric_by_key("component.sidebar.menu_badge.min_w")
+                .unwrap_or(Px(20.0));
+            let text_px = theme
+                .metric_by_key("component.sidebar.menu_badge.text_px")
+                .unwrap_or(Px(12.0));
+            let text_lh = theme
+                .metric_by_key("component.sidebar.menu_badge.line_height")
+                .unwrap_or(Px(16.0));
+            let fg = sidebar_fg(theme);
 
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .px(Space::N1)
-                .rounded(Radius::Md)
-                .merge(self.chrome),
-            LayoutRefinement::default()
-                .absolute()
-                .top_px(top)
-                .right_px(right)
-                .h_px(h)
-                .min_h(h)
-                .min_w(min_w)
-                .merge(self.layout),
-        );
+            let props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .px(Space::N1)
+                    .rounded(Radius::Md)
+                    .merge(self.chrome),
+                LayoutRefinement::default()
+                    .absolute()
+                    .top_px(top)
+                    .right_px(right)
+                    .h_px(h)
+                    .min_h(h)
+                    .min_w(min_w)
+                    .merge(self.layout),
+            );
+            (props, text_px, text_lh, fg)
+        };
 
         let text = ui::text(cx, self.label)
             .text_size_px(text_px)
             .line_height_px(text_lh)
             .font_medium()
-            .text_color(ColorRef::Color(sidebar_fg(&theme)))
+            .text_color(ColorRef::Color(fg))
             .nowrap()
             .into_element(cx);
 
@@ -2489,19 +2671,21 @@ impl SidebarMenuSkeleton {
             });
         }
 
-        let theme = Theme::global(&*cx.app).clone();
-        let h = sidebar_menu_button_h(&theme, SidebarMenuButtonSize::Default);
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .px(Space::N2)
-                .rounded(Radius::Md)
-                .merge(self.chrome),
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(h)
-                .merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let h = sidebar_menu_button_h(theme, SidebarMenuButtonSize::Default);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .px(Space::N2)
+                    .rounded(Radius::Md)
+                    .merge(self.chrome),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(h)
+                    .merge(self.layout),
+            )
+        };
 
         let icon = if self.show_icon {
             Some(
@@ -2580,21 +2764,23 @@ impl SidebarMenuSub {
             });
         }
 
-        let theme = Theme::global(&*cx.app).clone();
-        let mut props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .border_1()
-                .border_color(ColorRef::Color(sidebar_border(&theme)))
-                .px(Space::N2p5)
-                .py(Space::N0p5)
-                .merge(self.chrome),
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .mx_px(Px(14.0))
-                .merge(self.layout),
-        );
+        let mut props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .border_color(ColorRef::Color(sidebar_border(theme)))
+                    .px(Space::N2p5)
+                    .py(Space::N0p5)
+                    .merge(self.chrome),
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .mx_px(Px(14.0))
+                    .merge(self.layout),
+            )
+        };
         props.border.top = Px(0.0);
         props.border.right = Px(0.0);
         props.border.bottom = Px(0.0);
@@ -2642,16 +2828,18 @@ impl SidebarMenuSubItem {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default()
-                .relative()
-                .w_full()
-                .min_w_0()
-                .merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default()
+                    .relative()
+                    .w_full()
+                    .min_w_0()
+                    .merge(self.layout),
+            )
+        };
 
         let mut semantics = SemanticsDecoration::default().role(SemanticsRole::ListItem);
         if let Some(test_id) = self.test_id {
@@ -2806,8 +2994,15 @@ impl SidebarMenuSubButton {
             });
         }
 
-        let theme = Theme::global(&*cx.app).clone();
-        let ring = sidebar_ring(&theme, decl_style::radius(&theme, Radius::Md));
+        let (ring, pressable_layout) = {
+            let theme = Theme::global(&*cx.app);
+            let radius = decl_style::radius(theme, Radius::Md);
+            let ring = sidebar_ring(theme, radius);
+            let h = sidebar_menu_sub_button_h(theme);
+            let pressable_layout =
+                decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_px(h));
+            (ring, pressable_layout)
+        };
         let label = self.label.clone();
         let on_click = self.on_click.clone();
         let on_navigate = self.on_navigate.clone();
@@ -2832,12 +3027,7 @@ impl SidebarMenuSubButton {
         let pressable = PressableProps {
             enabled: !disabled,
             focus_ring: Some(ring),
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(sidebar_menu_sub_button_h(&theme)),
-            ),
+            layout: pressable_layout,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(a11y_role),
                 label: Some(label.clone()),
@@ -2866,43 +3056,46 @@ impl SidebarMenuSubButton {
                 cx.pressable_on_activate(on_activate);
             }
 
-            let theme = Theme::global(&*cx.app).clone();
-            let bg = if active || st.hovered || st.pressed {
-                sidebar_accent(&theme)
-            } else {
-                Color::TRANSPARENT
-            };
-            let fg = if disabled {
-                alpha_mul(sidebar_fg(&theme), 0.5)
-            } else if active || st.hovered || st.pressed {
-                sidebar_accent_fg(&theme)
-            } else {
-                sidebar_fg(&theme)
-            };
+            let (fg, props, style, gap) = {
+                let theme = Theme::global(&*cx.app);
+                let bg = if active || st.hovered || st.pressed {
+                    sidebar_accent(theme)
+                } else {
+                    Color::TRANSPARENT
+                };
+                let fg = if disabled {
+                    alpha_mul(sidebar_fg(theme), 0.5)
+                } else if active || st.hovered || st.pressed {
+                    sidebar_accent_fg(theme)
+                } else {
+                    sidebar_fg(theme)
+                };
 
-            let chrome = if bg.a > 0.0 {
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(bg))
-                    .rounded(Radius::Md)
-            } else {
-                ChromeRefinement::default().rounded(Radius::Md)
+                let chrome = if bg.a > 0.0 {
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(bg))
+                        .rounded(Radius::Md)
+                } else {
+                    ChromeRefinement::default().rounded(Radius::Md)
+                };
+                let h = sidebar_menu_sub_button_h(theme);
+                let props = decl_style::container_props(
+                    theme,
+                    chrome,
+                    LayoutRefinement::default().w_full().h_px(h),
+                );
+                let style = menu_sub_button_style(theme, size);
+                let gap = decl_style::space(theme, Space::N2);
+                (fg, props, style, gap)
             };
-            let props = decl_style::container_props(
-                &theme,
-                chrome,
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(sidebar_menu_sub_button_h(&theme)),
-            );
-            let style = menu_sub_button_style(&theme, size);
 
             vec![cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: decl_style::space(&theme, Space::N2),
+                    gap,
                     align: CrossAlign::Center,
                     justify: MainAlign::Start,
-                    padding: Edges::all(decl_style::space(&theme, Space::N2)),
+                    padding: Edges::all(gap),
                     layout: fret_ui::element::LayoutStyle {
                         size: fret_ui::element::SizeStyle {
                             width: fret_ui::element::Length::Fill,
@@ -3098,18 +3291,23 @@ impl SidebarMenuButton {
         cx: &mut ElementContext<'_, H>,
         expanded_progress: f32,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let radius = decl_style::radius(&theme, Radius::Md);
-        let ring = sidebar_ring(&theme, radius);
+        let (ring, pressable_layout) = {
+            let theme = Theme::global(&*cx.app);
+            let radius = decl_style::radius(theme, Radius::Md);
+            let ring = sidebar_ring(theme, radius);
+            let h = transition_prim::lerp_px(
+                sidebar_menu_button_collapsed_h(theme),
+                sidebar_menu_button_h(theme, self.size),
+                expanded_progress,
+            );
+            let pressable_layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
+            );
+            (ring, pressable_layout)
+        };
 
         let label = self.label.clone();
-        let h = transition_prim::lerp_px(
-            sidebar_menu_button_collapsed_h(&theme),
-            sidebar_menu_button_h(&theme, self.size),
-            expanded_progress,
-        );
-
         let on_click = self.on_click.clone();
         let on_navigate = self.on_navigate.clone();
         let on_activate = self.on_activate.clone();
@@ -3132,10 +3330,7 @@ impl SidebarMenuButton {
         let pressable = PressableProps {
             enabled: !disabled,
             focus_ring: Some(ring),
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
-            ),
+            layout: pressable_layout,
             a11y: fret_ui::element::PressableA11y {
                 role: Some(a11y_role),
                 label: Some(label.clone()),
@@ -3167,57 +3362,62 @@ impl SidebarMenuButton {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_on_activate(on_activate);
             }
-            let theme = Theme::global(&*cx.app).clone();
+            let (fg, props, inner_gap, label_style) = {
+                let theme = Theme::global(&*cx.app);
+                let bg = if active || st.hovered || st.pressed {
+                    sidebar_accent(theme)
+                } else {
+                    Color::TRANSPARENT
+                };
 
-            let bg = if active || st.hovered || st.pressed {
-                sidebar_accent(&theme)
-            } else {
-                Color::TRANSPARENT
+                let fg = if disabled {
+                    alpha_mul(sidebar_fg(theme), 0.5)
+                } else if active || st.hovered || st.pressed {
+                    sidebar_accent_fg(theme)
+                } else {
+                    sidebar_fg(theme)
+                };
+
+                let chrome = if matches!(variant, SidebarMenuButtonVariant::Outline) {
+                    let background = theme.color_required("background");
+                    let border = sidebar_border(theme);
+                    let mut chrome = ChromeRefinement::default()
+                        .bg(ColorRef::Color(background))
+                        .border_1()
+                        .border_color(ColorRef::Color(border))
+                        .rounded(Radius::Md);
+
+                    if bg.a > 0.0 {
+                        chrome = chrome
+                            .bg(ColorRef::Color(bg))
+                            .border_color(ColorRef::Color(bg));
+                    }
+                    chrome
+                } else if bg.a > 0.0 {
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(bg))
+                        .rounded(Radius::Md)
+                } else {
+                    ChromeRefinement::default().rounded(Radius::Md)
+                };
+
+                let h = transition_prim::lerp_px(
+                    sidebar_menu_button_collapsed_h(theme),
+                    sidebar_menu_button_h(theme, size),
+                    expanded_progress,
+                );
+
+                let mut props = decl_style::container_props(
+                    theme,
+                    chrome,
+                    LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
+                );
+                props.layout.overflow = Overflow::Clip;
+
+                let inner_gap = decl_style::space(theme, Space::N2); // `gap-2`
+                let label_style = menu_button_style(theme);
+                (fg, props, inner_gap, label_style)
             };
-
-            let fg = if disabled {
-                alpha_mul(sidebar_fg(&theme), 0.5)
-            } else if active || st.hovered || st.pressed {
-                sidebar_accent_fg(&theme)
-            } else {
-                sidebar_fg(&theme)
-            };
-
-            let chrome = if matches!(variant, SidebarMenuButtonVariant::Outline) {
-                let mut chrome = ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .border_1()
-                    .border_color(ColorRef::Color(sidebar_border(&theme)))
-                    .rounded(Radius::Md);
-
-                if bg.a > 0.0 {
-                    chrome = chrome
-                        .bg(ColorRef::Color(sidebar_accent(&theme)))
-                        .border_color(ColorRef::Color(sidebar_accent(&theme)));
-                }
-                chrome
-            } else if bg.a > 0.0 {
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(bg))
-                    .rounded(Radius::Md)
-            } else {
-                ChromeRefinement::default().rounded(Radius::Md)
-            };
-
-            let h = transition_prim::lerp_px(
-                sidebar_menu_button_collapsed_h(&theme),
-                sidebar_menu_button_h(&theme, size),
-                expanded_progress,
-            );
-
-            let mut props = decl_style::container_props(
-                &theme,
-                chrome,
-                LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
-            );
-            props.layout.overflow = Overflow::Clip;
-
-            let inner_gap = decl_style::space(&theme, Space::N2); // `gap-2`
 
             vec![cx.container(props, move |cx| {
                 let row = FlexProps {
@@ -3252,22 +3452,21 @@ impl SidebarMenuButton {
                         out.push(decl_icon::icon(cx, icon));
                     }
                     if label_opacity > 0.0 {
-                        let style = menu_button_style(&theme);
                         let text = ui::text(cx, label.clone())
                             .w_full()
                             .min_w_0()
                             .flex_1()
                             .basis_0()
-                            .text_size_px(style.size)
-                            .font_weight(style.weight)
+                            .text_size_px(label_style.size)
+                            .font_weight(label_style.weight)
                             .text_color(ColorRef::Color(fg))
                             .truncate();
 
                         let mut text = text;
-                        if let Some(line_height) = style.line_height {
+                        if let Some(line_height) = label_style.line_height {
                             text = text.line_height_px(line_height);
                         }
-                        if let Some(letter_spacing_em) = style.letter_spacing_em {
+                        if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                             text = text.letter_spacing_em(letter_spacing_em);
                         }
 
@@ -3312,35 +3511,37 @@ impl SidebarMenuButton {
         }
 
         // In collapsed (icon) mode, show the label via a tooltip.
-        let theme = Theme::global(&*cx.app).clone();
+        let (popover_bg, border, fg, label_style) = {
+            let theme = Theme::global(&*cx.app);
+            let popover_bg = theme
+                .color_by_key("popover.background")
+                .unwrap_or_else(|| theme.color_required("popover.background"));
+            let border = theme
+                .color_by_key("border")
+                .unwrap_or_else(|| theme.color_required("border"));
+            let fg = sidebar_fg(theme);
+            let label_style = menu_button_style(theme);
+            (popover_bg, border, fg, label_style)
+        };
 
         let label = this.label.clone();
 
         let chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(
-                theme
-                    .color_by_key("popover.background")
-                    .unwrap_or_else(|| theme.color_required("popover.background")),
-            ))
+            .bg(ColorRef::Color(popover_bg))
             .border_1()
-            .border_color(ColorRef::Color(
-                theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_required("border")),
-            ))
+            .border_color(ColorRef::Color(border))
             .rounded(Radius::Md)
             .p(Space::N2);
         let content = TooltipContent::new({
-            let style = menu_button_style(&theme);
             let mut text = ui::text(cx, label.clone())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(sidebar_fg(&theme)))
+                .text_size_px(label_style.size)
+                .font_weight(label_style.weight)
+                .text_color(ColorRef::Color(fg))
                 .nowrap();
-            if let Some(line_height) = style.line_height {
+            if let Some(line_height) = label_style.line_height {
                 text = text.line_height_px(line_height);
             }
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
+            if let Some(letter_spacing_em) = label_style.letter_spacing_em {
                 text = text.letter_spacing_em(letter_spacing_em);
             }
             vec![text.into_element(cx)]
@@ -3360,6 +3561,7 @@ impl SidebarMenuButton {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
     use fret_app::App;
@@ -3866,6 +4068,67 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
             "expected mobile sidebar sheet content to render sidebar children"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_infers_mobile_from_viewport_width_when_unset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(360.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(true);
+
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-mobile-infer-from-viewport",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .with(cx, |cx| {
+                        let content = SidebarMenuButton::new("Inbox")
+                            .test_id("sidebar-mobile-menu-button")
+                            .into_element(cx);
+                        let sidebar = Sidebar::new([content]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::Dialog),
+            "expected inferred mobile sidebar branch to expose sheet dialog semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
+            "expected inferred mobile sidebar sheet content to render sidebar children"
         );
     }
 
@@ -4866,6 +5129,78 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_rail_hover_sets_col_resize_cursor_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-rail-hover-cursor",
+            |cx| {
+                SidebarProvider::new().with(cx, |cx| {
+                    vec![SidebarRail::new().test_id("sidebar-rail").into_element(cx)]
+                })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let rail = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-rail"))
+            .expect("expected sidebar rail semantics node");
+
+        let center = Point::new(
+            Px(rail.bounds.origin.x.0 + rail.bounds.size.width.0 * 0.5),
+            Px(rail.bounds.origin.y.0 + rail.bounds.size.height.0 * 0.5),
+        );
+
+        let _ = app.flush_effects();
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::CursorSetIcon { window: w, icon }
+                        if *w == window && *icon == CursorIcon::ColResize
+                )
+            }),
+            "expected sidebar rail hover to request col-resize cursor icon"
+        );
+    }
+
+    #[test]
     fn sidebar_rail_tracks_side_and_offcanvas_position_matrix() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4893,18 +5228,16 @@ mod tests {
                 bounds,
                 "shadcn-sidebar-rail-side-matrix",
                 |cx| {
-                    let sidebar = Sidebar::new(Vec::<AnyElement>::new())
+                    let child = cx.spacer(SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    });
+                    let sidebar = Sidebar::new([child])
                         .side(side)
                         .collapsible(collapsible)
-                        .into_element_with_children(cx, |cx| {
-                            let child = cx.spacer(SpacerProps {
-                                min: Px(0.0),
-                                ..Default::default()
-                            });
-                            let rail = SidebarRail::new().test_id(test_id).into_element(cx);
-                            [child, rail]
-                        });
-                    vec![sidebar]
+                        .into_element(cx);
+                    let rail = SidebarRail::new().test_id(test_id).into_element(cx);
+                    vec![sidebar, rail]
                 },
             );
             ui.set_root(root);
@@ -6250,6 +6583,174 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_provider_on_open_change_builder_sets_handler() {
+        let provider = SidebarProvider::new().on_open_change(Some(Arc::new(|_open| {})));
+
+        assert!(provider.on_open_change.is_some());
+    }
+
+    #[test]
+    fn sidebar_provider_on_open_mobile_change_builder_sets_handler() {
+        let provider =
+            SidebarProvider::new().on_open_mobile_change(Some(Arc::new(|_open_mobile| {})));
+
+        assert!(provider.on_open_mobile_change.is_some());
+    }
+
+    #[test]
+    fn sidebar_provider_open_change_events_emit_only_on_state_change() {
+        let mut state = SidebarProviderOpenChangeCallbackState::default();
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, false, false);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, false);
+        assert_eq!(open_changed, Some(true));
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, false);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, true);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, Some(true));
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, false, false);
+        assert_eq!(open_changed, Some(false));
+        assert_eq!(open_mobile_changed, Some(false));
+    }
+
+    #[test]
+    fn sidebar_provider_open_change_callbacks_follow_model_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(false);
+
+        let open_events: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+        let open_mobile_events: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-sidebar-provider-open-change-callbacks",
+                |cx| {
+                    let open_events = Arc::clone(&open_events);
+                    let open_mobile_events = Arc::clone(&open_mobile_events);
+                    SidebarProvider::new()
+                        .open(Some(open_model.clone()))
+                        .open_mobile(Some(open_mobile_model.clone()))
+                        .on_open_change(Some(Arc::new(move |open| {
+                            open_events.lock().expect("open events lock").push(open);
+                        })))
+                        .on_open_mobile_change(Some(Arc::new(move |open_mobile| {
+                            open_mobile_events
+                                .lock()
+                                .expect("open_mobile events lock")
+                                .push(open_mobile);
+                        })))
+                        .with(cx, |_cx| Vec::<AnyElement>::new())
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        assert!(
+            open_events.lock().expect("open events lock").is_empty(),
+            "expected initial render to not emit open callback"
+        );
+        assert!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .is_empty(),
+            "expected initial render to not emit open_mobile callback"
+        );
+
+        let _ = app.models_mut().update(&open_model, |value| {
+            *value = true;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true],
+            "expected open callback to emit when open model changes"
+        );
+        assert!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .is_empty(),
+            "expected open_mobile callback to stay silent when open_mobile unchanged"
+        );
+
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true],
+            "expected unchanged open state to avoid duplicate callback"
+        );
+
+        let _ = app.models_mut().update(&open_mobile_model, |value| {
+            *value = true;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .as_slice(),
+            [true],
+            "expected open_mobile callback to emit when open_mobile model changes"
+        );
+
+        let _ = app.models_mut().update(&open_model, |value| {
+            *value = false;
+        });
+        let _ = app.models_mut().update(&open_mobile_model, |value| {
+            *value = false;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true, false],
+            "expected open callback to track both transitions"
+        );
+        assert_eq!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .as_slice(),
+            [true, false],
+            "expected open_mobile callback to track both transitions"
+        );
+    }
+
+    #[test]
     fn sidebar_context_set_open_and_set_open_mobile_update_models() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -6304,6 +6805,67 @@ mod tests {
         assert!(
             open_mobile_now,
             "expected ctx.set_open_mobile(true) to update open_mobile model"
+        );
+    }
+
+    #[test]
+    fn sidebar_context_function_style_setters_update_from_previous_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(false);
+        let open_for_assert = open_model.clone();
+        let open_mobile_for_assert = open_mobile_model.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-context-function-style-setters",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .with(cx, |cx| {
+                        if let Some(ctx) = use_sidebar(cx) {
+                            ctx.set_open_with(cx.app, |value| !value);
+                            ctx.set_open_mobile_with(cx.app, |value| !value);
+                        }
+                        Vec::<AnyElement>::new()
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let open_now = app
+            .models()
+            .get_copied(&open_for_assert)
+            .expect("open model value");
+        let open_mobile_now = app
+            .models()
+            .get_copied(&open_mobile_for_assert)
+            .expect("open mobile model value");
+
+        assert!(
+            open_now,
+            "expected ctx.set_open_with(|prev| !prev) to update open model"
+        );
+        assert!(
+            open_mobile_now,
+            "expected ctx.set_open_mobile_with(|prev| !prev) to update open_mobile model"
         );
     }
 

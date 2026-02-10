@@ -26,9 +26,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: *rect,
-                background: self.style.group_background,
+                background: fret_core::Paint::Solid(self.style.group_background),
+
                 border: Edges::all(Px(1.0 / zoom)),
-                border_color: self.style.group_border,
+                border_paint: fret_core::Paint::Solid(self.style.group_border),
+
                 corner_radii: Corners::all(group_corner),
             });
 
@@ -77,9 +79,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: *rect,
-                background: self.style.group_background,
+                background: fret_core::Paint::Solid(self.style.group_background),
+
                 border: Edges::all(Px(1.0 / zoom)),
-                border_color: self.style.node_border_selected,
+                border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+
                 corner_radii: Corners::all(group_corner),
             });
         }

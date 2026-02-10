@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
+use fret_kit::mvu::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
-#[cfg(not(target_arch = "wasm32"))]
-use fret_kit::mvu::KeyedMessageRouter;
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
@@ -87,8 +88,11 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
 pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
+#[allow(dead_code)]
 pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
+#[allow(dead_code)]
 pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
+#[allow(dead_code)]
 pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
@@ -119,6 +123,7 @@ pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
 pub(crate) const PAGE_AVATAR: &str = "avatar";
+pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -249,6 +254,7 @@ pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
 pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
+pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -419,6 +425,7 @@ pub(crate) struct PageSpec {
 }
 
 impl PageSpec {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) const fn new(
         id: &'static str,
         label: &'static str,
@@ -912,6 +919,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["avatar", "image", "fallback"],
                 docs::DOC_AVATAR,
                 docs::USAGE_AVATAR,
+            ),
+            PageSpec::new(
+                PAGE_IMAGE_OBJECT_FIT,
+                "Image (Object Fit)",
+                "Image / Object Fit",
+                "SceneOp::Image + MediaImage",
+                CMD_NAV_IMAGE_OBJECT_FIT,
+                &[
+                    "image",
+                    "object_fit",
+                    "cover",
+                    "contain",
+                    "stretch",
+                    "thumbnail",
+                    "streaming",
+                ],
+                docs::DOC_IMAGE_OBJECT_FIT,
+                docs::USAGE_IMAGE_OBJECT_FIT,
             ),
             PageSpec::new(
                 PAGE_BADGE,
@@ -1895,6 +1920,16 @@ fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>
     f(&mut guard)
 }
 
+#[cfg(target_arch = "wasm32")]
+fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    thread_local! {
+        static ROUTER: RefCell<KeyedMessageRouter<u64, u64>> =
+            RefCell::new(KeyedMessageRouter::new(CMD_DATA_GRID_ROW_PREFIX.to_string()));
+    }
+
+    ROUTER.with(|router| f(&mut *router.borrow_mut()))
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
@@ -1909,14 +1944,12 @@ pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
-    Some(CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}")))
+    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
 }
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    command
-        .strip_prefix(CMD_DATA_GRID_ROW_PREFIX)
-        .and_then(|suffix| suffix.parse::<u64>().ok())
+    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
 }
 
 pub(crate) fn page_meta(

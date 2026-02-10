@@ -183,40 +183,38 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         let trigger_open = demo_open.clone();
         let close_open = demo_open.clone();
 
-        let drawer = shadcn::Drawer::new(demo_open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Open Drawer")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(trigger_open.clone())
-                        .test_id("ui-gallery-drawer-demo-trigger")
-                        .into_element(cx)
-                },
-                move |cx| {
-                    shadcn::DrawerContent::new([
-                        shadcn::DrawerHeader::new([
-                            shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                            shadcn::DrawerDescription::new("Set your daily activity goal.")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::DrawerFooter::new([
-                            shadcn::Button::new("Submit").into_element(cx),
-                            shadcn::Button::new("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(close_open.clone())
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
+        let drawer = shadcn::Drawer::new(demo_open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Open Drawer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(trigger_open.clone())
+                    .test_id("ui-gallery-drawer-demo-trigger")
                     .into_element(cx)
-                    .test_id("ui-gallery-drawer-demo-content")
-                },
-            )
-            .test_id("ui-gallery-drawer-demo");
+            },
+            move |cx| {
+                shadcn::DrawerContent::new([
+                    shadcn::DrawerHeader::new([
+                        shadcn::DrawerTitle::new("Move Goal").into_element(cx),
+                        shadcn::DrawerDescription::new("Set your daily activity goal.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new([
+                        shadcn::Button::new("Submit").into_element(cx),
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-drawer-demo-content")
+            },
+        );
 
-        section_card(cx, "Demo", drawer)
+        section_card(cx, "Demo", drawer).test_id("ui-gallery-drawer-demo")
     };
 
     let scrollable_content = {
@@ -277,10 +275,9 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx)
                     .test_id("ui-gallery-drawer-scrollable-content")
                 },
-            )
-            .test_id("ui-gallery-drawer-scrollable");
+            );
 
-        section_card(cx, "Scrollable Content", drawer)
+        section_card(cx, "Scrollable Content", drawer).test_id("ui-gallery-drawer-scrollable")
     };
 
     let sides = {

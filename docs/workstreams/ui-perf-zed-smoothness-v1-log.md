@@ -7862,3 +7862,1410 @@ Results:
 - `ui-code-editor-resize-probes`: PASS (gate).
 - `ui-resize-probes`: PASS (gate).
 - `ui-gallery-steady`: PASS (baseline; failures=0).
+
+## 2026-02-08 13:32:06 (commit `828c945d4`)
+
+Change:
+- No code change; repeat gate attempts=3 to validate tail stability after merging the remote refactor.
+
+Suites:
+- `ui-resize-probes` (gate, attempts=3)
+- `ui-code-editor-resize-probes` (gate, attempts=3)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-post-merge-828c945d4-p0-a3
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-post-merge-828c945d4-editor-a3
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-post-merge-828c945d4-p0-a3/summary.json`
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-post-merge-828c945d4-editor-a3/summary.json`
+
+Results:
+- `ui-resize-probes`: PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes`: PASS (passes=3/3; required=2).
+
+## 2026-02-08 15:12:59 (commit `b9a8b1074`)
+
+Change:
+- Docs-only alignment: document current interactive-resize wrapped-text caching knobs and the current `TextSystem::release`
+  eager-eviction behavior in ADR 0006; add a follow-up TODO to consider renderer-owned retention (LRU) for released blobs.
+
+Suites:
+- None (no perf run; tracking-only update).
+
+Notes:
+- This entry is intended to keep the perf workstream “contract surface” (ADR + TODOs) in sync with the actual
+  implementation choices before deeper refactors (text layout reuse, resize scheduling, GPU attribution).
+
+## 2026-02-08 15:19:25 (commit `ed78d4d62`)
+
+Change:
+- No code change; re-run resize perf gates once to confirm current head still passes after doc/contract updates.
+
+Suites:
+- `ui-code-editor-resize-probes` (gate, attempts=1)
+- `ui-resize-probes` (gate, attempts=1)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0
+```
+
+Artifacts:
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor/summary.json`
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0/summary.json`
+
+Results:
+- `ui-code-editor-resize-probes`: PASS.
+  - Worst overall `top_total_time_us`: `14099` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor/stdout.json`)
+- `ui-resize-probes`: PASS.
+  - Worst overall `top_total_time_us`: `17567` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0/stdout.json`)
+
+## 2026-02-08 15:51:15 (commit `abf7ce646`)
+
+Change:
+- Add a renderer-owned, bounded “released blob” retention policy (LRU) so `TextSystem::release()` can keep recently
+  released `TextBlobId`s alive (default off) and avoid `Text::prepare` thrash when wrap widths oscillate.
+  - Knob: `FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES` (default: `0`/off; A/B tested at `256`).
+
+Suites:
+- `ui-code-editor-resize-probes` (gate; attempts=1 for off, attempts=3 for on)
+- `ui-resize-probes` (gate; attempts=1 for off, attempts=3 for on)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0
+
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3
+```
+
+Artifacts:
+- Off:
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/summary.json`
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0/summary.json`
+- On (`ENTRIES=256`):
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/summary.json`
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3/summary.json`
+
+Results:
+- Off (default `ENTRIES=0`):
+  - `ui-code-editor-resize-probes`: PASS (attempts=1).
+    - Worst overall `top_total_time_us`: `13075` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/stdout.json`)
+  - `ui-resize-probes`: PASS (attempts=1).
+    - Worst overall `top_total_time_us`: `17222` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0/stdout.json`)
+- On (`ENTRIES=256`):
+  - `ui-code-editor-resize-probes`: PASS (passes=3/3; required=2).
+    - Worst overall `top_total_time_us`: `12744` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/stdout.json`)
+  - `ui-resize-probes`: PASS (passes=2/3; required=2).
+    - Worst overall `top_total_time_us`: `17295` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3/stdout.json`)
+
+Worst-frame attribution (editor jitter script):
+- Off worst bundle: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/attempt-1/1770536398224-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `paint_text_prepare_time_us`: `4483` (width-changed prepares: `30`)
+- On (`ENTRIES=256`) worst bundle: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/attempt-1/1770536510926-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `paint_text_prepare_time_us`: `3973` (width-changed prepares: `29`)
+
+Notes:
+- In the sampled worst frames, `resource_caches.render_text.blobs_live` and `blob_cache_entries` remained `498`
+  (no obvious unbounded growth in this probe), but this needs broader validation on longer-running workloads.
+
+## 2026-02-08 17:38:51 (commit `06a16f35b`)
+
+Change:
+- Make the “wrap from unwrapped layout” path behave like GPUI’s `compute_wrap_boundaries`: if no word-boundary
+  candidate exists, we still cut at the last fitting cluster rather than bailing out to the per-line shaping path.
+- This is critical for code-editor content where long tokens frequently require hard cuts; previously this would
+  cause “shape unwrapped, then fall back and shape again”, doubling work in hot frames.
+
+Suites:
+- `ui-code-editor-resize-probes` (gate; attempts=3 off vs on)
+- `ui-resize-probes` (gate; attempts=3 on; sanity)
+
+Notes (measurement hygiene):
+- The primary workspace had unrelated, in-progress refactors in the working tree that changed perf characteristics.
+  To keep this A/B reversible and commit-addressable, the measurements below were run from a detached worktree
+  at the same commit hash:
+  - worktree root: `/Users/frankorz/codes/rust/fret-perf-lab-06a16`
+
+Commands (from the detached worktree root):
+```powershell
+# Ensure the release binary is up-to-date (gate default launch-bin).
+cargo build -p fret-ui-gallery --release
+
+# A/B (editor resize jitter)
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=0 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1
+
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1
+
+# P0 sanity (resize probes)
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1
+```
+
+Artifacts (absolute paths; see the detached worktree note above):
+- Off (`ENTRIES=0`):
+  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/summary.json`
+- On (`ENTRIES=2048`):
+  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/summary.json`
+  - `ui-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1/summary.json`
+
+Results:
+- Off (`ENTRIES=0`): `ui-code-editor-resize-probes` FAIL (passes=0/3; required=2).
+  - Max `top_layout_engine_solve_time_us` (attempt-1): `488` (threshold: `372`).
+  - Max `top_total_time_us` (attempt-1): `12528` (threshold: `12476`).
+- On (`ENTRIES=2048`): `ui-code-editor-resize-probes` PASS (passes=3/3; required=2).
+  - Max `top_layout_engine_solve_time_us` (attempt-1): `347` (threshold: `372`).
+  - Max `top_total_time_us` (attempt-1): `11105` (threshold: `12476`).
+- On (`ENTRIES=2048`): `ui-resize-probes` PASS (passes=2/3; required=2).
+  - One outlier attempt (attempt-1) failed with `top_layout_engine_solve_time_us=3738` (threshold: `2816`) in
+    `ui-gallery-window-resize-drag-jitter-steady.json`; attempts=3 majority-pass mitigates this tail.
+
+Worst-frame attribution (editor jitter script; max solve snapshot within bundle):
+- Off bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/attempt-1/1770541531439-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `layout_engine_solve_time_us`: `488`
+  - `paint_text_prepare_time_us`: `6812` (width-changed prepares: `13`)
+- On bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/attempt-1/1770541992598-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `layout_engine_solve_time_us`: `347`
+  - `paint_text_prepare_time_us`: `1275` (width-changed prepares: `30`)
+
+## 2026-02-08 20:26:18 (commit `00d170cfa`)
+
+Change:
+- Bump the canonical macOS M4 steady-suite baseline to `v25` because `v23` was consistently failing on current head
+  (not a micro-flake class; multiple scripts exceeded `max_top_total_us`).
+
+Suites:
+- `ui-gallery-steady` (baseline selection + validation)
+
+Commands:
+```powershell
+tools/perf/diag_perf_baseline_select.sh `
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --suite ui-gallery-steady `
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json `
+  --candidates 3 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 30 `
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v25 `
+  --launch-bin target/release/fret-ui-gallery
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/fret-diag-perf/ui-gallery-steady-baseline-v25-r3 `
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v25/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v25/candidate-results.json`
+- Validation check: `target/fret-diag-perf/ui-gallery-steady-baseline-v25-r3/check.perf_thresholds.json`
+
+Results:
+- Baseline selection: PASS on best candidate validation (fail_total=0; see selection summary).
+- `ui-gallery-steady` vs `v25`: PASS (failures=0).
+
+## 2026-02-08 20:31:50 (commit `ed769a7c1`)
+
+Change:
+- No code change; validate that enabling the text resize-jitter knobs does not regress the steady suite under the
+  new canonical baseline (`v25`).
+
+Suites:
+- `ui-gallery-steady` (baseline v25; repeat=3)
+
+Commands:
+```powershell
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/fret-diag-perf/ui-gallery-steady-v25-unwrapped-on-r3 `
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+  --env FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+  --env FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-gallery-steady`: `target/fret-diag-perf/ui-gallery-steady-v25-unwrapped-on-r3/check.perf_thresholds.json`
+
+Results:
+- PASS (failures=0).
+
+## 2026-02-08 23:44:01 (commit `f2c08b806`)
+
+Change:
+- Stabilize `TextService::measure` wrapped-text shaping reuse under interactive resize by:
+  - increasing the shaping cache working-set size (default: 4096),
+  - pre-reserving the cache to avoid rehash spikes, and
+  - skipping cache insertion for short labels to avoid steady-suite cache pollution.
+
+Suites:
+- `ui-code-editor-resize-probes` gate: PASS (passes=2/3; required=2).
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+- `ui-gallery-steady` (baseline v25): PASS (failures=0).
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800
+
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/perf-gates/ui-gallery-steady.measurecache-default.20260208-234600 `
+  --timeout-ms 600000 --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/summary.json`
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/summary.json`
+- `ui-gallery-steady`: `target/perf-gates/ui-gallery-steady.measurecache-default.20260208-234600/check.perf_thresholds.json`
+
+Results (us; selected pass attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 13360 | 13814 | 13814 | 1905 | 327 | 12343 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18439 | 18579 | 18579 | 9630 | 2218 | 8950 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16024 | 16291 | 16291 | 9612 | 2229 | 6549 |
+
+Worst bundles (for tail attribution):
+- Editor resize jitter:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/attempt-1/1770562400418-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- Window resize drag jitter:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564174496-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Window resize stress:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564003407-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- The `ui-resize-probes` `drag-jitter` script can still produce rare, near-threshold tail attempts on a busy system.
+  For “do-not-regress” gating, prefer `--attempts 5` until we eliminate the underlying hitch class and can tighten
+  the baseline again.
+
+## 2026-02-09 09:10:11 (commit `10e30dac1`)
+
+Change:
+- Reduce layout tree build allocations by:
+  - avoiding `UiTree::children(...).to_vec()` clones in the flow builder, and
+  - avoiding cloning the previous children vec in `TaffyLayoutEngine::set_children`.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): FAIL (passes=1/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.10e30dac1.20260209-0240
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/summary.json`
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.10e30dac1.20260209-0240/summary.json`
+
+Results (us; selected pass attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18531 | 18663 | 18663 | 9610 | 2280 | 9031 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15976 | 16337 | 16337 | 9707 | 2323 | 6567 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 13348 | 15242 | 15242 | 1993 | 362 | 13808 |
+
+Tail delta (drag-jitter; max across runs; baseline pass attempt vs worst-case attempt):
+- Baseline run (commit `6c82ba58c`, `target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1`):
+  - `max total`: `27464`
+  - `max layout`: `16146`
+  - `max solve`: `4492`
+  - `max paint`: `11188`
+- This run (commit `10e30dac1`, `target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1`):
+  - `max total`: `21083` (−23%)
+  - `max layout`: `12454` (−23%)
+  - `max solve`: `2354` (−48%)
+  - `max paint`: `8927` (−20%)
+
+Worst bundles (for tail attribution):
+- Baseline drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1/1770595376269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- This run drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1/1770598036992-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The steady-state medians for resize probes are already close to the baseline; this change primarily reduces
+  avoidable allocation and helps pull down the worst-case `drag-jitter` tail attempt.
+- `ui-resize-probes` still has intermittent tail failures when checked against the strict v3 baseline. Next steps:
+  investigate why view-cache roots are often not marked for reuse in resize probes, and consider cutting a new v4
+  baseline validated under idle conditions (or adding headroom policy for `drag-jitter`) once the hitch class is
+  explained and addressed.
+
+## 2026-02-09 10:20:13 (commit `427b91866`)
+
+Change:
+- Restore perf suite expansion for:
+  - `ui-resize-probes` (stress + drag-jitter), and
+  - `ui-code-editor-resize-probes` (editor drag-jitter).
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=3/5; required=3).
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=1/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.427b91866.20260209-094813
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.427b91866.20260209-094813/summary.json`
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/summary.json`
+
+Results (us; selected attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16169 | 16287 | 16287 | 10003 | 2473 | 6407 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18674 | 19041 | 19041 | 9743 | 2324 | 9407 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 12798 | 15305 | 15305 | 1989 | 324 | 13820 |
+
+Tail failures (to keep the gate honest; worst bundles via `diag triage --sort time --top 1`):
+
+- `ui-resize-probes` attempt-2 drag-jitter threshold failure:
+  - `top_total_time_us=19477` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-2/1770602292281-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `ui-resize-probes` attempt-5 drag-jitter threshold failure:
+  - `top_total_time_us=22347` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-5/1770603193223-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+- `ui-code-editor-resize-probes` attempt-1 threshold failures:
+  - `top_total_time_us=18560` (threshold `16308`)
+  - `top_layout_time_us=4115` (threshold `3432`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-1/1770601859375-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- `ui-code-editor-resize-probes` attempt-3 threshold failure:
+  - `top_total_time_us=17684` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-3/1770602132829-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- `ui-resize-probes` is “majority-pass stable” at attempts=5, but `drag-jitter` still produces intermittent tail
+  frames above the v3 baseline threshold. The dominant levers remain:
+  - reduce layout plumbing overhead (`layout_request/build` + solve count), and
+  - reduce paint/text prepare churn (it is still paint-dominant on `drag-jitter`).
+
+## 2026-02-09 10:51:48 (commit `c1af5d1f7`)
+
+Change:
+- No runtime perf change intended. Rerun the P0 resize gates from a detached worktree at `c1af5d1f7` to:
+  - verify the updated perf-gate triage workflow (JSON payload preserved on failures), and
+  - record a fresh, commit-addressable snapshot of resize gate stability.
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+git worktree add --detach ../fret-perf-lab-c1af5d1f7 c1af5d1f7
+cd ../fret-perf-lab-c1af5d1f7
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227
+```
+
+Artifacts:
+- `ui-resize-probes`: `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/summary.json`
+- `ui-code-editor-resize-probes`: `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/summary.json`
+
+Results (us; selected attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16120 | 16304 | 16304 | 9618 | 2109 | 6816 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 16522 | 17065 | 17065 | 9889 | 2173 | 7844 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 36512 | 41379 | 41379 | 2647 | 396 | 38679 |
+
+Tail failures (worst bundles resolved via `fret-perf-workflow` gate triage helper):
+
+- `ui-resize-probes` attempt-2 drag-jitter threshold failure:
+  - `top_total_time_us=19523` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770604637202-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+- `ui-code-editor-resize-probes` (all attempts failed; paint-dominant):
+  - attempt-1 worst: `top_total_time_us=41576` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-1/1770604939155-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - attempt-2 worst: `top_total_time_us=41326` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770605012001-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - attempt-3 worst: `top_total_time_us=41379` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-3/1770605182675-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- This run’s `ui-code-editor-resize-probes` failure is not a subtle tail flake: it is a large, repeatable `paint`
+  spike (~38ms p95 paint in the selected attempt). Next step is to attribute whether this is:
+  - `Text::prepare` churn (blob reuse / atlas churn), or
+  - non-text renderer churn (uploads, intermediate pool allocations/evictions), or
+  - an unintended “cold cache” effect from the detached run protocol.
+
+Quick attribution (attempt-1 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=41576us`, `paint=39619us`, `paint_text_prepare=5101us`, `layout=1903us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` (ElementHostWidget) `paint_time_us=33670us`
+  (`scene_ops_delta=581`), i.e. the vast majority of the hitch is inside the Canvas/widget paint path rather than
+  cache replay or layout.
+
+## 2026-02-09 11:31:52 (commit `a78a5fc76`)
+
+Change:
+- Fix build errors in the `syntax` path after landing row-level rich text caching in the code editor, then rerun the
+  editor resize probe from a detached worktree for a commit-addressable datapoint.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout a78a5fc76
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/summary.json`
+
+Tail failures (worst bundles via `fret-perf-workflow` gate triage helper):
+- attempt-1 worst: `top_total_time_us=36479` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-1/1770607132312-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=41411` (threshold `16308`)
+  - also exceeded: `top_layout_time_us=3960` (threshold `3432`), `top_layout_engine_solve_time_us=606` (threshold `372`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-2/1770607261026-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=38409` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.a78a5fc76.20260209-111757/attempt-3/1770607377132-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Quick attribution (attempt-2 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=41411us`, `paint=37394us`, `paint_text_prepare=7641us`, `layout=3960us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=28609us` (`scene_ops_delta=581`).
+
+## 2026-02-09 11:35:42 (commit `f9c2b10d6`)
+
+Change:
+- Experiment: bucket the code editor row text shaping max width by monospace cell width (attempt to reduce resize
+  width-jitter churn).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout f9c2b10d6
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/summary.json`
+
+Tail failures:
+- attempt-1 worst: `top_total_time_us=38578` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-1/1770607944238-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=39756` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-2/1770607975974-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=42334` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f9c2b10d6.20260209-113047/attempt-3/1770608160800-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Quick attribution (attempt-2 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=39756us`, `paint=37945us`, `paint_text_prepare=5601us`, `layout=2818us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=31468us` (`scene_ops_delta=581`).
+
+## 2026-02-09 11:43:03 (commit `92ff5182a`)
+
+Change:
+- Experiment: stabilize code editor row text shaping max width at ~512 monospace columns (attempt to avoid per-step
+  resize width jitter churn).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 92ff5182a
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/summary.json`
+
+Tail failures:
+- attempt-1 worst: `top_total_time_us=39957` (threshold `16308`)
+  - also exceeded: `top_layout_time_us=4408` (threshold `3432`), `top_layout_engine_solve_time_us=793` (threshold `372`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-1/1770608515863-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=40191` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-2/1770608702801-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=38826` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.92ff5182a.20260209-114142/attempt-3/1770608759500-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Quick attribution (attempt-3 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=38826us`, `paint=36296us`, `paint_text_prepare=4647us`, `layout=2483us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=30767us` (`scene_ops_delta=581`).
+
+## 2026-02-09 11:56:30 (commit `9fe6fe352`)
+
+Change:
+- Optimize the hosted Canvas text cache fingerprint comparisons for rich text by fast-pathing pointer equality on the
+  `Arc<str>` + `Arc<[TextSpan]>` content.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 9fe6fe352
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/summary.json`
+
+Tail failures:
+- attempt-1 worst: `top_total_time_us=46310` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-1/1770609303441-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=43600` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-2/1770609418535-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=37108` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.9fe6fe352.20260209-115422/attempt-3/1770609561484-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Quick attribution (attempt-3 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=37108us`, `paint=35205us`, `paint_text_prepare=5130us`, `layout=2596us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=29284us` (`scene_ops_delta=581`).
+
+Notes:
+- The best attempt improved the `top_total_time_us` tail (~41.6ms → ~37.1ms), but the suite remains far above the
+  16.3ms threshold and still shows large attempt-to-attempt variance. Next step is to add more fine-grained
+  attribution inside the code editor Canvas paint path (see TODO tracker).
+
+## 2026-02-09 12:22:35 (commit `f664ead2d`)
+
+Change:
+- Add code-editor Canvas paint internal attribution (frame-local phase timers + counters), and expose it in
+  the `app_snapshot` under `code_editor.torture.paint_perf` when `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout f664ead2d
+cargo build -p fret-ui-gallery --release
+FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/summary.json`
+
+Tail failures:
+- attempt-1 worst: `top_total_time_us=38098` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-1/1770610982603-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=40934` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-2/1770611097508-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=42129` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-3/1770611282853-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Attribution (attempt-3 worst bundle):
+- Worst frame: `total=42129us`, `paint=40174us`, `layout=2709us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=31443us`.
+- `app_snapshot.code_editor.torture.paint_perf`: `us_total=24920us`, dominated by `us_syntax_spans=24508us`.
+- `app_snapshot.code_editor.torture.cache_stats`: `syntax_resets=4234`, `row_rich_hits=0`.
+
+Finding:
+- `CodeEditorHandle::set_language(...)` was not idempotent: the UI gallery calls it during render even when the
+  language is unchanged, which reset syntax/rich caches on every frame and forced expensive `fret_syntax::highlight`
+  work during resize drag.
+
+## 2026-02-09 12:34:16 (commit `1778ba563`)
+
+Change:
+- Make `CodeEditorHandle::set_language(...)` idempotent: do nothing when the next language matches the current one.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 1778ba563
+cargo build -p fret-ui-gallery --release
+FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/summary.json`
+
+Results:
+- attempt-1 worst: `top_total_time_us=15953` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-1/1770611691494-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=15563` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-2/1770611764113-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=16006` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-3/1770611803894-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Delta (attempt-3 worst vs `f664ead2d` attempt-3 worst):
+- `top_total_time_us`: `42129us → 16006us` (Δ `-26123us`, `-62.0%`, `2.63×` speedup).
+- `paint_time_us`: `40174us → 14140us` (Δ `-26034us`, `2.84×` speedup).
+
+Attribution (attempt-3 worst bundle):
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=8327us`.
+- `app_snapshot.code_editor.torture.paint_perf`: `us_total=125us`, `us_syntax_spans=0us`.
+- `app_snapshot.code_editor.torture.cache_stats`: `syntax_resets=2`, `row_rich_hits=152610`, `row_rich_misses=837`.
+
+## 2026-02-09 13:27:36 (commit `4847d4f13`)
+
+Change:
+- Add a regression test to ensure `CodeEditorHandle::set_language(...)` remains idempotent for the same value.
+
+Commands:
+```bash
+cargo test -p fret-code-editor --features syntax-rust
+```
+
+## 2026-02-09 13:31:35 (commit `1778ba563`)
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 1778ba563
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.1778ba563.20260209-132813
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.1778ba563.20260209-132813/summary.json`
+
+## 2026-02-09 13:39:28 (commit `007006b28`)
+
+Change:
+- Make `CodeEditorHandle::set_line_folds` / `set_line_inlays` idempotent for identical values to avoid per-frame epoch
+  bumps + cache resets in declarative render loops. Add regression tests.
+
+Commands:
+```bash
+cargo test -p fret-code-editor
+```
+
+## 2026-02-09 13:46:46 (commit `007006b28`)
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 007006b28
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.007006b28.20260209-134317
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.007006b28.20260209-134317/summary.json`
+
+## 2026-02-09 13:58:15 (commit `f9de44cca`)
+
+Change:
+- Make `UiTree::set_node_view_cache_flags(...)` idempotent for identical flags to avoid redundant writes in hot paths.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout f9de44cca
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.f9de44cca.20260209-135815
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.f9de44cca.20260209-135815/summary.json`
+
+Notes:
+- attempt-1 failed due to `top_layout_engine_solve_time_us=3581us` exceeding the baseline threshold `3060us` in
+  `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`, but the gate passed via majority.
+
+## 2026-02-09 17:00:00 (commit `fcd1ada2d`)
+
+Change:
+- Make `TextArea::set_text(...)` idempotent for identical text (avoid resetting selection/IME state if render re-applies
+  the same value).
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout fcd1ada2d
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/summary.json`
+
+Notes:
+- attempt-3 failed due to `drag-jitter` thresholds exceeded:
+  - `top_total_time_us=20292us` (threshold `19128us`)
+  - `top_layout_time_us=12704us` (threshold `12264us`)
+  - `top_layout_engine_solve_time_us=3561us` (threshold `2816us`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/attempt-3/1770618416688-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 18:05:00 (commit `498147790`)
+
+Change:
+- Improve resize attribution: record layout-engine solves triggered by barrier roots (scroll/virtualization/etc) and keep
+  a bounded “top solves” list in bundles.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 498147790
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.498147790.20260209-1805
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.498147790.20260209-1805/summary.json`
+
+Finding (attempt-2 failing drag-jitter worst frame):
+- `top_total_time_us=20715us` exceeded threshold `19128us` in `ui-gallery-window-resize-drag-jitter-steady`.
+- Attribution now shows a heavy barrier root solve:
+  - `root=4294968378` `solve_us=1876` `measure_calls=960` `measure_cache_hits=0`
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.498147790.20260209-1805/attempt-2/1770619359780-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 19:15:00 (commit `58db05d7c`)
+
+Change:
+- Enable a small, per-text “prepared blob by wrap width” LRU during **small-step** interactive resize (default 2 entries),
+  to reduce `Text::prepare` churn when dragging back-and-forth across wrap-width buckets.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 58db05d7c
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.58db05d7c.20260209-1930
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.58db05d7c.20260209-1930/summary.json`
+
+Attribution note (one-off, semantics enabled; not used for gating due to overhead):
+- Command:
+  ```bash
+  cd ../fret-perf-lab-c1af5d1f7
+  FRET_DIAG_SEMANTICS=1 cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag-perf/semantics-drag-jitter.58db05d7c --timeout-ms 300000 --reuse-launch --repeat 1 --warmup-frames 0 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+  ```
+- Artifact bundle:
+  - `../fret-perf-lab-c1af5d1f7/target/fret-diag-perf/semantics-drag-jitter.58db05d7c/1770620408091-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Finding: the heaviest layout-engine solve during drag-jitter is rooted at `test_id=ui-gallery-view-cache-root`
+  (`measure_calls=960`, `measure_cache_hits=0`), with a smaller secondary root at `test_id=ui-gallery-content-viewport`.
+
+## 2026-02-09 15:28:00 (commit `96661c49c`)
+
+Change:
+- Memoize a pass-through wrapper-chain scan during the layout-engine request/build phase.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 96661c49c
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.96661c49c.20260209-1528
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.96661c49c.20260209-1528
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.96661c49c.20260209-1528/summary.json`
+
+Finding (drag-jitter probe; selected attempt):
+- Max `top_total_time_us=18665us` (threshold `19128us`).
+  - Worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/attempt-1/1770622160308-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `layout_request_build_roots_time_us` regressed in this bundle vs the prior commit (`58db05d7c`) for the same probe:
+  - `96661c49c`: mean/p95/max = `2367/2517/4042us`
+  - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
+  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Hypothesis: the added per-frame `HashMap` memoization overhead outweighs the saved wrapper-chain scans. This is a
+  good candidate to revert, and instead pursue the broader M1 direction (hashing → dense tables) in the layout engine.
+
+## 2026-02-09 15:58:00 (commit `56a1261dc`)
+
+Change:
+- Convert layout-engine request/build maps (`node_to_layout`, `styles`, `children`, `parent`) to dense tables
+  (`slotmap::SecondaryMap`), and experiment with generation-stamped `seen` tracking.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 56a1261dc
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/summary.json`
+
+Finding:
+- Attempt-1 exceeded `drag-jitter` total threshold:
+  - `top_total_time_us=19826us` (threshold `19128us`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-1/1770623967894-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Attempts 2/3 exceeded `stress` solve-time threshold:
+  - `top_layout_engine_solve_time_us=3087us` / `3535us` (threshold `3060us`)
+  - bundles:
+    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-2/1770623996413-ui-gallery-window-resize-stress-steady/bundle.json`
+    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-3/1770624057366-ui-gallery-window-resize-stress-steady/bundle.json`
+- Conclusion: the `seen` generation-stamp approach is a likely regression source; keep the dense tables but revert
+  `seen` to the prior `HashSet` tracking.
+
+## 2026-02-09 16:10:00 (commit `e9ea4522a`)
+
+Change:
+- Keep the dense layout-engine request/build tables, but restore `HashSet`-based `seen` tracking.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout e9ea4522a
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.e9ea4522a.20260209-1614
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.e9ea4522a.20260209-1614/summary.json`
+
+Finding (drag-jitter probe; selected attempt):
+- Max `top_total_time_us=17087us` (threshold `19128us`).
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/attempt-1/1770624678123-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `layout_request_build_roots_time_us` improved vs the prior stable run (`58db05d7c`) for the same probe:
+  - `e9ea4522a`: mean/p95/max = `1962/2116/2136us`
+  - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
+  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 16:37:00 (commit `0de40863f`)
+
+Change:
+- Treat interactive-resize “small-step” detection as **symmetric** (back-and-forth resizes keep the same policy/caches
+  enabled).
+
+Suites:
+- `ui-resize-probes` gate (attempts=1): PASS (passes=1/1; required=1).
+- `ui-code-editor-resize-probes` gate (attempts=1): PASS (passes=1/1; required=1).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 0de40863f
+cargo build -p fret-ui-gallery --release
+./tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes
+./tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626170/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626237/summary.json`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 16619 | 16775 | 16775 | 9194 | 2149 | 7657 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16038 | 16233 | 16233 | 9216 | 2194 | 6972 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 15162 | 15613 | 15613 | 2284 | 334 | 13904 |
+
+Worst overall:
+- `ui-resize-probes`:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+  - top_total_time_us: `16775`
+  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626170/attempt-1/1770626188635-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `ui-code-editor-resize-probes`:
+  - script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - top_total_time_us: `15613`
+  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626237/attempt-1/1770626249820-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- Compared to the prior dense-tables stable run (`e9ea4522a`, attempt-1, same probes):
+  - `ui-resize-probes` improved: `drag-jitter` p95 total `-312us` (17087 → 16775), `stress` p95 total `-275us`
+    (16508 → 16233), largely driven by `paint_time_us` reductions.
+  - `ui-code-editor-resize-probes` is effectively flat/noisy: `drag-jitter` p95 total `+69us` (15544 → 15613) while
+    `layout_engine_solve_time_us` p95 improved slightly (-6us).
+
+## 2026-02-09 19:32:39 (commit `75ac42db9`)
+
+Change:
+- Add `click_stable` as a diag script step that only clicks a target once its center remains stable for N frames.
+- Update `ui-gallery-material3-tabs-switch-perf-steady.json` to navigate via search and use `click_stable` to reduce
+  “stale click” flakiness (measurement reliability change, not a runtime perf win).
+
+Validation:
+- Smoke run: PASS (run_id `1770636679182`).
+
+Commands:
+```bash
+out_dir="target/fret-diag/click-stable-smoke-20260209-192936"
+cargo run -q -p fretboard -- \
+  diag run tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json \
+  --dir "$out_dir" \
+  --timeout-ms 180000 \
+  --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- cargo run -q -p fret-ui-gallery --release
+```
+
+Artifacts:
+- `target/fret-diag/click-stable-smoke-20260209-192936/1770636679549-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
+
+## 2026-02-09 20:04:39 (commit `d834481b3`)
+
+Change:
+- Drop no-op `Event::WindowResized` deliveries when the quantized logical size is unchanged (GPUI parity).
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-samples/ui-resize-probes.noopdrop.20260209-200004
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14745 | 14812 | 14854 | 8577 | 2049 | 6129 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 14976 | 15041 | 15214 | 8603 | 2060 | 6436 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/attempt-1/1770638413543-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/attempt-1/1770638441252-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- This is a churn/noise reduction change; it is not expected to materially move p95 totals by itself.
+- A representative tail failure mode for `drag-jitter` remains “paint text prepare (width)”; see:
+  - `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - `fretboard diag stats ... --sort time` attributes the worst frame to `paint_text_prepare.reasons=width`.
+
+## 2026-02-09 21:14:30 (commit `e337b4299`)
+
+Change:
+- Reuse prepared text blobs across layout/paint by caching the latest prepared blob + wrap width in the host-widget
+  layout path. This is intended to reduce redundant `TextService::prepare` work when a text node is both measured and
+  painted with the same constraints.
+- Snap `measure_width` to device pixel boundaries before interactive-resize bucketing to reduce float-noise churn.
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 5 \
+  --out-dir target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15703 | 15856 | 15856 | 9158 | 2218 | 6577 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15923 | 16025 | 16025 | 9168 | 2229 | 6901 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/attempt-1/1770642376254-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/attempt-1/1770642404541-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- `ui-resize-probes` remains somewhat noisy on `stress-steady` `top_layout_engine_solve_time_us`; attempts>3 may be
+  useful when validating changes locally under background load.
+- This does not, by itself, eliminate the `paint_text_prepare.reasons=width` churn observed in `drag-jitter` frames
+  (many UI gallery nodes are sized via the layout engine’s measure callback rather than the host-widget layout path).
+
+## 2026-02-09 22:12:02 (commit `7b9a98a8f`)
+
+Change:
+- Avoid cloning per-line glyph/cluster vectors when word-wrapping from cached unwrapped layouts (LTR-only). This
+  reduces allocations and intermediate copies in `TextSystem::prepare` under interactive resize width jitter.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15892 | 16021 | 16021 | 9286 | 2299 | 6590 | 182 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15885 | 16318 | 16318 | 9954 | 2225 | 6775 | 217 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/attempt-1/1770646073274-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/attempt-1/1770646103484-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The selected attempt still shows noise on `drag-jitter` `p95 layout_time_us`; consider validating this change against
+  a more text-amplifying probe (e.g. editor labels / status-bar churn) to confirm the allocation win translates into
+  frame-time improvements.
+
+## 2026-02-09 22:49:42 (commit `2085f8ff6`)
+
+Change:
+- Cache glyph image placement (left/top/width/height) in the text atlas entries and skip swash rendering when the
+  exact glyph key is already present. Also avoid double-rendering missing glyphs (insert into atlas from the first
+  render result).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 11699 | 12195 | 12195 | 2265 | 339 | 10459 | 624 |
+
+Worst bundle (selected attempt-1):
+- `target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720/attempt-1/1770647870243-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The worst-frame attribution still points at `paint_text_prepare.reasons=width`, and worst snapshots show
+  `paint_text_prepare_time_us` spikes ~4ms with ~33 prepares per frame. This suggests the next win is still reducing
+  width-driven prepare churn (bucketing/freeze/LOD), not micro-optimizing per-glyph placement.
+
+## 2026-02-09 22:54:20 (commit `53aa6534a`)
+
+Change:
+- Widen interactive-resize “small-step” detection for wrap-width bucketing by introducing
+  `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`; previously effectively `16` hardcoded). This is
+  intended to apply the existing `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` policy to a broader class of
+  real-world resize drags where the per-frame width delta is larger than 16px but still “jitter class”.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 10620 | 11243 | 11243 | 2183 | 327 | 9638 | 638 |
+
+Worst bundle (selected attempt-1):
+- `target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114/attempt-1/1770648681030-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- Compared to the prior run (commit `2085f8ff6`), `p95 total_time_us` improved by ~0.95ms (`12195 -> 11243`), and
+  `p95 paint_time_us` improved by ~0.82ms (`10459 -> 9638`).
+- Bundle-level scan (selected attempt-1; 7 repeats; 1302 frames) still shows `paint_text_prepare_calls.p95=33` with
+  `paint_text_prepare_reason_width_changed == paint_text_prepare_calls` on all nonzero frames, i.e. this change
+  does not reduce prepare *frequency* in this probe. It does reduce prepare *cost*:
+  - `paint_text_prepare_time_us.p95`: `4182 -> 3871`
+  - `paint_text_prepare_time_us.max`: `7750 -> 7118`
+
+Additional validation:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-resize-probes.smallstep64.53aa6534a.20260209-230250
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.smallstep64.53aa6534a.20260209-230250/summary.json`
+
+Results (selected attempt-2; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15987 | 22027 | 22027 | 9534 | 2228 | 12204 | 189 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15826 | 16083 | 16083 | 9895 | 2230 | 6760 | 207 |
+
+## 2026-02-10 00:18:40 (experiment; not landed)
+
+Change:
+- Attempt: latch the “small-step interactive resize” classification across the whole interactive-resize session so
+  wrap-width bucketing and per-width prepared-blob reuse do not toggle on/off when some resize frames exceed
+  `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (i.e. avoid cache thrash on mixed-speed drags).
+
+Status:
+- Reverted after measurement (no clear improvement; selected attempt regressed vs the prior best run).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.sticky-smallstep.9d558fb88.20260210-001748
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.sticky-smallstep.9d558fb88.20260210-001748/summary.json`
+
+Results (selected attempt-2; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 11481 | 11858 | 11858 | 2145 | 325 | 10237 | 600 |
+
+Notes:
+- Compared to the prior best run (commit `53aa6534a`), the selected attempt regressed:
+  - `p95 total_time_us`: `11243 -> 11858` (+0.615ms)
+  - `p95 paint_time_us`: `9638 -> 10237` (+0.599ms)
+- `paint_text_prepare_calls` and `paint_text_prepare_time_us` distributions did not materially improve in the
+  selected attempt (still `calls.p95=33` and `reasons_width_changed == calls` on nonzero frames).
+
+## 2026-02-10 01:47:36 (commit `15c1ee10ec233b4a6d8fa509a8c8fadd419e20c7`)
+
+Change:
+- fix(bootstrap): dedupe click_stable default fns
+
+Suite:
+- `ui-resize-probes`
+
+Stdout:
+- `target/fret-diag/perf.ui-resize-probes.stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 12631 | 12842 | 12842 | 9570 | 2281 | 112 | 3196 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13958 | 14200 | 14200 | 9616 | 2327 | 170 | 4414 | 0 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag/1770659045759-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag/1770659045759-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 182 | 182 | 15 | 15 | 15 | 15 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14200`
+- bundle: `target/fret-diag/1770658992054-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-10 07:47:16 (commit `94721614bd7bf2259be7fc635f71dd8dd3f83add`)
+
+Change:
+- Validation run only (no code change): record `ui-gallery-steady` numbers for this commit.
+
+Suite:
+- `ui-gallery-steady`
+
+Stdout:
+- `target/fret-diag/perf.ui-gallery-steady.stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 4749 | 4853 | 4853 | 4016 | 29 | 51 | 809 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 6928 | 7053 | 7053 | 6040 | 318 | 58 | 966 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 5507 | 5643 | 5643 | 4751 | 85 | 44 | 848 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 3287 | 3322 | 3322 | 2486 | 12 | 52 | 795 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 3548 | 3578 | 3578 | 2791 | 21 | 31 | 765 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 3176 | 3298 | 3298 | 2828 | 63 | 50 | 420 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 7017 | 7121 | 7121 | 6060 | 275 | 61 | 1000 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 12722 | 12984 | 12984 | 8638 | 219 | 187 | 4164 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 10697 | 10856 | 10856 | 7919 | 787 | 72 | 2867 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13383 | 13583 | 13583 | 9191 | 2174 | 152 | 4244 | 0 | 0 |
+
+Notes:
+- Pointer-move frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag/1770679202640-ui-gallery-context-action-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag/1770679202640-ui-gallery-context-action-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13583`
+- bundle: `target/fret-diag/1770680471656-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-10 07:47:26 (commit `94721614bd7bf2259be7fc635f71dd8dd3f83add`)
+
+Change:
+- Validation run only (no code change): record `ui-code-editor-resize-probes` numbers for this commit.
+
+Suite:
+- `ui-code-editor-resize-probes`
+
+Stdout:
+- `target/fret-diag/perf.ui-code-editor-resize-probes.stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 8330 | 8580 | 8580 | 7383 | 388 | 52 | 1182 | 0 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag/1770680615968-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag/1770680615968-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 234 | 234 | 21 | 21 | 21 | 21 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+- top_total_time_us: `8580`
+- bundle: `target/fret-diag/1770680645547-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`

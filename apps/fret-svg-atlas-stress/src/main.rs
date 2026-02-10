@@ -178,14 +178,14 @@ fn record_scene(
     scene.push(fret_core::SceneOp::Quad {
         order: fret_core::DrawOrder(0),
         rect: bounds,
-        background: Color {
+        background: fret_core::Paint::Solid(Color {
             r: 0.06,
             g: 0.07,
             b: 0.08,
             a: 1.0,
-        },
+        }),
         border: fret_core::Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 
@@ -296,14 +296,14 @@ fn run_headless(
         scene.push(fret_core::SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect: bounds,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.06,
                 g: 0.07,
                 b: 0.08,
                 a: 1.0,
-            },
+            }),
             border: fret_core::Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 

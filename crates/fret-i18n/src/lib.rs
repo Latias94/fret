@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use unic_langid::LanguageIdentifier;
 
@@ -224,7 +224,7 @@ pub enum MissingMessageBehavior {
 #[derive(Clone)]
 pub struct I18nService {
     preferred_locales: Vec<LocaleId>,
-    lookup: Option<Arc<dyn I18nLookup + 'static>>,
+    lookup: Option<Rc<dyn I18nLookup + 'static>>,
     missing_message_behavior: MissingMessageBehavior,
     pseudo_enabled: bool,
 }
@@ -258,16 +258,16 @@ impl I18nService {
         out
     }
 
-    pub fn with_lookup(mut self, lookup: Arc<dyn I18nLookup + 'static>) -> Self {
+    pub fn with_lookup(mut self, lookup: Rc<dyn I18nLookup + 'static>) -> Self {
         self.lookup = Some(lookup);
         self
     }
 
-    pub fn set_lookup(&mut self, lookup: Option<Arc<dyn I18nLookup + 'static>>) {
+    pub fn set_lookup(&mut self, lookup: Option<Rc<dyn I18nLookup + 'static>>) {
         self.lookup = lookup;
     }
 
-    pub fn lookup(&self) -> Option<&Arc<dyn I18nLookup + 'static>> {
+    pub fn lookup(&self) -> Option<&Rc<dyn I18nLookup + 'static>> {
         self.lookup.as_ref()
     }
 
@@ -371,7 +371,7 @@ fn pseudo_localize(input: &str) -> String {
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     struct StaticLookup {
         locale: LocaleId,
@@ -448,7 +448,7 @@ mod tests {
         };
 
         let mut service = I18nService::new(vec![locale]);
-        service.set_lookup(Some(Arc::new(lookup)));
+        service.set_lookup(Some(Rc::new(lookup)));
 
         assert_eq!(service.t("menu.file.open"), "Open");
 

@@ -1,5 +1,5 @@
 use fret_core::{
-    Axis, Color, Corners, CursorIcon, DrawOrder, Edges, Px, Rect, Scene, SceneOp, Size,
+    Axis, Color, Corners, CursorIcon, DrawOrder, Edges, Paint, Px, Rect, Scene, SceneOp, Size,
     geometry::Point,
 };
 
@@ -66,9 +66,9 @@ impl ResizeHandle {
         scene.push(SceneOp::Quad {
             order,
             rect,
-            background: color,
+            background: Paint::Solid(color),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
     }

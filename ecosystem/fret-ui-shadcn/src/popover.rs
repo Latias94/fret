@@ -10,9 +10,9 @@ use fret_ui::element::{
     Length, OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::{scheduling, style as decl_style};
+use fret_ui_kit::declarative::{primary_pointer_can_hover, scheduling, style as decl_style};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -590,7 +590,8 @@ impl Popover {
                 );
             }
 
-            let open_on_hover = self.open_on_hover;
+            let pointer_can_hover = primary_pointer_can_hover(cx, Invalidation::Layout, true);
+            let open_on_hover = self.open_on_hover && pointer_can_hover;
             let hover_last_pointer =
                 open_on_hover.then(|| popover_hover_last_pointer_model(cx, popover_id));
             let hover_open_delay_frames = self.hover_open_delay_frames;

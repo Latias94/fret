@@ -320,6 +320,8 @@ impl Renderer {
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
         let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
+        let quad_instance_bind_group =
+            self.quad_instance_bind_groups[instance_buffer_index].clone();
         if !instances.is_empty() {
             queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
             if perf_enabled {
@@ -638,7 +640,11 @@ impl Renderer {
                                             frame_perf.pipeline_switches_quad =
                                                 frame_perf.pipeline_switches_quad.saturating_add(1);
                                         }
-                                        pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                                        pass.set_bind_group(1, &quad_instance_bind_group, &[]);
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        }
                                         active_pipeline = ActivePipeline::Quad;
                                     }
 

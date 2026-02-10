@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub mod builder;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagTransportMessageV1 {
     pub schema_version: u32,
@@ -411,18 +413,13 @@ fn default_slider_epsilon() -> f32 {
     0.5
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
+    #[default]
     Left,
     Right,
     Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 impl UiMouseButtonV1 {

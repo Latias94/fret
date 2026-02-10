@@ -1487,6 +1487,12 @@ struct FrameHitchConfig {
     hitch_ms: u64,
 }
 
+#[cfg(target_arch = "wasm32")]
+fn frame_hitch_config() -> Option<FrameHitchConfig> {
+    None
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn frame_hitch_config() -> Option<FrameHitchConfig> {
     static CONFIG: OnceLock<Option<FrameHitchConfig>> = OnceLock::new();
     *CONFIG.get_or_init(|| {
@@ -1504,6 +1510,7 @@ fn frame_hitch_config() -> Option<FrameHitchConfig> {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     let mut paths = Vec::new();
     paths.push(std::path::Path::new(".fret").join("frame_hitches.log"));
@@ -1515,16 +1522,19 @@ fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct FrameHitchLogWriter {
     file: std::io::BufWriter<std::fs::File>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct FrameHitchLogState {
     writers: Vec<FrameHitchLogWriter>,
     writes_since_flush: u32,
-    last_flush: std::time::Instant,
+    last_flush: Instant,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FrameHitchLogState {
     fn new() -> Self {
         let mut writers = Vec::new();
@@ -1546,7 +1556,7 @@ impl FrameHitchLogState {
         Self {
             writers,
             writes_since_flush: 0,
-            last_flush: std::time::Instant::now(),
+            last_flush: Instant::now(),
         }
     }
 
@@ -1571,11 +1581,15 @@ impl FrameHitchLogState {
                 let _ = w.file.flush();
             }
             self.writes_since_flush = 0;
-            self.last_flush = std::time::Instant::now();
+            self.last_flush = Instant::now();
         }
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+fn write_frame_hitch_log(_line: &str) {}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn write_frame_hitch_log(line: &str) {
     let ts = fret_core::time::SystemTime::now()
         .duration_since(fret_core::time::UNIX_EPOCH)

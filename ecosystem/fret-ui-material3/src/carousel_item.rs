@@ -164,8 +164,6 @@ impl CarouselItem {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let interactive = self.on_activate.is_some();
                 let enabled = interactive && !self.disabled;
@@ -175,7 +173,18 @@ impl CarouselItem {
                 }
 
                 let now_frame = cx.frame_id.0;
-                let corner_radii = carousel_item_tokens::container_shape(&theme);
+                let (corner_radii, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = carousel_item_tokens::container_shape(theme);
+                    let focus_ring = enabled.then(|| {
+                        material_focus_ring_for_component(
+                            theme,
+                            carousel_item_tokens::COMPONENT_PREFIX,
+                            corner_radii,
+                        )
+                    });
+                    (corner_radii, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -191,13 +200,7 @@ impl CarouselItem {
                         l.overflow = Overflow::Visible;
                         l
                     },
-                    focus_ring: enabled.then(|| {
-                        material_focus_ring_for_component(
-                            &theme,
-                            carousel_item_tokens::COMPONENT_PREFIX,
-                            corner_radii,
-                        )
-                    }),
+                    focus_ring,
                     focus_ring_bounds: None,
                 };
 
@@ -217,62 +220,88 @@ impl CarouselItem {
 
                         let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                        let container_bg =
-                            carousel_item_tokens::container_background(&theme, self.disabled);
-                        let container_bg = resolve_override_slot_with(
-                            self.style.container_background.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || container_bg,
-                        );
+                        let (
+                            surface,
+                            outline,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            disabled_opacity,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let elevation = carousel_item_tokens::container_elevation(
-                            &theme,
-                            self.disabled,
-                            interaction,
-                        );
-                        let shadow_color = carousel_item_tokens::container_shadow_color(&theme);
-                        let surface = material_surface_style(
-                            &theme,
-                            container_bg,
-                            elevation,
-                            Some(shadow_color),
-                            corner_radii,
-                        );
+                            let container_bg =
+                                carousel_item_tokens::container_background(theme, self.disabled);
+                            let container_bg = resolve_override_slot_with(
+                                self.style.container_background.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || container_bg,
+                            );
 
-                        let outline = carousel_item_tokens::outline(
-                            &theme,
-                            self.variant == CarouselItemVariant::WithOutline,
-                            self.disabled,
-                            interaction,
-                        );
-                        let outline = resolve_override_slot_opt_with(
-                            self.style.outline_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || outline.map(|o| o.color),
-                        )
-                        .map(|color| {
-                            carousel_item_tokens::CarouselItemOutline {
-                                color,
-                                width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
-                            }
-                        });
+                            let elevation = carousel_item_tokens::container_elevation(
+                                theme,
+                                self.disabled,
+                                interaction,
+                            );
+                            let shadow_color = carousel_item_tokens::container_shadow_color(theme);
+                            let surface = material_surface_style(
+                                theme,
+                                container_bg,
+                                elevation,
+                                Some(shadow_color),
+                                corner_radii,
+                            );
 
-                        let state_layer_color =
-                            carousel_item_tokens::state_layer_color(&theme, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                            let outline = carousel_item_tokens::outline(
+                                theme,
+                                self.variant == CarouselItemVariant::WithOutline,
+                                self.disabled,
+                                interaction,
+                            );
+                            let outline = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || outline.map(|o| o.color),
+                            )
+                            .map(|color| {
+                                carousel_item_tokens::CarouselItemOutline {
+                                    color,
+                                    width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
+                                }
+                            });
 
-                        let state_layer_target =
-                            carousel_item_tokens::state_layer_opacity(&theme, interaction);
-                        let ripple_base_opacity =
-                            carousel_item_tokens::pressed_state_layer_opacity(&theme);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let state_layer_color =
+                                carousel_item_tokens::state_layer_color(theme, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let state_layer_target =
+                                carousel_item_tokens::state_layer_opacity(theme, interaction);
+                            let ripple_base_opacity =
+                                carousel_item_tokens::pressed_state_layer_opacity(theme);
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let disabled_opacity = self
+                                .disabled
+                                .then(|| carousel_item_tokens::disabled_opacity(theme));
+
+                            (
+                                surface,
+                                outline,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                                disabled_opacity,
+                            )
+                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -306,9 +335,9 @@ impl CarouselItem {
                             std::iter::once(overlay).chain(content(cx)).collect();
                         let container = cx.container(container, move |_cx| children);
 
-                        if self.disabled {
+                        if let Some(opacity) = disabled_opacity {
                             let mut props = OpacityProps::default();
-                            props.opacity = carousel_item_tokens::disabled_opacity(&theme);
+                            props.opacity = opacity;
                             vec![cx.opacity_props(props, move |_cx| vec![container])]
                         } else {
                             vec![container]

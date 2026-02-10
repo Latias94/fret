@@ -5,10 +5,10 @@ use std::sync::Arc;
 use fret_core::{Color, FontWeight, KeyCode, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
-    RovingFlexProps, RovingFocusProps, TextProps,
+    AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
@@ -467,674 +467,774 @@ impl Calendar {
             day_grid_width
         };
 
-        let bg = theme.color_required("background");
-        let mut chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(bg))
-            .p(Space::N3);
-        if matches!(
-            surface_slot_in_scope(cx),
-            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
-        ) {
-            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
-        }
-        let chrome = chrome.merge(self.chrome);
-        let root = LayoutRefinement::default().merge(self.layout);
+        let chrome_override = self.chrome;
+        let layout_override = self.layout;
 
-        let mut container_props = decl_style::container_props(&theme, chrome, root);
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
 
-        // Align with shadcn-web: the calendar root is `w-fit` so it doesn't stretch to the full
-        // width of its parent (e.g. gallery preview columns).
-        if matches!(container_props.layout.size.width, Length::Auto) {
-            let content_w = if number_of_months > 1 {
-                // Use the same breakpoint rule as our multi-month layout (`md:flex-row`).
-                let is_row = cx.bounds.size.width.0 >= 768.0;
-                let gap_px = decl_style::space(&theme, Space::N4);
-                if is_row {
-                    Px(month_width.0 * (number_of_months as f32)
-                        + gap_px.0 * ((number_of_months - 1) as f32))
-                } else {
-                    month_width
-                }
-            } else {
-                month_width
-            };
-            let w =
-                Px(content_w.0 + container_props.padding.left.0 + container_props.padding.right.0);
-            container_props.layout.size.width = Length::Px(w);
-        }
-        let (caption_month_value, caption_year_value) =
-            if caption_layout == CalendarCaptionLayout::Dropdown {
-                #[derive(Default, Clone)]
-                struct CaptionDropdownModels {
-                    month_value: Option<Model<Option<Arc<str>>>>,
-                    year_value: Option<Model<Option<Arc<str>>>>,
-                }
-
-                let st = cx.with_state(CaptionDropdownModels::default, |st| st.clone());
-
-                let month_value = match st.month_value {
-                    Some(model) => model,
-                    None => {
-                        let model = cx
-                            .app
-                            .models_mut()
-                            .insert(Some(Arc::from(month_number(month.month).to_string())));
-                        cx.with_state(CaptionDropdownModels::default, |st| {
-                            st.month_value = Some(model.clone())
-                        });
-                        model
-                    }
-                };
-                let year_value = match st.year_value {
-                    Some(model) => model,
-                    None => {
-                        let model = cx
-                            .app
-                            .models_mut()
-                            .insert(Some(Arc::from(month.year.to_string())));
-                        cx.with_state(CaptionDropdownModels::default, |st| {
-                            st.year_value = Some(model.clone())
-                        });
-                        model
-                    }
-                };
-
-                (Some(month_value), Some(year_value))
-            } else {
-                (None, None)
-            };
-
-        cx.container(container_props, move |cx| {
-            if number_of_months > 1 {
-                return calendar_multi_month_view(
-                    cx,
-                    &theme,
-                    month,
-                    month_model.clone(),
-                    selected_model.clone(),
-                    number_of_months,
-                    locale,
-                    month_bounds,
-                    disable_navigation,
-                    week_start,
-                    weekday_labels.clone(),
-                    selected,
-                    today,
-                    show_outside_days,
-                    disable_outside_days,
-                    show_week_number,
-                    day_size,
-                    month_width,
-                    day_grid_width,
-                    week_row_gap,
-                    disabled_predicate.clone(),
-                    close_on_select.clone(),
-                    initial_focus_out.clone(),
-                    grid_text_style.clone(),
-                );
-            }
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N4),
-                move |cx| {
-                    let theme_header = theme.clone();
-                    let theme_weekdays = theme.clone();
-                    let theme_days_for_days = theme.clone();
-                    let theme_days_for_week_numbers = theme.clone();
-
-                    let grid_text_style_weekdays = grid_text_style.clone();
-                    let grid_text_style_week_numbers = grid_text_style.clone();
-
-                    let month_model_header = month_model.clone();
-                    let month_model_days = month_model.clone();
-                    let selected_model = selected_model.clone();
-                    let close_on_select = close_on_select.clone();
-                    let disabled_predicate = disabled_predicate.clone();
-                    let caption_month_value_prev = caption_month_value.clone();
-                    let caption_year_value_prev = caption_year_value.clone();
-
-                    let header = stack::hstack(
+        // Tailwind `md:` breakpoints are viewport-driven on the web, but in editor-grade layouts
+        // the calendar should adapt to the width of its local container (panel resize), not the
+        // global window.
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.calendar",
+            region_props,
+            move |cx, region_id| {
+                let is_row = if number_of_months > 1 {
+                    fret_ui_kit::declarative::container_width_at_least(
                         cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
-                            .items_center()
-                            .justify_between(),
-                        move |cx| {
-                            let nav_enabled = !disable_navigation;
-                            let prev_enabled =
-                                nav_enabled && month_bounds.map_or(true, |b| month_lt(b.0, month));
-                            let next_enabled = nav_enabled
-                                && month_bounds
-                                    .map_or(true, |b| month_lt(month, max_start_month(b, 1)));
+                        region_id,
+                        Invalidation::Layout,
+                        false,
+                        fret_ui_kit::declarative::container_queries::tailwind::MD,
+                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                    )
+                } else {
+                    false
+                };
 
-                            let direction = direction_prim::use_direction_in_scope(cx, None);
-                            let (prev_icon, next_icon) =
-                                if direction == direction_prim::LayoutDirection::Rtl {
-                                    (Arc::from(">"), Arc::from("<"))
-                                } else {
-                                    (Arc::from("<"), Arc::from(">"))
-                                };
+                let bg = theme.color_required("background");
+                let mut chrome = ChromeRefinement::default()
+                    .bg(ColorRef::Color(bg))
+                    .p(Space::N3);
+                if matches!(
+                    surface_slot_in_scope(cx),
+                    Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+                ) {
+                    chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+                }
+                let chrome = chrome.merge(chrome_override);
+                let root = LayoutRefinement::default().merge(layout_override);
 
-                            let caption_month_value_for_prev = caption_month_value_prev.clone();
-                            let caption_year_value_for_prev = caption_year_value_prev.clone();
-                            let caption_month_value_for_next = caption_month_value_prev.clone();
-                            let caption_year_value_for_next = caption_year_value_prev.clone();
+                let mut container_props = decl_style::container_props(&theme, chrome, root);
 
-                            let month_model_prev = month_model_header.clone();
-                            let prev = calendar_icon_button(
-                                cx,
-                                "Go to the Previous Month",
-                                ButtonVariant::Ghost,
-                                ButtonSize::IconSm,
-                                day_size,
-                                prev_icon,
-                                prev_enabled,
-                                move |host| {
-                                    if disable_navigation {
-                                        return;
-                                    }
-                                    let next_month = host
-                                        .models_mut()
-                                        .read(&month_model_prev, |m| {
-                                            let cand = m.prev_month();
-                                            month_bounds
-                                                .map_or(cand, |b| clamp_start_month(cand, b, 1))
-                                        })
-                                        .ok();
-                                    let Some(next_month) = next_month else {
-                                        return;
-                                    };
-
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&month_model_prev, |m| *m = next_month);
-
-                                    if let (Some(month_value), Some(year_value)) = (
-                                        &caption_month_value_for_prev,
-                                        &caption_year_value_for_prev,
-                                    ) {
-                                        let _ = host.models_mut().update(month_value, |v| {
-                                            *v = Some(Arc::from(
-                                                month_number(next_month.month).to_string(),
-                                            ));
-                                        });
-                                        let _ = host.models_mut().update(year_value, |v| {
-                                            *v = Some(Arc::from(next_month.year.to_string()));
-                                        });
-                                    }
-                                },
-                            );
-                            let month_model_next = month_model_header.clone();
-                            let next = calendar_icon_button(
-                                cx,
-                                "Go to the Next Month",
-                                ButtonVariant::Ghost,
-                                ButtonSize::IconSm,
-                                day_size,
-                                next_icon,
-                                next_enabled,
-                                move |host| {
-                                    if disable_navigation {
-                                        return;
-                                    }
-                                    let next_month = host
-                                        .models_mut()
-                                        .read(&month_model_next, |m| {
-                                            let cand = m.next_month();
-                                            month_bounds
-                                                .map_or(cand, |b| clamp_start_month(cand, b, 1))
-                                        })
-                                        .ok();
-                                    let Some(next_month) = next_month else {
-                                        return;
-                                    };
-
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&month_model_next, |m| *m = next_month);
-
-                                    if let (Some(month_value), Some(year_value)) = (
-                                        &caption_month_value_for_next,
-                                        &caption_year_value_for_next,
-                                    ) {
-                                        let _ = host.models_mut().update(month_value, |v| {
-                                            *v = Some(Arc::from(
-                                                month_number(next_month.month).to_string(),
-                                            ));
-                                        });
-                                        let _ = host.models_mut().update(year_value, |v| {
-                                            *v = Some(Arc::from(next_month.year.to_string()));
-                                        });
-                                    }
-                                },
-                            );
-
-                            let title_el =
-                                match (&caption_month_value_prev, &caption_year_value_prev) {
-                                    (Some(month_value), Some(year_value))
-                                        if caption_layout == CalendarCaptionLayout::Dropdown =>
-                                    {
-                                        let month_model = month_model_header.clone();
-                                        let year_value_for_month = year_value.clone();
-                                        let month_value_for_month = month_value.clone();
-                                        let year_value_for_year = year_value.clone();
-                                        let month_value_for_year = month_value.clone();
-
-                                        let today_year = today.year();
-                                        let (year_start, year_end) = month_bounds
-                                            .map(|b| (b.0.year, b.1.year))
-                                            .unwrap_or((today_year - 10, today_year + 10));
-
-                                        let month_select = Select::new_controllable::<H, Arc<str>>(
-                                            cx,
-                                            Some(month_value.clone()),
-                                            None::<Arc<str>>,
-                                            None,
-                                            false,
-                                        )
-                                        .position(SelectPosition::Popper)
-                                        .on_value_change(move |host, _acx, raw| {
-                                            let Ok(month_num) = raw.parse::<u8>() else {
-                                                return;
-                                            };
-                                            let Ok(month) = Month::try_from(month_num) else {
-                                                return;
-                                            };
-
-                                            let cur_year = host
-                                                .models_mut()
-                                                .read(&month_model, |m| m.year)
-                                                .ok()
-                                                .unwrap_or(today_year);
-                                            let cand = CalendarMonth::new(cur_year, month);
-                                            let next = month_bounds
-                                                .map_or(cand, |b| clamp_start_month(cand, b, 1));
-
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&month_model, |m| *m = next);
-                                            let _ = host.models_mut().update(
-                                                &month_value_for_month,
-                                                |v| {
-                                                    *v = Some(Arc::from(
-                                                        month_number(next.month).to_string(),
-                                                    ));
-                                                },
-                                            );
-                                            let _ = host.models_mut().update(
-                                                &year_value_for_month,
-                                                |v| {
-                                                    *v = Some(Arc::from(next.year.to_string()));
-                                                },
-                                            );
-                                        })
-                                        .items([
-                                            SelectItem::new("1", locale.month_name(Month::January)),
-                                            SelectItem::new(
-                                                "2",
-                                                locale.month_name(Month::February),
-                                            ),
-                                            SelectItem::new("3", locale.month_name(Month::March)),
-                                            SelectItem::new("4", locale.month_name(Month::April)),
-                                            SelectItem::new("5", locale.month_name(Month::May)),
-                                            SelectItem::new("6", locale.month_name(Month::June)),
-                                            SelectItem::new("7", locale.month_name(Month::July)),
-                                            SelectItem::new("8", locale.month_name(Month::August)),
-                                            SelectItem::new(
-                                                "9",
-                                                locale.month_name(Month::September),
-                                            ),
-                                            SelectItem::new(
-                                                "10",
-                                                locale.month_name(Month::October),
-                                            ),
-                                            SelectItem::new(
-                                                "11",
-                                                locale.month_name(Month::November),
-                                            ),
-                                            SelectItem::new(
-                                                "12",
-                                                locale.month_name(Month::December),
-                                            ),
-                                        ])
-                                        .into_element(cx);
-
-                                        let year_model = month_model_header.clone();
-                                        let year_select = Select::new_controllable::<H, Arc<str>>(
-                                            cx,
-                                            Some(year_value.clone()),
-                                            None::<Arc<str>>,
-                                            None,
-                                            false,
-                                        )
-                                        .position(SelectPosition::Popper)
-                                        .on_value_change(move |host, _acx, raw| {
-                                            let Ok(year) = raw.parse::<i32>() else {
-                                                return;
-                                            };
-                                            let cur_month = host
-                                                .models_mut()
-                                                .read(&year_model, |m| m.month)
-                                                .ok()
-                                                .unwrap_or(Month::January);
-                                            let cand = CalendarMonth::new(year, cur_month);
-                                            let next = month_bounds
-                                                .map_or(cand, |b| clamp_start_month(cand, b, 1));
-
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&year_model, |m| *m = next);
-                                            let _ = host.models_mut().update(
-                                                &month_value_for_year,
-                                                |v| {
-                                                    *v = Some(Arc::from(
-                                                        month_number(next.month).to_string(),
-                                                    ));
-                                                },
-                                            );
-                                            let _ = host.models_mut().update(
-                                                &year_value_for_year,
-                                                |v| {
-                                                    *v = Some(Arc::from(next.year.to_string()));
-                                                },
-                                            );
-                                        })
-                                        .items(
-                                            (year_start..=year_end).map(|y| {
-                                                SelectItem::new(y.to_string(), y.to_string())
-                                            }),
-                                        )
-                                        .into_element(cx);
-
-                                        stack::hstack(
-                                            cx,
-                                            stack::HStackProps::default()
-                                                .gap(Space::N2)
-                                                .items_center(),
-                                            move |_cx| vec![month_select, year_select],
-                                        )
-                                    }
-                                    _ => {
-                                        let mut title_props = TextProps::new(title.clone());
-                                        title_props.style = Some(TextStyle {
-                                            font: Default::default(),
-                                            size: theme_header.metric_required("font.size"),
-                                            weight: FontWeight::MEDIUM,
-                                            line_height: Some(
-                                                theme_header.metric_required("font.line_height"),
-                                            ),
-                                            ..Default::default()
-                                        });
-                                        title_props.wrap = TextWrap::None;
-                                        title_props.overflow = TextOverflow::Clip;
-                                        cx.text_props(title_props)
-                                    }
-                                };
-
-                            vec![prev, title_el, next]
-                        },
-                    );
-
-                    let weekday_row = cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Px(month_width),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            direction: fret_core::Axis::Horizontal,
-                            gap: day_col_gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            let mut out = Vec::with_capacity(8);
-                            if show_week_number {
-                                let mut props = TextProps::new(Arc::from("Wk"));
-                                props.style = Some(grid_text_style_weekdays.clone());
-                                props.color = theme_weekdays.color_by_key("muted-foreground");
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(day_size);
-                                layout.size.height = Length::Auto;
-                                props.layout = layout;
-                                out.push(cx.text_props(props));
-                            }
-
-                            out.extend(weekday_labels.iter().map(|label| {
-                                let mut props = TextProps::new(Arc::clone(label));
-                                props.style = Some(grid_text_style_weekdays.clone());
-                                props.color = theme_weekdays.color_by_key("muted-foreground");
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(day_size);
-                                layout.size.height = Length::Auto;
-                                props.layout = layout;
-                                cx.text_props(props)
-                            }));
-                            out
-                        },
-                    );
-
-                    let roving_props = RovingFlexProps {
-                        flex: FlexProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Px(day_grid_width),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
-                                ..Default::default()
-                            },
-                            direction: fret_core::Axis::Horizontal,
-                            gap: day_col_gap,
-                            padding: fret_core::Edges {
-                                top: week_row_gap,
-                                ..fret_core::Edges::all(Px(0.0))
-                            },
-                            justify: MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Start,
-                            wrap: true,
-                        },
-                        roving: RovingFocusProps {
-                            enabled: true,
-                            wrap: false,
-                            disabled: Arc::clone(&disabled),
-                        },
-                    };
-
-                    let week_numbers: Arc<[u32]> = if show_week_number {
-                        grid.chunks(7)
-                            .map(|week| week_number(week[0].date, week_start))
-                            .collect::<Vec<_>>()
-                            .into()
+                // Align with shadcn-web: the calendar root is `w-fit` so it doesn't stretch to the
+                // full width of its parent (e.g. gallery preview columns).
+                if matches!(container_props.layout.size.width, Length::Auto) {
+                    let content_w = if number_of_months > 1 {
+                        let gap_px = decl_style::space(&theme, Space::N4);
+                        if is_row {
+                            Px(month_width.0 * (number_of_months as f32)
+                                + gap_px.0 * ((number_of_months - 1) as f32))
+                        } else {
+                            month_width
+                        }
                     } else {
-                        Vec::<u32>::new().into()
+                        month_width
+                    };
+                    let w = Px(content_w.0
+                        + container_props.padding.left.0
+                        + container_props.padding.right.0);
+                    container_props.layout.size.width = Length::Px(w);
+                }
+
+                let (caption_month_value, caption_year_value) =
+                    if caption_layout == CalendarCaptionLayout::Dropdown {
+                        #[derive(Default, Clone)]
+                        struct CaptionDropdownModels {
+                            month_value: Option<Model<Option<Arc<str>>>>,
+                            year_value: Option<Model<Option<Arc<str>>>>,
+                        }
+
+                        let st = cx.with_state(CaptionDropdownModels::default, |st| st.clone());
+
+                        let month_value = match st.month_value {
+                            Some(model) => model,
+                            None => {
+                                let model = cx
+                                    .app
+                                    .models_mut()
+                                    .insert(Some(Arc::from(month_number(month.month).to_string())));
+                                cx.with_state(CaptionDropdownModels::default, |st| {
+                                    st.month_value = Some(model.clone())
+                                });
+                                model
+                            }
+                        };
+                        let year_value = match st.year_value {
+                            Some(model) => model,
+                            None => {
+                                let model = cx
+                                    .app
+                                    .models_mut()
+                                    .insert(Some(Arc::from(month.year.to_string())));
+                                cx.with_state(CaptionDropdownModels::default, |st| {
+                                    st.year_value = Some(model.clone())
+                                });
+                                model
+                            }
+                        };
+
+                        (Some(month_value), Some(year_value))
+                    } else {
+                        (None, None)
                     };
 
-                    let days_grid = cx.roving_flex(roving_props, move |cx| {
-                        let direction = direction_prim::use_direction_in_scope(cx, None);
-                        let month_model = month_model_days.clone();
-                        cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
-                            use fret_core::KeyCode;
-                            use fret_ui::action::RovingNavigateResult;
+                vec![cx.container(container_props, move |cx| {
+                    if number_of_months > 1 {
+                        return calendar_multi_month_view(
+                            cx,
+                            &theme,
+                            is_row,
+                            month,
+                            month_model.clone(),
+                            selected_model.clone(),
+                            number_of_months,
+                            locale,
+                            month_bounds,
+                            disable_navigation,
+                            week_start,
+                            weekday_labels.clone(),
+                            selected,
+                            today,
+                            show_outside_days,
+                            disable_outside_days,
+                            show_week_number,
+                            day_size,
+                            month_width,
+                            day_grid_width,
+                            week_row_gap,
+                            disabled_predicate.clone(),
+                            close_on_select.clone(),
+                            initial_focus_out.clone(),
+                            grid_text_style.clone(),
+                        );
+                    }
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N4),
+                        move |cx| {
+                            let theme_header = theme.clone();
+                            let theme_weekdays = theme.clone();
+                            let theme_days_for_days = theme.clone();
+                            let theme_days_for_week_numbers = theme.clone();
 
-                            let Some(current) = it.current else {
-                                return RovingNavigateResult::NotHandled;
-                            };
+                            let grid_text_style_weekdays = grid_text_style.clone();
+                            let grid_text_style_week_numbers = grid_text_style.clone();
 
-                            let step = calendar_day_grid_step_for_key(direction, it.key);
+                            let month_model_header = month_model.clone();
+                            let month_model_days = month_model.clone();
+                            let selected_model = selected_model.clone();
+                            let close_on_select = close_on_select.clone();
+                            let disabled_predicate = disabled_predicate.clone();
+                            let caption_month_value_prev = caption_month_value.clone();
+                            let caption_year_value_prev = caption_year_value.clone();
 
-                            if let Some(step) = step {
-                                let next = (current as i32 + step)
-                                    .clamp(0, (it.len.saturating_sub(1)) as i32)
-                                    as usize;
-                                return RovingNavigateResult::Handled { target: Some(next) };
-                            }
+                            let header = stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .gap(Space::N2)
+                                    .layout(
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(month_width)),
+                                    )
+                                    .items_center()
+                                    .justify_between(),
+                                move |cx| {
+                                    let nav_enabled = !disable_navigation;
+                                    let prev_enabled = nav_enabled
+                                        && month_bounds.map_or(true, |b| month_lt(b.0, month));
+                                    let next_enabled = nav_enabled
+                                        && month_bounds.map_or(true, |b| {
+                                            month_lt(month, max_start_month(b, 1))
+                                        });
 
-                            if let Some(target) = calendar_day_grid_row_edge_target_for_key(
-                                direction, it.key, current, it.len,
-                            ) {
-                                return RovingNavigateResult::Handled {
-                                    target: Some(target),
-                                };
-                            }
+                                    let direction =
+                                        direction_prim::use_direction_in_scope(cx, None);
+                                    let (prev_icon, next_icon) =
+                                        if direction == direction_prim::LayoutDirection::Rtl {
+                                            (Arc::from(">"), Arc::from("<"))
+                                        } else {
+                                            (Arc::from("<"), Arc::from(">"))
+                                        };
 
-                            match it.key {
-                                KeyCode::PageUp => {
-                                    let _ = host.models_mut().update(&month_model, |m| {
-                                        *m = m.prev_month();
-                                    });
-                                    RovingNavigateResult::Handled {
-                                        target: Some(current),
-                                    }
-                                }
-                                KeyCode::PageDown => {
-                                    let _ = host.models_mut().update(&month_model, |m| {
-                                        *m = m.next_month();
-                                    });
-                                    RovingNavigateResult::Handled {
-                                        target: Some(current),
-                                    }
-                                }
-                                _ => RovingNavigateResult::NotHandled,
-                            }
-                        }));
+                                    let caption_month_value_for_prev =
+                                        caption_month_value_prev.clone();
+                                    let caption_year_value_for_prev =
+                                        caption_year_value_prev.clone();
+                                    let caption_month_value_for_next =
+                                        caption_month_value_prev.clone();
+                                    let caption_year_value_for_next =
+                                        caption_year_value_prev.clone();
 
-                        let week_count = (grid.len() / 7).max(1);
-                        grid.iter()
-                            .enumerate()
-                            .map(|(idx, day)| {
-                                let week_idx = idx / 7;
-                                let is_last_week = week_idx + 1 >= week_count;
-                                let row_bottom_gap =
-                                    if is_last_week { Px(0.0) } else { week_row_gap };
-                                let is_hidden =
-                                    (!day.in_month && !show_outside_days) || !in_bounds(day.date);
-                                if is_hidden {
-                                    return calendar_hidden_day_cell(
+                                    let month_model_prev = month_model_header.clone();
+                                    let prev = calendar_icon_button(
                                         cx,
-                                        &theme_days_for_days,
+                                        "Go to the Previous Month",
+                                        ButtonVariant::Ghost,
+                                        ButtonSize::IconSm,
                                         day_size,
-                                        row_bottom_gap,
+                                        prev_icon,
+                                        prev_enabled,
+                                        move |host| {
+                                            if disable_navigation {
+                                                return;
+                                            }
+                                            let next_month = host
+                                                .models_mut()
+                                                .read(&month_model_prev, |m| {
+                                                    let cand = m.prev_month();
+                                                    month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    })
+                                                })
+                                                .ok();
+                                            let Some(next_month) = next_month else {
+                                                return;
+                                            };
+
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&month_model_prev, |m| *m = next_month);
+
+                                            if let (Some(month_value), Some(year_value)) = (
+                                                &caption_month_value_for_prev,
+                                                &caption_year_value_for_prev,
+                                            ) {
+                                                let _ =
+                                                    host.models_mut().update(month_value, |v| {
+                                                        *v = Some(Arc::from(
+                                                            month_number(next_month.month)
+                                                                .to_string(),
+                                                        ));
+                                                    });
+                                                let _ = host.models_mut().update(year_value, |v| {
+                                                    *v = Some(Arc::from(
+                                                        next_month.year.to_string(),
+                                                    ));
+                                                });
+                                            }
+                                        },
                                     );
-                                }
+                                    let month_model_next = month_model_header.clone();
+                                    let next = calendar_icon_button(
+                                        cx,
+                                        "Go to the Next Month",
+                                        ButtonVariant::Ghost,
+                                        ButtonSize::IconSm,
+                                        day_size,
+                                        next_icon,
+                                        next_enabled,
+                                        move |host| {
+                                            if disable_navigation {
+                                                return;
+                                            }
+                                            let next_month = host
+                                                .models_mut()
+                                                .read(&month_model_next, |m| {
+                                                    let cand = m.next_month();
+                                                    month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    })
+                                                })
+                                                .ok();
+                                            let Some(next_month) = next_month else {
+                                                return;
+                                            };
 
-                                let is_selected = selected.is_some_and(|d| d == day.date);
-                                let is_today = today == day.date;
-                                let is_disabled = disabled.get(idx).copied().unwrap_or(false);
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&month_model_next, |m| *m = next_month);
 
-                                calendar_day_cell(
-                                    cx,
-                                    &theme_days_for_days,
-                                    locale,
-                                    day.date,
-                                    day.in_month,
-                                    is_selected,
-                                    is_today,
-                                    is_disabled,
-                                    focus_date.is_some_and(|d| d == day.date),
-                                    day_size,
-                                    row_bottom_gap,
-                                    &selected_model,
-                                    close_on_select.clone(),
-                                    disabled_predicate.clone(),
-                                    initial_focus_out.clone(),
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                    });
+                                            if let (Some(month_value), Some(year_value)) = (
+                                                &caption_month_value_for_next,
+                                                &caption_year_value_for_next,
+                                            ) {
+                                                let _ =
+                                                    host.models_mut().update(month_value, |v| {
+                                                        *v = Some(Arc::from(
+                                                            month_number(next_month.month)
+                                                                .to_string(),
+                                                        ));
+                                                    });
+                                                let _ = host.models_mut().update(year_value, |v| {
+                                                    *v = Some(Arc::from(
+                                                        next_month.year.to_string(),
+                                                    ));
+                                                });
+                                            }
+                                        },
+                                    );
 
-                    let days = if show_week_number {
-                        let week_numbers: Arc<[u32]> = Arc::clone(&week_numbers);
-                        let week_number_column = cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Px(day_size),
+                                    let title_el =
+                                        match (&caption_month_value_prev, &caption_year_value_prev)
+                                        {
+                                            (Some(month_value), Some(year_value))
+                                                if caption_layout
+                                                    == CalendarCaptionLayout::Dropdown =>
+                                            {
+                                                let month_model = month_model_header.clone();
+                                                let year_value_for_month = year_value.clone();
+                                                let month_value_for_month = month_value.clone();
+                                                let year_value_for_year = year_value.clone();
+                                                let month_value_for_year = month_value.clone();
+
+                                                let today_year = today.year();
+                                                let (year_start, year_end) = month_bounds
+                                                    .map(|b| (b.0.year, b.1.year))
+                                                    .unwrap_or((today_year - 10, today_year + 10));
+
+                                                let month_select = Select::new_controllable::<
+                                                    H,
+                                                    Arc<str>,
+                                                >(
+                                                    cx,
+                                                    Some(month_value.clone()),
+                                                    None::<Arc<str>>,
+                                                    None,
+                                                    false,
+                                                )
+                                                .position(SelectPosition::Popper)
+                                                .on_value_change(move |host, _acx, raw| {
+                                                    let Ok(month_num) = raw.parse::<u8>() else {
+                                                        return;
+                                                    };
+                                                    let Ok(month) = Month::try_from(month_num)
+                                                    else {
+                                                        return;
+                                                    };
+
+                                                    let cur_year = host
+                                                        .models_mut()
+                                                        .read(&month_model, |m| m.year)
+                                                        .ok()
+                                                        .unwrap_or(today_year);
+                                                    let cand = CalendarMonth::new(cur_year, month);
+                                                    let next = month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    });
+
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&month_model, |m| *m = next);
+                                                    let _ = host.models_mut().update(
+                                                        &month_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                month_number(next.month)
+                                                                    .to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                    let _ = host.models_mut().update(
+                                                        &year_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                next.year.to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                })
+                                                .items([
+                                                    SelectItem::new(
+                                                        "1",
+                                                        locale.month_name(Month::January),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "2",
+                                                        locale.month_name(Month::February),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "3",
+                                                        locale.month_name(Month::March),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "4",
+                                                        locale.month_name(Month::April),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "5",
+                                                        locale.month_name(Month::May),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "6",
+                                                        locale.month_name(Month::June),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "7",
+                                                        locale.month_name(Month::July),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "8",
+                                                        locale.month_name(Month::August),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "9",
+                                                        locale.month_name(Month::September),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "10",
+                                                        locale.month_name(Month::October),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "11",
+                                                        locale.month_name(Month::November),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "12",
+                                                        locale.month_name(Month::December),
+                                                    ),
+                                                ])
+                                                .into_element(cx);
+
+                                                let year_model = month_model_header.clone();
+                                                let year_select = Select::new_controllable::<
+                                                    H,
+                                                    Arc<str>,
+                                                >(
+                                                    cx,
+                                                    Some(year_value.clone()),
+                                                    None::<Arc<str>>,
+                                                    None,
+                                                    false,
+                                                )
+                                                .position(SelectPosition::Popper)
+                                                .on_value_change(move |host, _acx, raw| {
+                                                    let Ok(year) = raw.parse::<i32>() else {
+                                                        return;
+                                                    };
+                                                    let cur_month = host
+                                                        .models_mut()
+                                                        .read(&year_model, |m| m.month)
+                                                        .ok()
+                                                        .unwrap_or(Month::January);
+                                                    let cand = CalendarMonth::new(year, cur_month);
+                                                    let next = month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    });
+
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&year_model, |m| *m = next);
+                                                    let _ = host.models_mut().update(
+                                                        &month_value_for_year,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                month_number(next.month)
+                                                                    .to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                    let _ = host.models_mut().update(
+                                                        &year_value_for_year,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                next.year.to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                })
+                                                .items((year_start..=year_end).map(|y| {
+                                                    SelectItem::new(y.to_string(), y.to_string())
+                                                }))
+                                                .into_element(cx);
+
+                                                stack::hstack(
+                                                    cx,
+                                                    stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    move |_cx| vec![month_select, year_select],
+                                                )
+                                            }
+                                            _ => {
+                                                let mut title_props = TextProps::new(title.clone());
+                                                title_props.style = Some(TextStyle {
+                                                    font: Default::default(),
+                                                    size: theme_header.metric_required("font.size"),
+                                                    weight: FontWeight::MEDIUM,
+                                                    line_height: Some(
+                                                        theme_header
+                                                            .metric_required("font.line_height"),
+                                                    ),
+                                                    ..Default::default()
+                                                });
+                                                title_props.wrap = TextWrap::None;
+                                                title_props.overflow = TextOverflow::Clip;
+                                                cx.text_props(title_props)
+                                            }
+                                        };
+
+                                    vec![prev, title_el, next]
+                                },
+                            );
+
+                            let weekday_row = cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Px(month_width),
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
-                                    ..Default::default()
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: day_col_gap,
+                                    padding: fret_core::Edges::all(Px(0.0)),
+                                    justify: MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Center,
+                                    wrap: false,
                                 },
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges {
-                                    top: week_row_gap,
-                                    ..fret_core::Edges::all(Px(0.0))
-                                },
-                                justify: MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Start,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                let week_count = week_numbers.len().max(1);
-                                week_numbers
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(idx, n): (usize, &u32)| {
-                                        let mut props = TextProps::new(Arc::from(n.to_string()));
-                                        props.style = Some(grid_text_style_week_numbers.clone());
-                                        props.color = theme_days_for_week_numbers
-                                            .color_by_key("muted-foreground");
+                                move |cx| {
+                                    let mut out = Vec::with_capacity(8);
+                                    if show_week_number {
+                                        let mut props = TextProps::new(Arc::from("Wk"));
+                                        props.style = Some(grid_text_style_weekdays.clone());
+                                        props.color =
+                                            theme_weekdays.color_by_key("muted-foreground");
                                         props.wrap = TextWrap::None;
                                         props.overflow = TextOverflow::Clip;
 
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Px(day_size);
-                                        layout.size.height = Length::Px(day_size);
-                                        let is_last_week = idx + 1 >= week_count;
-                                        if !is_last_week {
-                                            layout.margin.bottom =
-                                                fret_ui::element::MarginEdge::Px(week_row_gap);
-                                        }
+                                        layout.size.height = Length::Auto;
+                                        props.layout = layout;
+                                        out.push(cx.text_props(props));
+                                    }
+
+                                    out.extend(weekday_labels.iter().map(|label| {
+                                        let mut props = TextProps::new(Arc::clone(label));
+                                        props.style = Some(grid_text_style_weekdays.clone());
+                                        props.color =
+                                            theme_weekdays.color_by_key("muted-foreground");
+                                        props.wrap = TextWrap::None;
+                                        props.overflow = TextOverflow::Clip;
+
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(day_size);
+                                        layout.size.height = Length::Auto;
                                         props.layout = layout;
                                         cx.text_props(props)
-                                    })
-                                    .collect::<Vec<_>>()
-                            },
-                        );
+                                    }));
+                                    out
+                                },
+                            );
 
-                        cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Px(month_width),
+                            let roving_props = RovingFlexProps {
+                                flex: FlexProps {
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Px(day_grid_width),
+                                            ..Default::default()
+                                        },
+                                        overflow: Overflow::Visible,
                                         ..Default::default()
                                     },
-                                    ..Default::default()
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: day_col_gap,
+                                    padding: fret_core::Edges {
+                                        top: week_row_gap,
+                                        ..fret_core::Edges::all(Px(0.0))
+                                    },
+                                    justify: MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Start,
+                                    wrap: true,
                                 },
-                                direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Start,
-                                wrap: false,
-                            },
-                            move |_cx| vec![week_number_column, days_grid],
-                        )
-                    } else {
-                        days_grid
-                    };
+                                roving: RovingFocusProps {
+                                    enabled: true,
+                                    wrap: false,
+                                    disabled: Arc::clone(&disabled),
+                                },
+                            };
 
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(Space::N0),
-                        move |_cx| vec![weekday_row, days],
-                    );
+                            let week_numbers: Arc<[u32]> = if show_week_number {
+                                grid.chunks(7)
+                                    .map(|week| week_number(week[0].date, week_start))
+                                    .collect::<Vec<_>>()
+                                    .into()
+                            } else {
+                                Vec::<u32>::new().into()
+                            };
 
-                    vec![header, body]
-                },
-            )]
-        })
+                            let days_grid = cx.roving_flex(roving_props, move |cx| {
+                                let direction = direction_prim::use_direction_in_scope(cx, None);
+                                let month_model = month_model_days.clone();
+                                cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
+                                    use fret_core::KeyCode;
+                                    use fret_ui::action::RovingNavigateResult;
+
+                                    let Some(current) = it.current else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
+
+                                    let step = calendar_day_grid_step_for_key(direction, it.key);
+
+                                    if let Some(step) = step {
+                                        let next = (current as i32 + step)
+                                            .clamp(0, (it.len.saturating_sub(1)) as i32)
+                                            as usize;
+                                        return RovingNavigateResult::Handled {
+                                            target: Some(next),
+                                        };
+                                    }
+
+                                    if let Some(target) = calendar_day_grid_row_edge_target_for_key(
+                                        direction, it.key, current, it.len,
+                                    ) {
+                                        return RovingNavigateResult::Handled {
+                                            target: Some(target),
+                                        };
+                                    }
+
+                                    match it.key {
+                                        KeyCode::PageUp => {
+                                            let _ = host.models_mut().update(&month_model, |m| {
+                                                *m = m.prev_month();
+                                            });
+                                            RovingNavigateResult::Handled {
+                                                target: Some(current),
+                                            }
+                                        }
+                                        KeyCode::PageDown => {
+                                            let _ = host.models_mut().update(&month_model, |m| {
+                                                *m = m.next_month();
+                                            });
+                                            RovingNavigateResult::Handled {
+                                                target: Some(current),
+                                            }
+                                        }
+                                        _ => RovingNavigateResult::NotHandled,
+                                    }
+                                }));
+
+                                let week_count = (grid.len() / 7).max(1);
+                                grid.iter()
+                                    .enumerate()
+                                    .map(|(idx, day)| {
+                                        let week_idx = idx / 7;
+                                        let is_last_week = week_idx + 1 >= week_count;
+                                        let row_bottom_gap =
+                                            if is_last_week { Px(0.0) } else { week_row_gap };
+                                        let is_hidden = (!day.in_month && !show_outside_days)
+                                            || !in_bounds(day.date);
+                                        if is_hidden {
+                                            return calendar_hidden_day_cell(
+                                                cx,
+                                                &theme_days_for_days,
+                                                day_size,
+                                                row_bottom_gap,
+                                            );
+                                        }
+
+                                        let is_selected = selected.is_some_and(|d| d == day.date);
+                                        let is_today = today == day.date;
+                                        let is_disabled =
+                                            disabled.get(idx).copied().unwrap_or(false);
+
+                                        calendar_day_cell(
+                                            cx,
+                                            &theme_days_for_days,
+                                            locale,
+                                            day.date,
+                                            day.in_month,
+                                            is_selected,
+                                            is_today,
+                                            is_disabled,
+                                            focus_date.is_some_and(|d| d == day.date),
+                                            day_size,
+                                            row_bottom_gap,
+                                            &selected_model,
+                                            close_on_select.clone(),
+                                            disabled_predicate.clone(),
+                                            initial_focus_out.clone(),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            });
+
+                            let days = if show_week_number {
+                                let week_numbers: Arc<[u32]> = Arc::clone(&week_numbers);
+                                let week_number_column = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Px(day_size),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        direction: fret_core::Axis::Vertical,
+                                        gap: Px(0.0),
+                                        padding: fret_core::Edges {
+                                            top: week_row_gap,
+                                            ..fret_core::Edges::all(Px(0.0))
+                                        },
+                                        justify: MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Start,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let week_count = week_numbers.len().max(1);
+                                        week_numbers
+                                            .iter()
+                                            .enumerate()
+                                            .map(|(idx, n): (usize, &u32)| {
+                                                let mut props =
+                                                    TextProps::new(Arc::from(n.to_string()));
+                                                props.style =
+                                                    Some(grid_text_style_week_numbers.clone());
+                                                props.color = theme_days_for_week_numbers
+                                                    .color_by_key("muted-foreground");
+                                                props.wrap = TextWrap::None;
+                                                props.overflow = TextOverflow::Clip;
+
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(day_size);
+                                                layout.size.height = Length::Px(day_size);
+                                                let is_last_week = idx + 1 >= week_count;
+                                                if !is_last_week {
+                                                    layout.margin.bottom =
+                                                        fret_ui::element::MarginEdge::Px(
+                                                            week_row_gap,
+                                                        );
+                                                }
+                                                props.layout = layout;
+                                                cx.text_props(props)
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
+                                );
+
+                                cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Px(month_width),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(0.0),
+                                        padding: fret_core::Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Start,
+                                        wrap: false,
+                                    },
+                                    move |_cx| vec![week_number_column, days_grid],
+                                )
+                            } else {
+                                days_grid
+                            };
+
+                            let body = stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N0),
+                                move |_cx| vec![weekday_row, days],
+                            );
+
+                            vec![header, body]
+                        },
+                    )]
+                })]
+            },
+        )
     }
 }
 
@@ -1142,6 +1242,7 @@ impl Calendar {
 fn calendar_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
     selected_model: Model<Option<Date>>,
@@ -1165,8 +1266,6 @@ fn calendar_multi_month_view<H: UiHost>(
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
 ) -> Vec<AnyElement> {
-    let is_row = cx.bounds.size.width.0 >= 768.0;
-
     let gap_px = decl_style::space(theme, Space::N4);
     let months_span = if is_row {
         Px(month_width.0 * (number_of_months as f32) + gap_px.0 * ((number_of_months - 1) as f32))

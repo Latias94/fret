@@ -28,7 +28,7 @@ Related ADRs:
 
 - ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
 
 Implementation pointers (where the code lives today):
 
@@ -152,6 +152,24 @@ Notes:
 }
 ```
 
+Optional: generate scripts from typed Rust templates
+
+If you prefer authoring scripts in Rust (type-safe selectors + reusable helpers) but still want the portable/reviewable
+JSON artifact, use `fret-diag-scriptgen`:
+
+```bash
+cargo run -p fret-diag-scriptgen -- list
+cargo run -p fret-diag-scriptgen -- write todo-baseline-v2
+```
+
+This writes a JSON file under `.fret/diag/scripts/` by default and prints the path. You can then run it via:
+
+```bash
+cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
+```
+
+Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`
@@ -199,6 +217,39 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
     - Or launch a fresh process per script (clean state, slower):
 
       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+
+Web runner note:
+
+- `diag perf` uses the filesystem-trigger transport, so for web runner workflows you typically:
+  1) run the script via `apps/fret-devtools` (or any devtools-ws-capable driver) to export bundles under `.fret/diag/exports/`, then
+  2) compute a baseline from those bundle paths:
+     - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
+
+### Web runner: exporting bundles headlessly (Trunk + devtools-ws)
+
+This is the simplest repeatable workflow for producing `.fret/diag/exports/<timestamp>/bundle.json` from a web/WASM app.
+
+1. Start the loopback devtools WS hub (prints the token):
+
+   - `cargo run -p fret-devtools-ws`
+
+2. Serve the WASM app with Trunk:
+
+   - `cd apps/fret-ui-gallery-web`
+   - `trunk serve --port 8080`
+
+3. Open the app URL with WS parameters:
+
+   - `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+
+4. Export a bundle by running a script that includes a `capture_bundle` step:
+
+   - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --token <token>`
+
+The command prints the export directory path, and writes:
+
+- `.fret/diag/exports/<timestamp>/bundle.json`
+
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
@@ -670,7 +721,7 @@ Notes:
 
 Recommended (CI/automation):
 
-- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+- `python3 tools/diag_matrix_ui_gallery.py --out-dir target/fret-diag --warmup-frames 5 --release --json`
 
 ### Bundle comparison (cached vs uncached)
 

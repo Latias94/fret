@@ -15,6 +15,7 @@ Active workstreams:
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
+- `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
 - `docs/workstreams/localization-i18n-v1.md`
@@ -60,6 +61,25 @@ Active workstreams:
 - `docs/workstreams/imui-authoring-facade-v1-todo.md` (baseline / historical reference)
 - `docs/workstreams/shadcn-web-goldens-v4.md`
 - `docs/workstreams/shadcn-web-goldens-v4-todo.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-todo.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-milestones.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-matrix.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-audit-sheet-template.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-select.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-combobox.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-dropdown-menu.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-context-menu.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-menubar.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-navigation-menu.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-tooltip.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-hover-card.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-popover.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-dialog.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-alert-dialog.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-sheet.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-drawer.md`
+- `docs/workstreams/primitives-interaction-semantics-alignment-v1-toast.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/control-rack-v1.md`
 - `docs/workstreams/control-rack-v1-todo.md`
@@ -93,3 +113,6 @@ Active workstreams:
 - `docs/workstreams/router-ui-v1-todo.md`
 - `docs/workstreams/image-support-v1.md`
 - `docs/workstreams/image-support-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1.md`
+- `docs/workstreams/creative-recipes-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1-milestones.md`

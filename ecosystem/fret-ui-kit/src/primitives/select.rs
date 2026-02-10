@@ -20,8 +20,9 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, PointerDownCx,
-    PointerMoveCx, PointerUpCx, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
+    PressablePointerDownResult, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
@@ -289,6 +290,53 @@ pub const SELECT_MOUSE_UP_SELECTED_DELAY_MS: u64 = 400;
 /// When a selected option exists, this delay is shorter than `SELECT_MOUSE_UP_SELECTED_DELAY_MS`.
 pub const SELECT_MOUSE_UP_UNSELECTED_DELAY_MS: u64 = 200;
 
+/// Select mouse interaction policy knobs.
+///
+/// These are intended to make the "anti-misclick" semantics explicit, while keeping Radix-shaped
+/// defaults:
+/// - pointer-up suppression after opening on trigger mouse `pointerdown` (Radix)
+/// - delayed mouse-up selection commit gating (Base UI style; optional)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMousePolicies {
+    /// When `true`, install the Radix-style pointer-up suppression outcome after opening on mouse
+    /// `pointerdown` (the "pointer up guard").
+    pub pointer_up_guard: bool,
+
+    /// When `Some`, delay mouse-up commits after opening to avoid accidental selection when the
+    /// release lands over an option row (Base UI style).
+    pub mouse_up_selection_gate: Option<SelectMouseUpSelectionGatePolicy>,
+}
+
+impl Default for SelectMousePolicies {
+    fn default() -> Self {
+        Self {
+            pointer_up_guard: true,
+            mouse_up_selection_gate: Some(SelectMouseUpSelectionGatePolicy::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMouseUpSelectionGatePolicy {
+    pub selected_delay: Duration,
+    pub unselected_delay_when_has_selected: Duration,
+    pub unselected_delay_when_no_selected: Duration,
+}
+
+impl Default for SelectMouseUpSelectionGatePolicy {
+    fn default() -> Self {
+        Self {
+            selected_delay: Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            unselected_delay_when_has_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+            ),
+            unselected_delay_when_no_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+            ),
+        }
+    }
+}
+
 /// Timer-driven mouse-up commit gate for select item rows.
 ///
 /// Mirrors Base UI's delayed `onMouseUp` selection policy:
@@ -333,25 +381,40 @@ impl SelectMouseUpSelectionGateState {
         window: AppWindowId,
         has_selected_item_in_list: bool,
     ) {
+        self.arm_on_open_with_policy(
+            host,
+            window,
+            has_selected_item_in_list,
+            SelectMouseUpSelectionGatePolicy::default(),
+        );
+    }
+
+    pub fn arm_on_open_with_policy(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        has_selected_item_in_list: bool,
+        policy: SelectMouseUpSelectionGatePolicy,
+    ) {
         self.allow_selected_mouse_up = false;
         self.allow_unselected_mouse_up = false;
 
-        let unselected_delay_ms = if has_selected_item_in_list {
-            SELECT_MOUSE_UP_UNSELECTED_DELAY_MS
+        let unselected_delay = if has_selected_item_in_list {
+            policy.unselected_delay_when_has_selected
         } else {
-            SELECT_MOUSE_UP_SELECTED_DELAY_MS
+            policy.unselected_delay_when_no_selected
         };
 
         Self::arm_timer(
             host,
             window,
-            Duration::from_millis(unselected_delay_ms),
+            unselected_delay,
             &mut self.unselected_delay_token,
         );
         Self::arm_timer(
             host,
             window,
-            Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            policy.selected_delay,
             &mut self.selected_delay_token,
         );
     }
@@ -1175,12 +1238,13 @@ impl SelectContentKeyState {
     pub fn handle_key_down_when_open(
         &mut self,
         host: &mut dyn UiActionHost,
-        window: AppWindowId,
+        action_cx: ActionCx,
         open: &Model<bool>,
         value: &Model<Option<Arc<str>>>,
         values_by_row: &[Option<Arc<str>>],
         labels_by_row: &[Arc<str>],
         disabled_by_row: &[bool],
+        on_value_change: Option<&Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
         key: KeyCode,
         repeat: bool,
         loop_navigation: bool,
@@ -1189,6 +1253,7 @@ impl SelectContentKeyState {
             return false;
         }
 
+        let window = action_cx.window;
         let is_open = host.models_mut().get_copied(open).unwrap_or(false);
         if !is_open {
             return false;
@@ -1239,9 +1304,16 @@ impl SelectContentKeyState {
                     return true;
                 }
                 if let Some(chosen_value) = values_by_row.get(active_row).cloned().flatten() {
-                    let _ = host
-                        .models_mut()
-                        .update(value, |v| *v = Some(chosen_value.clone()));
+                    let before = host.models_mut().read(value, |v| v.clone()).ok().flatten();
+                    let did_change = before.as_deref() != Some(chosen_value.as_ref());
+                    if did_change {
+                        let _ = host
+                            .models_mut()
+                            .update(value, |v| *v = Some(chosen_value.clone()));
+                        if let Some(on_value_change) = on_value_change {
+                            on_value_change(host, action_cx, chosen_value.clone());
+                        }
+                    }
                     let _ = host.models_mut().update(open, |v| *v = false);
                     host.request_redraw(window);
                 }
@@ -1567,6 +1639,121 @@ pub fn select_item_pointer_up_handler_with_mouse_up_gate(
         host.request_redraw(action_cx.window);
         true
     })
+}
+
+/// Pressable pointer handlers for select listbox items.
+///
+/// This consolidates the Radix pointer-up guard (opening on trigger mouse `pointerdown`) with
+/// Base UI's delayed mouse-up commit policy (200/400ms) in one place so shadcn recipes can share
+/// the same behavior without re-assembling handler logic.
+#[derive(Clone)]
+pub struct SelectItemPressablePointerHandlers {
+    pub on_pointer_down: OnPressablePointerDown,
+    pub on_pointer_up: OnPressablePointerUp,
+}
+
+/// Builds item-level `Pressable` pointer handlers that:
+/// - record whether the item received a mouse `pointerdown`
+/// - commit selection on `pointerup` when the interaction is not treated as a click (`is_click=false`)
+/// - gate "mouse-up without pointerdown" commits using Radix's pointer-up guard + Base UI's
+///   delayed selection window.
+///
+/// Notes:
+/// - When the item had a pointer-down and the pointer-up is a click, this returns `Continue` so the
+///   default pressable activation path commits the selection.
+/// - `mouse_up_gate` is only consulted for the "no item pointerdown" mouse-up commit path, matching
+///   Base UI's semantics.
+pub fn select_item_pressable_pointer_handlers_with_mouse_up_gate(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+    item_is_selected: bool,
+    mouse_up_gate: Option<Arc<Mutex<SelectMouseUpSelectionGateState>>>,
+    on_value_change: Option<Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
+) -> SelectItemPressablePointerHandlers {
+    let did_pointer_down = Arc::new(Mutex::new(false));
+
+    let did_pointer_down_for_down = did_pointer_down.clone();
+    let mouse_open_guard_for_down = mouse_open_guard.clone();
+    let on_pointer_down: OnPressablePointerDown = Arc::new(move |_host, _action_cx, down| {
+        if matches!(down.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            select_mouse_open_guard_clear(&mouse_open_guard_for_down);
+            let mut pressed = did_pointer_down_for_down
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            *pressed = true;
+        }
+        PressablePointerDownResult::Continue
+    });
+
+    let did_pointer_down_for_up = did_pointer_down.clone();
+    let open_for_up = open.clone();
+    let value_for_up = value.clone();
+    let item_value_for_up = item_value.clone();
+    let mouse_open_guard_for_up = mouse_open_guard.clone();
+    let on_value_change_for_up = on_value_change.clone();
+    let on_pointer_up: OnPressablePointerUp = Arc::new(move |host, action_cx, up| {
+        if up.button != fret_core::MouseButton::Left {
+            return PressablePointerUpResult::Continue;
+        }
+        if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            return PressablePointerUpResult::Continue;
+        }
+        if item_disabled {
+            return PressablePointerUpResult::SkipActivate;
+        }
+
+        let had_pointer_down = {
+            let mut pressed = did_pointer_down_for_up
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            let had = *pressed;
+            *pressed = false;
+            had
+        };
+
+        if had_pointer_down && up.is_click {
+            return PressablePointerUpResult::Continue;
+        }
+
+        if !had_pointer_down {
+            if select_mouse_open_guard_should_suppress_pointer_up_shared(
+                &mouse_open_guard_for_up,
+                up,
+            ) {
+                return PressablePointerUpResult::SkipActivate;
+            }
+            if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
+                let gate = mouse_up_gate.lock().unwrap_or_else(|e| e.into_inner());
+                if !gate.should_allow_item_mouse_up(item_is_selected) {
+                    return PressablePointerUpResult::SkipActivate;
+                }
+            }
+        }
+
+        let before = host
+            .models_mut()
+            .read(&value_for_up, |v| v.clone())
+            .ok()
+            .flatten();
+        let did_change = before.as_deref() != Some(item_value_for_up.as_ref());
+        let _ = host
+            .models_mut()
+            .update(&value_for_up, |v| *v = Some(item_value_for_up.clone()));
+        let _ = host.models_mut().update(&open_for_up, |v| *v = false);
+        if did_change && let Some(on_value_change) = on_value_change_for_up.as_ref() {
+            on_value_change(host, action_cx, item_value_for_up.clone());
+        }
+        host.request_redraw(action_cx.window);
+        PressablePointerUpResult::SkipActivate
+    });
+
+    SelectItemPressablePointerHandlers {
+        on_pointer_down,
+        on_pointer_up,
+    }
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.
@@ -2189,12 +2376,16 @@ mod tests {
 
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::ArrowDown,
             false,
             true,
@@ -2218,12 +2409,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Tab,
             false,
             true,
@@ -2251,12 +2446,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Enter,
             false,
             true,

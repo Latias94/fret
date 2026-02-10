@@ -362,6 +362,11 @@ fn view(
         }
     };
 
+    let add_enabled = !draft_value.trim().is_empty();
+    let add_cmd = msg.cmd(Msg::Add);
+    let clear_done_cmd = msg.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
+
     let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
         .variant(shadcn::BadgeVariant::Secondary)
         .into_element(cx);
@@ -386,10 +391,6 @@ fn view(
         .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
         .into_element(cx);
 
-    let add_enabled = !draft_value.trim().is_empty();
-    let add_cmd = msg.cmd(Msg::Add);
-    let clear_done_cmd = msg.cmd(Msg::ClearDone);
-    let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
 __ADD_BTN_DEF__
 
     let input = shadcn::Input::new(st.draft.clone())
@@ -584,46 +585,57 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     format!(
         r#"use fret_kit::prelude::*;
 
-const CMD_CLICK: &str = "hello.click";
+#[derive(Debug, Clone)]
+enum Msg {{
+    Click,
+}}
+
+struct HelloProgram;
+
+impl MvuProgram for HelloProgram {{
+    type State = ();
+    type Message = Msg;
+
+    fn init(_app: &mut App, _window: AppWindowId) -> Self::State {{}}
+
+    fn update(_app: &mut App, _state: &mut Self::State, message: Self::Message) {{
+        match message {{
+            Msg::Click => {{
+                println!("Clicked!");
+            }}
+        }}
+    }}
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        _state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {{
+        let click_cmd = msg.cmd(Msg::Click);
+
+        ui::v_flex(cx, |cx| {{
+            [
+                shadcn::Label::new("Hello, world!").into_element(cx),
+                shadcn::Button::new("Click me")
+                    .on_click(click_cmd)
+                    .into_element(cx),
+__PALETTE_BUTTON__
+            ]
+        }})
+        .size_full()
+        .gap(Space::N4)
+        .items_center()
+        .justify_center()
+        .into_element(cx)
+        .into()
+    }}
+}}
 
 fn main() -> anyhow::Result<()> {{
-    fret_kit::app_with_hooks("{package_name}", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<HelloProgram>("{package_name}")?
         .with_main_window("{package_name}", (560.0, 360.0))
         .run()?;
     Ok(())
-}}
-
-fn init_window(_app: &mut App, _window: AppWindowId) {{}}
-
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> ViewElements {{
-    ui::v_flex(cx, |cx| {{
-        [
-            shadcn::Label::new("Hello, world!").into_element(cx),
-            shadcn::Button::new("Click me")
-                .on_click(CMD_CLICK)
-                .into_element(cx),
-__PALETTE_BUTTON__
-        ]
-    }})
-    .size_full()
-    .gap(Space::N4)
-    .items_center()
-    .justify_center()
-    .into_element(cx)
-    .into()
-}}
-
-fn on_command(
-    _app: &mut App,
-    _services: &mut dyn UiServices,
-    _window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    _st: &mut (),
-    cmd: &CommandId,
-) {{
-    if cmd.as_str() == CMD_CLICK {{
-        println!("Clicked!");
-    }}
 }}
 "#
     )
@@ -714,7 +726,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::app_with_hooks` golden path (ADR 0107 / 0112).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::mvu::app::<Program>(...)` golden path (ADR 0107 / 0112).
 "#
     )
 }

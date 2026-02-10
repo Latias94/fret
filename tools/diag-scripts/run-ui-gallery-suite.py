@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 """
-Cross-platform helper to run the builtin `ui-gallery` diag suite.
+Run the built-in `ui-gallery` diag suite.
 
-This is a Python alternative to `tools/diag-scripts/run-ui-gallery-suite.ps1`.
+Cross-platform helper that wraps:
+  `cargo run -p fretboard -- diag suite ui-gallery`
+
+If you pass `--launch`, this script uses fretboard's `--launch` support so the suite can
+control the child process' environment consistently.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 
-def _workspace_root() -> Path:
+def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(
-        description="Run `fretboard diag suite ui-gallery` with an optional launch command.",
+        description="Run `fretboard diag suite ui-gallery` (optionally launching UI Gallery).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ap.add_argument("--dir", default="target/fret-diag", help="Diagnostics output directory.")
@@ -36,9 +41,9 @@ def main() -> int:
         help="When used with --launch, run UI Gallery without --release.",
     )
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    workspace_root = _workspace_root()
+    repo_root = _repo_root()
 
     cmd: list[str] = [
         "cargo",
@@ -58,14 +63,18 @@ def main() -> int:
     ]
 
     if args.launch:
-        cmd += ["--launch", "--", "cargo", "run", "-p", "fret-ui-gallery"]
+        launch_cmd: list[str] = ["cargo", "run", "-p", "fret-ui-gallery"]
         if not args.no_release:
-            cmd += ["--release"]
+            launch_cmd.append("--release")
+        cmd += ["--launch", "--", *launch_cmd]
 
     print("[suite] cmd:", " ".join(cmd))
-    return int(subprocess.run(cmd, cwd=str(workspace_root)).returncode)
+    return int(subprocess.run(cmd, cwd=str(repo_root)).returncode)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        os._exit(0)
 

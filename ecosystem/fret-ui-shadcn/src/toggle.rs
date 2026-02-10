@@ -291,35 +291,62 @@ impl Toggle {
         let layout = self.layout;
         let style_override = self.style;
 
-        let theme = Theme::global(&*cx.app).clone();
+        let (
+            radius,
+            ring_border,
+            ring,
+            text_style,
+            pad_x,
+            pressable_layout,
+            fg_default,
+            fg_disabled,
+            fg_muted,
+            bg_hover,
+            bg_on,
+            fg_on,
+            border,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let radius = MetricRef::radius(Radius::Md).resolve(&theme);
-        let ring_border = toggle_ring_color(&theme);
-        let mut ring = decl_style::focus_ring(&theme, radius);
-        ring.color = alpha_mul(ring_border, 0.5);
-        let text_style = toggle_text_style(&theme);
+            let radius = MetricRef::radius(Radius::Md).resolve(theme);
+            let ring_border = toggle_ring_color(theme);
+            let mut ring = decl_style::focus_ring(theme, radius);
+            ring.color = alpha_mul(ring_border, 0.5);
+            let text_style = toggle_text_style(theme);
 
-        let h = toggle_h(&theme, size_token);
-        let min_h = h;
-        let min_w = h;
-        let pad_x = toggle_pad_x(&theme, size_token);
+            let h = toggle_h(theme, size_token);
+            let pad_x = toggle_pad_x(theme, size_token);
+            let pressable_layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().min_h(h).min_w(h).merge(layout),
+            );
+
+            let fg_default = theme.color_required("foreground");
+            let fg_disabled = alpha_mul(fg_default, 0.5);
+            let fg_muted = toggle_fg_muted(theme);
+            let bg_hover = toggle_bg_hover(theme);
+            let bg_on = toggle_bg_on(theme);
+            let fg_on = toggle_fg_on(theme);
+            let border = toggle_border(theme);
+
+            (
+                radius,
+                ring_border,
+                ring,
+                text_style,
+                pad_x,
+                pressable_layout,
+                fg_default,
+                fg_disabled,
+                fg_muted,
+                bg_hover,
+                bg_on,
+                fg_on,
+                border,
+            )
+        };
+
         let pad_y = Px(0.0);
-
-        let pressable_layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .min_h(min_h)
-                .min_w(min_w)
-                .merge(layout),
-        );
-
-        let fg_default = theme.color_required("foreground");
-        let fg_disabled = alpha_mul(fg_default, 0.5);
-        let fg_muted = toggle_fg_muted(&theme);
-        let bg_hover = toggle_bg_hover(&theme);
-        let bg_on = toggle_bg_on(&theme);
-        let fg_on = toggle_fg_on(&theme);
-        let border = toggle_border(&theme);
 
         let (hover_bg, hover_fg) = match variant {
             ToggleVariant::Default => (bg_hover, fg_muted),
@@ -383,8 +410,9 @@ impl Toggle {
                 states,
             );
 
+            let theme = Theme::global(&*cx.app);
             let mut chrome_props = decl_style::container_props(
-                &theme,
+                theme,
                 base_chrome.clone(),
                 LayoutRefinement::default(),
             );
@@ -395,15 +423,15 @@ impl Toggle {
                 left: pad_x,
             };
             if matches!(variant, ToggleVariant::Outline) {
-                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
+                chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
             }
             if !user_bg_override {
                 if let Some(bg) = bg {
-                    chrome_props.background = Some(bg.resolve(&theme));
+                    chrome_props.background = Some(bg.resolve(theme));
                 }
             }
             if let Some(border_color) = border_color {
-                chrome_props.border_color = Some(border_color.resolve(&theme));
+                chrome_props.border_color = Some(border_color.resolve(theme));
             }
             chrome_props.layout.size = pressable_layout.size;
 
@@ -420,7 +448,10 @@ impl Toggle {
                 vec![cx.flex(
                     FlexProps {
                         direction: fret_core::Axis::Horizontal,
-                        gap: MetricRef::space(Space::N2).resolve(&theme),
+                        gap: {
+                            let theme = Theme::global(&*cx.app);
+                            MetricRef::space(Space::N2).resolve(theme)
+                        },
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,

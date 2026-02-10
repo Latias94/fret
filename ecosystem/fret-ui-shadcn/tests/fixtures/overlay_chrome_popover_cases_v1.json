@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "popover-demo.light.surface_colors", "web_name": "popover-demo", "theme": "light", "recipe": "demo_surface_colors" },
+    { "id": "popover-demo.dark.surface_colors", "web_name": "popover-demo", "theme": "dark", "recipe": "demo_surface_colors" },
+
+    { "id": "popover-demo.panel_chrome", "web_name": "popover-demo", "recipe": "panel_chrome" },
+
+    { "id": "popover-demo.light.panel_size", "web_name": "popover-demo", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "popover-demo.dark.panel_size", "web_name": "popover-demo", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "popover-demo.vp1440x240.light.panel_size", "web_name": "popover-demo.vp1440x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "popover-demo.vp1440x240.dark.panel_size", "web_name": "popover-demo.vp1440x240", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "popover-demo.vp375x240.light.panel_size", "web_name": "popover-demo.vp375x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "popover-demo.vp375x240.dark.panel_size", "web_name": "popover-demo.vp375x240", "theme": "dark", "recipe": "demo_panel_size" }
+  ]
+}

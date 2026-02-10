@@ -17,7 +17,7 @@ Unlike `repo-ref/`, paths under `third_party/` are intended for versioned, repro
 
 - Fresh clones will not include any upstream checkouts under `repo-ref/`.
 - Many docs (especially `docs/audits/*`) reference file paths under `repo-ref/` as a reading aid.
-- To reproduce those paths locally, use `tools/fetch_repo_refs.ps1` (PowerShell) or clone the refs manually.
+- To reproduce those paths locally, use `tools/fetch_repo_refs.py` (recommended) or clone the refs manually.
 
 ## Pin Policy
 
@@ -66,9 +66,9 @@ As a baseline, the project tracks the following reference SHAs (local checkouts 
 
 If you want the two refs most frequently used by goldens + audits:
 
-- `./tools/fetch_repo_refs.ps1` (defaults to `ui` + `primitives`)
-- `./tools/fetch_repo_refs.ps1 -UiOnly`
-- `./tools/fetch_repo_refs.ps1 -PrimitivesOnly`
+- `python3 tools/fetch_repo_refs.py` (defaults to `ui` + `primitives`)
+- `python3 tools/fetch_repo_refs.py --ui-only`
+- `python3 tools/fetch_repo_refs.py --primitives-only`
 
 ## Optional checkouts (not always present)
 

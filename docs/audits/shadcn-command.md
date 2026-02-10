@@ -61,13 +61,16 @@ Key upstream semantics:
 
 - Pass: `CommandDialog` supports `entries(...)`, so `CommandGroup/Separator/...` can be used inside a dialog.
 - Pass: `CommandDialog` exposes open lifecycle callbacks via
-  `CommandDialog::on_open_change` and `CommandDialog::on_open_change_complete`
+  `CommandDialog::on_open_change`, `CommandDialog::on_open_change_with_reason`, and
+  `CommandDialog::on_open_change_complete`
   (delegated to the aligned `Dialog` lifecycle semantics).
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib command::tests`
 - Contract test: `command_dialog_open_change_builders_set_handlers`
+- Reason mapping test: `command_dialog_open_change_reason_maps_dismiss_reasons`
+- Reason behavior test: `command_dialog_open_change_with_reason_reports_item_press_when_close_on_select`
 - shadcn-web golden + gates:
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-demo.json`
   - Layout gates:

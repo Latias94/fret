@@ -296,27 +296,48 @@ Evidence anchors:
   This follow-up is the v2+ unlock for “editor-grade display mapping”: fold placeholders, inlays,
   and inline IME preedit must coexist under one deterministic mapping surface (buffer↔display↔a11y).
 
-  - [ ] Promote inline IME preedit to a view-layer fragment source (stop paint-time string splicing).
+  - [x] Promote inline IME preedit to a view-layer fragment source (stop paint-time string splicing).
     - Target: `ecosystem/fret-code-editor-view` (`DisplayMap` / `DisplayRowFragment`).
     - Composition order (normative; ADR 0203): folds → inlays → preedit.
-  - [ ] Extend view-layer mapping helpers so positions “inside” a fragment clamp to its `maps_to` anchor.
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs` (`InlinePreedit`, `DisplayMap::new_with_decorations_and_preedit`).
+      - `ecosystem/fret-code-editor/src/editor/mod.rs` (`compose_inline_preedit` opt-in, `refresh_display_map` path).
+  - [x] Extend view-layer mapping helpers so positions “inside” a fragment clamp to its `maps_to` anchor.
     - Applies to: caret mapping, hit-testing mapping, selection normalization, and a11y range conversion.
-  - [ ] Provide a view-owned way to materialize the composed display text for a windowed export range.
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs` (clamp-to-anchor mapping for preedit fragments).
+  - [x] Provide a view-owned way to materialize the composed display text for a windowed export range.
     - Used by: paint row text, a11y `TextField.value`, and debug snapshots.
     - Must remain bounded: produce windowed slices only (ADR 0190), not full-document strings.
-  - [ ] Update the editor surface to consume the composed DisplayMap for:
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::materialize_display_row_text` + tests).
+  - [x] Update the editor surface to consume the composed DisplayMap for:
     - paint row text (no preedit injection in `fret-code-editor`),
     - caret/selection/hit-test mapping (single source of truth),
     - a11y export (`value` + `text_selection` + `text_composition`, ADR 0071).
-  - [ ] Add a dedicated UI Gallery baseline + gate for “soft wrap + folds + inlays + preedit” coexistence.
-    - Script (new): `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
-    - Gate (new): assert at least one snapshot with:
-      - `soft_wrap_cols != null`,
-      - `folds_fixture=true`, `inlays_fixture=true`,
-      - `torture.preedit_active=true`,
-      - fold placeholder observed and inlay observed while preedit is active,
-      - plus a minimal mapping sanity check (e.g. caret does not jump when toggling the fixtures).
-  - [ ] Keep the current v1 behavior + staging opt-ins gated until the composed preedit path is proven stable.
+    - Status: the composed preedit path is implemented as an opt-in and drives paint + mapping + a11y export when enabled; default remains v1.
+    - Evidence:
+      - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (paint consumes view materialization via `DisplayMap::materialize_display_row_text`).
+  - [x] Add a dedicated UI Gallery baseline + gate for “soft wrap + folds + inlays + preedit (composed)”.
+    - Script:
+      - `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
+    - Gates:
+      - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`):
+        toggling folds/inlays while inline preedit is active must not change buffer revision, text length, or selection anchor/caret (stability under composed mapping).
+      - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed`):
+        while toggling folds/inlays, `TextField.text_composition` must always point at the expected preedit text ("ab") inside `TextField.value`, and the collapsed selection must sit at the composition end (ADR 0071).
+  - [x] Add interaction baselines for the composed-preedit path (v2+ stability under input):
+    - Wheel scroll while inline preedit is active must keep selection + composition + buffer revision/len stable.
+      - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline.json`.
+      - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll`).
+    - Pointer drag selection must cancel inline preedit without mutating the underlying buffer.
+      - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-drag-select-baseline.json`.
+      - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection`).
+  - [ ] (Optional) Split the combined baseline into two narrower baselines (folds-only / inlays-only) if we need more targeted repros.
+    - Candidate scripts:
+      - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json`.
+      - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json`.
+  - [x] Keep the current v1 behavior + staging opt-ins gated until the composed preedit path is proven stable.
     - v1 suppress gates: `*-soft-wrap-inline-preedit-baseline.json` (folds/inlays absent).
     - staging opt-ins: `*-with-decorations-baseline.json` (folds/inlays present) (ADR 0203 staging).
 
@@ -324,10 +345,10 @@ Evidence anchors:
 
 ## M9 — Retained Host / Composable Rows (only if required)
 
-- [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
-  - Default decision (recommended): keep the code editor paint-driven (stable tree).
-  - “Yes” only if we need row-level composability that cannot be expressed as paint-only decorations.
-- [ ] Define the decision rubric (write it down here so it’s auditable):
+- [x] Decision: keep the code editor paint-driven (stable tree) for v1/v2.
+  - Rationale: the current milestones (wrap/fold/inlay/preedit) do not require per-row interactive widgets in layout/semantics.
+  - Revisit only if we need row-level composability that cannot be expressed as paint-only decorations.
+- [x] Decision rubric (auditable):
   - Need per-row interactive widgets (e.g. breakpoint toggles, per-row buttons) that must participate in layout/hit-test/semantics.
   - Need rich gutters that are not feasible as a canvas overlay (variable-sized widgets, focusable controls).
   - Need inline non-text widgets embedded in the flow (beyond “display fragments” text injection).
