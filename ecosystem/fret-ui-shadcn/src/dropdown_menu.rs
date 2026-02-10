@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
@@ -72,7 +72,7 @@ pub enum DropdownMenuEntry {
     Separator,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -84,11 +84,35 @@ pub struct DropdownMenuItem {
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub on_activate: Option<OnActivate>,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub variant: DropdownMenuItemVariant,
     pub submenu: Option<Vec<DropdownMenuEntry>>,
+}
+
+impl std::fmt::Debug for DropdownMenuItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DropdownMenuItem")
+            .field("label", &self.label)
+            .field("value", &self.value)
+            .field("inset", &self.inset)
+            .field("leading", &self.leading)
+            .field("content", &self.content)
+            .field("padding", &self.padding)
+            .field("estimated_height", &self.estimated_height)
+            .field("disabled", &self.disabled)
+            .field("close_on_select", &self.close_on_select)
+            .field("command", &self.command)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .field("trailing", &self.trailing)
+            .field("variant", &self.variant)
+            .field("submenu", &self.submenu)
+            .finish()
+    }
 }
 
 impl DropdownMenuItem {
@@ -105,6 +129,7 @@ impl DropdownMenuItem {
             disabled: false,
             close_on_select: true,
             command: None,
+            on_activate: None,
             a11y_label: None,
             test_id: None,
             trailing: None,
@@ -150,6 +175,11 @@ impl DropdownMenuItem {
 
     pub fn close_on_select(mut self, close: bool) -> Self {
         self.close_on_select = close;
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
         self
     }
 
@@ -1973,6 +2003,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let on_activate = item.on_activate.clone();
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let content = item.content.clone();
@@ -2043,6 +2074,13 @@ impl DropdownMenu {
                                                                 }
 
                                                                 if !has_submenu && !disabled {
+                                                                    if let Some(on_activate) =
+                                                                        on_activate.clone()
+                                                                    {
+                                                                        cx.pressable_add_on_activate(
+                                                                            on_activate,
+                                                                        );
+                                                                    }
                                                                     cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
