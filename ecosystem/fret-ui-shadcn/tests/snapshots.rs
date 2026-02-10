@@ -239,16 +239,26 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             rect,
             background,
             border,
-            border_color,
+            border_paint,
             corner_radii,
             ..
-        } => SnapSceneOp::Quad {
-            rect: snap_rect(rect),
-            background: snap_color(background),
-            border: snap_edges(border),
-            border_color: snap_color(border_color),
-            corner_radii: snap_corners(corner_radii),
-        },
+        } => {
+            let background = match background {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            let border_color = match border_paint {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            SnapSceneOp::Quad {
+                rect: snap_rect(rect),
+                background: snap_color(background),
+                border: snap_edges(border),
+                border_color: snap_color(border_color),
+                corner_radii: snap_corners(corner_radii),
+            }
+        }
         SceneOp::Image {
             rect, fit, opacity, ..
         } => SnapSceneOp::Image {
@@ -396,6 +406,19 @@ impl SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }

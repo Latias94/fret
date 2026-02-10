@@ -1376,6 +1376,9 @@ mod tests {
             else {
                 continue;
             };
+            let fret_core::Paint::Solid(background) = *background else {
+                continue;
+            };
             if background.a < 0.5 {
                 continue;
             }
@@ -1385,7 +1388,7 @@ mod tests {
             }
             let replace = best_quad.is_none_or(|(_, _, best)| score > best);
             if replace {
-                best_quad = Some((*rect, *background, score));
+                best_quad = Some((*rect, background, score));
             }
         }
 
