@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "field-input.geometry",
+      "web_name": "field-input",
+      "recipe": "input"
+    },
+    {
+      "id": "field-checkbox.geometry",
+      "web_name": "field-checkbox",
+      "recipe": "checkbox"
+    },
+    {
+      "id": "field-switch.geometry",
+      "web_name": "field-switch",
+      "recipe": "switch"
+    },
+    {
+      "id": "field-select.geometry",
+      "web_name": "field-select",
+      "recipe": "select"
+    },
+    {
+      "id": "field-radio.geometry",
+      "web_name": "field-radio",
+      "recipe": "radio"
+    },
+    {
+      "id": "field-textarea.geometry",
+      "web_name": "field-textarea",
+      "recipe": "textarea"
+    },
+    {
+      "id": "field-group.geometry",
+      "web_name": "field-group",
+      "recipe": "group"
+    },
+    {
+      "id": "field-fieldset.geometry",
+      "web_name": "field-fieldset",
+      "recipe": "fieldset"
+    },
+    {
+      "id": "field-choice-card.geometry",
+      "web_name": "field-choice-card",
+      "recipe": "choice_card"
+    },
+    {
+      "id": "field-slider.track_geometry",
+      "web_name": "field-slider",
+      "recipe": "slider_track_geometry"
+    },
+    {
+      "id": "field-slider.thumb_insets",
+      "web_name": "field-slider",
+      "recipe": "slider_thumb_insets"
+    },
+    {
+      "id": "field-demo.separator_height",
+      "web_name": "field-demo",
+      "recipe": "demo_separator_height"
+    },
+    {
+      "id": "field-responsive.orientation",
+      "web_name": "field-responsive",
+      "recipe": "responsive_orientation"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "typography-table.cell_geometry.light",
+      "web_name": "typography-table",
+      "recipe": "table_cell_geometry_light"
+    },
+    {
+      "id": "typography-table.cell_geometry.dark",
+      "web_name": "typography-table",
+      "recipe": "table_cell_geometry_dark"
+    },
+    {
+      "id": "typography-h1.geometry.light",
+      "web_name": "typography-h1",
+      "recipe": "h1_geometry_light"
+    },
+    {
+      "id": "typography-h2.geometry.light",
+      "web_name": "typography-h2",
+      "recipe": "h2_geometry_light"
+    },
+    {
+      "id": "typography-h3.geometry.light",
+      "web_name": "typography-h3",
+      "recipe": "h3_geometry_light"
+    },
+    {
+      "id": "typography-h4.geometry.light",
+      "web_name": "typography-h4",
+      "recipe": "h4_geometry_light"
+    },
+    {
+      "id": "typography-p.geometry.light",
+      "web_name": "typography-p",
+      "recipe": "p_geometry_light"
+    },
+    {
+      "id": "typography-lead.geometry.light",
+      "web_name": "typography-lead",
+      "recipe": "lead_geometry_light"
+    },
+    {
+      "id": "typography-muted.geometry.light",
+      "web_name": "typography-muted",
+      "recipe": "muted_geometry_light"
+    },
+    {
+      "id": "typography-large.geometry.light",
+      "web_name": "typography-large",
+      "recipe": "large_geometry_light"
+    },
+    {
+      "id": "typography-blockquote.geometry.light",
+      "web_name": "typography-blockquote",
+      "recipe": "blockquote_geometry_light"
+    },
+    {
+      "id": "typography-list.geometry.light",
+      "web_name": "typography-list",
+      "recipe": "list_geometry_light"
+    },
+    {
+      "id": "typography-inline-code.padding_and_style.light",
+      "web_name": "typography-inline-code",
+      "recipe": "inline_code_padding_and_style_light"
+    },
+    {
+      "id": "typography-small.text_style.light",
+      "web_name": "typography-small-text",
+      "recipe": "small_text_style_light"
+    },
+    {
+      "id": "typography-demo.geometry_smoke.light",
+      "web_name": "typography-demo",
+      "recipe": "demo_geometry_smoke_light"
+    }
+  ]
+}
