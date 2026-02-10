@@ -154,8 +154,6 @@ impl NavigationBar {
         } = self;
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let disabled_items: Arc<[bool]> = Arc::from(
@@ -185,20 +183,28 @@ impl NavigationBar {
                 ..Default::default()
             };
 
-            let container_height = nav_tokens::container_height(&theme);
-            let container_bg = nav_tokens::container_background(&theme);
-            let elevation = nav_tokens::container_elevation(&theme);
-            let shadow_color = nav_tokens::container_shadow_color(&theme);
-            let corner_radii = nav_tokens::container_shape(&theme);
-            let surface = material_surface_style(
-                &theme,
-                container_bg,
-                elevation,
-                Some(shadow_color),
-                corner_radii,
-            );
-            let container_bg = surface.background;
-            let shadow = surface.shadow;
+            let (container_height, container_bg, shadow, corner_radii) = {
+                let theme = Theme::global(&*cx.app);
+
+                let container_height = nav_tokens::container_height(theme);
+                let container_bg = nav_tokens::container_background(theme);
+                let elevation = nav_tokens::container_elevation(theme);
+                let shadow_color = nav_tokens::container_shadow_color(theme);
+                let corner_radii = nav_tokens::container_shape(theme);
+                let surface = material_surface_style(
+                    theme,
+                    container_bg,
+                    elevation,
+                    Some(shadow_color),
+                    corner_radii,
+                );
+                (
+                    container_height,
+                    surface.background,
+                    surface.shadow,
+                    corner_radii,
+                )
+            };
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -240,7 +246,6 @@ impl NavigationBar {
 
                         let indicator = navigation_bar_active_indicator(
                             cx,
-                            &theme,
                             now_frame,
                             container_id,
                             item_count,
@@ -338,7 +343,6 @@ impl NavigationBar {
                                         let tab_stop = tab_stop.is_some_and(|t| t == idx);
                                         navigation_bar_item(
                                             cx,
-                                            &theme,
                                             container_id,
                                             model.clone(),
                                             it,
@@ -360,7 +364,6 @@ impl NavigationBar {
 
 fn navigation_bar_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     container_id: GlobalElementId,
     model: Model<Arc<str>>,
     item: &NavigationBarItem,
@@ -375,6 +378,54 @@ fn navigation_bar_item<H: UiHost>(
     let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+
+    let (
+        height,
+        indicator_w,
+        indicator_h,
+        icon_size,
+        state_layer_shape,
+        focus_ring,
+        ripple_base_opacity,
+        config,
+        label_style_base,
+        label_weight_active,
+        label_weight_inactive,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+
+        let height = nav_tokens::container_height(theme);
+        let indicator_w = nav_tokens::active_indicator_width(theme);
+        let indicator_h = nav_tokens::active_indicator_height(theme);
+        let icon_size = nav_tokens::icon_size(theme);
+
+        let state_layer_shape = nav_tokens::active_indicator_shape(theme);
+        let focus_ring =
+            material_focus_ring_for_component(theme, "md.comp.navigation-bar", state_layer_shape);
+
+        let ripple_base_opacity = nav_tokens::pressed_state_layer_opacity(theme);
+        let config = material_pressable_indication_config(theme, None);
+
+        let label_style_base = theme
+            .text_style_by_key("md.sys.typescale.label-medium")
+            .unwrap_or_else(TextStyle::default);
+        let label_weight_active = nav_tokens::label_weight(theme, true);
+        let label_weight_inactive = nav_tokens::label_weight(theme, false);
+
+        (
+            height,
+            indicator_w,
+            indicator_h,
+            icon_size,
+            state_layer_shape,
+            focus_ring,
+            ripple_base_opacity,
+            config,
+            label_style_base,
+            label_weight_active,
+            label_weight_inactive,
+        )
+    };
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -401,11 +452,6 @@ fn navigation_bar_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let height = nav_tokens::container_height(theme);
-        let state_layer_shape = nav_tokens::active_indicator_shape(theme);
-        let focus_ring =
-            material_focus_ring_for_component(theme, "md.comp.navigation-bar", state_layer_shape);
-
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
@@ -424,7 +470,10 @@ fn navigation_bar_item<H: UiHost>(
                 l.size.width = Length::Fill;
                 l.flex.grow = 1.0;
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
             focus_ring: Some(focus_ring),
@@ -447,14 +496,21 @@ fn navigation_bar_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = nav_tokens::label_color(theme, selected, interaction);
-                let icon_color = nav_tokens::icon_color(theme, selected, interaction);
-                let state_layer_color = nav_tokens::state_layer_color(theme, selected, interaction);
-                let state_layer_target =
-                    nav_tokens::state_layer_target_opacity(theme, enabled, interaction);
-
-                let ripple_base_opacity = nav_tokens::pressed_state_layer_opacity(theme);
-                let config = material_pressable_indication_config(theme, None);
+                let (label_color, icon_color, state_layer_color, state_layer_target) = {
+                    let theme = Theme::global(&*cx.app);
+                    let label_color = nav_tokens::label_color(theme, selected, interaction);
+                    let icon_color = nav_tokens::icon_color(theme, selected, interaction);
+                    let state_layer_color =
+                        nav_tokens::state_layer_color(theme, selected, interaction);
+                    let state_layer_target =
+                        nav_tokens::state_layer_target_opacity(theme, enabled, interaction);
+                    (
+                        label_color,
+                        icon_color,
+                        state_layer_color,
+                        state_layer_target,
+                    )
+                };
                 let ink = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -469,16 +525,13 @@ fn navigation_bar_item<H: UiHost>(
                     false,
                 );
 
-                let indicator_w = nav_tokens::active_indicator_width(theme);
-                let indicator_h = nav_tokens::active_indicator_height(theme);
-
                 let icon_slot = cx.named("icon_slot", |cx| {
                     let icon_slot_id = cx.root_id();
                     cx.with_state_for(container_id, NavigationBarLayoutRuntime::default, |rt| {
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
-                    let icon_el = nav_icon(cx, theme, &icon, icon_color);
+                    let icon_el = nav_icon(cx, &icon, icon_size, icon_color);
                     let icon_el = if let Some(badge) = badge.clone() {
                         let badge = match badge {
                             BadgeValue::Dot => Badge::dot(),
@@ -489,7 +542,7 @@ fn navigation_bar_item<H: UiHost>(
                             .map(|id| Arc::<str>::from(format!("{id}-badge")));
                         let badge = badge
                             .placement(BadgePlacement::NavigationIcon)
-                            .navigation_anchor_size(nav_tokens::icon_size(theme));
+                            .navigation_anchor_size(icon_size);
                         let badge = if let Some(badge_test_id) = badge_test_id {
                             badge.test_id(badge_test_id)
                         } else {
@@ -518,7 +571,15 @@ fn navigation_bar_item<H: UiHost>(
                     )
                 });
 
-                let label_el = nav_label(cx, theme, &label, label_color, selected);
+                let label_el = {
+                    let mut style = label_style_base.clone();
+                    style.weight = if selected {
+                        label_weight_active
+                    } else {
+                        label_weight_inactive
+                    };
+                    nav_label(cx, &label, style, label_color)
+                };
 
                 let mut col = FlexProps::default();
                 col.layout.size.width = Length::Fill;
@@ -540,7 +601,6 @@ fn navigation_bar_item<H: UiHost>(
 
 fn navigation_bar_active_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     now_frame: u64,
     container_id: GlobalElementId,
     item_count: usize,
@@ -558,10 +618,29 @@ fn navigation_bar_active_indicator<H: UiHost>(
         let id = cx.root_id();
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
 
-        let indicator_w = nav_tokens::active_indicator_width(theme);
-        let indicator_h = nav_tokens::active_indicator_height(theme);
-        let indicator_color = nav_tokens::active_indicator_color(theme);
-        let corner_radii = nav_tokens::active_indicator_shape(theme);
+        let (indicator_w, indicator_h, indicator_color, corner_radii, label_h, spring) = {
+            let theme = Theme::global(&*cx.app);
+            let indicator_w = nav_tokens::active_indicator_width(theme);
+            let indicator_h = nav_tokens::active_indicator_height(theme);
+            let indicator_color = nav_tokens::active_indicator_color(theme);
+            let corner_radii = nav_tokens::active_indicator_shape(theme);
+            let label_style = theme
+                .text_style_by_key("md.sys.typescale.label-medium")
+                .unwrap_or_else(TextStyle::default);
+            let label_h = label_style
+                .line_height
+                .unwrap_or(Px(label_style.size.0 * 1.2))
+                .0;
+            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            (
+                indicator_w,
+                indicator_h,
+                indicator_color,
+                corner_radii,
+                label_h,
+                spring,
+            )
+        };
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
@@ -577,13 +656,6 @@ fn navigation_bar_active_indicator<H: UiHost>(
                 let y = b.origin.y.0 - container_bounds.origin.y.0;
                 (x, y, b.size.width.0, b.size.height.0, indicator_color)
             } else if let Some(idx) = selected_idx {
-                let label_style = theme
-                    .text_style_by_key("md.sys.typescale.label-medium")
-                    .unwrap_or_else(TextStyle::default);
-                let label_h = label_style
-                    .line_height
-                    .unwrap_or(Px(label_style.size.0 * 1.2))
-                    .0;
                 let content_h = indicator_h.0 + 4.0 + label_h;
                 let y = ((container_bounds.size.height.0 - content_h) / 2.0).max(0.0);
 
@@ -597,7 +669,6 @@ fn navigation_bar_active_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
         let (x, y, w, h, want_frames) = cx.with_state_for(id, NavIndicatorRuntime::default, |rt| {
             if !rt.x.is_initialized() {
                 rt.x.reset(now_frame, target_x);
@@ -691,17 +762,10 @@ fn interaction_state(
 
 fn nav_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     text: &Arc<str>,
+    style: TextStyle,
     color: Color,
-    active: bool,
 ) -> AnyElement {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-medium")
-        .unwrap_or_else(TextStyle::default);
-
-    style.weight = nav_tokens::label_weight(theme, active);
-
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
@@ -712,11 +776,10 @@ fn nav_label<H: UiHost>(
 
 fn nav_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     icon: &IconId,
+    size: Px,
     color: Color,
 ) -> AnyElement {
-    let size = nav_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);
