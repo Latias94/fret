@@ -784,6 +784,7 @@ fn page_preview(
             context_menu_edge_open,
             last_action.clone(),
         ),
+        PAGE_SHADCN_EXTRAS => preview_shadcn_extras(cx),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
@@ -7279,6 +7280,10 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     pages::preview_alert(cx)
+}
+
+fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pages::preview_shadcn_extras(cx)
 }
 
 fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {

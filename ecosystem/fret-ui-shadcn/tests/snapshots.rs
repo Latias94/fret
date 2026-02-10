@@ -767,3 +767,28 @@ fn snapshot_extras_avatar_stack_overflow_default() {
         ]
     });
 }
+
+#[test]
+fn snapshot_extras_kanban_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(920.0), Px(420.0)),
+    );
+    snapshot_for_root("extras_kanban_default", bounds, |cx| {
+        let columns = vec![
+            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+        ];
+
+        let items = cx.app.models_mut().insert(vec![
+            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+        ]);
+
+        vec![fret_ui_shadcn::extras::Kanban::new(columns, items).into_element(cx)]
+    });
+}

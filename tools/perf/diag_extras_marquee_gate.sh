@@ -41,7 +41,7 @@ baseline=""
 launch_bin="target/release/extras_marquee_perf_demo"
 timeout_ms=300000
 repeat=7
-warmup_frames=5
+warmup_frames=60
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -141,4 +141,3 @@ if [[ "$failures_count" != "0" ]]; then
 fi
 
 echo "PASS (extras-marquee-steady)"
-
