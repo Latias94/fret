@@ -745,6 +745,7 @@ fn page_preview(
             context_menu_edge_open,
             last_action.clone(),
         ),
+        PAGE_SHADCN_EXTRAS => preview_shadcn_extras(cx),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
@@ -3708,32 +3709,44 @@ fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
-                            shadcn::Button::new("Preedit decorations: off")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id(
-                                    "ui-gallery-code-editor-torture-preedit-decorations-set-off",
-                                )
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    allow_decorations_under_preedit.set(false);
-                                    header_handle_controls.set_allow_decorations_under_inline_preedit(false);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
-                            shadcn::Button::new("Preedit decorations: on")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id(
-                                    "ui-gallery-code-editor-torture-preedit-decorations-set-on",
-                                )
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    allow_decorations_under_preedit.set(true);
-                                    header_handle_controls.set_allow_decorations_under_inline_preedit(true);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
+                            {
+                                let allow_decorations_under_preedit =
+                                    allow_decorations_under_preedit.clone();
+                                let header_handle_controls = header_handle_controls.clone();
+                                shadcn::Button::new("Preedit decorations: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id(
+                                        "ui-gallery-code-editor-torture-preedit-decorations-set-off",
+                                    )
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        allow_decorations_under_preedit.set(false);
+                                        header_handle_controls
+                                            .set_allow_decorations_under_inline_preedit(false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx)
+                            },
+                            {
+                                let allow_decorations_under_preedit =
+                                    allow_decorations_under_preedit.clone();
+                                let header_handle_controls = header_handle_controls.clone();
+                                shadcn::Button::new("Preedit decorations: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id(
+                                        "ui-gallery-code-editor-torture-preedit-decorations-set-on",
+                                    )
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        allow_decorations_under_preedit.set(true);
+                                        header_handle_controls
+                                            .set_allow_decorations_under_inline_preedit(true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx)
+                            },
                             cx.text(if allow_decorations_under_preedit_enabled {
                                 "Preedit decorations: on"
                             } else {
@@ -7167,6 +7180,10 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     pages::preview_alert(cx)
+}
+
+fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pages::preview_shadcn_extras(cx)
 }
 
 fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {

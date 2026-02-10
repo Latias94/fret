@@ -126,6 +126,7 @@ pub(crate) const PAGE_SLIDER: &str = "slider";
 pub(crate) const PAGE_ICONS: &str = "icons";
 pub(crate) const PAGE_FIELD: &str = "field";
 pub(crate) const PAGE_OVERLAY: &str = "overlay";
+pub(crate) const PAGE_SHADCN_EXTRAS: &str = "shadcn_extras";
 pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
 pub(crate) const PAGE_COMBOBOX: &str = "combobox";
@@ -255,6 +256,7 @@ pub(crate) const CMD_NAV_SLIDER: &str = "ui_gallery.nav.select.slider";
 pub(crate) const CMD_NAV_ICONS: &str = "ui_gallery.nav.select.icons";
 pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
 pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
+pub(crate) const CMD_NAV_SHADCN_EXTRAS: &str = "ui_gallery.nav.select.shadcn_extras";
 pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
 pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
@@ -1456,6 +1458,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
     PageGroupSpec {
         title: "Shadcn (Extras)",
         items: &[
+            PageSpec::new(
+                PAGE_SHADCN_EXTRAS,
+                "Extras",
+                "Shadcn Extras (blocks / recipes)",
+                "fret-ui-shadcn::extras",
+                CMD_NAV_SHADCN_EXTRAS,
+                &["extras", "blocks", "recipes", "kibo"],
+                docs::DOC_SHADCN_EXTRAS,
+                docs::USAGE_SHADCN_EXTRAS,
+            ),
             PageSpec::new(
                 PAGE_DATA_GRID,
                 "DataGrid",
