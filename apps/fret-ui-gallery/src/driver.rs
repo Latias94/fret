@@ -4450,14 +4450,14 @@ impl WinitAppDriver for UiGalleryDriver {
                     shadcn::ToastRequest::new("Action toast")
                         .id(shadcn::ToastId(103))
                         .description("Try the action/cancel buttons.")
-                        .action(shadcn::ToastAction {
-                            label: Arc::from("Undo"),
-                            command: CommandId::new(CMD_TOAST_ACTION),
-                        })
-                        .cancel(shadcn::ToastAction {
-                            label: Arc::from("Cancel"),
-                            command: CommandId::new(CMD_TOAST_CANCEL),
-                        })
+                        .action(shadcn::ToastAction::new(
+                            "Undo",
+                            CommandId::new(CMD_TOAST_ACTION),
+                        ))
+                        .cancel(shadcn::ToastAction::new(
+                            "Cancel",
+                            CommandId::new(CMD_TOAST_CANCEL),
+                        ))
                         .duration(Some(Duration::from_secs(6))),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {

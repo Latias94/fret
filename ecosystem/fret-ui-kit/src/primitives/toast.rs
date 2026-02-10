@@ -226,4 +226,8 @@ impl ToastController {
     pub fn dismiss(&self, host: &mut dyn UiActionHost, window: AppWindowId, id: ToastId) -> bool {
         OverlayController::dismiss_toast_action(host, self.store.clone(), window, id)
     }
+
+    pub fn dismiss_all(&self, host: &mut dyn UiActionHost, window: AppWindowId) -> usize {
+        OverlayController::dismiss_all_toasts_action(host, self.store.clone(), window)
+    }
 }

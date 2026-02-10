@@ -1,8 +1,8 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Corners, Edges, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-    PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-    TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
+    AppWindowId, Color, Corners, Edges, Paint, PathCommand, PathConstraints, PathId, PathMetrics,
+    PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService,
+    TextBlobId, TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
@@ -200,6 +200,15 @@ fn snap_color(c: fret_core::Color) -> SnapColor {
     }
 }
 
+fn snap_paint(p: Paint) -> SnapColor {
+    match p {
+        Paint::Solid(c) => snap_color(c),
+        Paint::LinearGradient(_) | Paint::RadialGradient(_) | Paint::Material { .. } => {
+            snap_color(Color::TRANSPARENT)
+        }
+    }
+}
+
 fn snap_transform(t: Transform2D) -> [f32; 6] {
     [
         round3(t.a),
@@ -242,23 +251,13 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             border_paint,
             corner_radii,
             ..
-        } => {
-            let background = match background {
-                fret_core::Paint::Solid(c) => c,
-                _ => fret_core::Color::TRANSPARENT,
-            };
-            let border_color = match border_paint {
-                fret_core::Paint::Solid(c) => c,
-                _ => fret_core::Color::TRANSPARENT,
-            };
-            SnapSceneOp::Quad {
-                rect: snap_rect(rect),
-                background: snap_color(background),
-                border: snap_edges(border),
-                border_color: snap_color(border_color),
-                corner_radii: snap_corners(corner_radii),
-            }
-        }
+        } => SnapSceneOp::Quad {
+            rect: snap_rect(rect),
+            background: snap_paint(background),
+            border: snap_edges(border),
+            border_color: snap_paint(border_paint),
+            corner_radii: snap_corners(corner_radii),
+        },
         SceneOp::Image {
             rect, fit, opacity, ..
         } => SnapSceneOp::Image {

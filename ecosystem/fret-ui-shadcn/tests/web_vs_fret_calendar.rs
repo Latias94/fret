@@ -826,9 +826,8 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
-        let background = match background {
-            fret_core::Paint::Solid(c) => c,
-            _ => fret_core::Color::TRANSPARENT,
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
         };
         if background.a <= 0.001 {
             continue;

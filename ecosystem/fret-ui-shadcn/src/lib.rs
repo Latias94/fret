@@ -254,9 +254,9 @@ pub use sidebar::{
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
 pub use sonner::{
-    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise,
-    ToastPromiseAsyncOptions, ToastPromiseHandle, ToastPromiseUnwrapError, ToastRequest,
-    ToastVariant, Toaster,
+    Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
+    ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
+    ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};

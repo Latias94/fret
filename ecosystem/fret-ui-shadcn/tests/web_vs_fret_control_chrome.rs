@@ -241,9 +241,10 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-
-        let (Paint::Solid(background), Paint::Solid(border_color)) = (background, border_paint)
-        else {
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
+        };
+        let fret_core::Paint::Solid(border_color) = border_paint else {
             continue;
         };
 
@@ -557,18 +558,12 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             continue;
         };
 
-        let background = match background {
-            Paint::Solid(c) => c,
-            _ => Color::TRANSPARENT,
-        };
-        let border_color = match border_paint {
-            Paint::Solid(c) => c,
-            _ => Color::TRANSPARENT,
-        };
-
-        if background != Color::TRANSPARENT {
+        if background != Paint::TRANSPARENT {
             continue;
         }
+        let fret_core::Paint::Solid(border_color) = border_paint else {
+            continue;
+        };
         let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         if bw.iter().any(|v| (*v - spread).abs() > 0.15) {
             continue;
@@ -583,7 +578,7 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             best_score = score;
             best = Some(PaintedQuad {
                 rect,
-                background,
+                background: Color::TRANSPARENT,
                 border: bw,
                 border_color,
                 corners: [
@@ -5644,8 +5639,10 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
             else {
                 continue;
             };
-            let (Paint::Solid(background), Paint::Solid(border_color)) = (background, border_paint)
-            else {
+            let fret_core::Paint::Solid(background) = background else {
+                continue;
+            };
+            let fret_core::Paint::Solid(border_color) = border_paint else {
                 continue;
             };
             let score = (rect.origin.x.0 - target.origin.x.0).abs()

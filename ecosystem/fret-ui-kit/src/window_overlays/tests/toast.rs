@@ -38,7 +38,15 @@ fn toast_viewport_focus_command_focuses_active_toast_layer() {
     request_toast_layer_for_window(
         &mut app,
         window,
-        ToastLayerRequest::new(viewport_id, store.clone()),
+        ToastLayerRequest::new(viewport_id, store.clone())
+            .position(ToastPosition::BottomCenter)
+            .style({
+                let mut style = ToastLayerStyle::default();
+                style.open_ticks = 0;
+                style.close_ticks = 0;
+                style.slide_distance = Px(0.0);
+                style
+            }),
     );
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -59,6 +67,383 @@ fn toast_viewport_focus_command_focuses_active_toast_layer() {
         &fret_runtime::CommandId::from(TOAST_VIEWPORT_FOCUS_COMMAND),
     ));
     assert_eq!(ui.focus(), Some(expected));
+}
+
+#[test]
+fn toast_layer_container_aria_label_is_exposed_in_semantics_snapshot() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()).container_aria_label("Notifications"),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == fret_core::SemanticsRole::Viewport
+                && n.label.as_deref() == Some("Notifications")
+        }),
+        "expected a toast viewport semantics node with label=Notifications",
+    );
+}
+
+#[test]
+fn toast_layer_custom_aria_label_overrides_container_label() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone())
+            .container_aria_label("Notifications")
+            .custom_aria_label_opt(Some(Arc::from("Custom notifications label"))),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == fret_core::SemanticsRole::Viewport
+                && n.label.as_deref() == Some("Custom notifications label")
+        }),
+        "expected a toast viewport semantics node with the custom label",
+    );
+}
+
+#[test]
+fn toast_layer_close_button_has_a11y_label() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()).style({
+            let mut style = ToastLayerStyle::default();
+            style.open_ticks = 0;
+            style.close_ticks = 0;
+            style.slide_distance = Px(0.0);
+            style
+        }),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close toast")
+        }),
+        "expected a close button semantics node with label=Close toast",
+    );
+}
+
+#[test]
+fn toast_request_can_disable_close_button() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello").close_button(false),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()).style({
+            let mut style = ToastLayerStyle::default();
+            style.open_ticks = 0;
+            style.close_ticks = 0;
+            style.slide_distance = Px(0.0);
+            style
+        }),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    assert!(
+        !snap.nodes.iter().any(|n| {
+            n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close toast")
+        }),
+        "expected no close button semantics nodes when toast.close_button=false",
+    );
+}
+
+#[test]
+fn toast_layer_mobile_offset_defaults_to_16px_at_600px_breakpoint() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(600.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello").test_id("toast-mobile-default-offset"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let toast = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("toast-mobile-default-offset"))
+        .expect("toast semantics node");
+
+    assert!(
+        (toast.bounds.origin.x.0 - 16.0).abs() <= 1.0,
+        "expected toast x≈16 got={}",
+        toast.bounds.origin.x.0
+    );
+    assert!(
+        (toast.bounds.size.width.0 - (600.0 - 16.0 - 16.0)).abs() <= 2.0,
+        "expected toast w≈{} got={}",
+        600.0 - 16.0 - 16.0,
+        toast.bounds.size.width.0
+    );
+}
+
+#[test]
+fn toast_layer_mobile_offset_can_override_left_and_right() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(600.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello").test_id("toast-mobile-custom-offset"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone())
+            .position(ToastPosition::BottomCenter)
+            .style({
+                let mut style = ToastLayerStyle::default();
+                style.open_ticks = 0;
+                style.close_ticks = 0;
+                style.slide_distance = Px(0.0);
+                style
+            })
+            .mobile_offset(
+                ToastOffset::default()
+                    .left(Px(10.0))
+                    .right(Px(20.0))
+                    .top(Px(12.0))
+                    .bottom(Px(12.0)),
+            ),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let toast = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("toast-mobile-custom-offset"))
+        .expect("toast semantics node");
+
+    assert!(
+        (toast.bounds.origin.x.0 - 10.0).abs() <= 1.0,
+        "expected toast x≈10 got={}",
+        toast.bounds.origin.x.0
+    );
+    assert!(
+        (toast.bounds.size.width.0 - (600.0 - 10.0 - 20.0)).abs() <= 2.0,
+        "expected toast w≈{} got={}",
+        600.0 - 10.0 - 20.0,
+        toast.bounds.size.width.0
+    );
 }
 
 #[test]
@@ -100,7 +485,13 @@ fn toast_hit_testing_tracks_render_transform() {
         .models_mut()
         .update(&store, |st| {
             let _ = st.set_window_swipe_config(window, ToastSwipeDirection::Right, Px(1000.0));
-            let started = st.begin_drag(window, toast_id, Point::new(Px(0.0), Px(0.0)));
+            let started = st.begin_drag(
+                window,
+                GlobalElementId(0xbeef),
+                toast_id,
+                Point::new(Px(0.0), Px(0.0)),
+                ToastPosition::TopLeft,
+            );
             let moved = st
                 .drag_move(window, toast_id, Point::new(Px(200.0), Px(0.0)))
                 .is_some();

@@ -60,9 +60,10 @@ pub use overlay_controller::{
 };
 pub use window_overlays::{
     DEFAULT_MAX_TOASTS, DEFAULT_TOAST_DURATION, DEFAULT_VISIBLE_TOASTS, ToastAction, ToastAsyncMsg,
-    ToastAsyncQueueHandle, ToastButtonStyle, ToastIconButtonStyle, ToastId, ToastLayerStyle,
-    ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant, ToastVariantColors,
-    ToastVariantPalette, toast_async_queue,
+    ToastAsyncQueueHandle, ToastButtonStyle, ToastDescription, ToastDuration, ToastIconButtonStyle,
+    ToastIconOverride, ToastIconOverrides, ToastId, ToastLayerStyle, ToastOffset, ToastPosition,
+    ToastRequest, ToastStore, ToastSwipeConfig, ToastSwipeDirection, ToastSwipeDirections,
+    ToastTextStyle, ToastVariant, ToastVariantColors, ToastVariantPalette, toast_async_queue,
 };
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;

@@ -7,17 +7,25 @@ use std::{fmt, future::Future};
 use fret_core::AppWindowId;
 use fret_core::Px;
 use fret_executor::FutureSpawnerHandle;
+use fret_icons::IconId;
 use fret_runtime::{CommandId, DispatcherHandle, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::{OverlayController, OverlayRequest, ToastAsyncQueueHandle, ToastStore};
 
+pub use fret_ui_kit::{
+    ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastOffset, ToastPosition,
+    ToastRequest, ToastSwipeDirection, ToastSwipeDirections, ToastVariant,
+};
+
 #[derive(Debug, Clone)]
 pub struct Toaster {
     id: Option<Arc<str>>,
     position: ToastPosition,
     margin: Option<Px>,
+    offset: Option<ToastOffset>,
+    mobile_offset: Option<ToastOffset>,
     gap: Option<Px>,
     toast_min_width: Option<Px>,
     toast_max_width: Option<Px>,
@@ -26,11 +34,21 @@ pub struct Toaster {
     expand_by_default: bool,
     rich_colors: bool,
     invert: bool,
+    duration: Option<Duration>,
+    close_button: bool,
+    container_aria_label: Option<Arc<str>>,
+    custom_aria_label: Option<Arc<str>>,
+    close_button_aria_label: Option<Arc<str>>,
+    icons: ToastIconOverrides,
+    swipe_directions: Option<ToastSwipeDirections>,
 }
 
 #[derive(Debug, Default)]
 struct ToasterConfigState {
     max_toasts: Option<usize>,
+    toaster_id: Option<Arc<str>>,
+    duration: Option<Duration>,
+    swipe_directions: Option<ToastSwipeDirections>,
 }
 
 impl Default for Toaster {
@@ -42,17 +60,33 @@ impl Default for Toaster {
             position: ToastPosition::TopCenter,
             // Sonner defaults (sonner@2.x):
             // - offset: 24px (non-mobile)
+            // - mobileOffset: 16px
             // - gap: 14px
             // - width: 356px
             margin: Some(Px(24.0)),
+            offset: None,
+            mobile_offset: Some(ToastOffset::all(Px(16.0))),
             gap: Some(Px(14.0)),
             toast_min_width: Some(Px(356.0)),
             toast_max_width: Some(Px(356.0)),
-            max_toasts: Some(fret_ui_kit::DEFAULT_MAX_TOASTS),
+            // Sonner does not enforce a max toast count; it only collapses the viewport via
+            // `visibleToasts`. Keep the default unlimited and let apps opt into eviction if
+            // desired.
+            max_toasts: None,
             visible_toasts: Some(fret_ui_kit::DEFAULT_VISIBLE_TOASTS),
             expand_by_default: false,
             rich_colors: false,
             invert: false,
+            duration: None,
+            // Sonner's close button is opt-in (`closeButton`) and shadcn/ui does not enable it in
+            // the v4 app layout baseline.
+            close_button: false,
+            // Sonner defaults to `containerAriaLabel = 'Notifications'`.
+            container_aria_label: Some(Arc::from("Notifications")),
+            custom_aria_label: None,
+            close_button_aria_label: Some(Arc::from("Close toast")),
+            icons: ToastIconOverrides::default(),
+            swipe_directions: None,
         }
     }
 }
@@ -74,6 +108,16 @@ impl Toaster {
 
     pub fn margin(mut self, margin: Px) -> Self {
         self.margin = Some(margin);
+        self
+    }
+
+    pub fn offset(mut self, offset: ToastOffset) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    pub fn mobile_offset(mut self, offset: ToastOffset) -> Self {
+        self.mobile_offset = Some(offset);
         self
     }
 
@@ -122,35 +166,157 @@ impl Toaster {
         self
     }
 
+    /// Sets the default toast lifetime for this toaster (Sonner: `duration`).
+    pub fn duration(mut self, duration: Duration) -> Self {
+        self.duration = Some(duration);
+        self
+    }
+
+    pub fn duration_opt(mut self, duration: Option<Duration>) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    pub fn close_button(mut self, close_button: bool) -> Self {
+        self.close_button = close_button;
+        self
+    }
+
+    pub fn container_aria_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.container_aria_label = Some(label.into());
+        self
+    }
+
+    pub fn container_aria_label_opt(mut self, label: Option<Arc<str>>) -> Self {
+        self.container_aria_label = label;
+        self
+    }
+
+    pub fn custom_aria_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.custom_aria_label = Some(label.into());
+        self
+    }
+
+    pub fn custom_aria_label_opt(mut self, label: Option<Arc<str>>) -> Self {
+        self.custom_aria_label = label;
+        self
+    }
+
+    pub fn close_button_aria_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.close_button_aria_label = Some(label.into());
+        self
+    }
+
+    pub fn close_button_aria_label_opt(mut self, label: Option<Arc<str>>) -> Self {
+        self.close_button_aria_label = label;
+        self
+    }
+
+    pub fn icons(mut self, icons: ToastIconOverrides) -> Self {
+        self.icons = icons;
+        self
+    }
+
+    /// Overrides the allowed swipe-to-dismiss directions (Sonner: `swipeDirections`).
+    pub fn swipe_directions(mut self, dirs: &[ToastSwipeDirection]) -> Self {
+        self.swipe_directions = Some(ToastSwipeDirections::from_slice(dirs));
+        self
+    }
+
+    pub fn swipe_directions_opt(mut self, dirs: Option<ToastSwipeDirections>) -> Self {
+        self.swipe_directions = dirs;
+        self
+    }
+
+    /// Applies the shadcn/ui v4 Sonner icon set (Lucide) to match the web recipes.
+    pub fn shadcn_lucide_icons(mut self) -> Self {
+        let mut icons = ToastIconOverrides::default();
+        icons.close_button = Some(ToastIconOverride::icon(IconId::new_static("lucide.x")));
+        icons.success = Some(ToastIconOverride::icon(IconId::new_static(
+            "lucide.circle-check",
+        )));
+        icons.info = Some(ToastIconOverride::icon(IconId::new_static("lucide.info")));
+        icons.warning = Some(ToastIconOverride::icon(IconId::new_static(
+            "lucide.triangle-alert",
+        )));
+        icons.error = Some(ToastIconOverride::icon(IconId::new_static(
+            "lucide.octagon-x",
+        )));
+        self.icons = icons;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
             let store = OverlayController::toast_store(&mut *cx.app);
-            let config_changed = cx.with_state(ToasterConfigState::default, |st| {
-                if st.max_toasts == self.max_toasts {
-                    return false;
-                }
-                st.max_toasts = self.max_toasts;
-                true
-            });
-            if config_changed {
+            let (max_toasts_changed, duration_changed, prev_toaster_id, swipe_changed) = cx
+                .with_state(ToasterConfigState::default, |st| {
+                    let max_toasts_changed = st.max_toasts != self.max_toasts;
+                    let duration_changed =
+                        st.toaster_id.as_ref() != self.id.as_ref() || st.duration != self.duration;
+                    let swipe_changed = st.swipe_directions != self.swipe_directions;
+                    let prev_toaster_id = st.toaster_id.clone();
+
+                    if max_toasts_changed {
+                        st.max_toasts = self.max_toasts;
+                    }
+                    if duration_changed {
+                        st.toaster_id = self.id.clone();
+                        st.duration = self.duration;
+                    }
+                    if swipe_changed {
+                        st.swipe_directions = self.swipe_directions;
+                    }
+
+                    (
+                        max_toasts_changed,
+                        duration_changed,
+                        prev_toaster_id,
+                        swipe_changed,
+                    )
+                });
+
+            if max_toasts_changed {
                 let _ = cx.app.models_mut().update(&store, |st| {
                     st.set_window_max_toasts(cx.window, self.max_toasts)
                 });
             }
+            if duration_changed {
+                // Clear the previous default duration (if any) and set the new one.
+                let _ = cx.app.models_mut().update(&store, |st| {
+                    st.set_window_default_duration(cx.window, prev_toaster_id.clone(), None)
+                });
+                let _ = cx.app.models_mut().update(&store, |st| {
+                    st.set_window_default_duration(cx.window, self.id.clone(), self.duration)
+                });
+            }
+            if swipe_changed {
+                let _ = cx.app.models_mut().update(&store, |st| {
+                    st.set_toaster_swipe_directions(cx.window, id, self.swipe_directions)
+                });
+            }
 
             let mut style = fret_ui_kit::ToastLayerStyle::default();
-            // Sonner's close button is opt-in (`closeButton` prop) and shadcn/ui does not enable it
-            // in the v4 app layout baseline.
-            style.show_close_button = false;
+            style.show_close_button = self.close_button;
+            style.close_button_aria_label = self.close_button_aria_label.clone();
+            style.icons = self.icons.clone();
 
             let mut request = OverlayRequest::toast_layer(id, store)
                 .toast_position(self.position)
                 .toast_style(style)
                 .toast_expand_by_default(self.expand_by_default)
                 .toast_rich_colors(self.rich_colors)
-                .toast_invert(self.invert);
+                .toast_invert(self.invert)
+                .toast_container_aria_label_opt(self.container_aria_label.clone())
+                .toast_custom_aria_label_opt(self.custom_aria_label.clone());
+            if let Some(offset) = self.offset {
+                request = request.toast_offset(offset);
+            }
+            if let Some(offset) = self.mobile_offset {
+                request = request.toast_mobile_offset(offset);
+            }
             if let Some(toaster_id) = self.id.clone() {
                 request = request.toast_toaster_id(toaster_id);
             }
@@ -189,6 +355,7 @@ pub struct ToastMessageOptions {
     pub description: Option<Arc<str>>,
     pub action: Option<ToastAction>,
     pub cancel: Option<ToastAction>,
+    pub icon: Option<ToastIconOverride>,
     /// `None` means "use the default toast duration".
     /// `Some(None)` means "pinned" (no auto-close timer).
     pub duration: Option<Option<Duration>>,
@@ -206,10 +373,7 @@ impl ToastMessageOptions {
     }
 
     pub fn action(mut self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
-        self.action = Some(ToastAction {
-            label: label.into(),
-            command: command.into(),
-        });
+        self.action = Some(ToastAction::new(label, command));
         self
     }
 
@@ -219,15 +383,22 @@ impl ToastMessageOptions {
     }
 
     pub fn cancel(mut self, label: impl Into<Arc<str>>, command: impl Into<CommandId>) -> Self {
-        self.cancel = Some(ToastAction {
-            label: label.into(),
-            command: command.into(),
-        });
+        self.cancel = Some(ToastAction::new(label, command));
         self
     }
 
     pub fn cancel_with(mut self, cancel: ToastAction) -> Self {
         self.cancel = Some(cancel);
+        self
+    }
+
+    pub fn icon(mut self, icon: ToastIconOverride) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn no_icon(mut self) -> Self {
+        self.icon = Some(ToastIconOverride::Hidden);
         self
     }
 
@@ -427,9 +598,7 @@ impl Sonner {
         self.toast(
             host,
             window,
-            ToastRequest::new(title)
-                .variant(ToastVariant::Loading)
-                .duration(None),
+            ToastRequest::new(title).variant(ToastVariant::Loading),
         )
     }
 
@@ -444,9 +613,7 @@ impl Sonner {
             host,
             window,
             id,
-            ToastRequest::new(title)
-                .variant(ToastVariant::Loading)
-                .duration(None),
+            ToastRequest::new(title).variant(ToastVariant::Loading),
         )
     }
 
@@ -566,6 +733,10 @@ impl Sonner {
         OverlayController::dismiss_toast_action(host, self.store.clone(), window, id)
     }
 
+    pub fn dismiss_all(&self, host: &mut dyn UiActionHost, window: AppWindowId) -> usize {
+        OverlayController::dismiss_all_toasts_action(host, self.store.clone(), window)
+    }
+
     /// Starts a manual "promise" toast flow, similar to `sonner`'s `toast.promise(...)` on the web.
     ///
     /// This does not run async tasks. It returns a handle that can be resolved later by updating
@@ -576,7 +747,14 @@ impl Sonner {
         window: AppWindowId,
         loading: impl Into<std::sync::Arc<str>>,
     ) -> ToastPromise {
-        let id = self.toast_loading(host, window, loading);
+        let id = self.toast(
+            host,
+            window,
+            ToastRequest::new(loading)
+                .variant(ToastVariant::Loading)
+                .duration(None)
+                .promise(true),
+        );
         ToastPromise {
             sonner: self.clone(),
             window,
@@ -593,7 +771,10 @@ impl Sonner {
         let id = self.toast(
             host,
             window,
-            loading.variant(ToastVariant::Loading).duration(None),
+            loading
+                .variant(ToastVariant::Loading)
+                .duration(None)
+                .promise(true),
         );
         ToastPromise {
             sonner: self.clone(),
@@ -675,7 +856,10 @@ impl Sonner {
     {
         let loading_description = options.description_static.clone();
         let id = loading.map(|loading| {
-            let mut req = loading.variant(ToastVariant::Loading).duration(None);
+            let mut req = loading
+                .variant(ToastVariant::Loading)
+                .duration(None)
+                .promise(true);
             if let Some(desc) = loading_description {
                 req = req.description(desc);
             }
@@ -738,7 +922,7 @@ impl Sonner {
 
                     if let Some(success) = success {
                         let mut req = (success)(&value);
-                        if req.variant == ToastVariant::Default {
+                        if matches!(req.variant, None | Some(ToastVariant::Default)) {
                             req = req.variant(ToastVariant::Success);
                         }
                         if let Some(desc) = desc {
@@ -763,7 +947,7 @@ impl Sonner {
 
                     if let Some(error) = error {
                         let mut req = (error)(&err);
-                        if req.variant == ToastVariant::Default {
+                        if matches!(req.variant, None | Some(ToastVariant::Default)) {
                             req = req.variant(ToastVariant::Error);
                         }
                         if let Some(desc) = desc {
@@ -862,8 +1046,6 @@ impl ToastPromise {
         self.sonner.dismiss(host, self.window, self.id)
     }
 }
-
-pub use fret_ui_kit::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
 
 #[derive(Clone)]
 pub struct ToastPromiseAsyncOptions<T, E> {
@@ -1060,12 +1242,7 @@ impl<T, E> Future for ToastPromiseUnwrap<T, E> {
 }
 
 fn base_message_request(title: Arc<str>, variant: ToastVariant) -> ToastRequest {
-    let req = ToastRequest::new(title).variant(variant);
-    if matches!(variant, ToastVariant::Loading) {
-        req.duration(None)
-    } else {
-        req
-    }
+    ToastRequest::new(title).variant(variant)
 }
 
 fn apply_toast_message_options(
@@ -1080,6 +1257,9 @@ fn apply_toast_message_options(
     }
     if let Some(cancel) = options.cancel {
         req = req.cancel(cancel);
+    }
+    if let Some(icon) = options.icon {
+        req = req.icon(icon);
     }
     if let Some(duration) = options.duration {
         req = req.duration(duration);
@@ -1121,6 +1301,7 @@ mod tests {
             .description("desc")
             .action("Undo", "toast.undo")
             .cancel("Cancel", "toast.cancel")
+            .icon(ToastIconOverride::glyph("!"))
             .pinned()
             .dismissible(false);
 
@@ -1130,9 +1311,13 @@ mod tests {
         );
 
         assert_eq!(req.title.as_ref(), "Hello");
-        assert_eq!(req.description.as_ref().map(|d| d.as_ref()), Some("desc"));
-        assert_eq!(req.duration, None);
-        assert_eq!(req.dismissible, false);
+        assert!(matches!(
+            req.description.as_ref(),
+            Some(fret_ui_kit::ToastDescription::Text(text)) if text.as_ref() == "desc"
+        ));
+        assert!(matches!(req.duration, fret_ui_kit::ToastDuration::Pinned));
+        assert_eq!(req.dismissible, Some(false));
+        assert!(matches!(req.icon, Some(ToastIconOverride::Glyph(_))));
         assert_eq!(req.action.as_ref().map(|a| a.label.as_ref()), Some("Undo"));
         assert_eq!(
             req.cancel.as_ref().map(|a| a.label.as_ref()),
@@ -1141,9 +1326,12 @@ mod tests {
     }
 
     #[test]
-    fn toast_loading_message_defaults_to_pinned() {
+    fn toast_loading_message_defaults_to_use_default_duration() {
         let req = base_message_request(Arc::from("Loading..."), ToastVariant::Loading);
-        assert_eq!(req.duration, None);
+        assert!(matches!(
+            req.duration,
+            fret_ui_kit::ToastDuration::UseDefault
+        ));
     }
 
     #[test]
@@ -1260,5 +1448,26 @@ mod tests {
             matches!(poll, Poll::Ready(Ok(7))),
             "expected Ok(7), got {poll:?}"
         );
+    }
+
+    #[test]
+    fn toast_dismiss_all_closes_all_active_toasts() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let sonner = Sonner::global(&mut app);
+
+        let mut host = UiActionHostAdapter { app: &mut app };
+        let _ = sonner.toast(&mut host, window, ToastRequest::new("A").duration(None));
+        let _ = sonner.toast(&mut host, window, ToastRequest::new("B").duration(None));
+
+        let dismissed = sonner.dismiss_all(&mut host, window);
+        assert_eq!(dismissed, 2);
+
+        let counts = host
+            .models_mut()
+            .read(&sonner.store, |st| st.window_counts(window))
+            .expect("toast store readable");
+        assert_eq!(counts.open, 0);
+        assert_eq!(counts.removing, 2);
     }
 }

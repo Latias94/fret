@@ -71,10 +71,7 @@ impl Snackbar {
     }
 
     pub fn action(mut self, label: impl Into<Arc<str>>, command: CommandId) -> Self {
-        self.action = Some(ToastAction {
-            label: label.into(),
-            command,
-        });
+        self.action = Some(ToastAction::new(label, command));
         self
     }
 
@@ -93,9 +90,11 @@ impl Snackbar {
         if let Some(desc) = self.supporting_text {
             req = req.description(desc);
         }
-        req.duration = self.duration.to_duration();
-        req.action = self.action;
-        req.dismissible = self.dismissible;
+        req = req.duration(self.duration.to_duration());
+        if let Some(action) = self.action {
+            req = req.action(action);
+        }
+        req = req.dismissible(self.dismissible);
         req
     }
 }
@@ -274,5 +273,6 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         action: snackbar_tokens::action_button_style(theme),
         cancel: ToastButtonStyle::default(),
         close: snackbar_tokens::close_icon_button_style(theme),
+        ..ToastLayerStyle::default()
     }
 }

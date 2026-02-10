@@ -38,16 +38,20 @@ pub use names::{
 pub use render::render;
 pub use requests::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastButtonStyle,
-    ToastIconButtonStyle, ToastLayerRequest, ToastLayerStyle, ToastTextStyle, ToastVariantColors,
-    ToastVariantPalette, TooltipRequest,
+    ToastIconButtonStyle, ToastIconOverride, ToastIconOverrides, ToastLayerRequest,
+    ToastLayerStyle, ToastOffset, ToastTextStyle, ToastVariantColors, ToastVariantPalette,
+    TooltipRequest,
 };
 pub use toast::{
     DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
     DEFAULT_SWIPE_THRESHOLD_PX, DEFAULT_TOAST_DURATION, DEFAULT_VISIBLE_TOASTS, ToastAction,
     ToastAsyncMsg, ToastAsyncQueueHandle, ToastId, ToastPosition, ToastRequest, ToastStore,
-    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_toast_action, toast_action,
-    toast_async_queue, toast_store,
+    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_all_toasts_action,
+    dismiss_toast_action, toast_action, toast_async_queue, toast_store,
 };
+
+#[allow(unused_imports)]
+pub use toast::{ToastDescription, ToastDuration, ToastSwipeDirections};
 
 /// Radix `ToastViewport` focus-jump command (default hotkey: `F8`).
 pub const TOAST_VIEWPORT_FOCUS_COMMAND: &str = "toast.viewport.focus";

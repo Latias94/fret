@@ -64,6 +64,10 @@ pub struct ToastLayerSpec {
     pub expand: bool,
     pub rich_colors: bool,
     pub invert: bool,
+    pub container_aria_label: Option<std::sync::Arc<str>>,
+    pub custom_aria_label: Option<std::sync::Arc<str>>,
+    pub offset: Option<window_overlays::ToastOffset>,
+    pub mobile_offset: Option<window_overlays::ToastOffset>,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -297,6 +301,10 @@ impl OverlayRequest {
                 expand: false,
                 rich_colors: false,
                 invert: false,
+                container_aria_label: None,
+                custom_aria_label: None,
+                offset: None,
+                mobile_offset: None,
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -366,6 +374,69 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_invert requires a ToastLayer request");
         spec.invert = invert;
+        self
+    }
+
+    pub fn toast_container_aria_label(mut self, label: impl Into<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_container_aria_label requires a ToastLayer request");
+        spec.container_aria_label = Some(label.into());
+        self
+    }
+
+    pub fn toast_container_aria_label_opt(mut self, label: Option<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_container_aria_label_opt requires a ToastLayer request");
+        spec.container_aria_label = label;
+        self
+    }
+
+    pub fn toast_custom_aria_label_opt(mut self, label: Option<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_custom_aria_label_opt requires a ToastLayer request");
+        spec.custom_aria_label = label;
+        self
+    }
+
+    pub fn toast_offset(mut self, offset: window_overlays::ToastOffset) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_offset requires a ToastLayer request");
+        spec.offset = Some(offset);
+        self
+    }
+
+    pub fn toast_offset_opt(mut self, offset: Option<window_overlays::ToastOffset>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_offset_opt requires a ToastLayer request");
+        spec.offset = offset;
+        self
+    }
+
+    pub fn toast_mobile_offset(mut self, offset: window_overlays::ToastOffset) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_mobile_offset requires a ToastLayer request");
+        spec.mobile_offset = Some(offset);
+        self
+    }
+
+    pub fn toast_mobile_offset_opt(mut self, offset: Option<window_overlays::ToastOffset>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_mobile_offset_opt requires a ToastLayer request");
+        spec.mobile_offset = offset;
         self
     }
 
@@ -663,7 +734,15 @@ impl OverlayController {
                     .expand_by_default(spec.expand)
                     .rich_colors(spec.rich_colors)
                     .invert(spec.invert)
+                    .container_aria_label_opt(spec.container_aria_label)
+                    .custom_aria_label_opt(spec.custom_aria_label)
                     .root_name(root_name);
+                if let Some(offset) = spec.offset {
+                    toast_req = toast_req.offset(offset);
+                }
+                if let Some(offset) = spec.mobile_offset {
+                    toast_req = toast_req.mobile_offset(offset);
+                }
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }
@@ -913,6 +992,14 @@ impl OverlayController {
         id: window_overlays::ToastId,
     ) -> bool {
         window_overlays::dismiss_toast_action(host, store, window, id)
+    }
+
+    pub fn dismiss_all_toasts_action(
+        host: &mut dyn fret_ui::action::UiActionHost,
+        store: Model<window_overlays::ToastStore>,
+        window: AppWindowId,
+    ) -> usize {
+        window_overlays::dismiss_all_toasts_action(host, store, window)
     }
 }
 
