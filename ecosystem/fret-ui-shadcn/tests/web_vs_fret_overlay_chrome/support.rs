@@ -8,6 +8,8 @@ mod geometry;
 mod harness;
 #[path = "support/input.rs"]
 mod input;
+#[path = "support/listbox.rs"]
+mod listbox;
 #[path = "support/overlay_chrome.rs"]
 mod overlay_chrome;
 #[path = "support/probes.rs"]
@@ -27,6 +29,7 @@ pub(crate) use assertions::*;
 pub(crate) use geometry::*;
 pub(crate) use harness::*;
 pub(crate) use input::*;
+pub(crate) use listbox::*;
 pub(crate) use overlay_chrome::*;
 pub(crate) use probes::*;
 pub(crate) use scene::*;
