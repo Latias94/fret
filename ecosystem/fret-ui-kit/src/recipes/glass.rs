@@ -3,6 +3,7 @@ use fret_ui::Theme;
 
 use crate::ChromeRefinement;
 use crate::recipes::effect_recipe::{alpha_mul, alpha_set, clamp_u32_from_metric};
+use crate::recipes::resolve::{DegradationReason, ResolvedWithFallback};
 use crate::style::{ColorFallback, ColorRef, MetricFallback, MetricRef};
 
 #[derive(Debug, Clone, Copy)]
@@ -243,6 +244,21 @@ pub fn glass_effect_chain_for_environment(
         EffectChain::EMPTY
     } else {
         glass_effect_chain(effect)
+    }
+}
+
+pub fn resolve_glass_effect_chain_for_environment(
+    effect: ResolvedGlassEffect,
+    prefers_reduced_transparency: bool,
+) -> ResolvedWithFallback<EffectChain> {
+    if prefers_reduced_transparency {
+        ResolvedWithFallback::degraded(
+            EffectChain::EMPTY,
+            "glass.effect_chain",
+            DegradationReason::ReducedTransparency,
+        )
+    } else {
+        ResolvedWithFallback::ok(glass_effect_chain(effect))
     }
 }
 
