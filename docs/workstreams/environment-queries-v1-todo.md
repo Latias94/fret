@@ -96,6 +96,10 @@ ADR anchor:
   system UI + virtual keyboard overlap:
   - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs`
 
+- [x] (Optional policy) Allow shadcn theme to follow the environment color scheme (light/dark) at
+  app/runner integration boundaries, without pushing theme policy into the runtime.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/app_integration.rs` (`sync_theme_from_environment`)
+
 ## Sweep / hygiene
 
 - [x] Avoid ad-hoc viewport reads (`cx.bounds`) in overlay outer-bounds helpers: derive outer bounds

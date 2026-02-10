@@ -277,7 +277,9 @@ pub use tooltip::{
 };
 
 #[cfg(feature = "app-integration")]
-pub use app_integration::{install, install_app, install_app_with, install_app_with_theme};
+pub use app_integration::{
+    install, install_app, install_app_with, install_app_with_theme, sync_theme_from_environment,
+};
 
 pub use ::fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.
