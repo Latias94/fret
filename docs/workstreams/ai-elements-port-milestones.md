@@ -111,7 +111,7 @@ Acceptance criteria:
 - `FileTree` preserves keyed identity (no state jumping) and has a clear large-tree strategy
   (prefer `fret-ui-kit` virtualization/retained helpers).
 
-Status: In progress (FileTree is virtualized + gated; CodeBlock/Snippet parity pending).
+Status: In progress (core artifacts are gated; parity polish pending).
 Notes:
 
 - `FileTree` is ported with UI Kit flatten + `VirtualList` (virtualized under height constraints) and gated:
@@ -125,8 +125,10 @@ Notes:
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).
-- Remaining work in this milestone focuses on `CodeBlock` / `Snippet` parity and a large-tree
-  strategy (likely via UI Kit primitives + virtualization).
+Remaining work (current focus):
+
+- Tighten parity for `Commit` / `StackTrace` / `TestResults` (layout/styling + copy + extension hooks).
+- Keep gates stable and add missing selectors for edge cases (long lists / deep disclosures).
 
 ### M4 — Workflow surfaces (optional; only if we can reuse existing crates)
 

@@ -192,6 +192,16 @@ Prioritize thin adapters over new engines:
   - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
   - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
   - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
+  - Parity polish checklist (make it measurable):
+    - [ ] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
+    - [ ] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
+    - [ ] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
+      - commit: many files; stack trace: many frames; test results: many suites.
+    - [ ] Confirm extension hooks exist for app-owned effects:
+      - commit: file row click / open file
+      - stack trace: file path click / open file
+      - test results: test click / open test output
+    - [ ] Re-audit upstream TS (`commit.tsx`, `stack-trace.tsx`, `test-results.tsx`) and document known deltas in `docs/workstreams/ai-elements-port.md`.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)

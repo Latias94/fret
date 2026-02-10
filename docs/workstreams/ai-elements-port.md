@@ -78,7 +78,7 @@ an interactive chat demo:
 - `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
 - `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
 - `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
-- `FileTree`: AI Elements-aligned nested file tree surface (small trees; per-row actions; no virtualization yet).
+- `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
 - `StackTrace`: AI Elements-aligned stack trace disclosure surface (copy + parsed frames).
@@ -402,7 +402,7 @@ Fret’s virtualization and windowed surfaces key off `ItemKey`, which is `u64` 
 Requiring a `u64` message ID gives us:
 
 - deterministic keys across builds/platforms (no randomized hash seeds),
-- no hidden collision risk,
+- explicit collision behavior (IDs are app-owned; avoid hashing if you need strict uniqueness),
 - trivial performance characteristics (copyable, compact),
 - straightforward integration with view-cache + retained virtualization.
 
@@ -420,6 +420,22 @@ Recommended derivation strategy:
     mapping table and assign monotonic `MessageId`s.
 - Avoid using `Vec` indices as IDs if you ever insert/remove in the middle of the transcript (it
   breaks keyed identity and can cause per-row state to “jump”).
+
+Example (recommended, collision-free):
+
+```rust
+// Pseudocode: keep a per-transcript mapping table.
+let mut next_id: MessageId = 1;
+let mut map: HashMap<ExternalId, MessageId> = HashMap::new();
+
+fn ensure_id(map: &mut HashMap<ExternalId, MessageId>, next_id: &mut MessageId, ext: ExternalId) -> MessageId {
+    *map.entry(ext).or_insert_with(|| {
+        let id = *next_id;
+        *next_id += 1;
+        id
+    })
+}
+```
 
 ### Message content model
 
