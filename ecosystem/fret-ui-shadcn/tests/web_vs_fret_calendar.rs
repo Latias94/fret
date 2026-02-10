@@ -1234,7 +1234,8 @@ fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
         }
     }
 
-    let spacing = if theme.viewport.w >= 768.0 {
+    let md_min_width = fret_ui_kit::declarative::viewport_tailwind::MD.0;
+    let spacing = if theme.viewport.w >= md_min_width {
         md.or(base)
     } else {
         base
