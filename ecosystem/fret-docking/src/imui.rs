@@ -166,19 +166,25 @@ impl<H: UiHost + 'static> Widget<H> for DockHostRoot<H> {
 
         let _ = cx.layout_in(self.dock_space, cx.bounds);
         if let Some(anchor) = self.tab_drag_anchor {
-            const SIZE_PX: f32 = 12.0;
+            const SIZE_W_PX: f32 = 140.0;
+            const SIZE_H_PX: f32 = 20.0;
             const TAB_BAR_H_PX: f32 = 28.0;
 
-            let x = cx.bounds.origin.x.0 + cx.bounds.size.width.0 * 0.25;
-            let y = cx.bounds.origin.y.0 + TAB_BAR_H_PX * 0.5;
-            let half = SIZE_PX * 0.5;
+            // The anchor is semantics-only and is used by `fretboard diag` scripts to pick a
+            // deterministic start point for dock drags. Keep it biased towards the left side of
+            // the tab bar so the picked point is likely to land on a real tab hit target.
+            const LEFT_PAD_PX: f32 = 8.0;
+
+            let x0 = (cx.bounds.origin.x.0 + LEFT_PAD_PX).max(cx.bounds.origin.x.0);
+            let y0 =
+                (cx.bounds.origin.y.0 + (TAB_BAR_H_PX - SIZE_H_PX) * 0.5).max(cx.bounds.origin.y.0);
+
+            let max_w = (cx.bounds.size.width.0 - LEFT_PAD_PX).max(0.0);
+            let w = SIZE_W_PX.min(max_w);
 
             let rect = fret_core::Rect::new(
-                fret_core::Point::new(
-                    fret_core::Px((x - half).max(cx.bounds.origin.x.0)),
-                    fret_core::Px((y - half).max(cx.bounds.origin.y.0)),
-                ),
-                fret_core::Size::new(fret_core::Px(SIZE_PX), fret_core::Px(SIZE_PX)),
+                fret_core::Point::new(fret_core::Px(x0), fret_core::Px(y0)),
+                fret_core::Size::new(fret_core::Px(w), fret_core::Px(SIZE_H_PX)),
             );
             let _ = cx.layout_in(anchor, rect);
         }
