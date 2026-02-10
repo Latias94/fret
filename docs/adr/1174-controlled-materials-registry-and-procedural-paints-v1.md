@@ -71,10 +71,33 @@ V1 constraints:
 - all floats must be finite (non-finite values are sanitized to deterministic defaults),
 - parameter interpretation is material-defined, but the payload size is fixed.
 
+V1 payload size (normative):
+
+- `MaterialParams` is **64 bytes**: `16 * f32`.
+- The canonical shader view is `params: vec4<f32>[4]`.
+
+Sanitization (normative):
+
+- Renderers MUST sanitize non-finite values (`NaN`, `±Inf`) to `0.0` before use.
+- Renderers SHOULD clamp “obviously unbounded” values (e.g. negative sizes) to a safe default on a
+  per-material basis, but MUST do so deterministically.
+
 Rationale:
 
 - fixed-size instance payloads preserve batching and avoid per-op dynamic allocation,
 - they work on native + wasm/WebGPU.
+
+### D3.1 — Fixed binding shape (v1)
+
+All Tier B materials share a fixed binding shape:
+
+- exactly one uniform buffer binding for `MaterialParams`,
+- no texture/sampler bindings in v1.
+
+Non-goal (v1):
+
+- texture-sampling materials (including sampling `ImageId` or external surfaces) are deferred until
+  a dedicated ADR locks bind group shapes + budgets for sampled resources.
 
 ### D4 — Registration API lives in `fret-render` (not `fret-core`), and is capability-aware
 
@@ -87,6 +110,19 @@ The renderer exposes a registry API (shape is locked here; exact Rust placement 
 
 - it selects from a predefined material set (e.g. “dot grid”, “noise”, “border beam”),
 - and does not contain raw backend handles.
+
+### D4.1 — V1 baseline material kinds (portable minimum)
+
+The registry MUST support (at minimum) the following kinds, with stable parameter meanings:
+
+- `DotGrid`: repeating dots on a grid.
+- `Stripe`: repeating stripes with angle control.
+- `Noise`: stable, deterministic noise/grain (no hidden time dependency).
+- `Beam`: a directional highlight band intended for “moving shine” when animated by the caller.
+- `Sparkle`: a lightweight sparkle field intended for subtle ambient motion when animated by the caller.
+
+This list is intentionally small; it exists to prevent ecosystem crates from inventing divergent
+pattern semantics while still keeping the framework surface controlled.
 
 Capabilities (ADR 0124) may restrict which materials are available on a given backend:
 
@@ -158,4 +194,3 @@ This ADR is considered conformant when:
 - Budgets + degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Capabilities: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
 - Paint vocabulary (gradients): `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
-
