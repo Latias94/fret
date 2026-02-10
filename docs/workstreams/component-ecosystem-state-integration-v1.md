@@ -207,7 +207,7 @@ Initial audit snapshot:
 
 Guardrail added:
 
-- `tools/check_component_state_coupling.ps1`
+- `tools/check_component_state_coupling.py`
   - blocks direct selector/query imports and `use_query`/`use_selector` sugar in primitive-oriented
     source roots,
   - blocks direct `fret-query` / `fret-selector` dependencies in primitive-oriented Cargo manifests,
@@ -215,7 +215,7 @@ Guardrail added:
 
 Recommended usage:
 
-- run locally before PR: `powershell -ExecutionPolicy Bypass -File .\tools\check_component_state_coupling.ps1`
+- run locally before PR: `python3 tools/check_component_state_coupling.py`
 - optionally wire into consistency checks once the current workspace churn settles.
 ## 11) Ecosystem-by-ecosystem state recommendation matrix
 

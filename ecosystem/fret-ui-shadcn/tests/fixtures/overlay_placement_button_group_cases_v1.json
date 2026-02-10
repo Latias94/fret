@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "button-group-demo.menu_item_height",
+      "web_name": "button-group-demo",
+      "recipe": "constrained_menu_item_height"
+    },
+    {
+      "id": "button-group-demo.vp375x240.menu_item_height",
+      "web_name": "button-group-demo.vp375x240",
+      "recipe": "constrained_menu_item_height"
+    },
+    {
+      "id": "button-group-demo.menu_content_insets",
+      "web_name": "button-group-demo",
+      "recipe": "constrained_menu_content_insets"
+    },
+    {
+      "id": "button-group-demo.vp375x240.menu_content_insets",
+      "web_name": "button-group-demo.vp375x240",
+      "recipe": "constrained_menu_content_insets"
+    },
+    {
+      "id": "button-group-demo.submenu-kbd.overlay_placement",
+      "web_name": "button-group-demo.submenu-kbd",
+      "recipe": "submenu_overlay_placement"
+    },
+    {
+      "id": "button-group-demo.submenu-kbd.menu_content_insets",
+      "web_name": "button-group-demo.submenu-kbd",
+      "recipe": "submenu_menu_content_insets"
+    },
+    {
+      "id": "button-group-demo.submenu-kbd.menu_item_height",
+      "web_name": "button-group-demo.submenu-kbd",
+      "recipe": "submenu_menu_item_height"
+    }
+  ]
+}

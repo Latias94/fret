@@ -137,4 +137,4 @@ If an ecosystem crate wants optional selector/query support:
 2. Keep observation/invalidation explicit and reviewable.
 3. Keep async fetch in query service layer, not in drawing helpers.
 4. Keep command routing typed for dynamic actions.
-5. Validate with gates (`check_component_state_coupling.ps1`, targeted checks/nextest).
+5. Validate with gates (`check_component_state_coupling.py`, targeted checks/nextest).

@@ -140,6 +140,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::LayoutQueryRegion(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::InteractivityGate(props) => {
                 if !props.present {
                     return;
@@ -334,6 +341,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {
@@ -515,6 +523,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {
@@ -697,6 +706,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {

@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "overlay" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+    },
+    { "type": "wait_frames", "n": 16 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-submenu-item-nested" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "move_pointer_sweep",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" },
+      "delta_x": 12.0,
+      "delta_y": 1.5,
+      "steps": 16,
+      "frames_per_step": 1
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-submenu-item-nested" }
+      }
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dropdown-submenu-safe-corridor-sweep"
+    }
+  ]
+}
+

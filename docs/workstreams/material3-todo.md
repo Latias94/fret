@@ -327,7 +327,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_*_colors_from_sys`).
     - [x] Expand scalar import coverage for other MVP components.
       - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (prefix allowlist includes all MVP components),
-        `tools/check_material3_tokens.ps1` (local reproducible check entrypoint).
+        `tools/check_material3_tokens.py` (local reproducible check entrypoint).
     - [x] Represent corner sets via `ThemeConfig.corners` (per-corner radii); other structured tokens TBD.
 - [x] Add support for non-color/non-px token kinds needed by Material:
   - [x] scalar numbers (e.g. state-layer opacity)

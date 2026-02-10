@@ -151,12 +151,12 @@ emit `SvgSource::Id` directly.
   - Windows/macOS/Linux: `python3 tools/gen_lucide.py`
   - Unified entrypoint: `python3 tools/gen_icons.py --pack lucide`
 - Sync vendored SVGs from upstream sources:
-  - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
+  - `python3 tools/sync_icons.py --pack lucide --clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
 - Verify vendor icon references resolve to vendored assets:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - CI consistency gate:
-  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack lucide`
+  - `python3 tools/check_icons_generation.py --pack lucide`
 
 ## In-repo maintenance (Radix)
 
@@ -167,12 +167,12 @@ emit `SvgSource::Id` directly.
   - Windows/macOS/Linux: `python3 tools/gen_radix.py`
   - Unified entrypoint: `python3 tools/gen_icons.py --pack radix`
 - Sync vendored SVGs from upstream sources:
-  - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
+  - `python3 tools/sync_icons.py --pack radix --clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
 - Verify vendor icon references resolve to vendored assets:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - CI consistency gate:
-  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack radix`
+  - `python3 tools/check_icons_generation.py --pack radix`
 
 ## Vendor update quick flow (pre-release)
 
@@ -182,6 +182,6 @@ emit `SvgSource::Id` directly.
 - Regenerate both packs:
   - `python3 tools/gen_icons.py --pack all`
 - Run unified consistency check:
-  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack all`
+  - `python3 tools/check_icons_generation.py --pack all`
 - Optional release gate:
-  - `pwsh -NoProfile -File tools/pre_release_icons.ps1`
+  - `python3 tools/pre_release_icons.py`

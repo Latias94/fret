@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
@@ -7,11 +7,13 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{
@@ -26,6 +28,18 @@ use crate::{
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn test_id_slug(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_string()
 }
 
 #[derive(Debug, Clone, Default)]
@@ -90,34 +104,16 @@ impl ComboboxItem {
 #[derive(Default)]
 struct ComboboxState {
     query: Option<Model<String>>,
-    was_open: bool,
+    open_change_reason: Option<Model<Option<ComboboxOpenChangeReason>>>,
+    clear_query_on_close: kit_combobox::ClearQueryOnCloseState,
+    focus_restore_target: Option<Arc<Mutex<Option<GlobalElementId>>>>,
 }
 
-type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+pub use kit_combobox::ComboboxOpenChangeReason;
 
-#[derive(Default)]
-struct ComboboxOpenChangeCallbackState {
-    initialized: bool,
-    last_open: bool,
-}
-
-fn combobox_open_change_event(
-    state: &mut ComboboxOpenChangeCallbackState,
-    open: bool,
-) -> Option<bool> {
-    if !state.initialized {
-        state.initialized = true;
-        state.last_open = open;
-        return None;
-    }
-
-    if state.last_open != open {
-        state.last_open = open;
-        return Some(open);
-    }
-
-    None
-}
+type OnOpenChange = kit_combobox::OnOpenChange;
+type OnOpenChangeWithReason = kit_combobox::OnOpenChangeWithReason;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 
 #[derive(Clone)]
 pub struct Combobox {
@@ -125,8 +121,10 @@ pub struct Combobox {
     open: Model<bool>,
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
+    test_id_prefix: Option<Arc<str>>,
     width: Option<Px>,
     responsive: bool,
+    responsive_device_md_breakpoint: Px,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -134,7 +132,12 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    selection_commit_policy: kit_combobox::SelectionCommitPolicy,
+    close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
+    on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: ComboboxStyle,
@@ -147,8 +150,10 @@ impl Combobox {
             open,
             query: None,
             items: Vec::new(),
+            test_id_prefix: None,
             width: None,
             responsive: false,
+            responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
@@ -158,7 +163,12 @@ impl Combobox {
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
+            selection_commit_policy: kit_combobox::SelectionCommitPolicy::default(),
+            close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
+            on_value_change: None,
             on_open_change: None,
+            on_open_change_with_reason: None,
+            on_open_change_complete: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: ComboboxStyle::default(),
@@ -200,6 +210,15 @@ impl Combobox {
         self
     }
 
+    /// Overrides the device-level viewport breakpoint used by [`Combobox::responsive`].
+    ///
+    /// This is intentionally **viewport-driven** (mobile vs desktop), not container-query-driven.
+    /// For panel-width responsiveness, prefer container queries (ADR 1170).
+    pub fn responsive_device_md_breakpoint(mut self, breakpoint: Px) -> Self {
+        self.responsive_device_md_breakpoint = breakpoint;
+        self
+    }
+
     pub fn query_model(mut self, query: Model<String>) -> Self {
         self.query = Some(query);
         self
@@ -212,6 +231,11 @@ impl Combobox {
 
     pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
         self.items.extend(items);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -250,9 +274,46 @@ impl Combobox {
         self
     }
 
+    pub fn selection_commit_policy(mut self, policy: kit_combobox::SelectionCommitPolicy) -> Self {
+        self.selection_commit_policy = policy;
+        self
+    }
+
+    pub fn close_auto_focus_policy(
+        mut self,
+        policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
+    ) -> Self {
+        self.close_auto_focus_policy = policy;
+        self
+    }
+
+    /// Called when selected value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// Called when the open state changes (Base UI `onOpenChange`).
     pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
         self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when the open state changes, with reason metadata.
+    pub fn on_open_change_with_reason(
+        mut self,
+        on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    ) -> Self {
+        self.on_open_change_with_reason = on_open_change_with_reason;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
         self
     }
 
@@ -278,6 +339,7 @@ impl Combobox {
             self.open,
             self.query,
             &self.items,
+            self.test_id_prefix,
             self.width,
             self.placeholder,
             self.search_placeholder,
@@ -285,9 +347,15 @@ impl Combobox {
             self.disabled,
             self.a11y_label,
             self.responsive,
+            self.responsive_device_md_breakpoint,
             self.search_enabled,
             self.consume_outside_pointer_events,
+            self.selection_commit_policy,
+            self.close_auto_focus_policy,
+            self.on_value_change,
             self.on_open_change,
+            self.on_open_change_with_reason,
+            self.on_open_change_complete,
             self.chrome,
             self.layout,
             self.style,
@@ -317,6 +385,7 @@ pub fn combobox<H: UiHost>(
         open,
         query,
         items,
+        None,
         width,
         placeholder,
         search_placeholder,
@@ -324,8 +393,14 @@ pub fn combobox<H: UiHost>(
         disabled,
         a11y_label,
         false,
+        fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
         consume_outside_pointer_events,
+        kit_combobox::SelectionCommitPolicy::default(),
+        kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
+        None,
+        None,
+        None,
         None,
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -340,6 +415,7 @@ fn combobox_with_patch<H: UiHost>(
     open: Model<bool>,
     query: Option<Model<String>>,
     items: &[ComboboxItem],
+    test_id_prefix: Option<Arc<str>>,
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -347,21 +423,82 @@ fn combobox_with_patch<H: UiHost>(
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     responsive: bool,
+    responsive_device_md_breakpoint: Px,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    selection_commit_policy: kit_combobox::SelectionCommitPolicy,
+    close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
+    on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome_patch: ChromeRefinement,
     layout_patch: LayoutRefinement,
     style_override: ComboboxStyle,
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
+        let open_change_reason_model = {
+            let existing =
+                cx.with_state(ComboboxState::default, |st| st.open_change_reason.clone());
+            if let Some(model) = existing {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(None::<ComboboxOpenChangeReason>);
+                cx.with_state(ComboboxState::default, |st| {
+                    st.open_change_reason = Some(model.clone())
+                });
+                model
+            }
+        };
+        let focus_restore_target = {
+            let existing =
+                cx.with_state(ComboboxState::default, |st| st.focus_restore_target.clone());
+            if let Some(cell) = existing {
+                cell
+            } else {
+                let cell: Arc<Mutex<Option<GlobalElementId>>> = Arc::new(Mutex::new(None));
+                cx.with_state(ComboboxState::default, |st| {
+                    st.focus_restore_target = Some(cell.clone());
+                });
+                cell
+            }
+        };
+        let close_auto_focus = kit_combobox::on_close_auto_focus_with_reason(
+            open_change_reason_model.clone(),
+            focus_restore_target.clone(),
+            close_auto_focus_policy,
+        );
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+        if let Some(handler) = on_value_change.as_ref() {
+            let value_change = cx.with_state(
+                kit_combobox::ValueChangeCallbackState::<Arc<str>>::default,
+                |state| kit_combobox::value_change_event(state, selected.clone()),
+            );
+            if let Some(value) = value_change {
+                handler(value);
+            }
+        }
         let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-        let open_change = cx.with_state(ComboboxOpenChangeCallbackState::default, |state| {
-            combobox_open_change_event(state, is_open)
-        });
+        let open_change_reason = cx
+            .watch_model(&open_change_reason_model)
+            .layout()
+            .copied()
+            .unwrap_or(None)
+            .unwrap_or(ComboboxOpenChangeReason::None);
+        let (open_change, open_change_complete) = cx
+            .with_state(kit_combobox::OpenChangeCallbackState::default, |state| {
+                kit_combobox::open_change_events(state, is_open, is_open, false)
+            });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
+            handler(open);
+        }
+        if let (Some(open), Some(handler)) = (open_change, on_open_change_with_reason.as_ref()) {
+            handler(open, open_change_reason);
+        }
+        if let (Some(open), Some(handler)) =
+            (open_change_complete, on_open_change_complete.as_ref())
+        {
             handler(open);
         }
 
@@ -379,12 +516,10 @@ fn combobox_with_patch<H: UiHost>(
             }
         };
 
-        let was_open = cx.with_state(ComboboxState::default, |st| {
-            let prev = st.was_open;
-            st.was_open = is_open;
-            prev
+        let should_clear_query = cx.with_state(ComboboxState::default, |st| {
+            kit_combobox::should_clear_query_on_close(&mut st.clear_query_on_close, is_open)
         });
-        if was_open && !is_open {
+        if should_clear_query {
             let _ = cx.app.models_mut().update(&query_model, |v| v.clear());
         }
 
@@ -500,289 +635,336 @@ fn combobox_with_patch<H: UiHost>(
 
         let theme_for_trigger = theme.clone();
 
-        if responsive && cx.bounds.size.width.0 < 768.0 {
-            return Drawer::new(open.clone()).into_element(
-                cx,
-                move |cx| {
-                    cx.pressable_with_id_props(|cx, st, _trigger_id| {
-                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                        states.set(WidgetState::Open, is_open);
+        // Device-level responsiveness: shadcn's "responsive combobox" uses Drawer on mobile.
+        // This is a viewport breakpoint by design (not a container query).
+        let is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            responsive_device_md_breakpoint,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
+        if responsive && !is_desktop {
+            let open_change_reason_model_for_trigger = open_change_reason_model.clone();
+            let open_change_reason_model_for_content = open_change_reason_model.clone();
+            let test_id_prefix_for_content = test_id_prefix.clone();
+            let focus_restore_target_for_trigger = focus_restore_target.clone();
+            return Drawer::new(open.clone())
+                .on_dismiss_request(Some(
+                    kit_combobox::set_open_change_reason_on_dismiss_request(
+                        open_change_reason_model.clone(),
+                    ),
+                ))
+                .on_close_auto_focus(Some(close_auto_focus.clone()))
+                .into_element(
+                    cx,
+                    move |cx| {
+                        let open_change_reason_model = open_change_reason_model_for_trigger.clone();
+                        let focus_restore_target = focus_restore_target_for_trigger.clone();
+                        cx.pressable_with_id_props(|cx, st, trigger_id| {
+                            *focus_restore_target
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                            states.set(WidgetState::Open, is_open);
 
-                        let bg_ref = resolve_override_slot(
-                            style_override.trigger_background.as_ref(),
-                            &default_trigger_bg,
-                            states,
-                        );
-                        let fg_ref = resolve_override_slot(
-                            style_override.trigger_foreground.as_ref(),
-                            &default_trigger_fg,
-                            states,
-                        );
-                        let border_ref = resolve_override_slot(
-                            style_override.trigger_border_color.as_ref(),
-                            &default_trigger_border,
-                            states,
-                        );
+                            let bg_ref = resolve_override_slot(
+                                style_override.trigger_background.as_ref(),
+                                &default_trigger_bg,
+                                states,
+                            );
+                            let fg_ref = resolve_override_slot(
+                                style_override.trigger_foreground.as_ref(),
+                                &default_trigger_fg,
+                                states,
+                            );
+                            let border_ref = resolve_override_slot(
+                                style_override.trigger_border_color.as_ref(),
+                                &default_trigger_border,
+                                states,
+                            );
 
-                        let bg = bg_ref.resolve(&theme_for_trigger);
-                        let fg = fg_ref.resolve(&theme_for_trigger);
-                        let border = border_ref.resolve(&theme_for_trigger);
-                        let icon_fg = alpha_mul(fg, 0.5);
+                            let bg = bg_ref.resolve(&theme_for_trigger);
+                            let fg = fg_ref.resolve(&theme_for_trigger);
+                            let border = border_ref.resolve(&theme_for_trigger);
+                            let icon_fg = alpha_mul(fg, 0.5);
 
-                        cx.pressable_toggle_bool(&open_for_trigger);
+                            cx.pressable_add_on_activate(
+                                kit_combobox::set_open_change_reason_on_activate(
+                                    open_change_reason_model.clone(),
+                                    ComboboxOpenChangeReason::TriggerPress,
+                                ),
+                            );
+                            cx.pressable_toggle_bool(&open_for_trigger);
 
-                        let props = PressableProps {
-                            layout: trigger_layout,
-                            enabled,
-                            focusable: true,
-                            focus_ring: Some(ring),
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::ComboBox),
-                                label: a11y_label_for_trigger
-                                    .clone()
-                                    .or_else(|| Some(resolved_label.clone())),
-                                expanded: Some(is_open),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-
-                        let children = vec![cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle::default(),
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
+                            let props = PressableProps {
+                                layout: trigger_layout,
+                                enabled,
+                                focusable: true,
+                                focus_ring: Some(ring),
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::ComboBox),
+                                    label: a11y_label_for_trigger
+                                        .clone()
+                                        .or_else(|| Some(resolved_label.clone())),
+                                    expanded: Some(is_open),
+                                    ..Default::default()
                                 },
-                                background: Some(bg),
-                                shadow: None,
-                                border: Edges::all(border_w),
-                                border_color: Some(border),
-                                corner_radii: Corners::all(radius),
                                 ..Default::default()
-                            },
-                            move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: trigger_gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::SpaceBetween,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
+                            };
+
+                            let children = vec![cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle::default(),
+                                    padding: Edges {
+                                        top: pad_top,
+                                        right: pad_right,
+                                        bottom: pad_bottom,
+                                        left: pad_left,
                                     },
-                                    move |cx| {
-                                        let label_style = text_style.clone();
-                                        vec![
-                                            {
-                                                let mut label =
-                                                    ui::label(cx, resolved_label.clone())
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .flex_1()
-                                                        .basis_0()
-                                                        .text_size_px(label_style.size)
-                                                        .font_weight(label_style.weight)
-                                                        .text_color(fg_ref.clone())
-                                                        .truncate();
-                                                if let Some(line_height) = label_style.line_height {
-                                                    label = label.line_height_px(line_height);
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    label_style.letter_spacing_em
+                                    background: Some(bg),
+                                    shadow: None,
+                                    border: Edges::all(border_w),
+                                    border_color: Some(border),
+                                    corner_radii: Corners::all(radius),
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: trigger_gap,
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::SpaceBetween,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let label_style = text_style.clone();
+                                            vec![
                                                 {
-                                                    label =
-                                                        label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                label.into_element(cx)
-                                            },
-                                            decl_icon::icon_with(
-                                                cx,
-                                                ids::ui::CHEVRON_DOWN,
-                                                Some(Px(16.0)),
-                                                Some(ColorRef::Color(icon_fg)),
-                                            ),
-                                        ]
-                                    },
-                                )]
-                            },
-                        )];
+                                                    let mut label =
+                                                        ui::label(cx, resolved_label.clone())
+                                                            .w_full()
+                                                            .min_w_0()
+                                                            .flex_1()
+                                                            .basis_0()
+                                                            .text_size_px(label_style.size)
+                                                            .font_weight(label_style.weight)
+                                                            .text_color(fg_ref.clone())
+                                                            .truncate();
+                                                    if let Some(line_height) =
+                                                        label_style.line_height
+                                                    {
+                                                        label = label.line_height_px(line_height);
+                                                    }
+                                                    if let Some(letter_spacing_em) =
+                                                        label_style.letter_spacing_em
+                                                    {
+                                                        label = label
+                                                            .letter_spacing_em(letter_spacing_em);
+                                                    }
+                                                    label.into_element(cx)
+                                                },
+                                                decl_icon::icon_with(
+                                                    cx,
+                                                    ids::ui::CHEVRON_DOWN,
+                                                    Some(Px(16.0)),
+                                                    Some(ColorRef::Color(icon_fg)),
+                                                ),
+                                            ]
+                                        },
+                                    )]
+                                },
+                            )];
 
-                        (props, children)
-                    })
-                },
-                move |cx| {
-                    let theme_max_list_h = theme
-                        .metric_by_key("component.combobox.max_list_height")
-                        .or_else(|| theme.metric_by_key("component.select.max_list_height"))
-                        .unwrap_or(Px(280.0));
+                            (props, children)
+                        })
+                    },
+                    move |cx| {
+                        let test_id_prefix = test_id_prefix_for_content.clone();
+                        let open_change_reason_model = open_change_reason_model_for_content.clone();
+                        let theme_max_list_h = theme
+                            .metric_by_key("component.combobox.max_list_height")
+                            .or_else(|| theme.metric_by_key("component.select.max_list_height"))
+                            .unwrap_or(Px(280.0));
 
-                    let transparent = Color::TRANSPARENT;
-                    let list = if search_enabled {
-                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                        let transparent = Color::TRANSPARENT;
+                        let list = if search_enabled {
+                            let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
-                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                        for item in items.iter().cloned() {
-                            let item_disabled = disabled || item.disabled;
-                            let is_selected = selected
-                                .as_ref()
-                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                            let mut command_items: Vec<CommandItem> =
+                                Vec::with_capacity(items.len());
+                            for item in items.iter().cloned() {
+                                let item_disabled = disabled || item.disabled;
+                                let is_selected = selected
+                                    .as_ref()
+                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                            let model_for_select = model.clone();
-                            let open_for_select = open.clone();
-                            let query_for_select = query_model.clone();
-                            let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
+                                let model_for_select = model.clone();
+                                let open_for_select = open.clone();
+                                let query_for_select = query_model.clone();
+                                let open_change_reason_model_for_select =
+                                    open_change_reason_model.clone();
+                                let value_for_select = item.value.clone();
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select,
+                                    open_for_select,
+                                    query_for_select,
+                                    open_change_reason_model_for_select,
+                                    value_for_select,
+                                );
 
-                            command_items.push(
-                                CommandItem::new(item.label.clone())
+                                let mut cmd_item = CommandItem::new(item.label.clone())
                                     .value(item.value.clone())
                                     .disabled(item_disabled)
                                     .checkmark(is_selected)
-                                    .on_select_action(on_select),
-                            );
-                        }
+                                    .on_select_action(on_select);
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    cmd_item = cmd_item.test_id(format!(
+                                        "{prefix}-item-{}",
+                                        test_id_slug(item.value.as_ref())
+                                    ));
+                                }
+                                command_items.push(cmd_item);
+                            }
 
-                        CommandPalette::new(query_model.clone(), command_items)
-                            .a11y_label("Combobox list")
-                            .input_role(SemanticsRole::ComboBox)
-                            .input_expanded(true)
-                            .placeholder(search_placeholder.clone())
-                            .disabled(disabled)
-                            .empty_text(empty_text.clone())
-                            .refine_style(
-                                ChromeRefinement::default()
-                                    .radius(Px(0.0))
-                                    .border_width(Px(0.0))
-                                    .bg(ColorRef::Color(transparent))
-                                    .border_color(ColorRef::Color(transparent)),
-                            )
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                            .into_element(cx)
-                    } else {
-                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                            CommandPalette::new(query_model.clone(), command_items)
+                                .a11y_label("Combobox list")
+                                .input_role(SemanticsRole::ComboBox)
+                                .input_expanded(true)
+                                .placeholder(search_placeholder.clone())
+                                .disabled(disabled)
+                                .empty_text(empty_text.clone())
+                                .refine_style(
+                                    ChromeRefinement::default()
+                                        .radius(Px(0.0))
+                                        .border_width(Px(0.0))
+                                        .bg(ColorRef::Color(transparent))
+                                        .border_color(ColorRef::Color(transparent)),
+                                )
+                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                                .into_element(cx)
+                        } else {
+                            let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
-                        let fg = theme
-                            .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_required("foreground"));
-                        let fg_disabled = alpha_mul(fg, 0.5);
-                        let item_text_style = crate::command::item_text_style(&theme);
+                            let fg = theme
+                                .color_by_key("foreground")
+                                .unwrap_or_else(|| theme.color_required("foreground"));
+                            let fg_disabled = alpha_mul(fg, 0.5);
+                            let item_text_style = crate::command::item_text_style(&theme);
 
-                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                        for item in items.iter().cloned() {
-                            let item_disabled = disabled || item.disabled;
-                            let is_selected = selected
-                                .as_ref()
-                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                            let mut command_items: Vec<CommandItem> =
+                                Vec::with_capacity(items.len());
+                            for item in items.iter().cloned() {
+                                let item_disabled = disabled || item.disabled;
+                                let is_selected = selected
+                                    .as_ref()
+                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                            let model_for_select = model.clone();
-                            let open_for_select = open.clone();
-                            let query_for_select = query_model.clone();
-                            let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
+                                let model_for_select = model.clone();
+                                let open_for_select = open.clone();
+                                let query_for_select = query_model.clone();
+                                let open_change_reason_model_for_select =
+                                    open_change_reason_model.clone();
+                                let value_for_select = item.value.clone();
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select,
+                                    open_for_select,
+                                    query_for_select,
+                                    open_change_reason_model_for_select,
+                                    value_for_select,
+                                );
 
-                            let label_text = item.label.clone();
-                            let label_style = item_text_style.clone();
-                            let icon = decl_icon::icon_with(
-                                cx,
-                                ids::ui::CHECK,
-                                Some(Px(16.0)),
-                                Some(ColorRef::Color(if item_disabled {
-                                    fg_disabled
-                                } else {
-                                    fg
-                                })),
-                            );
-                            let icon = cx
-                                .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
-                                    vec![icon]
-                                });
-
-                            let text = {
-                                let mut label = ui::label(cx, label_text.clone())
-                                    .text_size_px(label_style.size)
-                                    .font_weight(label_style.weight)
-                                    .text_color(ColorRef::Color(if item_disabled {
+                                let label_text = item.label.clone();
+                                let label_style = item_text_style.clone();
+                                let icon = decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHECK,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(if item_disabled {
                                         fg_disabled
                                     } else {
                                         fg
-                                    }))
-                                    .truncate();
-                                if let Some(line_height) = label_style.line_height {
-                                    label = label.line_height_px(line_height);
-                                }
-                                if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                                    label = label.letter_spacing_em(letter_spacing_em);
-                                }
-                                label.into_element(cx)
-                            };
+                                    })),
+                                );
+                                let icon = cx
+                                    .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
+                                        vec![icon]
+                                    });
 
-                            command_items.push(
-                                CommandItem::new(label_text)
+                                let text = {
+                                    let mut label = ui::label(cx, label_text.clone())
+                                        .text_size_px(label_style.size)
+                                        .font_weight(label_style.weight)
+                                        .text_color(ColorRef::Color(if item_disabled {
+                                            fg_disabled
+                                        } else {
+                                            fg
+                                        }))
+                                        .truncate();
+                                    if let Some(line_height) = label_style.line_height {
+                                        label = label.line_height_px(line_height);
+                                    }
+                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em {
+                                        label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    label.into_element(cx)
+                                };
+
+                                let mut cmd_item = CommandItem::new(label_text)
                                     .value(item.value.clone())
                                     .disabled(item_disabled)
                                     .on_select_action(on_select)
-                                    .children(vec![text, icon]),
-                            );
-                        }
+                                    .children(vec![text, icon]);
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    cmd_item = cmd_item.test_id(format!(
+                                        "{prefix}-item-{}",
+                                        test_id_slug(item.value.as_ref())
+                                    ));
+                                }
+                                command_items.push(cmd_item);
+                            }
 
-                        CommandList::new(command_items)
-                            .disabled(disabled)
-                            .empty_text(empty_text.clone())
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                            CommandList::new(command_items)
+                                .disabled(disabled)
+                                .empty_text(empty_text.clone())
+                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                                .into_element(cx)
+                        };
+
+                        DrawerContent::new(vec![list])
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx)
-                    };
-
-                    DrawerContent::new(vec![list])
-                        .refine_style(ChromeRefinement::default().p(Space::N0))
-                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx)
-                },
-            );
+                    },
+                );
         }
 
+        let open_change_reason_model_for_trigger = open_change_reason_model.clone();
+        let open_change_reason_model_for_content = open_change_reason_model.clone();
+        let test_id_prefix_for_content = test_id_prefix.clone();
+        let focus_restore_target_for_trigger = focus_restore_target.clone();
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
+            .on_dismiss_request(Some(
+                kit_combobox::set_open_change_reason_on_dismiss_request(
+                    open_change_reason_model.clone(),
+                ),
+            ))
+            .on_close_auto_focus(Some(close_auto_focus.clone()))
             .into_element_with_anchor(
                 cx,
                 move |cx| {
-                    cx.pressable_with_id_props(|cx, st, _trigger_id| {
+                    let open_change_reason_model = open_change_reason_model_for_trigger.clone();
+                    let focus_restore_target = focus_restore_target_for_trigger.clone();
+                    cx.pressable_with_id_props(|cx, st, trigger_id| {
+                        *focus_restore_target
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
                         let mut states = WidgetStates::from_pressable(cx, st, enabled);
                         states.set(WidgetState::Open, is_open);
 
@@ -807,6 +989,12 @@ fn combobox_with_patch<H: UiHost>(
                         let border = border_ref.resolve(&theme_for_trigger);
                         let icon_fg = alpha_mul(fg, 0.5);
 
+                        cx.pressable_add_on_activate(
+                            kit_combobox::set_open_change_reason_on_activate(
+                                open_change_reason_model.clone(),
+                                ComboboxOpenChangeReason::TriggerPress,
+                            ),
+                        );
                         cx.pressable_toggle_bool(&open_for_trigger);
 
                         let props = PressableProps {
@@ -893,6 +1081,8 @@ fn combobox_with_patch<H: UiHost>(
                     })
                 },
                 move |cx, anchor| {
+                    let test_id_prefix = test_id_prefix_for_content.clone();
+                    let open_change_reason_model = open_change_reason_model_for_content.clone();
                     let theme_max_list_h = theme
                         .metric_by_key("component.combobox.max_list_height")
                         .or_else(|| theme.metric_by_key("component.select.max_list_height"))
@@ -913,32 +1103,30 @@ fn combobox_with_patch<H: UiHost>(
                             let model_for_select = model.clone();
                             let open_for_select = open.clone();
                             let query_for_select = query_model.clone();
+                            let open_change_reason_model_for_select =
+                                open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
-
-                            command_items.push(
-                                CommandItem::new(item.label.clone())
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .checkmark(is_selected)
-                                    .on_select_action(on_select),
+                            let on_select = kit_combobox::commit_selection_on_activate(
+                                selection_commit_policy,
+                                model_for_select,
+                                open_for_select,
+                                query_for_select,
+                                open_change_reason_model_for_select,
+                                value_for_select,
                             );
+
+                            let mut cmd_item = CommandItem::new(item.label.clone())
+                                .value(item.value.clone())
+                                .disabled(item_disabled)
+                                .checkmark(is_selected)
+                                .on_select_action(on_select);
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                cmd_item = cmd_item.test_id(format!(
+                                    "{prefix}-item-{}",
+                                    test_id_slug(item.value.as_ref())
+                                ));
+                            }
+                            command_items.push(cmd_item);
                         }
 
                         CommandPalette::new(query_model.clone(), command_items)
@@ -976,24 +1164,17 @@ fn combobox_with_patch<H: UiHost>(
                             let model_for_select = model.clone();
                             let open_for_select = open.clone();
                             let query_for_select = query_model.clone();
+                            let open_change_reason_model_for_select =
+                                open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
+                            let on_select = kit_combobox::commit_selection_on_activate(
+                                selection_commit_policy,
+                                model_for_select,
+                                open_for_select,
+                                query_for_select,
+                                open_change_reason_model_for_select,
+                                value_for_select,
+                            );
 
                             let label_text = item.label.clone();
                             let label_style = item_text_style.clone();
@@ -1031,13 +1212,18 @@ fn combobox_with_patch<H: UiHost>(
                                 label.into_element(cx)
                             };
 
-                            command_items.push(
-                                CommandItem::new(label_text)
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .on_select_action(on_select)
-                                    .children(vec![text, icon]),
-                            );
+                            let mut cmd_item = CommandItem::new(label_text)
+                                .value(item.value.clone())
+                                .disabled(item_disabled)
+                                .on_select_action(on_select)
+                                .children(vec![text, icon]);
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                cmd_item = cmd_item.test_id(format!(
+                                    "{prefix}-item-{}",
+                                    test_id_slug(item.value.as_ref())
+                                ));
+                            }
+                            command_items.push(cmd_item);
                         }
 
                         CommandList::new(command_items)
@@ -1368,20 +1554,35 @@ mod tests {
     }
 
     #[test]
-    fn combobox_open_change_event_emits_only_on_state_change() {
-        let mut state = ComboboxOpenChangeCallbackState::default();
+    fn combobox_open_change_with_reason_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox = Combobox::new(value, open)
+            .on_open_change_with_reason(Some(Arc::new(|_open, _reason| {})));
 
-        let changed = combobox_open_change_event(&mut state, false);
-        assert_eq!(changed, None);
+        assert!(combobox.on_open_change_with_reason.is_some());
+    }
 
-        let changed = combobox_open_change_event(&mut state, true);
-        assert_eq!(changed, Some(true));
+    #[test]
+    fn combobox_open_change_complete_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox =
+            Combobox::new(value, open).on_open_change_complete(Some(Arc::new(|_open| {})));
 
-        let changed = combobox_open_change_event(&mut state, true);
-        assert_eq!(changed, None);
+        assert!(combobox.on_open_change_complete.is_some());
+    }
 
-        let changed = combobox_open_change_event(&mut state, false);
-        assert_eq!(changed, Some(false));
+    #[test]
+    fn combobox_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox = Combobox::new(value, open).on_value_change(Some(Arc::new(|_value| {})));
+
+        assert!(combobox.on_value_change.is_some());
     }
 
     #[test]

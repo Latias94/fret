@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "input-demo.geometry",
+      "web_name": "input-demo",
+      "recipe": "input_demo_geometry"
+    },
+    {
+      "id": "input-disabled.geometry",
+      "web_name": "input-disabled",
+      "recipe": "input_disabled_geometry"
+    },
+    {
+      "id": "input-file.geometry",
+      "web_name": "input-file",
+      "recipe": "input_file_geometry"
+    },
+    {
+      "id": "input-with-button.geometry",
+      "web_name": "input-with-button",
+      "recipe": "input_with_button_geometry"
+    },
+    {
+      "id": "input-with-text.geometry",
+      "web_name": "input-with-text",
+      "recipe": "input_with_text_geometry"
+    },
+    {
+      "id": "input-group-label.geometry",
+      "web_name": "input-group-label",
+      "recipe": "input_group_label_geometry"
+    },
+    {
+      "id": "input-group-button-group.geometry",
+      "web_name": "input-group-button-group",
+      "recipe": "input_group_button_group_geometry"
+    },
+
+    {
+      "id": "otp-01.otp_row_relative_geometry",
+      "web_name": "otp-01",
+      "recipe": "input_otp_row_relative_geometry",
+      "row_tokens": [
+        "flex",
+        "items-center",
+        "gap-2.5",
+        "*:data-[slot=input-otp-slot]:rounded-md",
+        "*:data-[slot=input-otp-slot]:border"
+      ]
+    },
+    {
+      "id": "otp-02.otp_row_relative_geometry",
+      "web_name": "otp-02",
+      "recipe": "input_otp_row_relative_geometry",
+      "row_tokens": [
+        "flex",
+        "items-center",
+        "gap-2",
+        "*:data-[slot=input-otp-slot]:rounded-md",
+        "*:data-[slot=input-otp-slot]:border"
+      ]
+    },
+    {
+      "id": "otp-03.otp_row_relative_geometry",
+      "web_name": "otp-03",
+      "recipe": "input_otp_row_relative_geometry",
+      "row_tokens": [
+        "flex",
+        "items-center",
+        "gap-2.5",
+        "*:data-[slot=input-otp-slot]:rounded-md",
+        "*:data-[slot=input-otp-slot]:border"
+      ]
+    },
+    {
+      "id": "otp-05.otp_row_relative_geometry",
+      "web_name": "otp-05",
+      "recipe": "input_otp_row_relative_geometry",
+      "row_tokens": [
+        "flex",
+        "items-center",
+        "gap-2.5",
+        "*:data-[slot=input-otp-slot]:h-16",
+        "*:data-[slot=input-otp-slot]:w-12",
+        "*:data-[slot=input-otp-slot]:rounded-md",
+        "*:data-[slot=input-otp-slot]:border",
+        "*:data-[slot=input-otp-slot]:text-xl"
+      ]
+    },
+
+    {
+      "id": "input-otp-demo.geometry",
+      "web_name": "input-otp-demo",
+      "recipe": "input_otp_demo_geometry"
+    },
+    {
+      "id": "input-otp-separator.geometry",
+      "web_name": "input-otp-separator",
+      "recipe": "input_otp_separator_geometry"
+    },
+    {
+      "id": "input-otp-pattern.geometry",
+      "web_name": "input-otp-pattern",
+      "recipe": "input_otp_pattern_geometry"
+    },
+    {
+      "id": "input-otp-controlled.geometry",
+      "web_name": "input-otp-controlled",
+      "recipe": "input_otp_controlled_geometry"
+    },
+
+    {
+      "id": "command-demo.input_height",
+      "web_name": "command-demo",
+      "recipe": "command_demo_input_height"
+    },
+    {
+      "id": "command-demo.listbox_height",
+      "web_name": "command-demo",
+      "recipe": "command_demo_listbox_height"
+    },
+    {
+      "id": "command-demo.option_height",
+      "web_name": "command-demo",
+      "recipe": "command_demo_listbox_option_height"
+    },
+    {
+      "id": "command-demo.option_insets",
+      "web_name": "command-demo",
+      "recipe": "command_demo_listbox_option_insets"
+    },
+
+    {
+      "id": "input-with-label.geometry",
+      "web_name": "input-with-label",
+      "recipe": "input_with_label_geometry"
+    },
+    {
+      "id": "input-group-dropdown.height",
+      "web_name": "input-group-dropdown",
+      "recipe": "input_group_dropdown_height"
+    },
+    {
+      "id": "input-group-icon.geometry",
+      "web_name": "input-group-icon",
+      "recipe": "input_group_icon_geometry"
+    },
+    {
+      "id": "input-group-spinner.geometry",
+      "web_name": "input-group-spinner",
+      "recipe": "input_group_spinner_geometry"
+    },
+    {
+      "id": "input-group-button.geometry",
+      "web_name": "input-group-button",
+      "recipe": "input_group_button_geometry"
+    },
+    {
+      "id": "input-group-tooltip.geometry",
+      "web_name": "input-group-tooltip",
+      "recipe": "input_group_tooltip_geometry"
+    },
+    {
+      "id": "empty-input-group.geometry",
+      "web_name": "empty-input-group",
+      "recipe": "empty_input_group_geometry"
+    },
+    {
+      "id": "kbd-input-group.geometry",
+      "web_name": "kbd-input-group",
+      "recipe": "kbd_input_group_geometry"
+    },
+    {
+      "id": "input-group-textarea.geometry",
+      "web_name": "input-group-textarea",
+      "recipe": "input_group_textarea_geometry"
+    },
+    {
+      "id": "input-group-text.currency.geometry",
+      "web_name": "input-group-text",
+      "recipe": "input_group_text_currency_geometry"
+    },
+    {
+      "id": "input-group-text.url.geometry",
+      "web_name": "input-group-text",
+      "recipe": "input_group_text_url_geometry"
+    },
+    {
+      "id": "input-group-text.email.geometry",
+      "web_name": "input-group-text",
+      "recipe": "input_group_text_email_geometry"
+    },
+    {
+      "id": "input-group-text.textarea_count.geometry",
+      "web_name": "input-group-text",
+      "recipe": "input_group_text_textarea_count_geometry"
+    },
+    {
+      "id": "input-group-custom.geometry",
+      "web_name": "input-group-custom",
+      "recipe": "input_group_custom_geometry"
+    },
+    {
+      "id": "input-group-demo.block_end.geometry",
+      "web_name": "input-group-demo",
+      "recipe": "input_group_demo_block_end_geometry"
+    }
+  ]
+}

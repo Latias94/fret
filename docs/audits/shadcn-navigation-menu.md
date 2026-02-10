@@ -58,6 +58,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Base UI timing props are mirrored by shadcn-friendly aliases:
   `delay_ms`/`delay_duration`, `close_delay_ms`/`close_delay_duration`,
   and `skip_delay_ms`/`skip_delay_duration`.
+- Pass: Base UI selected-value lifecycle callback is exposed via
+  `NavigationMenu::on_value_change` (Base UI `onValueChange`).
 - Pass: Open lifecycle complete callback is exposed via
   `NavigationMenu::on_open_change_complete` (Base UI `onOpenChangeComplete`).
 
@@ -97,6 +99,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
 - Contract test: `navigation_menu_delay_aliases_update_config`
 - Contract test: `navigation_menu_duration_aliases_update_config`
+- Contract test: `navigation_menu_on_value_change_builder_sets_handler`
+- Contract test: `navigation_menu_value_change_event_emits_only_on_state_change`
 - Contract test: `navigation_menu_on_open_change_complete_builder_sets_handler`
 - Contract test: `navigation_menu_open_change_complete_event_emits_after_settle`
 - Contract test: `navigation_menu_open_change_complete_event_completes_without_animation`

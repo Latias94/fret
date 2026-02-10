@@ -153,7 +153,9 @@ for ((i=1; i<=attempts; i++)); do
   echo
 
   rc=0
-  if ! "${cmd[@]}" > "$attempt_dir/stdout.json" 2> "$attempt_dir/stderr.log"; then
+  if "${cmd[@]}" > "$attempt_dir/stdout.json" 2> "$attempt_dir/stderr.log"; then
+    rc=0
+  else
     rc=$?
   fi
 

@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "navigation-menu-demo.home.variant_overlay_placement",
+      "web_name": "navigation-menu-demo",
+      "recipe": "variant_overlay_placement",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.components.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.components",
+      "recipe": "variant_overlay_placement",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-vp1440x320.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.components-vp1440x320",
+      "recipe": "variant_overlay_placement",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.list.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.list",
+      "recipe": "variant_overlay_placement",
+      "open_value": "list"
+    },
+    {
+      "id": "navigation-menu-demo.list-vp1440x320.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.list-vp1440x320",
+      "recipe": "variant_overlay_placement",
+      "open_value": "list"
+    },
+    {
+      "id": "navigation-menu-demo.simple.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.simple",
+      "recipe": "variant_overlay_placement",
+      "open_value": "simple"
+    },
+    {
+      "id": "navigation-menu-demo.simple-vp1440x320.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.simple-vp1440x320",
+      "recipe": "variant_overlay_placement",
+      "open_value": "simple"
+    },
+    {
+      "id": "navigation-menu-demo.with-icon.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.with-icon",
+      "recipe": "variant_overlay_placement",
+      "open_value": "with-icon"
+    },
+    {
+      "id": "navigation-menu-demo.with-icon-vp1440x320.variant_overlay_placement",
+      "web_name": "navigation-menu-demo.with-icon-vp1440x320",
+      "recipe": "variant_overlay_placement",
+      "open_value": "with-icon"
+    },
+    {
+      "id": "navigation-menu-demo.home-then-hover-components.hover_switch_overlay_placement",
+      "web_name": "navigation-menu-demo.home-then-hover-components",
+      "recipe": "hover_switch_overlay_placement",
+      "from_value": "home",
+      "to_value": "components"
+    },
+
+    {
+      "id": "navigation-menu-demo.home-mobile.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.home-mobile",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.home-mobile",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x320.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x320",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x320.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x320",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x240.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x240",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "home"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x240.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x240",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "home"
+    },
+
+    {
+      "id": "navigation-menu-demo.components-mobile.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.components-mobile",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-mobile.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.components-mobile",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-mobile-vp375x320.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.components-mobile-vp375x320",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-mobile-vp375x320.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.components-mobile-vp375x320",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-mobile-vp375x240.mobile_viewport_geometry",
+      "web_name": "navigation-menu-demo.components-mobile-vp375x240",
+      "recipe": "mobile_viewport_geometry",
+      "open_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.components-mobile-vp375x240.mobile_viewport_insets",
+      "web_name": "navigation-menu-demo.components-mobile-vp375x240",
+      "recipe": "mobile_viewport_insets",
+      "open_value": "components"
+    },
+
+    {
+      "id": "navigation-menu-demo.home-mobile-then-hover-components.mobile_viewport_geometry_after_hover",
+      "web_name": "navigation-menu-demo.home-mobile-then-hover-components",
+      "recipe": "mobile_viewport_geometry_after_hover",
+      "from_value": "home",
+      "to_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x320-then-hover-components.mobile_viewport_geometry_after_hover",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x320-then-hover-components",
+      "recipe": "mobile_viewport_geometry_after_hover",
+      "from_value": "home",
+      "to_value": "components"
+    },
+    {
+      "id": "navigation-menu-demo.home-mobile-vp375x240-then-hover-components.mobile_viewport_geometry_after_hover",
+      "web_name": "navigation-menu-demo.home-mobile-vp375x240-then-hover-components",
+      "recipe": "mobile_viewport_geometry_after_hover",
+      "from_value": "home",
+      "to_value": "components"
+    }
+  ]
+}

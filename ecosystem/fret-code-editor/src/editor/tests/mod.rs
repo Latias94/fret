@@ -1531,6 +1531,116 @@ fn rust_syntax_spans_are_materialized_for_rows() {
 
 #[cfg(feature = "syntax-rust")]
 #[test]
+fn set_language_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        0,
+        "new handles should not reset syntax caches"
+    );
+
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let _ = paint::cached_row_syntax_spans(&mut st, 0, 256);
+        let _ = paint::cached_row_syntax_spans(&mut st, 1, 256);
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1"
+        );
+    }
+
+    let resets_before = handle.cache_stats().syntax_resets;
+
+    // The UI layer may call set_language during render; that must be a no-op when the language is
+    // unchanged to avoid per-frame cache resets and re-highlighting work.
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        resets_before,
+        "idempotent set_language must not reset syntax caches"
+    );
+
+    {
+        let st = handle.state.borrow();
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0 to survive idempotent set_language"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1 to survive idempotent set_language"
+        );
+    }
+}
+
+#[test]
+fn set_line_folds_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let placeholder = Arc::<str>::from("…");
+    let spans = vec![FoldSpan {
+        range: 1..3,
+        placeholder,
+    }];
+
+    handle.set_line_folds(0, spans.clone());
+
+    let (folds_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.folds_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_folds(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.folds_epoch, folds_epoch_before,
+        "idempotent set_line_folds must not bump folds_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_folds must not reset row text caches"
+    );
+}
+
+#[test]
+fn set_line_inlays_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let spans = vec![InlaySpan {
+        byte: 2,
+        text: Arc::<str>::from("<inlay>"),
+    }];
+
+    handle.set_line_inlays(0, spans.clone());
+
+    let (inlays_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.inlays_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_inlays(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.inlays_epoch, inlays_epoch_before,
+        "idempotent set_line_inlays must not bump inlays_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_inlays must not reset row text caches"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
 fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
     let mut text = String::new();
     for _ in 0..200 {

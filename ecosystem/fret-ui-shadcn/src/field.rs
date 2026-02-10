@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
-    SemanticsDecoration,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
+    MainAlign, RowProps, SemanticsDecoration,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
@@ -928,75 +928,34 @@ impl Field {
             CrossAlign::Center
         };
 
-        let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
 
-        cx.container(wrapper, move |cx| {
-            let inner = match orientation {
-                FieldOrientation::Vertical => cx.column(
-                    ColumnProps {
-                        layout: inner_layout.clone(),
-                        gap,
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                        let len = children.len();
-                        children
-                            .into_iter()
-                            .enumerate()
-                            .map(|(idx, child)| {
-                                if len >= 2
-                                    && idx == len - 2
-                                    && is_field_description(&theme, &child)
-                                {
-                                    let layout = decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default().mt_neg(Space::N1),
-                                    );
-                                    cx.container(
-                                        ContainerProps {
-                                            layout,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![child],
-                                    )
-                                } else {
-                                    child
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                ),
-                FieldOrientation::Horizontal => cx.row(
-                    RowProps {
-                        layout: inner_layout,
-                        gap,
-                        justify: MainAlign::Start,
-                        align: align_horizontal,
-                        ..Default::default()
-                    },
-                    move |_cx| children,
-                ),
-                FieldOrientation::Responsive => {
-                    let children_row = children.clone();
-                    let children_col = children;
-                    if md_breakpoint {
-                        let children_row = children_row
-                            .into_iter()
-                            .map(responsive_md_width_auto)
-                            .collect::<Vec<_>>();
-                        cx.row(
-                            RowProps {
-                                layout: inner_layout,
-                                gap,
-                                justify: MainAlign::Start,
-                                align: align_horizontal,
-                                ..Default::default()
-                            },
-                            move |_cx| children_row,
-                        )
-                    } else {
-                        cx.column(
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.field",
+            region_props,
+            move |cx, region_id| {
+                vec![cx.container(wrapper, move |cx| {
+                    let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                        cx,
+                        region_id,
+                        Invalidation::Layout,
+                        false,
+                        &[(
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
+                            true,
+                        )],
+                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                    );
+
+                    let inner = match orientation {
+                        FieldOrientation::Vertical => cx.column(
                             ColumnProps {
                                 layout: inner_layout.clone(),
                                 gap,
@@ -1004,8 +963,8 @@ impl Field {
                             },
                             move |cx| {
                                 // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                                let len = children_col.len();
-                                children_col
+                                let len = children.len();
+                                children
                                     .into_iter()
                                     .enumerate()
                                     .map(|(idx, child)| {
@@ -1030,13 +989,80 @@ impl Field {
                                     })
                                     .collect::<Vec<_>>()
                             },
-                        )
-                    }
-                }
-            };
+                        ),
+                        FieldOrientation::Horizontal => cx.row(
+                            RowProps {
+                                layout: inner_layout,
+                                gap,
+                                justify: MainAlign::Start,
+                                align: align_horizontal,
+                                ..Default::default()
+                            },
+                            move |_cx| children,
+                        ),
+                        FieldOrientation::Responsive => {
+                            let children_row = children.clone();
+                            let children_col = children;
+                            if md_breakpoint {
+                                let children_row = children_row
+                                    .into_iter()
+                                    .map(responsive_md_width_auto)
+                                    .collect::<Vec<_>>();
+                                cx.row(
+                                    RowProps {
+                                        layout: inner_layout,
+                                        gap,
+                                        justify: MainAlign::Start,
+                                        align: align_horizontal,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| children_row,
+                                )
+                            } else {
+                                cx.column(
+                                    ColumnProps {
+                                        layout: inner_layout.clone(),
+                                        gap,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                                        let len = children_col.len();
+                                        children_col
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(|(idx, child)| {
+                                                if len >= 2
+                                                    && idx == len - 2
+                                                    && is_field_description(&theme, &child)
+                                                {
+                                                    let layout = decl_style::layout_style(
+                                                        &theme,
+                                                        LayoutRefinement::default()
+                                                            .mt_neg(Space::N1),
+                                                    );
+                                                    cx.container(
+                                                        ContainerProps {
+                                                            layout,
+                                                            ..Default::default()
+                                                        },
+                                                        move |_cx| vec![child],
+                                                    )
+                                                } else {
+                                                    child
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
+                                )
+                            }
+                        }
+                    };
 
-            vec![inner]
-        })
+                    vec![inner]
+                })]
+            },
+        )
     }
 }
 

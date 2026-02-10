@@ -54,7 +54,7 @@ We treat these as reading aids, not as implementation targets.
 
 ### Shared
 
-- Radix UI Primitives: `repo-ref/primitives` (pinned via `tools/fetch_repo_refs.ps1`)
+- Radix UI Primitives: `repo-ref/primitives` (pinned via `tools/fetch_repo_refs.py`)
 - Floating UI: `repo-ref/floating-ui`
 - TailwindCSS vocabulary: `repo-ref/tailwindcss`
 - GPUI/Zed references: `repo-ref/zed`, `repo-ref/gpui-component`

@@ -4760,6 +4760,19 @@ See: `docs/tracy.md`.\n";
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-resize-probes" {
+                [
+                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                    "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+                ]
+                .into_iter()
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-code-editor-resize-probes" {
+                ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else if rest.len() == 1 && rest[0] == "extras-marquee-steady" {
                 ["tools/diag-scripts/extras-marquee-steady.json"]
                     .into_iter()
@@ -5001,14 +5014,23 @@ See: `docs/tracy.md`.\n";
                             top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                         let top_view_cache_roots_reused =
                             top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                        let top_view_cache_roots_first_mount =
+                            top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                        let top_view_cache_roots_node_recreated =
+                            top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                         let top_view_cache_roots_cache_key_mismatch = top
                             .map(|r| r.view_cache_roots_cache_key_mismatch)
+                            .unwrap_or(0);
+                        let top_view_cache_roots_not_marked_reuse_root = top
+                            .map(|r| r.view_cache_roots_not_marked_reuse_root)
                             .unwrap_or(0);
                         let top_view_cache_roots_needs_rerender =
                             top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                         let top_view_cache_roots_layout_invalidated = top
                             .map(|r| r.view_cache_roots_layout_invalidated)
                             .unwrap_or(0);
+                        let top_view_cache_roots_manual =
+                            top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                         let top_cache_roots_contained_relayout =
                             top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
@@ -5146,9 +5168,13 @@ See: `docs/tracy.md`.\n";
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                                 "top_view_cache_roots_total": top_view_cache_roots_total,
                                 "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                                "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                                "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                                 "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                                "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                                 "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                                 "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                                "top_view_cache_roots_manual": top_view_cache_roots_manual,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -5557,14 +5583,23 @@ See: `docs/tracy.md`.\n";
                         top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                     let top_view_cache_roots_reused =
                         top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                    let top_view_cache_roots_first_mount =
+                        top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                    let top_view_cache_roots_node_recreated =
+                        top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                     let top_view_cache_roots_cache_key_mismatch = top
                         .map(|r| r.view_cache_roots_cache_key_mismatch)
+                        .unwrap_or(0);
+                    let top_view_cache_roots_not_marked_reuse_root = top
+                        .map(|r| r.view_cache_roots_not_marked_reuse_root)
                         .unwrap_or(0);
                     let top_view_cache_roots_needs_rerender =
                         top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                     let top_view_cache_roots_layout_invalidated = top
                         .map(|r| r.view_cache_roots_layout_invalidated)
                         .unwrap_or(0);
+                    let top_view_cache_roots_manual =
+                        top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                     let top_cache_roots_contained_relayout =
                         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
@@ -5732,9 +5767,13 @@ See: `docs/tracy.md`.\n";
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                         "top_view_cache_roots_total": top_view_cache_roots_total,
                         "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                        "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                        "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                         "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                        "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                         "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                         "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                        "top_view_cache_roots_manual": top_view_cache_roots_manual,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -6426,6 +6465,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
+            let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
             if wants_perf_thresholds {
                 let out_path = resolved_out_dir.join("check.perf_thresholds.json");
                 let payload = serde_json::json!({
@@ -6453,15 +6493,8 @@ See: `docs/tracy.md`.\n";
                 });
                 let _ = write_json_value(&out_path, &payload);
                 if !perf_threshold_failures.is_empty() {
-                    if launched_by_fretboard {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    }
-                    eprintln!(
-                        "PERF threshold gate failed (failures={}, evidence={})",
-                        perf_threshold_failures.len(),
-                        out_path.display()
-                    );
-                    std::process::exit(1);
+                    perf_threshold_failure =
+                        Some((perf_threshold_failures.len(), out_path.clone()));
                 }
             }
 
@@ -6495,6 +6528,15 @@ See: `docs/tracy.md`.\n";
                     us,
                     bundle.display()
                 );
+            }
+
+            if let Some((failures, evidence)) = perf_threshold_failure {
+                eprintln!(
+                    "PERF threshold gate failed (failures={}, evidence={})",
+                    failures,
+                    evidence.display()
+                );
+                std::process::exit(1);
             }
 
             std::process::exit(0);

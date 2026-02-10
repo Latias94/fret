@@ -11222,6 +11222,9 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
                         .into_element(cx),
                     ])
                     .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-gallery-sheet-demo-content"),
+                    )
                 },
             )
             .attach_semantics(

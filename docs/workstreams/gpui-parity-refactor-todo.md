@@ -71,7 +71,7 @@ Keep this list short and evidence-backed:
   - Notes: conformance includes modal overlay barrier gating under view-cache reuse.
 - Diagnostics + scripted interaction runner exists (foundation for regression harnesses):
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`.
-  - Notes: `diag matrix ui-gallery` runs cached vs uncached variants per script and can gate on view-cache reuse and overlay cached-synthesis. Evidence: `tools/diag_matrix_ui_gallery.ps1`, `docs/ui-diagnostics-and-scripted-tests.md`.
+  - Notes: `diag matrix ui-gallery` runs cached vs uncached variants per script and can gate on view-cache reuse and overlay cached-synthesis. Evidence: `tools/diag_matrix_ui_gallery.py`, `docs/ui-diagnostics-and-scripted-tests.md`.
 - Cache-root and paint-cache counters are exposed in the UI gallery driver:
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (cache roots and paint cache stats).
 
