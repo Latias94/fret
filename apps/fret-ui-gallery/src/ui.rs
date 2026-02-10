@@ -730,6 +730,7 @@ fn page_preview(
         PAGE_AI_CHECKPOINT_DEMO => preview_ai_checkpoint_demo(cx, theme),
         PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
+        PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20541,6 +20542,89 @@ fn preview_ai_environment_variables_demo(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Environment Variables (AI Elements)"), env_vars],
+    )]
+}
+
+fn preview_ai_plan_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use fret_ui::Invalidation;
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let plan = ui_ai::Plan::new()
+        .default_open(false)
+        .is_streaming(true)
+        .test_id_root("ui-ai-plan-root")
+        .into_element_with_children(cx, move |cx, controller| {
+            let header = ui_ai::PlanHeader::new([
+                ui_ai::PlanTitle::new("Implementation Plan")
+                    .test_id("ui-ai-plan-title")
+                    .into_element(cx),
+                ui_ai::PlanDescription::new("A small demo plan surface with streaming shimmer.")
+                    .test_id("ui-ai-plan-description")
+                    .into_element(cx),
+                ui_ai::PlanAction::new([ui_ai::PlanTrigger::default()
+                    .test_id("ui-ai-plan-trigger")
+                    .into_element(cx)])
+                .test_id("ui-ai-plan-action")
+                .into_element(cx),
+            ])
+            .test_id("ui-ai-plan-header")
+            .into_element(cx);
+
+            let content_list = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2),
+                move |cx| {
+                    vec![
+                        cx.text("1. Scan upstream components and map ownership"),
+                        cx.text("2. Port thin surfaces and keep effects app-owned"),
+                        cx.text("3. Add UI Gallery demo + diag gate"),
+                        cx.text("4. Update workstreams + milestones"),
+                    ]
+                },
+            );
+
+            let content_marker = cx.text("").attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id("ui-ai-plan-content-marker"),
+            );
+
+            let content = ui_ai::PlanContent::new([content_list, content_marker])
+                .test_id("ui-ai-plan-content")
+                .into_element(cx);
+
+            let footer = ui_ai::PlanFooter::new([cx.text("This footer is always visible.")])
+                .test_id("ui-ai-plan-footer")
+                .into_element(cx);
+
+            let open = cx
+                .get_model_copied(&controller.open, Invalidation::Layout)
+                .unwrap_or(false);
+            let state_marker = cx
+                .text(format!("open={open} streaming={}", controller.is_streaming))
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Generic)
+                        .test_id(if open {
+                            "ui-ai-plan-open-true"
+                        } else {
+                            "ui-ai-plan-open-false"
+                        }),
+                );
+
+            vec![header, content, footer, state_marker]
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Plan (AI Elements)"), plan],
     )]
 }
 
