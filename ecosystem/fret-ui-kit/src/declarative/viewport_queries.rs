@@ -21,6 +21,13 @@ pub struct ViewportQueryHysteresis {
     pub down: Px,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewportOrientation {
+    Portrait,
+    Landscape,
+    Square,
+}
+
 impl Default for ViewportQueryHysteresis {
     fn default() -> Self {
         // Keep the default small: enough to avoid single-pixel oscillation without delaying
@@ -113,6 +120,21 @@ fn viewport_dimension_at_least_apply_hysteresis(
     active
 }
 
+fn viewport_orientation_for_dimensions(width: Px, height: Px) -> ViewportOrientation {
+    match width.0.partial_cmp(&height.0) {
+        Some(std::cmp::Ordering::Less) => ViewportOrientation::Portrait,
+        Some(std::cmp::Ordering::Greater) => ViewportOrientation::Landscape,
+        Some(std::cmp::Ordering::Equal) | None => ViewportOrientation::Square,
+    }
+}
+
+fn viewport_aspect_ratio_for_dimensions(width: Px, height: Px, fallback: f32) -> f32 {
+    if height.0 <= 0.0 {
+        return fallback;
+    }
+    (width.0 / height.0).max(0.0)
+}
+
 /// Viewport-driven responsive breakpoints, based on the committed per-window environment snapshot.
 ///
 /// This is intended for **device/viewport** decisions (ADR 1171). For panel-width responsiveness
@@ -176,6 +198,53 @@ pub fn viewport_width_at_least<H: UiHost>(
             st.active
         })
     })
+}
+
+/// Returns the viewport's aspect ratio (`width / height`) based on the committed per-window
+/// environment snapshot (ADR 1171).
+#[track_caller]
+pub fn viewport_aspect_ratio<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+    fallback_when_zero_height: f32,
+) -> f32 {
+    cx.scope(|cx| {
+        let bounds = cx.environment_viewport_bounds(invalidation);
+        viewport_aspect_ratio_for_dimensions(
+            bounds.size.width,
+            bounds.size.height,
+            fallback_when_zero_height,
+        )
+    })
+}
+
+/// Returns a coarse "portrait/landscape/square" orientation derived from the committed viewport
+/// snapshot (ADR 1171).
+#[track_caller]
+pub fn viewport_orientation<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> ViewportOrientation {
+    cx.scope(|cx| {
+        let bounds = cx.environment_viewport_bounds(invalidation);
+        viewport_orientation_for_dimensions(bounds.size.width, bounds.size.height)
+    })
+}
+
+#[track_caller]
+pub fn viewport_is_portrait<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> bool {
+    viewport_orientation(cx, invalidation) == ViewportOrientation::Portrait
+}
+
+#[track_caller]
+pub fn viewport_is_landscape<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> bool {
+    viewport_orientation(cx, invalidation) == ViewportOrientation::Landscape
 }
 
 /// Viewport-driven boolean query with hysteresis.
@@ -244,6 +313,46 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn viewport_orientation_for_dimensions_detects_portrait_landscape_square() {
+        assert_eq!(
+            viewport_orientation_for_dimensions(Px(100.0), Px(200.0)),
+            ViewportOrientation::Portrait
+        );
+        assert_eq!(
+            viewport_orientation_for_dimensions(Px(200.0), Px(100.0)),
+            ViewportOrientation::Landscape
+        );
+        assert_eq!(
+            viewport_orientation_for_dimensions(Px(100.0), Px(100.0)),
+            ViewportOrientation::Square
+        );
+    }
+
+    #[test]
+    fn viewport_aspect_ratio_for_dimensions_uses_fallback_for_zero_height() {
+        assert_eq!(
+            viewport_aspect_ratio_for_dimensions(Px(200.0), Px(0.0), 1.0),
+            1.0
+        );
+        assert_eq!(
+            viewport_aspect_ratio_for_dimensions(Px(200.0), Px(-10.0), 2.0),
+            2.0
+        );
+    }
+
+    #[test]
+    fn viewport_aspect_ratio_for_dimensions_computes_ratio() {
+        assert_eq!(
+            viewport_aspect_ratio_for_dimensions(Px(200.0), Px(100.0), 1.0),
+            2.0
+        );
+        assert_eq!(
+            viewport_aspect_ratio_for_dimensions(Px(100.0), Px(200.0), 1.0),
+            0.5
+        );
+    }
 
     #[test]
     fn viewport_breakpoints_hysteresis_transitions() {
