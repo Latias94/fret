@@ -35,6 +35,8 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
+#[path = "web_vs_fret_layout/field.rs"]
+mod layout_field_fixtures;
 #[path = "web_vs_fret_layout/input.rs"]
 mod layout_input_fixtures;
 #[path = "web_vs_fret_layout/scroll.rs"]
@@ -16237,7 +16239,6 @@ fn web_vs_fret_layout_form_tanstack_complex_geometry_matches_web() {
     assert_form_radio_control_size_matches_web("form-tanstack-complex", "basic");
 }
 
-#[test]
 fn web_vs_fret_layout_field_input_geometry() {
     let web = read_web_golden("field-input");
     let theme = web_theme(&web);
@@ -16523,7 +16524,6 @@ fn web_vs_fret_layout_field_input_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_checkbox_geometry() {
     let web = read_web_golden("field-checkbox");
     let theme = web_theme(&web);
@@ -16783,7 +16783,6 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_switch_geometry() {
     let web = read_web_golden("field-switch");
     let theme = web_theme(&web);
@@ -16901,7 +16900,6 @@ fn web_vs_fret_layout_field_switch_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_select_geometry() {
     let web = read_web_golden("field-select");
     let theme = web_theme(&web);
@@ -17054,7 +17052,6 @@ fn web_vs_fret_layout_field_select_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_radio_geometry() {
     let web = read_web_golden("field-radio");
     let theme = web_theme(&web);
@@ -17195,7 +17192,6 @@ fn web_vs_fret_layout_field_radio_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_textarea_geometry() {
     let web = read_web_golden("field-textarea");
     let theme = web_theme(&web);
@@ -17337,7 +17333,6 @@ fn web_vs_fret_layout_field_textarea_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_group_geometry() {
     let web = read_web_golden("field-group");
     let theme = web_theme(&web);
@@ -17623,7 +17618,6 @@ fn web_vs_fret_layout_field_group_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_fieldset_geometry() {
     let web = read_web_golden("field-fieldset");
     let theme = web_theme(&web);
@@ -17923,7 +17917,6 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_choice_card_geometry() {
     let web = read_web_golden("field-choice-card");
     let theme = web_theme(&web);
@@ -25690,7 +25683,6 @@ fn web_vs_fret_layout_date_picker_with_range_trigger_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_slider_track_geometry_matches_web() {
     let web = read_web_golden("field-slider");
     let theme = web_theme(&web);
@@ -25764,7 +25756,6 @@ fn web_vs_fret_layout_field_slider_track_geometry_matches_web() {
     let _ = ui.debug_node_bounds(slider.id).expect("fret slider bounds");
 }
 
-#[test]
 fn web_vs_fret_layout_field_slider_thumb_insets_match_web() {
     let web = read_web_golden("field-slider");
     let theme = web_theme(&web);
@@ -25883,7 +25874,6 @@ fn web_vs_fret_layout_field_slider_thumb_insets_match_web() {
     }
 }
 
-#[test]
 fn web_vs_fret_layout_field_demo_separator_height_matches_web() {
     let web = read_web_golden("field-demo");
     let theme = web_theme(&web);
@@ -25945,7 +25935,6 @@ fn web_vs_fret_layout_field_demo_separator_height_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content() {
     let web = read_web_golden("field-responsive");
     let theme = web_theme(&web);
