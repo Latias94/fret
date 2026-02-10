@@ -406,6 +406,16 @@ pub(crate) fn find_semantics<'a>(
     })
 }
 
+pub(crate) fn find_by_test_id<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    id: &str,
+) -> &'a fret_core::SemanticsNode {
+    snap.nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(id))
+        .unwrap_or_else(|| panic!("missing semantics node with test_id={id:?}"))
+}
+
 pub(crate) fn assert_panel_x_w_match(
     web_name: &str,
     label: &str,
