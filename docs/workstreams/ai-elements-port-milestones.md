@@ -122,6 +122,7 @@ Notes:
 - `Artifact` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-artifact-demo-close-toggle.json`).
 - `Shimmer` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-shimmer-demo-pixels-changed.json`).
 - `Commit` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-commit-demo-copy.json`).
+- `Commit` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-commit-large-scroll.json`).
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).

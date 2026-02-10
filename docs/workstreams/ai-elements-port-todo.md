@@ -155,6 +155,10 @@ Existing gates (UI Gallery `ai_commit_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
 
+Existing gates (UI Gallery `ai_commit_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
+
 Existing gates (UI Gallery `ai_stack_trace_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
@@ -193,11 +197,16 @@ Prioritize thin adapters over new engines:
   - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
   - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
   - Parity polish checklist (make it measurable):
-    - [ ] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
-    - [ ] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
-    - [ ] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
+    - [~] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
+      - Done: `CommitCopyButton` suppresses re-copy while `copied` is active + `on_copy` hook exists.
+      - Done: `StackTraceCopyButton` `on_copy` hook exists (repeat-copy semantics remain allowed).
+    - [~] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
+      - Done: commit file rows + file paths have `test_id` and a large-list demo uses them.
+      - Pending: per-frame `test_id` for stack trace rows (optional but useful for deep-frame gates).
+    - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
       - commit: many files; stack trace: many frames; test results: many suites.
-    - [ ] Confirm extension hooks exist for app-owned effects:
+      - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
+    - [~] Confirm extension hooks exist for app-owned effects:
       - commit: file row click / open file
       - stack trace: file path click / open file
       - test results: test click / open test output
