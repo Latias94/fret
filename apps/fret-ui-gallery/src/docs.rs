@@ -638,6 +638,29 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str = r#"
+## AI prompt input referenced sources (demo)
+
+This page demonstrates a local “referenced sources” model for `PromptInputRoot` (aligned with
+AI Elements `ReferencedSourcesContext` in `prompt-input.tsx`):
+
+- referenced sources are **local to the prompt input** (even when attachments are provider-owned),
+- the surface is intent-driven (apps decide how sources are discovered/added),
+- chips are rendered via `PromptInputReferencedSourcesRow`.
+
+It exists to validate:
+
+- local model ownership and stable keyed identity for chips,
+- remove affordances (chip hover + remove button),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{PromptInputReferencedSourcesRow, use_prompt_input_referenced_sources};
+```
+"#;
+
 pub(crate) const DOC_AI_ARTIFACT_DEMO: &str = r#"
 ## AI artifact (demo)
 

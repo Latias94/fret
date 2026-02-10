@@ -709,6 +709,9 @@ fn page_preview(
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
         }
+        PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO => {
+            preview_ai_prompt_input_referenced_sources_demo(cx, theme)
+        }
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
@@ -1351,6 +1354,154 @@ fn preview_ai_prompt_input_action_menu_demo(
 
     let note =
         cx.text("This page demonstrates PromptInputActionMenu composed into PromptInputRoot.");
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full()),
+        move |_cx| vec![prompt_el, note],
+    )]
+}
+
+fn preview_ai_prompt_input_referenced_sources_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct Models {
+        prompt: Option<Model<String>>,
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+        next_source_id: Option<Model<u64>>,
+    }
+
+    let prompt = cx.with_state(Models::default, |st| st.prompt.clone());
+    let prompt = match prompt {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let attachments = cx.with_state(Models::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Vec::<ui_ai::AttachmentData>::new());
+            cx.with_state(Models::default, |st| st.attachments = Some(model.clone()));
+            model
+        }
+    };
+
+    let next_source_id = cx.with_state(Models::default, |st| st.next_source_id.clone());
+    let next_source_id = match next_source_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(Models::default, |st| {
+                st.next_source_id = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let prompt_el = ui_ai::PromptInputProvider::new()
+        .text_model(prompt.clone())
+        .attachments_model(attachments.clone())
+        .into_element_with_children(cx, move |cx, _controller| {
+            let root = ui_ai::PromptInputRoot::new_uncontrolled()
+                .test_id_root("ui-gallery-ai-prompt-input-referenced-sources-root")
+                .test_id_textarea("ui-gallery-ai-prompt-input-referenced-sources-textarea")
+                .test_id_referenced_sources("ui-gallery-ai-prompt-input-referenced-sources")
+                .refine_layout(LayoutRefinement::default().w_full());
+
+            let input =
+                root.into_element_with_slots(cx, |slot_cx: &mut ElementContext<'_, App>| {
+                    let mut out = ui_ai::PromptInputSlots::default();
+
+                    let sources_len = ui_ai::use_prompt_input_referenced_sources(slot_cx)
+                        .and_then(|c| {
+                            slot_cx.get_model_cloned(&c.sources, fret_ui::Invalidation::Layout)
+                        })
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+
+                    if sources_len > 0 {
+                        out.block_start.push(
+                            ui_ai::PromptInputHeader::new([
+                                ui_ai::PromptInputReferencedSourcesRow::new().into_element(slot_cx),
+                            ])
+                            .into_element(slot_cx),
+                        );
+                    }
+
+                    let sources_model = ui_ai::use_prompt_input_referenced_sources(slot_cx)
+                        .map(|c| c.sources.clone());
+                    let add_source = if let Some(sources_model) = sources_model {
+                        let next_source_id = next_source_id.clone();
+                        let on_add: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                            let id = host
+                                .models_mut()
+                                .update(&next_source_id, |v| {
+                                    let out = *v;
+                                    *v = v.saturating_add(1);
+                                    out
+                                })
+                                .unwrap_or(0);
+
+                            let item_id: Arc<str> = Arc::from(format!("src-{id}"));
+                            let item = ui_ai::AttachmentSourceDocumentData::new(item_id.clone())
+                                .title(Arc::<str>::from("Source"))
+                                .filename(Arc::<str>::from("source.md"));
+
+                            let _ = host.models_mut().update(&sources_model, |v| {
+                                if v.iter().any(|s| s.id.as_ref() == item_id.as_ref()) {
+                                    return;
+                                }
+                                v.push(item.clone());
+                            });
+
+                            host.notify(action_cx);
+                        });
+
+                        shadcn::Button::new("Add source")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(on_add)
+                            .test_id("ui-gallery-ai-prompt-input-referenced-sources-add")
+                            .into_element(slot_cx)
+                    } else {
+                        slot_cx.text("")
+                    };
+
+                    out.block_end.push(
+                        ui_ai::PromptInputFooter::new(
+                            [ui_ai::PromptInputTools::new([add_source]).into_element(slot_cx)],
+                            Vec::<AnyElement>::new(),
+                        )
+                        .into_element(slot_cx),
+                    );
+
+                    out
+                });
+
+            vec![input]
+        });
+
+    let note = cx.text(
+        "This page demonstrates PromptInput referenced sources (local to PromptInputRoot), gated via diag.",
+    );
     vec![stack::vstack(
         cx,
         stack::VStackProps::default()

@@ -113,6 +113,8 @@ pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+    "ai_prompt_input_referenced_sources_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
 pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
@@ -256,6 +258,8 @@ pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_referenced_sources_demo";
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
 pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
@@ -850,6 +854,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
                 docs::USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                "AI PromptInput Referenced Sources (Demo)",
+                "PromptInput referenced sources (chips) Demo",
+                "fret-ui-ai (prompt input referenced sources)",
+                CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                &[
+                    "ai",
+                    "prompt",
+                    "input",
+                    "referenced",
+                    "sources",
+                    "chips",
+                    "demo",
+                ],
+                docs::DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                docs::USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ARTIFACT_DEMO,

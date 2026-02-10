@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "prompt input referenced sources" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-ai-prompt-input-referenced-sources-demo"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-ai-prompt-input-referenced-sources-demo"
+      }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-prompt-input-referenced-sources-add"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-ai-prompt-input-referenced-sources-add"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-prompt-input-referenced-sources-item-src-0"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-ai-prompt-input-referenced-sources-item-src-0"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-ai-prompt-input-referenced-sources-item-src-0-remove"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-prompt-input-referenced-sources-item-src-0"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-prompt-input-referenced-sources-demo"
+    }
+  ]
+}
+
