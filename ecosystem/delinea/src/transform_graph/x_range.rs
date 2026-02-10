@@ -65,7 +65,7 @@ impl super::TransformGraph {
 
         let signature = x_range_signature(
             model.revs.spec,
-            table.revision,
+            table.revision(),
             series_id,
             base_range,
             x_col,

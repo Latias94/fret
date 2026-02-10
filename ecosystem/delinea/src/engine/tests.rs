@@ -14961,7 +14961,7 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
 
     let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
     table.append_row_f64(&[1.0, 0.0]).unwrap();
-    let appended_index = (table.row_count - 1) as u32;
+    let appended_index = (table.row_count() - 1) as u32;
 
     let mut steps = 0;
     let mut result = crate::scheduler::StepResult::default();
@@ -15000,6 +15000,366 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
             .any(|&i| i == appended_index),
         "expected the appended row index to be represented in the LOD output"
     );
+}
+
+#[test]
+fn append_only_marks_rebuild_preserves_geometry_while_unfinished_multi_series() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y1_field = crate::ids::FieldId::new(2);
+    let y2_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y2_field,
+                    column: 2,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed { min: 0.0, max: 1.0 }),
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed {
+                    min: -1.5,
+                    max: 1.5,
+                }),
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y1_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y2_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 120_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut y1s = Vec::with_capacity(n);
+    let mut y2s = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n as f64 - 1.0);
+        xs.push(t);
+        y1s.push((t * 20.0).sin());
+        y2s.push((t * 17.0).cos());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(y1s));
+    table.push_column(Column::F64(y2s));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0usize;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 512 {
+            break;
+        }
+    }
+    assert!(steps <= 512);
+
+    let before_marks_rev = engine.output().marks.revision;
+    let before_nodes_len = engine.output().marks.nodes.len();
+    assert!(before_nodes_len > 0);
+
+    for series_id in [series_a, series_b] {
+        assert!(
+            engine
+                .output()
+                .marks
+                .nodes
+                .iter()
+                .any(|n| n.kind == crate::marks::MarkKind::Polyline
+                    && n.source_series == Some(series_id)),
+            "expected a polyline node for series {series_id:?} before append"
+        );
+    }
+
+    let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
+    table.append_row_f64(&[1.0, 0.0, 1.0]).unwrap();
+    let appended_index = (table.row_count() - 1) as u32;
+
+    let mut saw_unfinished = false;
+    let mut last_rev = before_marks_rev;
+    let mut result = crate::scheduler::StepResult::default();
+
+    for _ in 0..512 {
+        result = engine
+            .step(&mut measurer, WorkBudget::new(2048, 0, 8))
+            .unwrap();
+
+        let marks = &engine.output().marks;
+        assert!(marks.nodes.len() >= before_nodes_len);
+        assert!(marks.revision.0 >= last_rev.0);
+        last_rev = marks.revision;
+
+        for series_id in [series_a, series_b] {
+            assert!(
+                marks.nodes.iter().any(|n| {
+                    n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series_id)
+                }),
+                "expected a polyline node for series {series_id:?} during append-only rebuild"
+            );
+        }
+
+        if result.unfinished {
+            saw_unfinished = true;
+        } else {
+            break;
+        }
+    }
+
+    assert!(saw_unfinished, "expected at least one unfinished step");
+    assert!(!result.unfinished, "expected append-only rebuild to finish");
+
+    for series_id in [series_a, series_b] {
+        let has_appended_index = engine
+            .output()
+            .marks
+            .nodes
+            .iter()
+            .filter(|n| {
+                n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series_id)
+            })
+            .any(|node| {
+                let crate::marks::MarkPayloadRef::Polyline(poly) = &node.payload else {
+                    return false;
+                };
+                engine.output().marks.arena.data_indices[poly.points.clone()]
+                    .iter()
+                    .any(|&i| i == appended_index)
+            });
+
+        assert!(
+            has_appended_index,
+            "expected appended raw index to be represented in the LOD output for series {series_id:?}"
+        );
+    }
+}
+
+#[test]
+fn update_mutation_clears_marks_and_forces_rebuild() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed { min: 0.0, max: 1.0 }),
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed {
+                    min: -1.5,
+                    max: 1.5,
+                }),
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+            lod: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 20_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n as f64 - 1.0);
+        xs.push(t);
+        ys.push((t * 20.0).sin());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    assert!(!engine.output().marks.nodes.is_empty());
+    let marks_rev_before = engine.output().marks.revision;
+
+    // In-place update (no row_count growth) must invalidate caches deterministically and must not be
+    // mistaken for append-only rebuild.
+    {
+        let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
+        let mid = table.row_count() / 2;
+        let x_mid = table.column_f64(0).unwrap()[mid];
+        table.update_row_f64(mid, &[x_mid, 0.0]).unwrap();
+    }
+
+    // With a zero budget, marks cannot be rebuilt; the engine should have cleared marks due to the
+    // update revision change.
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(0, 0, 0))
+        .unwrap();
+    assert!(step.unfinished);
+    assert!(engine.output().marks.nodes.is_empty());
+    assert!(engine.output().marks.revision.0 > marks_rev_before.0);
+
+    // Rebuild should be possible under a normal budget again.
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+    assert!(!engine.output().marks.nodes.is_empty());
 }
 
 #[test]

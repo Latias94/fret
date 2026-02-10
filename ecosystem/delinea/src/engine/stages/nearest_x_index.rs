@@ -127,8 +127,8 @@ impl NearestXIndexStage {
             self.cache.insert(
                 *key,
                 NearestXIndexEntry::Building {
-                    data_rev: table.revision,
-                    row_count: table.row_count,
+                    data_rev: table.revision(),
+                    row_count: table.row_count(),
                     next: seed_next,
                     end,
                     items: seed_items,
@@ -238,7 +238,7 @@ impl NearestXIndexStage {
                 continue;
             };
 
-            let data_rev = table.revision;
+            let data_rev = table.revision();
             match entry {
                 NearestXIndexEntry::Ready {
                     data_rev: r,
@@ -252,20 +252,20 @@ impl NearestXIndexStage {
                     }
 
                     let requested_end = key.end as usize;
-                    let next_end_limit = requested_end.min(table.row_count);
+                    let next_end_limit = requested_end.min(table.row_count());
 
-                    let is_append_only = table.row_count >= *cached_len;
+                    let is_append_only = table.row_count() >= *cached_len;
                     if is_append_only && next_end_limit >= *end_limit {
                         if next_end_limit == *end_limit {
                             *r = data_rev;
-                            *cached_len = table.row_count;
+                            *cached_len = table.row_count();
                             self.cursor += 1;
                             continue;
                         }
 
                         *entry = NearestXIndexEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: *end_limit,
                             end: requested_end,
                             items: items.to_vec(),
@@ -273,7 +273,7 @@ impl NearestXIndexStage {
                     } else {
                         *entry = NearestXIndexEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: key.start as usize,
                             end: requested_end,
                             items: Vec::new(),
@@ -288,10 +288,10 @@ impl NearestXIndexStage {
                     ..
                 } => {
                     if *r != data_rev {
-                        let is_append_only = table.row_count >= *cached_len;
+                        let is_append_only = table.row_count() >= *cached_len;
                         let can_resume = is_append_only && *next <= *cached_len;
                         *r = data_rev;
-                        *cached_len = table.row_count;
+                        *cached_len = table.row_count();
                         if !can_resume {
                             *next = key.start as usize;
                             items.clear();
@@ -352,7 +352,7 @@ impl NearestXIndexStage {
                 let frozen: Arc<[NearestXIndexItem]> = std::mem::take(items).into();
                 *entry = NearestXIndexEntry::Ready {
                     data_rev,
-                    row_count: table.row_count,
+                    row_count: table.row_count(),
                     end_limit,
                     items: frozen,
                 };
@@ -528,8 +528,8 @@ mod tests {
         assert!(stage.step(&datasets, &mut budget));
 
         let table = datasets.dataset(dataset_id).unwrap();
-        let table_rev_before = table.revision;
-        assert_eq!(table.row_count, 5);
+        let table_rev_before = table.revision();
+        assert_eq!(table.row_count(), 5);
         assert_eq!(stage.items_for(key, table_rev_before).unwrap().len(), 5);
 
         {
@@ -559,8 +559,8 @@ mod tests {
         assert!(stage.step(&datasets, &mut finish_budget));
 
         let table = datasets.dataset(dataset_id).unwrap();
-        let table_rev_after = table.revision;
-        assert_eq!(table.row_count, 10);
+        let table_rev_after = table.revision();
+        assert_eq!(table.row_count(), 10);
         assert_eq!(stage.items_for(key, table_rev_after).unwrap().len(), 10);
     }
 }

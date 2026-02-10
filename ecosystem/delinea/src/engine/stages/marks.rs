@@ -154,7 +154,7 @@ impl MarksStage {
             };
             current_meta.insert(
                 dataset_id,
-                (table.revision, table.row_count, table.columns.len()),
+                (table.revision(), table.row_count(), table.column_count()),
             );
         }
 
@@ -254,7 +254,6 @@ impl MarksStage {
         self.bounds = None;
         self.axis_windows.clear();
         self.pending_append_rebuild = false;
-        self.last_dataset_meta.clear();
         self.append_rebuild_mode = false;
         self.minmax_append_cache.clear();
     }
@@ -330,7 +329,7 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let contract = participation.series_contract(series.id, table.row_count);
+            let contract = participation.series_contract(series.id, table.row_count());
             let base_selection = contract.selection;
             let selection_range = contract.selection_range;
             let view_x_filter = contract.x_policy.filter;
@@ -501,7 +500,7 @@ impl MarksStage {
                                 build.stack,
                                 series_id,
                                 model.revs.marks,
-                                table.revision,
+                                table.revision(),
                             ) else {
                                 return false;
                             };
@@ -643,7 +642,7 @@ impl MarksStage {
                 let mut y_window = y_window;
                 y_window.clamp_non_degenerate();
 
-                let visible_len = selection.view_len(table.row_count);
+                let visible_len = selection.view_len(table.row_count());
                 let large_threshold = series
                     .lod
                     .large_threshold
@@ -667,7 +666,7 @@ impl MarksStage {
                     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
                     if self.append_rebuild_mode {
                         if let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
-                            && table.row_count >= cache.row_count
+                            && table.row_count() >= cache.row_count
                             && cache.viewport_width_px == width_px
                             && cache.bounds == bounds
                             && self.cursor.next_index == 0
@@ -788,8 +787,8 @@ impl MarksStage {
 
                     {
                         let entry = self.minmax_append_cache.entry(series.id).or_default();
-                        entry.data_rev = table.revision;
-                        entry.row_count = table.row_count;
+                        entry.data_rev = table.revision();
+                        entry.row_count = table.row_count();
                         entry.bounds = bounds;
                         entry.viewport_width_px = width_px;
                         entry.cursor = self.cursor.clone();
@@ -859,7 +858,7 @@ impl MarksStage {
                         return false;
                     };
 
-                    let row_end = selection.view_len(table.row_count);
+                    let row_end = selection.view_len(table.row_count());
                     while build.next_view_index < row_end {
                         let points_budget = budget.take_points(4096) as usize;
                         if points_budget == 0 {
@@ -1062,7 +1061,7 @@ impl MarksStage {
                     }
                 }
 
-                let row_end = selection.view_len(table.row_count);
+                let row_end = selection.view_len(table.row_count());
                 while self.scatter_next_index < row_end {
                     let points_budget = budget.take_points(4096) as usize;
                     if points_budget == 0 {
@@ -1158,7 +1157,7 @@ impl MarksStage {
                     mapping.orientation == crate::engine::bar::BarOrientation::Vertical;
 
                 let stack_arrays = series.stack.and_then(|stack| {
-                    stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
+                    stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision())
                 });
                 if series.stack.is_some() && stack_arrays.is_none() {
                     return false;
@@ -1253,7 +1252,7 @@ impl MarksStage {
                         return false;
                     };
 
-                    let row_end = selection.view_len(table.row_count);
+                    let row_end = selection.view_len(table.row_count());
                     while build.next_view_index < row_end {
                         let points_budget = budget.take_points(4096) as usize;
                         if points_budget == 0 {
@@ -1537,7 +1536,7 @@ impl MarksStage {
                     }
                 }
 
-                let row_end = selection.view_len(table.row_count);
+                let row_end = selection.view_len(table.row_count());
                 while self.bar_next_index < row_end {
                     let points_budget = budget.take_points(4096) as usize;
                     if points_budget == 0 {
@@ -1716,7 +1715,7 @@ impl MarksStage {
             }
 
             let stack_arrays = series.stack.and_then(|stack| {
-                stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
+                stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision())
             });
             if series.stack.is_some() && stack_arrays.is_none() {
                 return false;
@@ -2172,7 +2171,7 @@ impl MarksStage {
             let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
             if self.append_rebuild_mode {
                 if let Some(cache) = self.minmax_append_cache.get_mut(&series.id)
-                    && table.row_count >= cache.row_count
+                    && table.row_count() >= cache.row_count
                     && cache.viewport_width_px == width_px
                     && cache.bounds == bounds
                     && self.cursor.next_index == 0
@@ -2518,8 +2517,8 @@ impl MarksStage {
 
             {
                 let entry = self.minmax_append_cache.entry(series.id).or_default();
-                entry.data_rev = table.revision;
-                entry.row_count = table.row_count;
+                entry.data_rev = table.revision();
+                entry.row_count = table.row_count();
                 entry.bounds = bounds;
                 entry.viewport_width_px = width_px;
                 entry.cursor = self.cursor.clone();
@@ -2572,9 +2571,9 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
         let dataset_id = series.dataset;
         hash = fnv1a_step(hash, dataset_id.0);
         if let Some(table) = datasets.dataset(model.root_dataset_id(dataset_id)) {
-            hash = fnv1a_step(hash, table.revision.0);
-            hash = fnv1a_step(hash, table.row_count as u64);
-            hash = fnv1a_step(hash, table.columns.len() as u64);
+            hash = fnv1a_step(hash, table.revision().0);
+            hash = fnv1a_step(hash, table.row_count() as u64);
+            hash = fnv1a_step(hash, table.column_count() as u64);
         }
     }
     hash

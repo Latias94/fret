@@ -1556,7 +1556,7 @@ fn request_nearest_x_indices_for_axis_pointer(
         let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             continue;
         };
-        let contract = participation.series_contract(series.id, table.row_count);
+        let contract = participation.series_contract(series.id, table.row_count());
         let (RowSelection::All | RowSelection::Range(_)) = contract.selection else {
             continue;
         };
@@ -1857,7 +1857,7 @@ fn compute_axis_axis_pointer_output(
             None
         };
 
-        let contract = participation.series_contract(series.id, table.row_count);
+        let contract = participation.series_contract(series.id, table.row_count());
         let selection_range = contract.selection_range;
         let filter = contract.x_policy.filter;
         let base_selection = contract.selection.clone();
@@ -1884,7 +1884,7 @@ fn compute_axis_axis_pointer_output(
         });
 
         let model_rev = model.revs.marks;
-        let table_rev = table.revision;
+        let table_rev = table.revision();
         let nearest_index = x_col.and_then(|x_col| {
             let key = NearestXIndexKey::new(
                 series.dataset,
@@ -2130,7 +2130,7 @@ fn snap_axis_pointer_x_to_series(
 
     let root_dataset = model.root_dataset_id(primary.dataset);
     let table = datasets.dataset(root_dataset)?;
-    let table_rev = table.revision;
+    let table_rev = table.revision();
     let model_rev = model.revs.data;
 
     let dataset = model.datasets.get(&primary.dataset)?;
@@ -2145,7 +2145,7 @@ fn snap_axis_pointer_x_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let contract = participation.series_contract(primary.id, table.row_count);
+    let contract = participation.series_contract(primary.id, table.row_count());
     let selection_range = contract.selection_range;
     let filter = contract.x_policy.filter;
     let base_selection = contract.selection;
@@ -2345,7 +2345,7 @@ fn snap_axis_pointer_y_to_series(
 
     let root_dataset = model.root_dataset_id(primary.dataset);
     let table = datasets.dataset(root_dataset)?;
-    let table_rev = table.revision;
+    let table_rev = table.revision();
     let model_rev = model.revs.data;
 
     let dataset = model.datasets.get(&primary.dataset)?;
@@ -2360,7 +2360,7 @@ fn snap_axis_pointer_y_to_series(
         .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
         .and_then(|y2_col| table.column_f64(y2_col));
 
-    let contract = participation.series_contract(primary.id, table.row_count);
+    let contract = participation.series_contract(primary.id, table.row_count());
     let selection_range = contract.selection_range;
     let filter = contract.x_policy.filter;
     let base_selection = contract.selection.clone();
@@ -2587,7 +2587,7 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         };
 
-        let contract = participation.series_contract(series.id, table.row_count);
+        let contract = participation.series_contract(series.id, table.row_count());
         let selection_range = contract.selection_range;
         let filter = contract.x_policy.filter;
         let selection = contract.selection;

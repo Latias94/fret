@@ -475,7 +475,7 @@ impl TransformGraph {
             };
             let y1_values = y1_col.and_then(|c| table.column_f64(c));
 
-            let len = table.row_count;
+            let len = table.row_count();
             let view_len = series_view.selection.view_len(len);
             if view_len == 0 {
                 continue;
@@ -598,7 +598,7 @@ fn y_percent_extents_signature(
 
         let table_rev = datasets
             .dataset(series_model.dataset)
-            .map(|t| rev_u64(t.revision))
+            .map(|t| rev_u64(t.revision()))
             .unwrap_or(0);
         h = fnv1a_step(h, table_rev);
 
@@ -647,7 +647,7 @@ fn x_extent_signature(
 
         let table_rev = datasets
             .dataset(series.dataset)
-            .map(|t| rev_u64(t.revision))
+            .map(|t| rev_u64(t.revision()))
             .unwrap_or(0);
         h = fnv1a_step(h, table_rev);
 
@@ -710,9 +710,9 @@ fn scan_x_extent(
             .copied()
             .unwrap_or(crate::transform::RowRange {
                 start: 0,
-                end: table.row_count,
+                end: table.row_count(),
             });
-        range.clamp_to_len(table.row_count);
+        range.clamp_to_len(table.row_count());
 
         for i in range.start..range.end {
             let v = x_values.get(i).copied().unwrap_or(f64::NAN);

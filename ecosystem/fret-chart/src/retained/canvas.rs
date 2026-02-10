@@ -2065,8 +2065,8 @@ impl ChartCanvas {
             for dataset_id in dataset_ids {
                 dataset_id.0.hash(&mut hasher);
                 if let Some(table) = datasets.dataset_mut(dataset_id) {
-                    table.revision.0.hash(&mut hasher);
-                    table.row_count.hash(&mut hasher);
+                    table.revision().0.hash(&mut hasher);
+                    table.row_count().hash(&mut hasher);
                 }
             }
             hasher.finish()

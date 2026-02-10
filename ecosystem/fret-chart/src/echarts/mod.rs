@@ -1122,7 +1122,7 @@ fn translate_option_with_dataset(option: &EchartsOption) -> Result<TranslatedCha
                 }
 
                 table.push_column(Column::F64(codes));
-                let column = table.columns.len().saturating_sub(1);
+                let column = table.column_count().saturating_sub(1);
 
                 let derived_id = FieldId::new(next_field_id);
                 next_field_id = next_field_id.saturating_add(1);
@@ -1567,7 +1567,7 @@ fn translate_visual_maps_v1(
             .copied()
             .ok_or(EchartsError::Invalid("visualMap dataset table missing"))?;
         let values = table
-            .columns
+            .columns()
             .get(column)
             .and_then(|c| c.as_f64_slice())
             .ok_or(EchartsError::Unsupported(
@@ -1576,7 +1576,7 @@ fn translate_visual_maps_v1(
 
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
-        for v in values.iter().copied().take(table.row_count) {
+        for v in values.iter().copied().take(table.row_count()) {
             if v.is_nan() {
                 continue;
             }
@@ -2188,7 +2188,7 @@ fn parse_raw_dataset_v1(
     for col in columns {
         table.push_column(Column::F64(col));
     }
-    if table.row_count != row_count {
+    if table.row_count() != row_count {
         return Err(EchartsError::Invalid("dataset.source rowCount mismatch"));
     }
 
@@ -2277,7 +2277,7 @@ mod tests {
         assert_eq!(translated.datasets.len(), 1);
 
         let ds = translated.datasets[0].1.clone();
-        assert_eq!(ds.row_count, 3);
+        assert_eq!(ds.row_count(), 3);
         assert!(translated.spec.axes.len() >= 2);
     }
 
@@ -2294,7 +2294,7 @@ mod tests {
         "#;
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
     }
 
     #[test]
@@ -2321,7 +2321,7 @@ mod tests {
 
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
         assert_eq!(translated.spec.datasets.len(), 1);
         assert_eq!(translated.spec.datasets[0].fields.len(), 2);
         assert_eq!(translated.spec.axes.len(), 4);
@@ -2349,7 +2349,7 @@ mod tests {
 
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
         assert_eq!(translated.spec.datasets[0].fields.len(), 2);
     }
 
@@ -2374,7 +2374,7 @@ mod tests {
 
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
         assert_eq!(translated.spec.datasets[0].fields.len(), 2);
     }
 
@@ -2395,7 +2395,7 @@ mod tests {
 
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
 
         let axis = translated
             .spec
@@ -2440,7 +2440,7 @@ mod tests {
 
         let translated = translate_json_str(json).expect("translate");
         assert_eq!(translated.datasets.len(), 1);
-        assert_eq!(translated.datasets[0].1.row_count, 3);
+        assert_eq!(translated.datasets[0].1.row_count(), 3);
 
         let axis = translated
             .spec

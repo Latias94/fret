@@ -519,7 +519,7 @@ fn apply_dataset_transforms_for_view(
             .map(|v| v.row_range)
             .unwrap_or(RowRange {
                 start: 0,
-                end: table.row_count,
+                end: table.row_count(),
             });
 
         let sel = transform_graph.dataset_transform_selection_for_dataset(
@@ -633,7 +633,7 @@ fn apply_xy_weak_filter_for_grid(
             .map(|v| v.row_range)
             .unwrap_or(crate::transform::RowRange {
                 start: 0,
-                end: table.row_count,
+                end: table.row_count(),
             });
         let base_len = base_range.end.saturating_sub(base_range.start);
         if base_len > max_view_len {
@@ -679,7 +679,7 @@ fn apply_xy_weak_filter_for_grid(
                 base_range,
                 x_filter,
                 y_filter,
-                table.revision,
+                table.revision(),
             ),
             None => transform_graph.selection_for_xy_weak_filter(
                 series_model.dataset,
@@ -689,7 +689,7 @@ fn apply_xy_weak_filter_for_grid(
                 base_range,
                 x_filter,
                 y_filter,
-                table.revision,
+                table.revision(),
             ),
         };
 
@@ -808,7 +808,7 @@ fn apply_x_indices_for_grid(
             continue;
         };
 
-        let selection_range = series_view.selection.as_range(table.row_count);
+        let selection_range = series_view.selection.as_range(table.row_count());
         let selection_range = crate::transform::RowRange {
             start: selection_range.start,
             end: selection_range.end,
@@ -820,7 +820,7 @@ fn apply_x_indices_for_grid(
             x_col,
             selection_range,
             x_filter,
-            table.revision,
+            table.revision(),
         ) else {
             continue;
         };

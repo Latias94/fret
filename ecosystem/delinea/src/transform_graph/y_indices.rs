@@ -145,7 +145,7 @@ impl super::TransformGraph {
         let signature = y_indices_signature(
             model.revs.spec,
             view.revision,
-            table.revision,
+            table.revision(),
             series_id,
             series_model.kind,
             x_col,

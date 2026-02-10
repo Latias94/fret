@@ -90,8 +90,8 @@ impl OrdinalIndexStage {
             self.cache.insert(
                 *key,
                 OrdinalIndexEntry::Building {
-                    data_rev: table.revision,
-                    row_count: table.row_count,
+                    data_rev: table.revision(),
+                    row_count: table.row_count(),
                     next: seed_next,
                     end: key.end as usize,
                     map: seed_map,
@@ -193,7 +193,7 @@ impl OrdinalIndexStage {
                 continue;
             };
 
-            let data_rev = table.revision;
+            let data_rev = table.revision();
             match entry {
                 OrdinalIndexEntry::Ready {
                     data_rev: r,
@@ -207,20 +207,20 @@ impl OrdinalIndexStage {
                     }
 
                     let requested_end = key.end as usize;
-                    let next_end_limit = requested_end.min(table.row_count);
+                    let next_end_limit = requested_end.min(table.row_count());
 
-                    let is_append_only = table.row_count >= *cached_len;
+                    let is_append_only = table.row_count() >= *cached_len;
                     if is_append_only && next_end_limit >= *end_limit {
                         if next_end_limit == *end_limit {
                             *r = data_rev;
-                            *cached_len = table.row_count;
+                            *cached_len = table.row_count();
                             self.cursor += 1;
                             continue;
                         }
 
                         *entry = OrdinalIndexEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: *end_limit,
                             end: requested_end,
                             map: map.to_vec(),
@@ -228,7 +228,7 @@ impl OrdinalIndexStage {
                     } else {
                         *entry = OrdinalIndexEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: key.start as usize,
                             end: requested_end,
                             map: vec![INDEX_NOT_FOUND; key.ordinal_len as usize],
@@ -243,11 +243,11 @@ impl OrdinalIndexStage {
                     map,
                 } => {
                     if *r != data_rev {
-                        let is_append_only = table.row_count >= *cached_len;
+                        let is_append_only = table.row_count() >= *cached_len;
                         let can_resume = is_append_only && *next <= *cached_len;
 
                         *r = data_rev;
-                        *cached_len = table.row_count;
+                        *cached_len = table.row_count();
                         *end = key.end as usize;
                         if !can_resume {
                             *next = key.start as usize;
@@ -277,7 +277,7 @@ impl OrdinalIndexStage {
             if end_limit <= start {
                 let ready = OrdinalIndexEntry::Ready {
                     data_rev,
-                    row_count: table.row_count,
+                    row_count: table.row_count(),
                     end_limit,
                     map: Arc::from(map.clone().into_boxed_slice()),
                 };
@@ -325,7 +325,7 @@ impl OrdinalIndexStage {
             if *next >= end_limit {
                 let ready = OrdinalIndexEntry::Ready {
                     data_rev,
-                    row_count: table.row_count,
+                    row_count: table.row_count(),
                     end_limit,
                     map: Arc::from(map.clone().into_boxed_slice()),
                 };
@@ -402,7 +402,7 @@ mod tests {
 
         let mut table = DataTable::default();
         table.push_column(Column::F64(vec![0.0, 2.0, 1.0]));
-        let rev = table.revision;
+        let rev = table.revision();
         datasets.insert(dataset, table);
 
         let key = OrdinalIndexKey::new(
@@ -449,7 +449,7 @@ mod tests {
             AxisFilter1D::default(),
         );
 
-        let _rev0 = datasets.dataset(dataset).unwrap().revision;
+        let _rev0 = datasets.dataset(dataset).unwrap().revision();
 
         let mut stage = OrdinalIndexStage::default();
         stage.begin_frame();
@@ -461,7 +461,7 @@ mod tests {
 
         let table = datasets.dataset_mut(dataset).unwrap();
         table.append_row_f64(&[3.0]).unwrap();
-        let rev1 = table.revision;
+        let rev1 = table.revision();
 
         stage.begin_frame();
         stage.request(key);

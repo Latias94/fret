@@ -322,7 +322,7 @@ fn run_option_snapshot_with_viewport(option_json: &str, viewport: Rect) -> Headl
 
     let mut row_count_by_dataset: BTreeMap<u64, usize> = BTreeMap::new();
     for (id, table) in &translated.datasets {
-        row_count_by_dataset.insert(id.0 as u64, table.row_count);
+        row_count_by_dataset.insert(id.0 as u64, table.row_count());
     }
 
     let mut engine = ChartEngine::new(spec).expect("engine");

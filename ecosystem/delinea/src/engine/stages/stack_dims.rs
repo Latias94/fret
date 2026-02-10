@@ -105,8 +105,8 @@ impl StackDimsStage {
                 continue;
             };
 
-            let data_rev = table.revision;
-            let row_count = table.row_count;
+            let data_rev = table.revision();
+            let row_count = table.row_count();
 
             match self.cache.get(&stack) {
                 Some(StackGroupEntry::Ready {
@@ -194,7 +194,7 @@ impl StackDimsStage {
                 continue;
             };
 
-            if table.revision != *data_rev || table.row_count != *row_count {
+            if table.revision() != *data_rev || table.row_count() != *row_count {
                 self.cursor += 1;
                 continue;
             }
@@ -708,7 +708,7 @@ mod tests {
         table.push_column(Column::F64(vec![0.0, 1.0, 2.0]));
         table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
         table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
-        let data_rev = table.revision;
+        let data_rev = table.revision();
         datasets.insert(dataset_id, table);
 
         let mut stage = StackDimsStage::default();
@@ -856,7 +856,7 @@ mod tests {
         table.push_column(Column::F64(vec![0.0, 2.0, 1.0]));
         table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
         table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
-        let data_rev = table.revision;
+        let data_rev = table.revision();
         datasets.insert(dataset_id, table);
 
         let mut stage = StackDimsStage::default();

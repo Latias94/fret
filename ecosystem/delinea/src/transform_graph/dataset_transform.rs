@@ -86,7 +86,7 @@ impl DatasetTransformStage {
                 data_rev,
                 indices,
                 ..
-            }) if *sig == signature && *data_rev == table.revision => {
+            }) if *sig == signature && *data_rev == table.revision() => {
                 Some(RowSelection::Indices(indices.clone()))
             }
             _ => None,
@@ -143,8 +143,8 @@ impl DatasetTransformStage {
                 continue;
             }
 
-            let row_count = table.row_count;
-            let data_rev = table.revision;
+            let row_count = table.row_count();
+            let data_rev = table.revision();
 
             let entry_needs_rebuild = match self.cache.get(&dataset) {
                 Some(DatasetTransformEntry::Ready {
@@ -348,15 +348,15 @@ fn dataset_transform_signature(
     h = fnv1a_step(h, model.revs.spec.0);
     h = fnv1a_step(h, dataset.0);
     h = fnv1a_step(h, root.0);
-    h = fnv1a_step(h, table.revision.0);
-    h = fnv1a_step(h, table.row_count as u64);
+    h = fnv1a_step(h, table.revision().0);
+    h = fnv1a_step(h, table.row_count() as u64);
 
     let base_range = view
         .dataset_view(dataset)
         .map(|v| v.row_range)
         .unwrap_or(RowRange {
             start: 0,
-            end: table.row_count,
+            end: table.row_count(),
         });
     h = fnv1a_step(h, base_range.start as u64);
     h = fnv1a_step(h, base_range.end as u64);
@@ -373,7 +373,7 @@ fn dataset_transform_signature(
                 .map(|v| v.row_range)
                 .unwrap_or(RowRange {
                     start: 0,
-                    end: table.row_count,
+                    end: table.row_count(),
                 });
             h = fnv1a_step(h, parent_base.start as u64);
             h = fnv1a_step(h, parent_base.end as u64);

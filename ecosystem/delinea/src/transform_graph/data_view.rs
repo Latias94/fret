@@ -197,7 +197,7 @@ impl DataViewStage {
             return false;
         };
 
-        let selection_range = series_view.selection.as_range(table.row_count);
+        let selection_range = series_view.selection.as_range(table.row_count());
         let selection_range = RowRange {
             start: selection_range.start,
             end: selection_range.end,
@@ -435,8 +435,8 @@ impl DataViewStage {
                     self.cache.insert(
                         *key,
                         DataViewEntry::Building {
-                            data_rev: table.revision,
-                            row_count: table.row_count,
+                            data_rev: table.revision(),
+                            row_count: table.row_count(),
                             next: seed_next,
                             end: end as usize,
                             indices: seed_indices,
@@ -448,8 +448,8 @@ impl DataViewStage {
                     self.cache.insert(
                         *key,
                         DataViewEntry::Building {
-                            data_rev: table.revision,
-                            row_count: table.row_count,
+                            data_rev: table.revision(),
+                            row_count: table.row_count(),
                             next: start as usize,
                             end: end as usize,
                             indices: Vec::new(),
@@ -589,7 +589,7 @@ impl DataViewStage {
                 continue;
             };
 
-            let data_rev = table.revision;
+            let data_rev = table.revision();
             match entry {
                 DataViewEntry::Ready {
                     data_rev: r,
@@ -608,23 +608,23 @@ impl DataViewStage {
                         DataViewKind::XYWeakFilterBand { start, end, .. } => (start, end),
                     };
                     let requested_end = end as usize;
-                    let next_end_limit = requested_end.min(table.row_count);
+                    let next_end_limit = requested_end.min(table.row_count());
 
                     // Append-only fast path: if the dataset grew, continue scanning from the
                     // previous completion point and keep accumulated indices.
-                    let is_append_only = table.row_count >= *cached_len;
+                    let is_append_only = table.row_count() >= *cached_len;
                     if is_append_only && next_end_limit >= *end_limit {
                         if next_end_limit == *end_limit {
                             // No new rows inside the request range; just bump the revision.
                             *r = data_rev;
-                            *cached_len = table.row_count;
+                            *cached_len = table.row_count();
                             self.cursor += 1;
                             continue;
                         }
 
                         *entry = DataViewEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: *end_limit,
                             end: requested_end,
                             indices: indices.to_vec(),
@@ -632,7 +632,7 @@ impl DataViewStage {
                     } else {
                         *entry = DataViewEntry::Building {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             next: start as usize,
                             end: requested_end,
                             indices: Vec::new(),
@@ -652,11 +652,11 @@ impl DataViewStage {
                             | DataViewKind::XYWeakFilter { start, .. } => start,
                             DataViewKind::XYWeakFilterBand { start, .. } => start,
                         };
-                        let is_append_only = table.row_count >= *cached_len;
+                        let is_append_only = table.row_count() >= *cached_len;
                         let can_resume = is_append_only && *next <= *cached_len;
 
                         *r = data_rev;
-                        *cached_len = table.row_count;
+                        *cached_len = table.row_count();
                         if !can_resume {
                             *next = start as usize;
                             indices.clear();
@@ -724,7 +724,7 @@ impl DataViewStage {
                         let frozen: Arc<[u32]> = std::mem::take(indices).into();
                         *entry = DataViewEntry::Ready {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             end_limit,
                             indices: frozen,
                         };
@@ -817,7 +817,7 @@ impl DataViewStage {
                         let frozen: Arc<[u32]> = std::mem::take(indices).into();
                         *entry = DataViewEntry::Ready {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             end_limit,
                             indices: frozen,
                         };
@@ -933,7 +933,7 @@ impl DataViewStage {
                         let frozen: Arc<[u32]> = std::mem::take(indices).into();
                         *entry = DataViewEntry::Ready {
                             data_rev,
-                            row_count: table.row_count,
+                            row_count: table.row_count(),
                             end_limit,
                             indices: frozen,
                         };
@@ -1043,7 +1043,7 @@ impl DataViewStage {
                 x_col,
                 selection_range,
                 filter,
-                table.revision,
+                table.revision(),
             )
             .unwrap_or(base_selection);
         DataTableView::new(table, selection)
@@ -1191,8 +1191,8 @@ mod tests {
             0,
             range,
             filter,
-            table.revision,
-            table.row_count,
+            table.revision(),
+            table.row_count(),
         );
 
         let mut budget = WorkBudget::new(1, 0, 0);
@@ -1202,7 +1202,7 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for(dataset_id, dataset_id, 0, range, filter, table.revision)
+            .selection_for(dataset_id, dataset_id, 0, range, filter, table.revision())
             .expect("selection should be ready");
 
         let RowSelection::Indices(indices) = sel else {
@@ -1242,8 +1242,8 @@ mod tests {
             range,
             x_filter,
             y_filter,
-            table.revision,
-            table.row_count,
+            table.revision(),
+            table.row_count(),
         );
 
         let mut budget = WorkBudget::new(1, 0, 0);
@@ -1261,7 +1261,7 @@ mod tests {
                 range,
                 x_filter,
                 y_filter,
-                table.revision,
+                table.revision(),
             )
             .expect("selection should be ready");
 
@@ -1309,8 +1309,8 @@ mod tests {
             range,
             x_filter,
             y_filter,
-            table.revision,
-            table.row_count,
+            table.revision(),
+            table.row_count(),
         );
 
         let mut budget = WorkBudget::new(1, 0, 0);
@@ -1329,7 +1329,7 @@ mod tests {
                 range,
                 x_filter,
                 y_filter,
-                table.revision,
+                table.revision(),
             )
             .expect("selection should be ready");
 
@@ -1361,7 +1361,7 @@ mod tests {
         };
         let range = RowRange { start: 0, end: 100 };
 
-        let data_rev = store.dataset(dataset_id).unwrap().revision;
+        let data_rev = store.dataset(dataset_id).unwrap().revision();
         let mut stage = build_stage_with_single_key(
             dataset_id,
             dataset_id,
@@ -1369,7 +1369,7 @@ mod tests {
             range,
             filter,
             data_rev,
-            store.dataset(dataset_id).unwrap().row_count,
+            store.dataset(dataset_id).unwrap().row_count(),
         );
 
         let mut budget = WorkBudget::new(4096, 0, 0);
@@ -1383,7 +1383,7 @@ mod tests {
         let old_rev = data_rev;
         let table = store.dataset_mut(dataset_id).unwrap();
         table.append_row_f64(&[6.0]).unwrap();
-        let new_rev = table.revision;
+        let new_rev = table.revision();
         assert_ne!(old_rev, new_rev);
 
         // The cached selection should be considered stale when queried with the new data revision.
@@ -1428,7 +1428,7 @@ mod tests {
         };
         let range = RowRange { start: 0, end: 100 };
 
-        let data_rev = store.dataset(dataset_id).unwrap().revision;
+        let data_rev = store.dataset(dataset_id).unwrap().revision();
         let mut stage = build_stage_with_single_xy_key(
             dataset_id,
             dataset_id,
@@ -1438,7 +1438,7 @@ mod tests {
             x_filter,
             y_filter,
             data_rev,
-            store.dataset(dataset_id).unwrap().row_count,
+            store.dataset(dataset_id).unwrap().row_count(),
         );
 
         let mut budget = WorkBudget::new(4096, 0, 0);
@@ -1454,7 +1454,7 @@ mod tests {
         let old_rev = data_rev;
         let table = store.dataset_mut(dataset_id).unwrap();
         table.append_row_f64(&[12.0, 5.0]).unwrap();
-        let new_rev = table.revision;
+        let new_rev = table.revision();
         assert_ne!(old_rev, new_rev);
 
         // The cached selection should be considered stale when queried with the new data revision.
@@ -1498,7 +1498,7 @@ mod tests {
         };
         let range = RowRange { start: 0, end: 100 };
 
-        let rev0 = store.dataset(dataset_id).unwrap().revision;
+        let rev0 = store.dataset(dataset_id).unwrap().revision();
         let mut stage = build_stage_with_single_key(
             dataset_id,
             dataset_id,
@@ -1506,7 +1506,7 @@ mod tests {
             range,
             filter,
             rev0,
-            store.dataset(dataset_id).unwrap().row_count,
+            store.dataset(dataset_id).unwrap().row_count(),
         );
 
         let mut budget = WorkBudget::new(4096, 0, 0);
@@ -1514,7 +1514,7 @@ mod tests {
 
         let table = store.dataset_mut(dataset_id).unwrap();
         table.append_row_f64(&[6.0]).unwrap();
-        let rev1 = table.revision;
+        let rev1 = table.revision();
 
         stage.cursor = 0;
         let mut budget = WorkBudget::new(1, 0, 0);
@@ -1552,7 +1552,7 @@ mod tests {
         };
         let range = RowRange { start: 0, end: 100 };
 
-        let rev0 = store.dataset(dataset_id).unwrap().revision;
+        let rev0 = store.dataset(dataset_id).unwrap().revision();
         let mut stage = build_stage_with_single_xy_key(
             dataset_id,
             dataset_id,
@@ -1562,7 +1562,7 @@ mod tests {
             x_filter,
             y_filter,
             rev0,
-            store.dataset(dataset_id).unwrap().row_count,
+            store.dataset(dataset_id).unwrap().row_count(),
         );
 
         let mut budget = WorkBudget::new(4096, 0, 0);
@@ -1570,7 +1570,7 @@ mod tests {
 
         let table = store.dataset_mut(dataset_id).unwrap();
         table.append_row_f64(&[12.0, 5.0]).unwrap();
-        let rev1 = table.revision;
+        let rev1 = table.revision();
 
         stage.cursor = 0;
         let mut budget = WorkBudget::new(1, 0, 0);
