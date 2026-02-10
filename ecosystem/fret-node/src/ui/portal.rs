@@ -501,8 +501,13 @@ where
                                 ..Default::default()
                             },
                             |ecx| {
-                                element_ids.push((*node_id, ecx.root_id()));
-                                children
+                                vec![ecx.container(
+                                    fret_ui::element::ContainerProps::default(),
+                                    |ecx| {
+                                        element_ids.push((*node_id, ecx.root_id()));
+                                        children
+                                    },
+                                )]
                             },
                         );
                         out.push(positioned);
