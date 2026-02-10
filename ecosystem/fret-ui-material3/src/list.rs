@@ -154,13 +154,14 @@ impl List {
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let count = items.len();
 
-            let selected_idx =
-                cx.get_model_cloned(&model, Invalidation::Layout)
-                    .and_then(|value| {
-                        items
-                            .iter()
-                            .position(|it| it.value.as_ref() == value.as_ref())
-                    });
+            let selected_idx = cx
+                .read_model_ref(&model, Invalidation::Layout, |value| {
+                    items
+                        .iter()
+                        .position(|it| it.value.as_ref() == value.as_ref())
+                })
+                .ok()
+                .flatten();
 
             let tab_stop = selected_idx.or_else(|| disabled_items.iter().position(|&d| !d));
             let model_for_roving = model.clone();
@@ -298,8 +299,10 @@ fn list_item<H: UiHost>(
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
         let selected = cx
-            .get_model_cloned(&model, Invalidation::Layout)
-            .map(|v| v.as_ref() == value.as_ref())
+            .read_model_ref(&model, Invalidation::Layout, |v| {
+                v.as_ref() == value.as_ref()
+            })
+            .ok()
             .unwrap_or(false);
 
         let default_design_variant = {

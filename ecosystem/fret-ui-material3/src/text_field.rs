@@ -454,8 +454,8 @@ impl TextField {
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
-                                .get_model_cloned(&model, Invalidation::Layout)
-                                .map(|v| !v.is_empty())
+                                .read_model_ref(&model, Invalidation::Layout, |v| !v.is_empty())
+                                .ok()
                                 .unwrap_or(false);
 
                             let mut container = ContainerProps::default();

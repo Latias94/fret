@@ -1614,6 +1614,15 @@ fn select_listbox_panel<H: UiHost>(
 
     let disabled: Arc<[bool]> = Arc::from(items.iter().map(|it| it.disabled).collect::<Vec<_>>());
     let count = items.len();
+    let typeahead_items: Arc<[Arc<str>]> = Arc::from(
+        items
+            .iter()
+            .map(select_item_typeahead_text)
+            .collect::<Vec<_>>(),
+    );
+    let two_line = items
+        .iter()
+        .any(|it| it.supporting_text.is_some() || it.trailing_supporting_text.is_some());
 
     let tab_stop_idx = selected
         .as_ref()
@@ -1765,20 +1774,11 @@ fn select_listbox_panel<H: UiHost>(
                                     // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
                                     fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
                                         cx,
-                                        Arc::from(
-                                            items
-                                                .iter()
-                                                .map(select_item_typeahead_text)
-                                                .collect::<Vec<_>>(),
-                                        ),
+                                        typeahead_items.clone(),
                                         crate::motion::ms_to_frames(typeahead_delay_ms),
                                     );
 
                                     let mut out: Vec<AnyElement> = Vec::with_capacity(count);
-                                    let two_line = items.iter().any(|it| {
-                                        it.supporting_text.is_some()
-                                            || it.trailing_supporting_text.is_some()
-                                    });
                                     for (idx, item) in items.iter().cloned().enumerate() {
                                         let tab_stop = idx == tab_stop_idx;
                                         out.push(select_list_item(

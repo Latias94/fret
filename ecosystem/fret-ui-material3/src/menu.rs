@@ -275,6 +275,12 @@ impl Menu {
             let first_enabled_idx = disabled.iter().position(|&d| !d).unwrap_or(0);
             let disabled: Arc<[bool]> = Arc::from(disabled);
             let count = flat_items.len();
+            let typeahead_items: Arc<[Arc<str>]> = Arc::from(
+                flat_items
+                    .iter()
+                    .map(|it| it.a11y_label.clone().unwrap_or_else(|| it.label.clone()))
+                    .collect::<Vec<_>>(),
+            );
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
@@ -363,16 +369,7 @@ impl Menu {
                             // Prefix typeahead (best-effort): matches `RadioGroup` semantics in this crate.
                             roving_typeahead_prefix_arc_str_always_wrap(
                                 cx,
-                                Arc::from(
-                                    flat_items
-                                        .iter()
-                                        .map(|it| {
-                                            it.a11y_label
-                                                .clone()
-                                                .unwrap_or_else(|| it.label.clone())
-                                        })
-                                        .collect::<Vec<_>>(),
-                                ),
+                                typeahead_items.clone(),
                                 30,
                             );
 
