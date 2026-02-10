@@ -1,5 +1,19 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutSwitchRecipe {
+    TrackSize,
+    ThumbOffsetUnchecked,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutSwitchCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutSwitchRecipe,
+}
+
 #[test]
 fn web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(

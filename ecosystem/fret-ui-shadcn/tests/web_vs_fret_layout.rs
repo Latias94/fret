@@ -37,14 +37,32 @@ use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
 #[path = "web_vs_fret_layout/accordion.rs"]
 mod accordion;
+#[path = "web_vs_fret_layout/avatar.rs"]
+mod avatar;
+#[path = "web_vs_fret_layout/badge.rs"]
+mod badge;
+#[path = "web_vs_fret_layout/basic.rs"]
+mod basic;
+#[path = "web_vs_fret_layout/breadcrumb.rs"]
+mod breadcrumb;
+#[path = "web_vs_fret_layout/button.rs"]
+mod button;
 #[path = "web_vs_fret_layout/calendar.rs"]
 mod calendar;
+#[path = "web_vs_fret_layout/card.rs"]
+mod card;
 #[path = "web_vs_fret_layout/carousel.rs"]
 mod carousel;
 #[path = "web_vs_fret_layout/chart.rs"]
 mod chart;
+#[path = "web_vs_fret_layout/collapsible.rs"]
+mod collapsible;
 #[path = "web_vs_fret_layout/dashboard.rs"]
 mod dashboard;
+#[path = "web_vs_fret_layout/empty.rs"]
+mod empty;
+#[path = "web_vs_fret_layout/item.rs"]
+mod item;
 #[path = "web_vs_fret_layout/kbd.rs"]
 mod kbd;
 #[path = "web_vs_fret_layout/chart_scaffold.rs"]
@@ -65,18 +83,34 @@ mod native_select;
 mod pagination;
 #[path = "web_vs_fret_layout/progress.rs"]
 mod progress;
+#[path = "web_vs_fret_layout/radio_group.rs"]
+mod radio_group;
 #[path = "web_vs_fret_layout/resizable.rs"]
 mod resizable;
 #[path = "web_vs_fret_layout/select.rs"]
 mod select;
+#[path = "web_vs_fret_layout/separator.rs"]
+mod separator;
+#[path = "web_vs_fret_layout/shell.rs"]
+mod shell;
+#[path = "web_vs_fret_layout/sidebar.rs"]
+mod sidebar;
 #[path = "web_vs_fret_layout/skeleton.rs"]
 mod skeleton;
 #[path = "web_vs_fret_layout/sonner.rs"]
 mod sonner;
 #[path = "web_vs_fret_layout/spinner.rs"]
 mod spinner;
+#[path = "web_vs_fret_layout/switch.rs"]
+mod switch;
 #[path = "web_vs_fret_layout/table.rs"]
 mod table;
+#[path = "web_vs_fret_layout/tabs.rs"]
+mod tabs;
+#[path = "web_vs_fret_layout/textarea.rs"]
+mod textarea;
+#[path = "web_vs_fret_layout/triggers.rs"]
+mod triggers;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -152,6 +186,12 @@ struct WebScrollMetrics {
     scroll_left: f32,
     #[serde(rename = "scrollTop")]
     scroll_top: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FixtureSuite<T> {
+    schema_version: u32,
+    cases: Vec<T>,
 }
 
 fn repo_root() -> PathBuf {
@@ -1019,6 +1059,27 @@ fn rect_close_px(actual: Rect, expected: WebRect, tol: f32) -> bool {
         && (actual.size.height.0 - expected.h).abs() <= tol
 }
 
+fn overlap_area(a: Rect, b: Rect) -> f32 {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = ax0 + a.size.width.0;
+    let ay1 = ay0 + a.size.height.0;
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = bx0 + b.size.width.0;
+    let by1 = by0 + b.size.height.0;
+
+    let x0 = ax0.max(bx0);
+    let y0 = ay0.max(by0);
+    let x1 = ax1.min(bx1);
+    let y1 = ay1.min(by1);
+
+    let w = (x1 - x0).max(0.0);
+    let h = (y1 - y0).max(0.0);
+    w * h
+}
+
 fn find_scene_quad_with_rect_close(scene: &Scene, expected: WebRect, tol: f32) -> Option<Rect> {
     scene
         .ops()
@@ -1738,150 +1799,6 @@ fn find_semantics<'a>(
     })
 }
 
-#[test]
-fn web_vs_fret_layout_button_default_height() {
-    let web = read_web_golden("button-default");
-    let theme = web_theme(&web);
-    let web_button = web_find_by_tag_and_text(&theme.root, "button", "Button").expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        vec![fret_ui_shadcn::Button::new("Button").into_element(cx)]
-    });
-
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Button"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret button semantics node");
-
-    assert_close_px(
-        "button height",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_drawer_demo_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
-
-    let web = read_web_golden("drawer-demo");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Open Drawer").expect("web trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Drawer::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Open Drawer")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Open Drawer"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "drawer-demo trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_drawer_dialog_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
-
-    let web = read_web_golden("drawer-dialog");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Edit Profile").expect("web trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Dialog::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Edit Profile")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DialogContent::new(Vec::new()).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Edit Profile"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "drawer-dialog trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_dialog_close_button_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
-
-    let web = read_web_golden("dialog-close-button");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Share").expect("web trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Dialog::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Share")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DialogContent::new(Vec::new()).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Share"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "dialog-close-button trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
 fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect, tol: f32) {
     assert_close_px(&format!("{web_name} {label} x"), fret.origin.x, web.x, tol);
     assert_close_px(
@@ -1892,6 +1809,7 @@ fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect
     );
 }
 
+#[cfg(any())]
 fn assert_shell_container_centered_x_w_matches(web_name: &str, tokens: &[&str]) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -1961,6 +1879,7 @@ fn assert_shell_container_centered_x_w_matches(web_name: &str, tokens: &[&str]) 
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_login_01_shell_container_matches() {
     let web = read_web_golden("login-01");
@@ -2028,6 +1947,7 @@ fn web_vs_fret_layout_login_01_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_login_02_shell_container_matches() {
     let web = read_web_golden("login-02");
@@ -2147,6 +2067,7 @@ fn web_vs_fret_layout_login_02_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_login_03_shell_container_matches() {
     assert_shell_container_centered_x_w_matches(
@@ -2155,6 +2076,7 @@ fn web_vs_fret_layout_login_03_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_login_04_shell_container_matches() {
     assert_shell_container_centered_x_w_matches(
@@ -2163,16 +2085,19 @@ fn web_vs_fret_layout_login_04_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_login_05_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("login-05", &["w-full", "max-w-sm"]);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_signup_01_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("signup-01", &["w-full", "max-w-sm"]);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_signup_02_shell_container_matches() {
     let web = read_web_golden("signup-02");
@@ -2292,6 +2217,7 @@ fn web_vs_fret_layout_signup_02_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_signup_03_shell_container_matches() {
     assert_shell_container_centered_x_w_matches(
@@ -2300,6 +2226,7 @@ fn web_vs_fret_layout_signup_03_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_signup_04_shell_container_matches() {
     assert_shell_container_centered_x_w_matches(
@@ -2308,16 +2235,19 @@ fn web_vs_fret_layout_signup_04_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_signup_05_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("signup-05", &["w-full", "max-w-sm"]);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_otp_01_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("otp-01", &["w-full", "max-w-xs"]);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_otp_02_shell_container_matches() {
     let web = read_web_golden("otp-02");
@@ -2437,6 +2367,7 @@ fn web_vs_fret_layout_otp_02_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_otp_03_shell_container_matches() {
     assert_shell_container_centered_x_w_matches(
@@ -2445,16 +2376,19 @@ fn web_vs_fret_layout_otp_03_shell_container_matches() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_otp_04_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("otp-04", &["w-full", "max-w-sm", "md:max-w-3xl"]);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_otp_05_shell_container_matches() {
     assert_shell_container_centered_x_w_matches("otp-05", &["w-full", "max-w-sm"]);
 }
 
+#[cfg(any())]
 fn web_find_sidebar_menu_button_by_height<'a>(
     root: &'a WebNode,
     height_token: &str,
@@ -2466,6 +2400,7 @@ fn web_find_sidebar_menu_button_by_height<'a>(
     })
 }
 
+#[cfg(any())]
 fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -2526,76 +2461,91 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
     }
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_01_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-01");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_02_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-02");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_03_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-03");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_04_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-04");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_05_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-05");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_06_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-06");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_07_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-07");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_08_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-08");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_09_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-09");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_10_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-10");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_11_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-11");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_12_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-12");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_14_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-14");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_15_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-15");
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_sidebar_16_menu_button_heights_match_web() {
     assert_sidebar_menu_button_heights_match_web("sidebar-16");
@@ -2895,6 +2845,7 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_switch_demo_track_size() {
     let web = read_web_golden("switch-demo");
@@ -2938,6 +2889,7 @@ fn web_vs_fret_layout_switch_demo_track_size() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_switch_demo_thumb_geometry_matches_web() {
     fn overlap_area(a: Rect, b: Rect) -> f32 {
@@ -3056,6 +3008,7 @@ fn web_vs_fret_layout_switch_demo_thumb_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_radio_group_demo_row_geometry() {
     let web = read_web_golden("radio-group-demo");
@@ -3137,6 +3090,7 @@ fn web_vs_fret_layout_radio_group_demo_row_geometry() {
     assert_close_px("radio-group row gap", Px(fret_gap_y), web_gap_y, 1.0);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_radio_group_demo_indicator_geometry_matches_web() {
     fn overlap_area(a: Rect, b: Rect) -> f32 {
@@ -3398,6 +3352,7 @@ fn web_vs_fret_layout_slider_demo_geometry() {
     assert_close_px("thumb h", fret_thumb.size.height, web_thumb.rect.h, 1.0);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_demo_geometry() {
     let web = read_web_golden("textarea-demo");
@@ -3436,6 +3391,7 @@ fn web_vs_fret_layout_textarea_demo_geometry() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_disabled_geometry_matches_web() {
     let web = read_web_golden("textarea-disabled");
@@ -3487,6 +3443,7 @@ fn web_vs_fret_layout_textarea_disabled_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_with_button_geometry_matches_web() {
     let web = read_web_golden("textarea-with-button");
@@ -3587,6 +3544,7 @@ fn web_vs_fret_layout_textarea_with_button_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_with_label_geometry_matches_web() {
     let web = read_web_golden("textarea-with-label");
@@ -3657,6 +3615,7 @@ fn web_vs_fret_layout_textarea_with_label_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_with_text_geometry_matches_web() {
     let web = read_web_golden("textarea-with-text");
@@ -3748,6 +3707,7 @@ fn web_vs_fret_layout_textarea_with_text_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_empty_demo_geometry_matches_web() {
     let web = read_web_golden("empty-demo");
@@ -3873,6 +3833,7 @@ fn web_vs_fret_layout_empty_demo_geometry_matches_web() {
     assert_rect_close_px("empty-demo header", header.bounds, web_header.rect, 2.0);
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_empty_background_geometry_matches_web() {
     let web = read_web_golden("empty-background");
@@ -3947,6 +3908,7 @@ fn web_vs_fret_layout_empty_background_geometry_matches_web() {
     );
 }
 
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_empty_outline_geometry_matches_web() {
     let web = read_web_golden("empty-outline");
@@ -10803,168 +10765,6 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
         "collapsible-demo trigger h",
         trigger.bounds.size.height,
         web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_date_picker_demo_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-demo");
-    let theme = web_theme(&web);
-    let web_button =
-        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::Month;
-
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2026, Month::January));
-        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-
-        vec![
-            fret_ui_shadcn::DatePicker::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
-
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret date-picker trigger button");
-
-    assert_close_px(
-        "date-picker-demo trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-demo trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_date_picker_with_presets_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-with-presets");
-    let theme = web_theme(&web);
-    let web_button =
-        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::Month;
-
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2026, Month::January));
-        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-
-        vec![
-            fret_ui_shadcn::DatePickerWithPresets::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
-
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret date-picker trigger button");
-
-    assert_close_px(
-        "date-picker-with-presets trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-with-presets trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_date_picker_with_range_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-with-range");
-    let theme = web_theme(&web);
-    let web_button = find_first(&theme.root, &|n| {
-        n.tag == "button" && contains_id(n, "date")
-    })
-    .expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::{Date, Month};
-
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2022, Month::January));
-        let selected: Model<fret_ui_headless::calendar::DateRangeSelection> = cx
-            .app
-            .models_mut()
-            .insert(fret_ui_headless::calendar::DateRangeSelection {
-                from: Some(Date::from_calendar_date(2022, Month::January, 20).expect("from date")),
-                to: Some(Date::from_calendar_date(2022, Month::February, 9).expect("to date")),
-            });
-
-        vec![
-            fret_ui_shadcn::DateRangePicker::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
-
-    let button = find_semantics(
-        &snap,
-        SemanticsRole::Button,
-        Some("Jan 20, 2022 - Feb 09, 2022"),
-    )
-    .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-    .expect("fret date-range trigger button");
-
-    assert_close_px(
-        "date-picker-with-range trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-with-range trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
         1.0,
     );
 }

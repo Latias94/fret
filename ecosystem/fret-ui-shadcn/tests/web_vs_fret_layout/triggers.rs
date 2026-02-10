@@ -1,5 +1,37 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutTriggerHeightRecipe {
+    PlainButton,
+    DrawerTrigger,
+    DialogTrigger,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutTriggerHeightCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutTriggerHeightRecipe,
+    label: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutDatePickerTriggerRecipe {
+    DatePicker,
+    DatePickerWithPresets,
+    DateRangePicker,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutDatePickerTriggerCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutDatePickerTriggerRecipe,
+    label: String,
+}
+
 #[test]
 fn web_vs_fret_layout_trigger_heights_match_web_fixtures() {
     let raw = include_str!(concat!(

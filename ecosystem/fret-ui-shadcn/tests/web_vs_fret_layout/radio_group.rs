@@ -1,5 +1,19 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutRadioGroupRecipe {
+    RowGeometry,
+    IndicatorOffset,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutRadioGroupCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutRadioGroupRecipe,
+}
+
 #[test]
 fn web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
