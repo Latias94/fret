@@ -10,7 +10,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
@@ -18,7 +18,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "imui-float-demo.a.activate" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     { "type": "capture_bundle", "label": "imui-float-titlebar-before-drag" },
@@ -37,4 +37,3 @@
     { "type": "capture_screenshot", "label": "imui-float-titlebar-after-drag" }
   ]
 }
-

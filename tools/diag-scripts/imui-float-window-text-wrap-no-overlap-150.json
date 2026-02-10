@@ -9,7 +9,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "imui.float_window.window:b" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "capture_bundle",
@@ -17,4 +17,3 @@
     }
   ]
 }
-

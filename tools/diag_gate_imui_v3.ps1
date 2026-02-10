@@ -22,12 +22,19 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 Push-Location $workspaceRoot
 try {
+    # Avoid cross-run contamination: `diag run` uses `--dir` as a stateful rendezvous with the
+    # launched demo process. Reusing the same directory across runs can cause scripts to talk to
+    # a different (previous) demo instance or to pick up stale bundles.
+    $runId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $runOutDir = Join-Path $OutDir $runId
+
     # Build the demo once and launch the produced exe for diag runs. Avoid nested `cargo run` under
     # `--launch`, which can exceed the script timeout on cold builds.
-    $demoBuild = @("cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_floating_windows_demo")
-    if ($Release) { $demoBuild += "--release" }
-
-    & $demoBuild
+    if ($Release) {
+        & cargo build -j 1 -p fret-demo --bin imui_floating_windows_demo --release
+    } else {
+        & cargo build -j 1 -p fret-demo --bin imui_floating_windows_demo
+    }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     $demoExe = if ($Release) { "target/release/imui_floating_windows_demo.exe" } else { "target/debug/imui_floating_windows_demo.exe" }
@@ -75,9 +82,11 @@ try {
     foreach ($script in $scripts) {
         $scriptPath = $script.Path
         $extraArgs = $script.ExtraArgs
+        $scriptName = [IO.Path]::GetFileNameWithoutExtension($scriptPath)
+        $scriptOutDir = Join-Path $runOutDir $scriptName
         & cargo run -j 1 -p fretboard -- `
             diag run $scriptPath `
-            --dir $OutDir `
+            --dir $scriptOutDir `
             --timeout-ms $TimeoutMs `
             --poll-ms $PollMs `
             @extraArgs `

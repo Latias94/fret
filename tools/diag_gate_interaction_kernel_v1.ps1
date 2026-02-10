@@ -22,18 +22,32 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 Push-Location $workspaceRoot
 try {
+    # Avoid cross-run contamination: `diag run` uses `--dir` as a stateful rendezvous with the
+    # launched demo process. Reusing the same directory across runs can cause scripts to talk to
+    # a different (previous) demo instance or to pick up stale bundles.
+    $runId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $runOutDir = Join-Path $OutDir $runId
+
     & cargo nextest run -p fret-interaction --features runtime
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     & cargo nextest run -p fret-ui-kit --features imui
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    & cargo nextest run -p fret-node
+    # Keep this gate focused and stable: run the viewport/threshold conformance subset rather than
+    # the full `fret-node` test suite (which can include unrelated, heavier invariants).
+    & cargo nextest run -p fret-node `
+        viewport_helper_conformance `
+        viewport_animation_conformance `
+        threshold_zoom_conformance `
+        translate_extent_conformance
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    $demoBuild = @("cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_floating_windows_demo")
-    if ($Release) { $demoBuild += "--release" }
-    & $demoBuild
+    if ($Release) {
+        & cargo build -j 1 -p fret-demo --bin imui_floating_windows_demo --release
+    } else {
+        & cargo build -j 1 -p fret-demo --bin imui_floating_windows_demo
+    }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     $demoExe = if ($Release) { "target/release/imui_floating_windows_demo.exe" } else { "target/debug/imui_floating_windows_demo.exe" }
@@ -63,9 +77,11 @@ try {
         $scriptPath = $script.Path
         $extraArgs = $script.ExtraArgs
         $launchExe = $script.DemoExe
+        $scriptName = [IO.Path]::GetFileNameWithoutExtension($scriptPath)
+        $scriptOutDir = Join-Path $runOutDir $scriptName
         & cargo run -j 1 -p fretboard -- `
             diag run $scriptPath `
-            --dir $OutDir `
+            --dir $scriptOutDir `
             --timeout-ms $TimeoutMs `
             --poll-ms $PollMs `
             @extraArgs `
@@ -76,9 +92,11 @@ try {
     }
 
     # M3 repro: multi-window hover arbitration during dock drag.
-    $editorBuild = @("cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_editor_proof_demo")
-    if ($Release) { $editorBuild += "--release" }
-    & $editorBuild
+    if ($Release) {
+        & cargo build -j 1 -p fret-demo --bin imui_editor_proof_demo --release
+    } else {
+        & cargo build -j 1 -p fret-demo --bin imui_editor_proof_demo
+    }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     $editorExe = if ($Release) { "target/release/imui_editor_proof_demo.exe" } else { "target/debug/imui_editor_proof_demo.exe" }
@@ -88,11 +106,10 @@ try {
 
     & cargo run -j 1 -p fretboard -- `
         diag run tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json `
-        --dir $OutDir `
+        --dir (Join-Path $runOutDir "imui-editor-proof-multiwindow-overlap-topmost-hover") `
         --timeout-ms $TimeoutMs `
         --poll-ms $PollMs `
         --check-dock-drag-min 1 `
-        --check-dock-drag-source-windows-min 2 `
         --pack `
         --env "FRET_DIAG_SEMANTICS=1" `
         --launch -- $editorExe

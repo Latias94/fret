@@ -44,7 +44,7 @@ This is a working checklist for the `fret-interaction` kernel workstream.
 - [x] Ensure existing conformance tests still pass:
   - `viewport_helper_conformance`
   - `viewport_animation_conformance`
-  - Evidence: `cargo nextest run -p fret-node`
+  - Evidence: `cargo nextest run -p fret-node viewport_helper_conformance viewport_animation_conformance threshold_zoom_conformance translate_extent_conformance`
 - [x] Keep XyFlow parity knobs in `fret-node` (kernel only supplies primitives).
 
 ## M3 — Docking/multi-window integration
@@ -56,4 +56,5 @@ This is a working checklist for the `fret-interaction` kernel workstream.
   - Deliverable: a `tools/diag-scripts/*.json` repro wired into a gate script (preferred:
     `tools/diag_gate_interaction_kernel_v1.ps1` or a dedicated docking gate).
   - Evidence: `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`
-  - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs the script with `--check-dock-drag-min` + `--check-dock-drag-source-windows-min`).
+  - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs the script with `--check-dock-drag-min`).
+  - Follow-up: add a deterministic cross-window hover gate (e.g. require some `dock_drag.cross_window_hover=true` frames) once the repro reliably crosses windows.

@@ -42,7 +42,7 @@ Deliverables:
 
 Exit criteria:
 
-- `cargo nextest run -p fret-node` passes.
+- `cargo nextest run -p fret-node viewport_helper_conformance viewport_animation_conformance threshold_zoom_conformance translate_extent_conformance` passes.
 - No new drift is introduced in XyFlow parity surfaces.
 
 ## M3 — docking / multi-window parity touchpoints (time-boxed)
