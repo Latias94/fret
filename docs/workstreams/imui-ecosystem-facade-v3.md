@@ -173,6 +173,9 @@ M0 contract notes (normative for v3 work):
     - a TODO tracker update with evidence anchors (tests/diag/docs),
     - explicit migration notes when call-site expectations change.
 
+For an explicit "not mirrored" list of `ImGuiWindowFlags_*` (non-goals for the in-window floating surface),
+see: `docs/workstreams/imui-imgui-parity-audit-v1.md` (section `1.1`).
+
 ## 0.1 Recently fixed regressions (carry-forward notes)
 
 - Windows fractional DPI (150%, `scale_factor=1.5`) floating window text wrapping:

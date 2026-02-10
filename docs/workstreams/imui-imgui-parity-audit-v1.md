@@ -72,8 +72,25 @@ Legend:
 - **Other window flags and platform viewports**: **Intentional divergence / not mirrored**
   - Fret currently mirrors only a *small subset* of `ImGuiWindowFlags_*` via `FloatingWindowOptions`
     (`movable`, `resizable`, `collapsible`, `closable`, `activate_on_click`, `focus_on_click`, plus input policy flags).
-  - ImGui window-level flags that affect decorations/appearance/scrolling (e.g. "no title bar", "no scrollbar",
-    "no background") are not modeled as immediate-mode flags today; Fret prefers theme + declarative chrome policy.
+  - ImGui window-level flags that affect decorations/appearance/scrolling are not modeled as immediate-mode flags
+    today; Fret prefers theme + declarative chrome policy.
+  - Explicit non-goals / not mirrored (v3; in-window floating surface):
+    - Decoration/chrome: `ImGuiWindowFlags_NoTitleBar`, `ImGuiWindowFlags_MenuBar`,
+      `ImGuiWindowFlags_NoBackground`, `ImGuiWindowFlags_UnsavedDocument`.
+    - Scrollbars/scrolly policy: `ImGuiWindowFlags_NoScrollbar`, `ImGuiWindowFlags_NoScrollWithMouse`,
+      `ImGuiWindowFlags_HorizontalScrollbar`, `ImGuiWindowFlags_AlwaysVerticalScrollbar`,
+      `ImGuiWindowFlags_AlwaysHorizontalScrollbar`.
+      - Rationale: scrolling is modeled explicitly by scroll containers inside the window content, not by window flags.
+    - Window persistence: `ImGuiWindowFlags_NoSavedSettings`.
+      - Rationale: ImGui's `.ini` persistence is not a portable contract for Fret; persistence is app-owned.
+    - Docking admission: `ImGuiWindowFlags_NoDocking`.
+      - Rationale: docking is explicitly a separate ecosystem layer; docking/viewports policy is tracked elsewhere.
+    - Focus-on-appearing: `ImGuiWindowFlags_NoFocusOnAppearing` is not mirrored by `FloatingWindowOptions` today.
+      - Rationale: focus-on-appear is overlay/runtime policy; if we adopt it later it should be explicit and gated.
+    - Nav input vs nav focus split: `ImGuiWindowFlags_NoNavInputs` / `ImGuiWindowFlags_NoNavFocus` are not mirrored.
+      - Closest intent today: `no_inputs=true` (click-through + skipped by focus traversal). This does not preserve the
+        finer ImGui split ("focusable but no nav inputs").
+    - Internal-only flags (not applicable): `DockNodeHost`, `ChildWindow`, `Tooltip`, `Popup`, `Modal`, `ChildMenu`.
   - ImGui multi-viewport / platform window promotion is out of scope for the in-window `imui` floating surface:
     it is tracked under docking + runner workstreams (platform-owned).
 

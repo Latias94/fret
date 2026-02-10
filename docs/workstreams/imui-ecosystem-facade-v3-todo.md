@@ -156,11 +156,13 @@ Exit criteria:
     `install_hover_query_hooks_for_pressable`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`no_shared_delay_disables_window_scoped_hover_delay_sharing`).
 
-- [ ] IMUIECO3-float-024 Audit the remaining `ImGuiWindowFlags_*` surface and record explicit non-goals for v3.
+- [x] IMUIECO3-float-024 Audit the remaining `ImGuiWindowFlags_*` surface and record explicit non-goals for v3.
   - Goal: keep the facade small, but make any divergences around decorations/scrolling/appearance explicit so ports
     can compensate without guessing.
   - Output: add a short "not mirrored" list (by flag family) to `docs/workstreams/imui-imgui-parity-audit-v1.md`
     and link it from the v3 note.
+  - Evidence: `docs/workstreams/imui-imgui-parity-audit-v1.md` (section `1.1`, explicit non-goals list).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (link to parity audit in mapping notes).
 - [ ] IMUIECO3-resp-024 Decide whether to implement ImGui-style "active item blocks hover" semantics.
   - Reference: `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`.
   - Rationale: this can affect editor hand-feel when dragging (window move/resize, docking drags, slider drags)
