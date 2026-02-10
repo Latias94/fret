@@ -88,6 +88,20 @@ impl KanbanColumn {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KanbanCardMode {
+    Board,
+    Overlay,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct KanbanCardCtx {
+    pub mode: KanbanCardMode,
+    pub dragging: bool,
+    pub active: bool,
+    pub over: bool,
+}
+
 #[derive(Debug, Clone)]
 struct KanbanPointerState {
     active: DndItemId,
@@ -341,6 +355,21 @@ impl Kanban {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with(cx, |cx, item, _ctx| {
+            ui::text(cx, item.name.clone())
+                .font_medium()
+                .w_full()
+                .min_w_0()
+                .truncate()
+                .into_element(cx)
+        })
+    }
+
+    pub fn into_element_with<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        render_card: impl Fn(&mut ElementContext<'_, H>, &KanbanItem, KanbanCardCtx) -> AnyElement,
+    ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -507,6 +536,8 @@ impl Kanban {
                     })
                 })();
 
+                let render_card = &render_card;
+
                 let mut cols: Vec<AnyElement> = Vec::with_capacity(columns.len());
                 for col in columns.iter().cloned() {
                     let dnd_for_render = dnd_svc.clone();
@@ -601,7 +632,7 @@ impl Kanban {
                         );
                         for (card_index, card) in column_cards.drain(..).enumerate() {
                             let card_id = card.id.clone();
-                            let card_name = card.name.clone();
+                            let card = card;
                             let card_dnd_id = kanban_card_dnd_id(card_id.as_ref());
 
                             let card_test_id = Arc::<str>::from(format!(
@@ -1013,14 +1044,16 @@ impl Kanban {
                                             }
                                         }
 
-                                        vec![
-                                            ui::text(cx, card_name)
-                                                .font_medium()
-                                                .w_full()
-                                                .min_w_0()
-                                                .truncate()
-                                                .into_element(cx),
-                                        ]
+                                        vec![render_card(
+                                            cx,
+                                            &card,
+                                            KanbanCardCtx {
+                                                mode: KanbanCardMode::Board,
+                                                dragging,
+                                                active: active_card,
+                                                over: over_card,
+                                            },
+                                        )]
                                     });
 
                                     let card = if active_card {
@@ -1150,7 +1183,6 @@ impl Kanban {
                             ..Default::default()
                         };
 
-                        let active_name = active_item.name.clone();
                         let overlay_test_id = Arc::<str>::from(format!(
                             "shadcn-extras.kanban.card-{}.overlay",
                             sanitize_test_id_suffix(active_item.id.as_ref())
@@ -1175,16 +1207,17 @@ impl Kanban {
                             let radius = card_props.corner_radii.top_left;
                             card_props.shadow = Some(decl_style::shadow_md(&theme, radius));
 
-                            let active_name = active_name.clone();
                             let card = cx.container(card_props, |cx| {
-                                vec![
-                                    ui::text(cx, active_name)
-                                        .font_medium()
-                                        .w_full()
-                                        .min_w_0()
-                                        .truncate()
-                                        .into_element(cx),
-                                ]
+                                vec![render_card(
+                                    cx,
+                                    active_item,
+                                    KanbanCardCtx {
+                                        mode: KanbanCardMode::Overlay,
+                                        dragging,
+                                        active: true,
+                                        over: false,
+                                    },
+                                )]
                             });
 
                             vec![cx.opacity(overlay_presence.opacity, |cx| {
