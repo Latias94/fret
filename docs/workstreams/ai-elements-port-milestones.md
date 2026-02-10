@@ -126,6 +126,7 @@ Notes:
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
 - `StackTrace` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-stack-trace-large-scroll.json`).
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
+- `TestResults` large-list demo + scroll/activate seam gate exists (`ui-gallery-ai-test-results-large-scroll.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).
 Remaining work (current focus):
 

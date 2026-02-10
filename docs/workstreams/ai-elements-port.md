@@ -116,6 +116,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
   - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
+  - `AI test results large (demo)` (`ai_test_results_large_demo`): long test list + scroll + activate seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 

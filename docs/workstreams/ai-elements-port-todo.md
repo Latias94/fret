@@ -171,6 +171,10 @@ Existing gates (UI Gallery `ai_test_results_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
 
+Existing gates (UI Gallery `ai_test_results_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
+
 Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
@@ -207,14 +211,17 @@ Prioritize thin adapters over new engines:
     - [~] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
       - Done: commit file rows + file paths have `test_id` and a large-list demo uses them.
       - Done: per-frame `test_id` for stack trace rows + file path buttons (used by the large-list gate).
+      - Done: test rows can be tagged with `test_id` and a large-list demo uses them.
     - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
       - commit: many files; stack trace: many frames; test results: many suites.
       - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
       - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`).
+      - Done: test results many-tests scroll/activate gate (`tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`).
     - [~] Confirm extension hooks exist for app-owned effects:
       - commit: file row click / open file
       - stack trace: file path click / open file
       - test results: test click / open test output
+      - Done: `Test::on_activate(OnTestActivate)` exists and is used by the large demo gate.
     - [ ] Re-audit upstream TS (`commit.tsx`, `stack-trace.tsx`, `test-results.tsx`) and document known deltas in `docs/workstreams/ai-elements-port.md`.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
