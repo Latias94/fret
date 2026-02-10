@@ -964,6 +964,24 @@ use fret_ui_ai::{TestResults, TestSuite, Test, TestError, TestStatusKind, TestRe
 ```
 "#;
 
+pub(crate) const DOC_AI_TEST_RESULTS_LARGE_DEMO: &str = r#"
+## AI test results large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `TestResults` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- long test lists remain scrollable and stable,
+- per-row `test_id` selectors are stable for automation,
+- row activate/click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{OnTestActivate, Test, TestResults, TestSuite, TestStatusKind};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

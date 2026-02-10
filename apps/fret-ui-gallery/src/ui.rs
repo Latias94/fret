@@ -726,6 +726,7 @@ fn page_preview(
         PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
         PAGE_AI_STACK_TRACE_LARGE_DEMO => preview_ai_stack_trace_large_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_LARGE_DEMO => preview_ai_test_results_large_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20053,6 +20054,140 @@ fn preview_ai_test_results_demo(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("TestResults (AI Elements)"), results],
+    )]
+}
+
+fn preview_ai_test_results_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::{Arc, Mutex};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Clone, Default)]
+    struct ActivatedRef(Arc<Mutex<Option<Arc<str>>>>);
+
+    impl ActivatedRef {
+        fn lock(&self) -> std::sync::MutexGuard<'_, Option<Arc<str>>> {
+            self.0.lock().unwrap_or_else(|e| e.into_inner())
+        }
+    }
+
+    let activated = cx.with_state(ActivatedRef::default, |st| st.clone());
+
+    let on_activate: ui_ai::OnTestActivate = Arc::new({
+        let activated = activated.clone();
+        move |host, action_cx, name| {
+            *activated.lock() = Some(name);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let total = 480;
+    let passed = 455;
+    let failed = 14;
+    let skipped = total - passed - failed;
+
+    let summary = ui_ai::TestResultsSummaryData::new(passed, failed, skipped, total)
+        .duration_ms((total as u64) * 3);
+
+    let header = ui_ai::TestResultsHeader::new([
+        ui_ai::TestResultsSummary::new(summary.clone()).into_element(cx),
+        ui_ai::TestResultsDuration::new(summary.clone()).into_element(cx),
+    ])
+    .test_id("ui-ai-test-results-large-header")
+    .into_element(cx);
+
+    let progress = ui_ai::TestResultsProgress::new(summary.clone())
+        .test_id("ui-ai-test-results-large-progress")
+        .into_element(cx);
+
+    let mut tests: Vec<AnyElement> = Vec::new();
+    for i in 0..400u32 {
+        let status = match i % 9 {
+            0 => ui_ai::TestStatusKind::Failed,
+            1 => ui_ai::TestStatusKind::Skipped,
+            2 => ui_ai::TestStatusKind::Running,
+            _ => ui_ai::TestStatusKind::Passed,
+        };
+
+        let name = Arc::<str>::from(format!("case_{i:04}: parses inputs"));
+        let row_test_id = Arc::<str>::from(format!("ui-ai-test-results-large-test-{i:04}"));
+
+        let on_activate = on_activate.clone();
+        tests.push(
+            cx.keyed(format!("ai_test_results_large_test_{i:04}"), move |cx| {
+                ui_ai::Test::new(name.clone(), status)
+                    .duration_ms((i % 17) as u32)
+                    .on_activate(on_activate.clone())
+                    .test_id(row_test_id.clone())
+                    .into_element(cx)
+            }),
+        );
+    }
+
+    let big_suite = ui_ai::TestSuite::new(
+        ui_ai::TestSuiteName::new("ai::stress_suite", ui_ai::TestStatusKind::Failed)
+            .stats(360, 14, 26)
+            .test_id("ui-ai-test-results-large-suite-0-trigger"),
+        ui_ai::TestSuiteContent::new(tests).test_id("ui-ai-test-results-large-suite-0-content"),
+    )
+    .default_open(true)
+    .into_element(cx);
+
+    let small_suite = ui_ai::TestSuite::new(
+        ui_ai::TestSuiteName::new("ai::small_suite", ui_ai::TestStatusKind::Passed)
+            .stats(12, 0, 0)
+            .test_id("ui-ai-test-results-large-suite-1-trigger"),
+        ui_ai::TestSuiteContent::new([
+            ui_ai::Test::new("smoke test", ui_ai::TestStatusKind::Passed)
+                .duration_ms(1)
+                .test_id("ui-ai-test-results-large-test-smoke-0")
+                .into_element(cx),
+            ui_ai::Test::new("renders header", ui_ai::TestStatusKind::Passed)
+                .duration_ms(1)
+                .test_id("ui-ai-test-results-large-test-smoke-1")
+                .into_element(cx),
+        ])
+        .test_id("ui-ai-test-results-large-suite-1-content"),
+    )
+    .default_open(false)
+    .into_element(cx);
+
+    let content = ui_ai::TestResultsContent::new([progress, big_suite, small_suite])
+        .test_id("ui-ai-test-results-large-content")
+        .into_element(cx);
+
+    let results = ui_ai::TestResults::new()
+        .children([header, content])
+        .test_id_root("ui-ai-test-results-large-root")
+        .into_element(cx);
+
+    let activated_marker = activated.lock().clone().map(|name| {
+        cx.text(format!("Activated: {name}")).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id("ui-ai-test-results-large-activated-marker"),
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            let mut children: Vec<AnyElement> =
+                vec![cx.text("TestResults Large (AI Elements)"), results];
+            if let Some(marker) = activated_marker.clone() {
+                children.push(marker);
+            }
+            children
+        },
     )]
 }
 

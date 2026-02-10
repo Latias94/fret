@@ -130,6 +130,7 @@ pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
 pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_demo";
 pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
+pub(crate) const PAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = "ai_test_results_large_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -280,6 +281,8 @@ pub(crate) const CMD_NAV_AI_STACK_TRACE_LARGE_DEMO: &str =
 pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
     "ui_gallery.nav.select.ai_schema_display_demo";
 pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str = "ui_gallery.nav.select.ai_test_results_demo";
+pub(crate) const CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO: &str =
+    "ui_gallery.nav.select.ai_test_results_large_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -1032,6 +1035,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "test", "results", "suite", "demo"],
                 docs::DOC_AI_TEST_RESULTS_DEMO,
                 docs::USAGE_AI_TEST_RESULTS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TEST_RESULTS_LARGE_DEMO,
+                "AI Test Results Large (Demo)",
+                "TestResults Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO,
+                &["ai", "test", "results", "large", "scroll", "demo"],
+                docs::DOC_AI_TEST_RESULTS_LARGE_DEMO,
+                docs::USAGE_AI_TEST_RESULTS_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SCHEMA_DISPLAY_DEMO,
