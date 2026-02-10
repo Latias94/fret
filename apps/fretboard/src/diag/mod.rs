@@ -1625,7 +1625,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
             }
-            let result = result?;
+            let result = match result {
+                Ok(v) => v,
+                Err(e) => {
+                    let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    return Err(e);
+                }
+            };
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
@@ -1677,75 +1683,83 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_keep_alive_reuse_min.is_some()
                     || check_retained_vlist_keep_alive_budget.is_some()
                 {
-                    let bundle_path = wait_for_bundle_json_from_script_result(
-                        &resolved_out_dir,
-                        &result,
-                        timeout_ms,
-                        poll_ms,
-                    )
-                    .ok_or_else(|| {
-                        "script passed but no bundle.json was found (required for post-run checks)"
-                            .to_string()
-                    })?;
+                    let post_run_result: Result<(), String> = (|| {
+                        let bundle_path = wait_for_bundle_json_from_script_result(
+                            &resolved_out_dir,
+                            &result,
+                            timeout_ms,
+                            poll_ms,
+                        )
+                        .ok_or_else(|| {
+                            "script passed but no bundle.json was found (required for post-run checks)"
+                                .to_string()
+                        })?;
 
-                    apply_post_run_checks(
-                        &bundle_path,
-                        &resolved_out_dir,
-                        check_idle_no_paint_min,
-                        check_stale_paint_test_id.as_deref(),
-                        check_stale_paint_eps,
-                        check_stale_scene_test_id.as_deref(),
-                        check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
-                        check_ui_gallery_code_editor_torture_marker_present,
-                        check_ui_gallery_code_editor_torture_undo_redo,
-                        check_ui_gallery_code_editor_word_boundary,
-                        check_ui_gallery_code_editor_a11y_selection,
-                        check_ui_gallery_code_editor_a11y_composition,
-                        check_ui_gallery_code_editor_a11y_selection_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-                        check_ui_gallery_code_editor_a11y_composition_drag,
-                        check_semantics_changed_repainted,
-                        dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
-                        check_wheel_scroll_hit_changes_test_id.as_deref(),
-                        check_scroll_offset_stable_test_id.as_deref(),
-                        check_scrollbar_thumb_valid_selector.as_deref(),
-                        check_prepaint_actions_min,
-                        check_chart_sampling_window_shifts_min,
-                        check_node_graph_cull_window_shifts_min,
-                        check_node_graph_cull_window_shifts_max,
-                        check_vlist_visible_range_refreshes_min,
-                        check_vlist_visible_range_refreshes_max,
-                        check_vlist_window_shifts_explainable,
-                        check_vlist_window_shifts_have_prepaint_actions,
-                        check_vlist_window_shifts_non_retained_max,
-                        check_vlist_window_shifts_prefetch_max,
-                        check_vlist_window_shifts_escape_max,
-                        check_vlist_policy_key_stable,
-                        check_windowed_rows_offset_changes_min,
-                        check_windowed_rows_offset_changes_eps,
-                        check_layout_fast_path_min,
-                        check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
-                        check_gc_sweep_liveness,
-                        &check_notify_hotspot_file_max,
-                        check_view_cache_reuse_stable_min,
-                        check_view_cache_reuse_min,
-                        check_overlay_synthesis_min,
-                        check_viewport_input_min,
-                        check_dock_drag_min,
-                        check_dock_drag_cross_window_max,
-                        check_dock_drag_source_windows_min,
-                        check_dock_drop_resolve_min,
-                        check_viewport_capture_min,
-                        check_retained_vlist_reconcile_no_notify_min,
-                        check_retained_vlist_attach_detach_max,
-                        check_retained_vlist_keep_alive_reuse_min,
-                        check_retained_vlist_keep_alive_budget,
-                        warmup_frames,
-                    )?;
+                        apply_post_run_checks(
+                            &bundle_path,
+                            &resolved_out_dir,
+                            check_idle_no_paint_min,
+                            check_stale_paint_test_id.as_deref(),
+                            check_stale_paint_eps,
+                            check_stale_scene_test_id.as_deref(),
+                            check_stale_scene_eps,
+                            check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
+                            check_ui_gallery_code_editor_a11y_composition,
+                            check_ui_gallery_code_editor_a11y_selection_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                            check_ui_gallery_code_editor_a11y_composition_drag,
+                            check_semantics_changed_repainted,
+                            dump_semantics_changed_repainted_json,
+                            check_wheel_scroll_test_id.as_deref(),
+                            check_wheel_scroll_hit_changes_test_id.as_deref(),
+                            check_scroll_offset_stable_test_id.as_deref(),
+                            check_scrollbar_thumb_valid_selector.as_deref(),
+                            check_prepaint_actions_min,
+                            check_chart_sampling_window_shifts_min,
+                            check_node_graph_cull_window_shifts_min,
+                            check_node_graph_cull_window_shifts_max,
+                            check_vlist_visible_range_refreshes_min,
+                            check_vlist_visible_range_refreshes_max,
+                            check_vlist_window_shifts_explainable,
+                            check_vlist_window_shifts_have_prepaint_actions,
+                            check_vlist_window_shifts_non_retained_max,
+                            check_vlist_window_shifts_prefetch_max,
+                            check_vlist_window_shifts_escape_max,
+                            check_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
+                            check_layout_fast_path_min,
+                            check_drag_cache_root_paint_only_test_id.as_deref(),
+                            check_hover_layout_max,
+                            check_gc_sweep_liveness,
+                            &check_notify_hotspot_file_max,
+                            check_view_cache_reuse_stable_min,
+                            check_view_cache_reuse_min,
+                            check_overlay_synthesis_min,
+                            check_viewport_input_min,
+                            check_dock_drag_min,
+                            check_dock_drag_cross_window_max,
+                            check_dock_drag_source_windows_min,
+                            check_dock_drop_resolve_min,
+                            check_viewport_capture_min,
+                            check_retained_vlist_reconcile_no_notify_min,
+                            check_retained_vlist_attach_detach_max,
+                            check_retained_vlist_keep_alive_reuse_min,
+                            check_retained_vlist_keep_alive_budget,
+                            warmup_frames,
+                        )?;
+                        Ok(())
+                    })();
+                    if let Err(err) = post_run_result {
+                        eprintln!("POST-RUN check failed for {}: {err}", src.display());
+                        let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        std::process::exit(1);
+                    }
                 }
             }
 
@@ -3221,233 +3235,249 @@ See: `docs/tracy.md`.\n";
                     || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
-                    let bundle_path = wait_for_bundle_json_from_script_result(
-                        &resolved_out_dir,
-                        &result,
-                        timeout_ms,
-                        poll_ms,
-                    )
-                    .ok_or_else(|| {
-                        format!(
-                            "script passed but no bundle.json was found (required for post-run checks): {}",
-                            src.display()
+                    let post_run_result: Result<(), String> = (|| {
+                        let bundle_path = wait_for_bundle_json_from_script_result(
+                            &resolved_out_dir,
+                            &result,
+                            timeout_ms,
+                            poll_ms,
                         )
-                    })?;
+                        .ok_or_else(|| {
+                            format!(
+                                "script passed but no bundle.json was found (required for post-run checks): {}",
+                                src.display()
+                            )
+                        })?;
 
-                    let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
-                        if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
+                        let (
+                            suite_viewport_input_min,
+                            suite_dock_drag_min,
+                            suite_viewport_capture_min,
+                        ) = if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
                             docking_arbitration_script_default_gates(&src)
                         } else {
                             (None, None, None)
                         };
-                    let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite
-                        || is_ui_gallery_vlist_window_boundary_retained_suite;
-                    let vlist_window_boundary_retained_suite =
-                        is_ui_gallery_vlist_window_boundary_retained_suite;
-                    let components_gallery_suite = is_components_gallery_file_tree_suite
-                        || is_components_gallery_table_suite
-                        || is_components_gallery_table_keep_alive_suite;
-                    let suite_components_gallery_stale_paint_test_id =
-                        is_components_gallery_file_tree_suite
-                            .then_some("components-gallery-file-tree-root")
-                            .or_else(|| {
-                                (is_components_gallery_table_suite
-                                    || is_components_gallery_table_keep_alive_suite)
-                                    .then_some("components-gallery-table-root")
-                            })
+                        let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite
+                            || is_ui_gallery_vlist_window_boundary_retained_suite;
+                        let vlist_window_boundary_retained_suite =
+                            is_ui_gallery_vlist_window_boundary_retained_suite;
+                        let components_gallery_suite = is_components_gallery_file_tree_suite
+                            || is_components_gallery_table_suite
+                            || is_components_gallery_table_keep_alive_suite;
+                        let suite_components_gallery_stale_paint_test_id =
+                            is_components_gallery_file_tree_suite
+                                .then_some("components-gallery-file-tree-root")
+                                .or_else(|| {
+                                    (is_components_gallery_table_suite
+                                        || is_components_gallery_table_keep_alive_suite)
+                                        .then_some("components-gallery-table-root")
+                                })
+                                .filter(|_| check_stale_paint_test_id.is_none());
+                        let suite_components_gallery_wheel_scroll_hit_changes_test_id =
+                            is_components_gallery_file_tree_suite
+                                .then_some("components-gallery-file-tree-root")
+                                .or_else(|| {
+                                    (is_components_gallery_table_suite
+                                        || is_components_gallery_table_keep_alive_suite)
+                                        .then_some("components-gallery-table-root")
+                                })
+                                .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
+                        let suite_components_gallery_view_cache_reuse_min =
+                            components_gallery_suite
+                                .then_some(1u64)
+                                .filter(|_| check_view_cache_reuse_min.is_none());
+                        let suite_layout_fast_path_min = components_gallery_suite
+                            .then_some(1u64)
+                            .filter(|_| check_layout_fast_path_min.is_none());
+                        let suite_stale_paint_test_id = vlist_window_boundary_suite
+                            .then_some("ui-gallery-virtual-list-root")
                             .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_components_gallery_wheel_scroll_hit_changes_test_id =
-                        is_components_gallery_file_tree_suite
-                            .then_some("components-gallery-file-tree-root")
-                            .or_else(|| {
-                                (is_components_gallery_table_suite
-                                    || is_components_gallery_table_keep_alive_suite)
-                                    .then_some("components-gallery-table-root")
+                        let suite_view_cache_reuse_min = vlist_window_boundary_suite
+                            .then_some(1u64)
+                            .filter(|_| check_view_cache_reuse_min.is_none());
+                        let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
+                            .then_some(1u64)
+                            .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
+                        let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
+                            // Default budget:
+                            // - Non-retained path: keep this relatively tight so we catch churn
+                            //   regressions early while still allowing prefetch shifts.
+                            // - Retained-host path: allow a looser cap since reconcile can legitimately
+                            //   refresh more often (and we have additional retained-only gates).
+                            .then_some(if vlist_window_boundary_retained_suite {
+                                50u64
+                            } else {
+                                20u64
                             })
-                            .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
-                    let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
-                        .then_some(1u64)
-                        .filter(|_| check_view_cache_reuse_min.is_none());
-                    let suite_layout_fast_path_min = components_gallery_suite
-                        .then_some(1u64)
-                        .filter(|_| check_layout_fast_path_min.is_none());
-                    let suite_stale_paint_test_id = vlist_window_boundary_suite
-                        .then_some("ui-gallery-virtual-list-root")
-                        .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_view_cache_reuse_min = vlist_window_boundary_suite
-                        .then_some(1u64)
-                        .filter(|_| check_view_cache_reuse_min.is_none());
-                    let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
-                        .then_some(1u64)
-                        .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
-                    let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
-                        // Default budget:
-                        // - Non-retained path: keep this relatively tight so we catch churn
-                        //   regressions early while still allowing prefetch shifts.
-                        // - Retained-host path: allow a looser cap since reconcile can legitimately
-                        //   refresh more often (and we have additional retained-only gates).
-                        .then_some(if vlist_window_boundary_retained_suite {
-                            50u64
-                        } else {
-                            20u64
-                        })
-                        .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
-                    let suite_vlist_window_shifts_explainable =
-                        vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
-                    let suite_prepaint_actions_min = vlist_window_boundary_suite
-                        .then_some(1u64)
-                        .filter(|_| check_prepaint_actions_min.is_none());
-                    let suite_vlist_window_shifts_have_prepaint_actions =
-                        vlist_window_boundary_suite
-                            && !check_vlist_window_shifts_have_prepaint_actions;
-                    let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
-                        .then_some(if vlist_window_boundary_retained_suite {
-                            100u64
-                        } else {
-                            12u64
-                        })
-                        .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
-                    let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
-                        .then_some(if vlist_window_boundary_retained_suite {
-                            6u64
-                        } else {
-                            4u64
-                        })
-                        .filter(|_| check_vlist_window_shifts_escape_max.is_none());
-                    let script_requires_retained_vlist_reconcile_gate =
-                        ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
-                            || vlist_window_boundary_retained_suite;
-                    let suite_vlist_window_shifts_non_retained_max =
-                        script_requires_retained_vlist_reconcile_gate
-                            .then_some(0u64)
-                            .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-                    let suite_vlist_policy_key_stable = components_gallery_suite
-                        && script_requires_retained_vlist_reconcile_gate
-                        && !check_vlist_policy_key_stable;
-                    let script_requires_retained_vlist_keep_alive_reuse_gate =
-                        ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-                    let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
-                        && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
-                        .then_some(1u64)
-                        .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-                    let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
-                        && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
-                        .then_some(if vlist_window_boundary_retained_suite {
-                            64u64
-                        } else {
-                            256u64
-                        })
-                        .filter(|_| check_retained_vlist_attach_detach_max.is_none());
-                    let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
-                        && script_requires_retained_vlist_keep_alive_reuse_gate)
-                        || vlist_window_boundary_retained_suite)
-                        .then_some(if vlist_window_boundary_retained_suite {
-                            5u64
-                        } else {
-                            1u64
-                        })
-                        .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
-                    let suite_retained_vlist_keep_alive_budget = ((components_gallery_suite
-                        && script_requires_retained_vlist_keep_alive_reuse_gate)
-                        || vlist_window_boundary_retained_suite)
-                        .then_some((1u64, 0u64))
-                        .filter(|_| check_retained_vlist_keep_alive_budget.is_none());
-                    let suite_gc_sweep_liveness =
-                        builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
+                            .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
+                        let suite_vlist_window_shifts_explainable =
+                            vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
+                        let suite_prepaint_actions_min = vlist_window_boundary_suite
+                            .then_some(1u64)
+                            .filter(|_| check_prepaint_actions_min.is_none());
+                        let suite_vlist_window_shifts_have_prepaint_actions =
+                            vlist_window_boundary_suite
+                                && !check_vlist_window_shifts_have_prepaint_actions;
+                        let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
+                            .then_some(if vlist_window_boundary_retained_suite {
+                                100u64
+                            } else {
+                                12u64
+                            })
+                            .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
+                        let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
+                            .then_some(if vlist_window_boundary_retained_suite {
+                                6u64
+                            } else {
+                                4u64
+                            })
+                            .filter(|_| check_vlist_window_shifts_escape_max.is_none());
+                        let script_requires_retained_vlist_reconcile_gate =
+                            ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+                                || vlist_window_boundary_retained_suite;
+                        let suite_vlist_window_shifts_non_retained_max =
+                            script_requires_retained_vlist_reconcile_gate
+                                .then_some(0u64)
+                                .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                        let suite_vlist_policy_key_stable = components_gallery_suite
+                            && script_requires_retained_vlist_reconcile_gate
+                            && !check_vlist_policy_key_stable;
+                        let script_requires_retained_vlist_keep_alive_reuse_gate =
+                            ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
+                        let suite_retained_vlist_reconcile_no_notify_min =
+                            ((components_gallery_suite
+                                && script_requires_retained_vlist_reconcile_gate)
+                                || vlist_window_boundary_retained_suite)
+                                .then_some(1u64)
+                                .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
+                        let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
+                            && script_requires_retained_vlist_reconcile_gate)
+                            || vlist_window_boundary_retained_suite)
+                            .then_some(if vlist_window_boundary_retained_suite {
+                                64u64
+                            } else {
+                                256u64
+                            })
+                            .filter(|_| check_retained_vlist_attach_detach_max.is_none());
+                        let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
+                            && script_requires_retained_vlist_keep_alive_reuse_gate)
+                            || vlist_window_boundary_retained_suite)
+                            .then_some(if vlist_window_boundary_retained_suite {
+                                5u64
+                            } else {
+                                1u64
+                            })
+                            .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
+                        let suite_retained_vlist_keep_alive_budget = ((components_gallery_suite
+                            && script_requires_retained_vlist_keep_alive_reuse_gate)
+                            || vlist_window_boundary_retained_suite)
+                            .then_some((1u64, 0u64))
+                            .filter(|_| check_retained_vlist_keep_alive_budget.is_none());
+                        let suite_gc_sweep_liveness =
+                            builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
 
-                    let mut notify_hotspot_file_max_for_script =
-                        check_notify_hotspot_file_max.clone();
-                    if notify_hotspot_file_max_for_script.is_empty()
-                        && builtin_suite == Some(BuiltinSuite::UiGallery)
-                        && src
-                            .file_name()
-                            .and_then(|v| v.to_str())
-                            .is_some_and(|v| v == "ui-gallery-virtual-list-torture.json")
-                    {
-                        notify_hotspot_file_max_for_script.push((
-                            "crates/fret-ui/src/declarative/host_widget/event/pressable.rs"
-                                .to_string(),
-                            0,
-                        ));
+                        let mut notify_hotspot_file_max_for_script =
+                            check_notify_hotspot_file_max.clone();
+                        if notify_hotspot_file_max_for_script.is_empty()
+                            && builtin_suite == Some(BuiltinSuite::UiGallery)
+                            && src
+                                .file_name()
+                                .and_then(|v| v.to_str())
+                                .is_some_and(|v| v == "ui-gallery-virtual-list-torture.json")
+                        {
+                            notify_hotspot_file_max_for_script.push((
+                                "crates/fret-ui/src/declarative/host_widget/event/pressable.rs"
+                                    .to_string(),
+                                0,
+                            ));
+                        }
+
+                        apply_post_run_checks(
+                            &bundle_path,
+                            &resolved_out_dir,
+                            check_idle_no_paint_min,
+                            check_stale_paint_test_id
+                                .as_deref()
+                                .or(suite_stale_paint_test_id)
+                                .or(suite_components_gallery_stale_paint_test_id),
+                            check_stale_paint_eps,
+                            check_stale_scene_test_id.as_deref(),
+                            check_stale_scene_eps,
+                            check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
+                            check_ui_gallery_code_editor_a11y_composition,
+                            check_ui_gallery_code_editor_a11y_selection_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                            check_ui_gallery_code_editor_a11y_composition_drag,
+                            check_semantics_changed_repainted,
+                            dump_semantics_changed_repainted_json,
+                            check_wheel_scroll_test_id.as_deref(),
+                            check_wheel_scroll_hit_changes_test_id
+                                .as_deref()
+                                .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
+                            check_scroll_offset_stable_test_id.as_deref(),
+                            check_scrollbar_thumb_valid_selector.as_deref(),
+                            check_prepaint_actions_min.or(suite_prepaint_actions_min),
+                            check_chart_sampling_window_shifts_min,
+                            check_node_graph_cull_window_shifts_min,
+                            check_node_graph_cull_window_shifts_max,
+                            check_vlist_visible_range_refreshes_min
+                                .or(suite_vlist_visible_range_refreshes_min),
+                            check_vlist_visible_range_refreshes_max
+                                .or(suite_vlist_visible_range_refreshes_max),
+                            check_vlist_window_shifts_explainable
+                                || suite_vlist_window_shifts_explainable,
+                            check_vlist_window_shifts_have_prepaint_actions
+                                || suite_vlist_window_shifts_have_prepaint_actions,
+                            vlist_window_shifts_non_retained_max_for_script
+                                .or(suite_vlist_window_shifts_non_retained_max),
+                            check_vlist_window_shifts_prefetch_max
+                                .or(suite_vlist_window_shifts_prefetch_max),
+                            check_vlist_window_shifts_escape_max
+                                .or(suite_vlist_window_shifts_escape_max),
+                            check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
+                            check_layout_fast_path_min.or(suite_layout_fast_path_min),
+                            check_drag_cache_root_paint_only_test_id.as_deref(),
+                            check_hover_layout_max,
+                            check_gc_sweep_liveness || suite_gc_sweep_liveness,
+                            &notify_hotspot_file_max_for_script,
+                            check_view_cache_reuse_stable_min,
+                            check_view_cache_reuse_min
+                                .or(suite_view_cache_reuse_min)
+                                .or(suite_components_gallery_view_cache_reuse_min),
+                            check_overlay_synthesis_min,
+                            check_viewport_input_min.or(suite_viewport_input_min),
+                            check_dock_drag_min.or(suite_dock_drag_min),
+                            check_dock_drag_cross_window_max,
+                            check_dock_drag_source_windows_min,
+                            check_dock_drop_resolve_min,
+                            check_viewport_capture_min.or(suite_viewport_capture_min),
+                            retained_vlist_gate_for_script
+                                .or(suite_retained_vlist_reconcile_no_notify_min),
+                            retained_vlist_attach_detach_max_for_script
+                                .or(suite_retained_vlist_attach_detach_max),
+                            retained_vlist_keep_alive_reuse_min_for_script
+                                .or(suite_retained_vlist_keep_alive_reuse_min),
+                            retained_vlist_keep_alive_budget_for_script
+                                .or(suite_retained_vlist_keep_alive_budget),
+                            warmup_frames,
+                        )?;
+
+                        Ok(())
+                    })();
+
+                    if let Err(err) = post_run_result {
+                        eprintln!("POST-RUN check failed for {}: {err}", src.display());
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        std::process::exit(1);
                     }
-                    apply_post_run_checks(
-                        &bundle_path,
-                        &resolved_out_dir,
-                        check_idle_no_paint_min,
-                        check_stale_paint_test_id
-                            .as_deref()
-                            .or(suite_stale_paint_test_id)
-                            .or(suite_components_gallery_stale_paint_test_id),
-                        check_stale_paint_eps,
-                        check_stale_scene_test_id.as_deref(),
-                        check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
-                        check_ui_gallery_code_editor_torture_marker_present,
-                        check_ui_gallery_code_editor_torture_undo_redo,
-                        check_ui_gallery_code_editor_word_boundary,
-                        check_ui_gallery_code_editor_a11y_selection,
-                        check_ui_gallery_code_editor_a11y_composition,
-                        check_ui_gallery_code_editor_a11y_selection_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-                        check_ui_gallery_code_editor_a11y_composition_drag,
-                        check_semantics_changed_repainted,
-                        dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
-                        check_wheel_scroll_hit_changes_test_id
-                            .as_deref()
-                            .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
-                        check_scroll_offset_stable_test_id.as_deref(),
-                        check_scrollbar_thumb_valid_selector.as_deref(),
-                        check_prepaint_actions_min.or(suite_prepaint_actions_min),
-                        check_chart_sampling_window_shifts_min,
-                        check_node_graph_cull_window_shifts_min,
-                        check_node_graph_cull_window_shifts_max,
-                        check_vlist_visible_range_refreshes_min
-                            .or(suite_vlist_visible_range_refreshes_min),
-                        check_vlist_visible_range_refreshes_max
-                            .or(suite_vlist_visible_range_refreshes_max),
-                        check_vlist_window_shifts_explainable
-                            || suite_vlist_window_shifts_explainable,
-                        check_vlist_window_shifts_have_prepaint_actions
-                            || suite_vlist_window_shifts_have_prepaint_actions,
-                        vlist_window_shifts_non_retained_max_for_script
-                            .or(suite_vlist_window_shifts_non_retained_max),
-                        check_vlist_window_shifts_prefetch_max
-                            .or(suite_vlist_window_shifts_prefetch_max),
-                        check_vlist_window_shifts_escape_max
-                            .or(suite_vlist_window_shifts_escape_max),
-                        check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
-                        check_windowed_rows_offset_changes_min,
-                        check_windowed_rows_offset_changes_eps,
-                        check_layout_fast_path_min.or(suite_layout_fast_path_min),
-                        check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
-                        check_gc_sweep_liveness || suite_gc_sweep_liveness,
-                        &notify_hotspot_file_max_for_script,
-                        check_view_cache_reuse_stable_min,
-                        check_view_cache_reuse_min
-                            .or(suite_view_cache_reuse_min)
-                            .or(suite_components_gallery_view_cache_reuse_min),
-                        check_overlay_synthesis_min,
-                        check_viewport_input_min.or(suite_viewport_input_min),
-                        check_dock_drag_min.or(suite_dock_drag_min),
-                        check_dock_drag_cross_window_max,
-                        check_dock_drag_source_windows_min,
-                        check_dock_drop_resolve_min,
-                        check_viewport_capture_min.or(suite_viewport_capture_min),
-                        retained_vlist_gate_for_script
-                            .or(suite_retained_vlist_reconcile_no_notify_min),
-                        retained_vlist_attach_detach_max_for_script
-                            .or(suite_retained_vlist_attach_detach_max),
-                        retained_vlist_keep_alive_reuse_min_for_script
-                            .or(suite_retained_vlist_keep_alive_reuse_min),
-                        retained_vlist_keep_alive_budget_for_script
-                            .or(suite_retained_vlist_keep_alive_budget),
-                        warmup_frames,
-                    )?;
                 }
 
                 if !reuse_process {
