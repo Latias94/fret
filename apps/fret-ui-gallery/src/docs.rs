@@ -1020,6 +1020,29 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_ENVIRONMENT_VARIABLES_DEMO: &str = r#"
+## AI environment variables (demo)
+
+This page is a small demo for the AI Elements-aligned `EnvironmentVariables` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- controlled/uncontrolled `showValues` behavior (toggle),
+- masked value rendering (bullet replacement),
+- copy button timing feedback with stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    EnvironmentVariable, EnvironmentVariableCopyButton, EnvironmentVariableCopyFormat,
+    EnvironmentVariableGroup, EnvironmentVariableName, EnvironmentVariableRequired,
+    EnvironmentVariableValue, EnvironmentVariables, EnvironmentVariablesContent,
+    EnvironmentVariablesHeader, EnvironmentVariablesTitle, EnvironmentVariablesToggle,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

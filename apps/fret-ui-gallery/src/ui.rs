@@ -729,6 +729,7 @@ fn page_preview(
         PAGE_AI_TEST_RESULTS_LARGE_DEMO => preview_ai_test_results_large_demo(cx, theme),
         PAGE_AI_CHECKPOINT_DEMO => preview_ai_checkpoint_demo(cx, theme),
         PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
+        PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20450,6 +20451,96 @@ fn preview_ai_confirmation_demo(
                 state_marker,
             ]
         },
+    )]
+}
+
+fn preview_ai_environment_variables_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui::Invalidation;
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let env_vars = ui_ai::EnvironmentVariables::new()
+        .default_show_values(false)
+        .test_id_root("ui-ai-env-vars-root")
+        .into_element_with_children(cx, move |cx, controller| {
+            let title = ui_ai::EnvironmentVariablesTitle::new()
+                .test_id("ui-ai-env-vars-title")
+                .into_element(cx);
+            let toggle = ui_ai::EnvironmentVariablesToggle::new()
+                .test_id("ui-ai-env-vars-toggle")
+                .test_id_switch("ui-ai-env-vars-toggle-switch")
+                .test_id_icon("ui-ai-env-vars-toggle-icon")
+                .into_element(cx);
+
+            let header = ui_ai::EnvironmentVariablesHeader::new([title, toggle])
+                .test_id("ui-ai-env-vars-header")
+                .into_element(cx);
+
+            let api_key = ui_ai::EnvironmentVariable::new("OPENAI_API_KEY", "sk-test-123456")
+                .test_id("ui-ai-env-var-openai-api-key")
+                .into_element_with_children(cx, |cx| {
+                    let left = ui_ai::EnvironmentVariableGroup::new([
+                        ui_ai::EnvironmentVariableName::new().into_element(cx),
+                        ui_ai::EnvironmentVariableRequired::new().into_element(cx),
+                    ])
+                    .into_element(cx);
+
+                    let right = ui_ai::EnvironmentVariableGroup::new([
+                        ui_ai::EnvironmentVariableValue::new().into_element(cx),
+                        ui_ai::EnvironmentVariableCopyButton::new()
+                            .copy_format(ui_ai::EnvironmentVariableCopyFormat::Export)
+                            .test_id("ui-ai-env-var-copy-export")
+                            .copied_marker_test_id("ui-ai-env-var-copy-export-copied")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx);
+
+                    vec![left, right]
+                });
+
+            let db_url = ui_ai::EnvironmentVariable::new(
+                "DATABASE_URL",
+                "postgres://postgres:postgres@localhost:5432/app",
+            )
+            .test_id("ui-ai-env-var-database-url")
+            .into_element(cx);
+
+            let region = ui_ai::EnvironmentVariable::new("AWS_REGION", "us-east-1")
+                .test_id("ui-ai-env-var-aws-region")
+                .into_element(cx);
+
+            let content = ui_ai::EnvironmentVariablesContent::new([api_key, db_url, region])
+                .test_id("ui-ai-env-vars-content")
+                .into_element(cx);
+
+            let show_values = cx
+                .get_model_copied(&controller.show_values, Invalidation::Paint)
+                .unwrap_or(false);
+            let state_marker = cx
+                .text(format!("showValues={show_values}"))
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Generic)
+                        .test_id(if show_values {
+                            "ui-ai-env-vars-show-values-true"
+                        } else {
+                            "ui-ai-env-vars-show-values-false"
+                        }),
+                );
+
+            vec![header, content, state_marker]
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Environment Variables (AI Elements)"), env_vars],
     )]
 }
 
