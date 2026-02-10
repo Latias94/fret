@@ -6,6 +6,7 @@
 //! - Selection is staged while open and applied on confirm.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
@@ -26,6 +27,46 @@ use crate::foundation::surface::material_surface_style;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
+
+fn default_date_picker_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-date-picker"))
+        .clone()
+}
+
+fn cached_day_of_month_label(day: u8) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (1u8..=31)
+            .map(|d| Arc::<str>::from(d.to_string()))
+            .collect::<Vec<_>>()
+    });
+    let idx = day.saturating_sub(1) as usize;
+    table
+        .get(idx)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(day.to_string()))
+}
+
+fn weekday_short_arc(w: Weekday) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            .into_iter()
+            .map(Arc::<str>::from)
+            .collect::<Vec<_>>()
+    });
+    let idx = match w {
+        Weekday::Monday => 0,
+        Weekday::Tuesday => 1,
+        Weekday::Wednesday => 2,
+        Weekday::Thursday => 3,
+        Weekday::Friday => 4,
+        Weekday::Saturday => 5,
+        Weekday::Sunday => 6,
+    };
+    table[idx].clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DatePickerVariant {
@@ -740,7 +781,25 @@ fn month_nav_header<H: UiHost>(
     month_model: Model<CalendarMonth>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    let title = Arc::<str>::from(format!("{} {}", month_name_en(month.month), month.year));
+    #[derive(Default)]
+    struct DerivedTitle {
+        month: Option<time::Month>,
+        year: i32,
+        title: Option<Arc<str>>,
+    }
+
+    let title = cx.with_state(DerivedTitle::default, |st| {
+        if st.title.is_none() || st.month != Some(month.month) || st.year != month.year {
+            st.month = Some(month.month);
+            st.year = month.year;
+            st.title = Some(Arc::<str>::from(format!(
+                "{} {}",
+                month_name_en(month.month),
+                month.year
+            )));
+        }
+        st.title.as_ref().expect("title").clone()
+    });
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -768,9 +827,7 @@ fn month_nav_header<H: UiHost>(
         cx.text_props(props)
     };
 
-    let base_id = test_id
-        .clone()
-        .unwrap_or_else(|| Arc::<str>::from("material3-date-picker"));
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
 
     let prev: OnActivate = {
         let month_model = month_model.clone();
@@ -796,15 +853,37 @@ fn month_nav_header<H: UiHost>(
         DatePickerTokenVariant::Modal => "modal",
     };
 
+    #[derive(Default)]
+    struct DerivedNavTestIds {
+        base: Option<Arc<str>>,
+        tag: Option<&'static str>,
+        prev: Option<Arc<str>>,
+        next: Option<Arc<str>>,
+    }
+
+    let (prev_test_id, next_test_id) = cx.with_state(DerivedNavTestIds::default, |st| {
+        if st.prev.is_none() || st.base.as_deref() != Some(base_id.as_ref()) || st.tag != Some(tag)
+        {
+            st.base = Some(base_id.clone());
+            st.tag = Some(tag);
+            st.prev = Some(Arc::from(format!("{base_id}-{tag}-prev")));
+            st.next = Some(Arc::from(format!("{base_id}-{tag}-next")));
+        }
+        (
+            st.prev.as_ref().expect("prev").clone(),
+            st.next.as_ref().expect("next").clone(),
+        )
+    });
+
     let prev = Button::new("Prev")
         .variant(ButtonVariant::Text)
         .on_activate(prev)
-        .test_id(Arc::from(format!("{base_id}-{tag}-prev")))
+        .test_id(prev_test_id)
         .into_element(cx);
     let next = Button::new("Next")
         .variant(ButtonVariant::Text)
         .on_activate(next)
-        .test_id(Arc::from(format!("{base_id}-{tag}-next")))
+        .test_id(next_test_id)
         .into_element(cx);
 
     cx.flex(row, move |_cx| vec![prev, title_el, next])
@@ -835,7 +914,7 @@ fn weekdays_row<H: UiHost>(
         weekdays
             .into_iter()
             .map(|w| {
-                let label: Arc<str> = Arc::from(weekday_short_en(w));
+                let label = weekday_short_arc(w);
                 let mut props = TextProps::new(label);
                 props.style = Some(style.clone());
                 props.color = Some(color);
@@ -886,9 +965,27 @@ fn dates_grid<H: UiHost>(
         )
     };
 
-    let base_id = test_id
-        .clone()
-        .unwrap_or_else(|| Arc::<str>::from("material3-date-picker"));
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+
+    #[derive(Default)]
+    struct DerivedGridTestIds {
+        base: Option<Arc<str>>,
+        cell_test_ids: Option<Arc<[Arc<str>]>>,
+    }
+
+    let cell_test_ids = cx.with_state(DerivedGridTestIds::default, |st| {
+        if st.cell_test_ids.is_none() || st.base.as_deref() != Some(base_id.as_ref()) {
+            st.base = Some(base_id.clone());
+            let mut out: Vec<Arc<str>> = Vec::with_capacity(42);
+            for row_idx in 0..6 {
+                for col_idx in 0..7 {
+                    out.push(Arc::from(format!("{base_id}-cell-{row_idx}-{col_idx}")));
+                }
+            }
+            st.cell_test_ids = Some(Arc::from(out));
+        }
+        st.cell_test_ids.as_ref().expect("cell_test_ids").clone()
+    });
 
     let mut grid = FlexProps::default();
     grid.direction = Axis::Vertical;
@@ -901,10 +998,10 @@ fn dates_grid<H: UiHost>(
     cx.flex(grid, move |cx| {
         let mut out: Vec<AnyElement> = Vec::new();
         for row_idx in 0..6 {
-            let base_id = base_id.clone();
             let month_model = month_model.clone();
             let selected_model = selected_model.clone();
             let label_style = label_style.clone();
+            let cell_test_ids = cell_test_ids.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
             row.justify = MainAlign::SpaceBetween;
@@ -939,7 +1036,7 @@ fn dates_grid<H: UiHost>(
                             props.border_color = Some(today_outline_color);
                         }
 
-                        let mut label_props = TextProps::new(Arc::from(date.day().to_string()));
+                        let mut label_props = TextProps::new(cached_day_of_month_label(date.day()));
                         label_props.style = Some(label_style.clone());
                         let mut label_color = if is_selected {
                             selected_label
@@ -953,7 +1050,10 @@ fn dates_grid<H: UiHost>(
                         label_props.wrap = TextWrap::None;
                         label_props.overflow = TextOverflow::Clip;
 
-                        let cell_test_id = Arc::from(format!("{base_id}-cell-{row_idx}-{i}"));
+                        let cell_test_id = cell_test_ids
+                            .get(row_idx * 7 + i)
+                            .expect("cell_test_id")
+                            .clone();
 
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
@@ -1006,18 +1106,6 @@ fn weekdays_from_start(start: Weekday) -> [Weekday; 7] {
     ];
     let idx = all.iter().position(|w| *w == start).unwrap_or(0);
     std::array::from_fn(|i| all[(idx + i) % 7])
-}
-
-fn weekday_short_en(w: Weekday) -> &'static str {
-    match w {
-        Weekday::Monday => "Mo",
-        Weekday::Tuesday => "Tu",
-        Weekday::Wednesday => "We",
-        Weekday::Thursday => "Th",
-        Weekday::Friday => "Fr",
-        Weekday::Saturday => "Sa",
-        Weekday::Sunday => "Su",
-    }
 }
 
 fn month_name_en(m: time::Month) -> &'static str {
