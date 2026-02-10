@@ -257,7 +257,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_chart_scaffold_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/chart_scaffold.rs` (`web_vs_fret_layout_chart_scaffold_geometry_matches_web_fixtures`)
   - Evidence (wiring, split modules are exercised by the integration test root):
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`mod accordion`, `mod chart`, `mod layout_chart_scaffold_fixtures`, `mod dashboard`, `mod layout_form_fixtures`, `mod layout_field_fixtures`, `mod layout_input_fixtures`, `mod layout_scroll_fixtures`, `mod layout_typography_fixtures`, `mod kbd`, `mod pagination`, `mod skeleton`, `mod sonner`, `mod table`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`mod accordion`, `mod chart`, `mod layout_chart_scaffold_fixtures`, `mod dashboard`, `mod layout_form_fixtures`, `mod layout_field_fixtures`, `mod layout_input_fixtures`, `mod layout_scroll_fixtures`, `mod layout_typography_fixtures`, `mod kbd`, `mod pagination`, `mod progress`, `mod skeleton`, `mod sonner`, `mod table`)
   - Evidence (fixture-driven slice, bug report form demo geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_form_bug_report_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/form.rs` (`web_vs_fret_layout_form_bug_report_demo_geometry_matches_web_fixtures`)
