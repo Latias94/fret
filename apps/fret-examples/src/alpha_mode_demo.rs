@@ -154,14 +154,15 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
                 Px(bounds.size.height.0.max(1.0)),
             ),
         ),
-        background: Color {
+        background: fret_core::Paint::Solid(Color {
             r: 0.08,
             g: 0.09,
             b: 0.10,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
+
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -179,19 +180,19 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
         scene.push(SceneOp::Quad {
             order,
             rect,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.16,
                 g: 0.16,
                 b: 0.18,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(1.0)),
-            border_color: Color {
+            border_paint: fret_core::Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 0.10,
-            },
+            }),
             corner_radii: Corners::all(Px(12.0)),
         });
     }

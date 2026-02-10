@@ -68,6 +68,44 @@ impl SceneRecording {
             c.r.is_finite() && c.g.is_finite() && c.b.is_finite() && c.a.is_finite()
         }
 
+        fn paint_is_finite(p: Paint) -> bool {
+            match p {
+                Paint::Solid(c) => color_is_finite(c),
+                Paint::LinearGradient(g) => {
+                    if !g.start.x.0.is_finite()
+                        || !g.start.y.0.is_finite()
+                        || !g.end.x.0.is_finite()
+                        || !g.end.y.0.is_finite()
+                    {
+                        return false;
+                    }
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    for i in 0..n {
+                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                Paint::RadialGradient(g) => {
+                    if !g.center.x.0.is_finite()
+                        || !g.center.y.0.is_finite()
+                        || !g.radius.width.0.is_finite()
+                        || !g.radius.height.0.is_finite()
+                    {
+                        return false;
+                    }
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    for i in 0..n {
+                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+            }
+        }
+
         fn uv_is_finite(uv: UvRect) -> bool {
             uv.u0.is_finite() && uv.v0.is_finite() && uv.u1.is_finite() && uv.v1.is_finite()
         }
@@ -218,14 +256,14 @@ impl SceneRecording {
                     rect,
                     background,
                     border,
-                    border_color,
+                    border_paint,
                     corner_radii,
                     ..
                 } => {
                     if !rect_is_finite(rect)
-                        || !color_is_finite(background)
+                        || !paint_is_finite(background)
                         || !edges_is_finite(border)
-                        || !color_is_finite(border_color)
+                        || !paint_is_finite(border_paint)
                         || !corners_is_finite(corner_radii)
                     {
                         return Err(SceneValidationError {

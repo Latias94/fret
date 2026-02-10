@@ -1,6 +1,6 @@
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
-    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
+    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Paint, Scene, SceneOp,
 };
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
@@ -146,9 +146,9 @@ fn push_bounds_stripes(scene: &mut Scene, bounds: Rect, order_base: u32) {
                 Point::new(Px(x), bounds.origin.y),
                 Size::new(Px(1.0), bounds.size.height),
             ),
-            background: bg,
+            background: Paint::Solid(bg),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Default::default(),
         });
     }
@@ -180,14 +180,14 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(size.0 as f32), Px(size.1 as f32)),
         ),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
     without_effect.push(SceneOp::PushClipRRect {
@@ -200,14 +200,14 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
     without_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
         rect: Rect::new(Point::new(Px(33.0), Px(31.0)), Size::new(Px(8.0), Px(8.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
 
@@ -218,14 +218,14 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(size.0 as f32), Px(size.1 as f32)),
         ),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
     with_effect.push(SceneOp::PushClipRRect {
@@ -244,14 +244,14 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
     with_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
         rect: Rect::new(Point::new(Px(33.0), Px(31.0)), Size::new(Px(8.0), Px(8.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
 

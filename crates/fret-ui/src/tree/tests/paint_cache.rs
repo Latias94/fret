@@ -71,9 +71,9 @@ fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: cx.bounds,
-                background: Color::TRANSPARENT,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT),
                 border: Edges::default(),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::default(),
             });
 
@@ -101,9 +101,9 @@ fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: cx.bounds,
-                background: Color::TRANSPARENT,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT),
                 border: Edges::default(),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::default(),
             });
         }
@@ -176,9 +176,9 @@ fn paint_cache_does_not_replay_ops_when_widget_requests_animation_frame() {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: cx.bounds,
-                background: Color::TRANSPARENT,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT),
                 border: Edges::default(),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::default(),
             });
         }
@@ -486,9 +486,9 @@ impl<H: UiHost> Widget<H> for ToggleTransformPaintWidget {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::Solid(Color::TRANSPARENT),
             border: Edges::default(),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::default(),
         });
     }

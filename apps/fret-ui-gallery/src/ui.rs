@@ -1228,9 +1228,10 @@ fn preview_hit_test_only_paint_cache_probe(
                                         p.scene().push(SceneOp::Quad {
                                             order: DrawOrder(0),
                                             rect: bounds,
-                                            background: accent_bg,
+                                            background: fret_core::Paint::Solid(accent_bg),
+
                                             border: Edges::all(Px(1.0)),
-                                            border_color,
+                                            border_paint: fret_core::Paint::Solid(border_color),
                                             corner_radii: Corners::all(Px(8.0)),
                                         });
 
@@ -1247,9 +1248,11 @@ fn preview_hit_test_only_paint_cache_probe(
                                         p.scene().push(SceneOp::Quad {
                                             order: DrawOrder(0),
                                             rect: guide,
-                                            background: secondary_bg,
+                                            background: fret_core::Paint::Solid(secondary_bg),
+
                                             border: Edges::all(Px(1.0)),
-                                            border_color: muted_border,
+                                            border_paint: fret_core::Paint::Solid(muted_border),
+
                                             corner_radii: Corners::all(Px(6.0)),
                                         });
                                     })
@@ -4666,9 +4669,11 @@ fn preview_text_selection_perf(cx: &mut ElementContext<'_, App>, theme: &Theme) 
                             scene.push(SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: selection_bg,
+                                background: fret_core::Paint::Solid(selection_bg),
+
                                 border: Edges::all(Px(0.0)),
-                                border_color: CoreColor::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
+
                                 corner_radii: Corners::all(Px(0.0)),
                             });
                         }
@@ -5158,9 +5163,11 @@ fn preview_text_bidi_rtl_conformance(
                                 scene.push(SceneOp::Quad {
                                     order: DrawOrder(0),
                                     rect,
-                                    background: selection_bg,
+                                    background: fret_core::Paint::Solid(selection_bg),
+
                                     border: Edges::all(Px(0.0)),
-                                    border_color: CoreColor::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT,
+
                                     corner_radii: Corners::all(Px(0.0)),
                                 });
                             }
@@ -5184,9 +5191,11 @@ fn preview_text_bidi_rtl_conformance(
                             scene.push(SceneOp::Quad {
                                 order: DrawOrder(2),
                                 rect: caret_rect,
-                                background: fg,
+                                background: fret_core::Paint::Solid(fg),
+
                                 border: Edges::all(Px(0.0)),
-                                border_color: CoreColor::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
+
                                 corner_radii: Corners::all(Px(0.0)),
                             });
 
@@ -5198,9 +5207,11 @@ fn preview_text_bidi_rtl_conformance(
                                 scene.push(SceneOp::Quad {
                                     order: DrawOrder(3),
                                     rect: dot,
-                                    background: fg,
+                                    background: fret_core::Paint::Solid(fg),
+
                                     border: Edges::all(Px(0.0)),
-                                    border_color: CoreColor::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT,
+
                                     corner_radii: Corners::all(Px(2.0)),
                                 });
                             }
@@ -5788,9 +5799,11 @@ fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: case_rect,
-                        background: bg,
+                        background: fret_core::Paint::Solid(bg),
+
                         border: Edges::all(Px(1.0)),
-                        border_color: border,
+                        border_paint: fret_core::Paint::Solid(border),
+
                         corner_radii: Corners::all(Px(8.0)),
                     });
 
@@ -5832,9 +5845,11 @@ fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: text_box,
-                        background: CoreColor::TRANSPARENT,
+                        background: fret_core::Paint::TRANSPARENT,
+
                         border: Edges::all(Px(1.0)),
-                        border_color: green,
+                        border_paint: fret_core::Paint::Solid(green),
+
                         corner_radii: Corners::all(Px(6.0)),
                     });
 
@@ -5872,9 +5887,11 @@ fn preview_text_measure_overlay(
                             Point::new(text_box.origin.x, text_box.origin.y + metrics.baseline),
                             Size::new(text_box.size.width, Px(1.0)),
                         ),
-                        background: cyan,
+                        background: fret_core::Paint::Solid(cyan),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: CoreColor::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
 
@@ -5882,9 +5899,11 @@ fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(4),
                         rect: Rect::new(text_box.origin, metrics.size),
-                        background: CoreColor::TRANSPARENT,
+                        background: fret_core::Paint::TRANSPARENT,
+
                         border: Edges::all(Px(1.0)),
-                        border_color: yellow,
+                        border_paint: fret_core::Paint::Solid(yellow),
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
 
@@ -6169,9 +6188,10 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
                                     painter.scene().push(fret_core::SceneOp::Quad {
                                         order: DrawOrder(0),
                                         rect,
-                                        background,
+                                        background: fret_core::Paint::Solid(background),
                                         border: Edges::all(Px(1.0)),
-                                        border_color: grid,
+                                        border_paint: fret_core::Paint::Solid(grid),
+
                                         corner_radii: Corners::all(Px(4.0)),
                                     });
 
@@ -6179,9 +6199,11 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
                                         painter.scene().push(fret_core::SceneOp::Quad {
                                             order: DrawOrder(1),
                                             rect,
-                                            background: fret_core::Color::TRANSPARENT,
+                                            background: fret_core::Paint::TRANSPARENT,
+
                                             border: Edges::all(Px(2.0)),
-                                            border_color: fg,
+                                            border_paint: fret_core::Paint::Solid(fg),
+
                                             corner_radii: Corners::all(Px(4.0)),
                                         });
                                     }
@@ -6758,9 +6780,10 @@ fn preview_windowed_rows_surface_torture(
                 painter.scene().push(fret_core::SceneOp::Quad {
                     order: DrawOrder(0),
                     rect,
-                    background,
+                    background: fret_core::Paint::Solid(background),
                     border: Edges::all(Px(0.0)),
-                    border_color: fret_core::Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
 
@@ -6944,17 +6967,17 @@ fn preview_windowed_rows_surface_interactive_torture(
                             painter.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background,
+                                background: fret_core::Paint::Solid(background),
                                 border: if selected {
                                     Edges::all(Px(1.0))
                                 } else {
                                     Edges::all(Px(0.0))
                                 },
-                                border_color: if selected {
+                                border_paint: fret_core::Paint::Solid(if selected {
                                     fg
                                 } else {
                                     fret_core::Color::TRANSPARENT
-                                },
+                                }),
                                 corner_radii: Corners::all(Px(0.0)),
                             });
 
@@ -12623,9 +12646,11 @@ fn preview_material3_touch_targets(
                         p.scene().push(SceneOp::Quad {
                             order: DrawOrder(order),
                             rect,
-                            background: CoreColor::TRANSPARENT,
+                            background: fret_core::Paint::TRANSPARENT,
+
                             border: Edges::all(Px(1.0)),
-                            border_color: color,
+                            border_paint: fret_core::Paint::Solid(color),
+
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     }

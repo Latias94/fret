@@ -27,9 +27,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(60),
                 rect,
-                background,
+                background: fret_core::Paint::Solid(background),
                 border: Edges::all(Px(1.0 / zoom)),
-                border_color: self.style.context_menu_border,
+                border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+
                 corner_radii: Corners::all(Px(6.0 / zoom)),
             });
 
