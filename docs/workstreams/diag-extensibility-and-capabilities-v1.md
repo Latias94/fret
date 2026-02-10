@@ -28,6 +28,19 @@ Related:
   `docs/adr/0196-ui-automation-and-debug-recipes-v1.md`,
   `docs/adr/0204-ui-diagnostics-extensibility-and-capabilities-v1.md`
 
+Sub-documents (this workstream intentionally decomposes into small, checkable steps):
+
+- Capabilities vocabulary, discovery, and fail-fast gating:
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
+- Artifacts, evidence surfaces, and structured failure reasons (“why did this step fail?”):
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace.md`
+- Script ergonomics beyond authoring (normalize/validate/lint/shrink):
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
+- Text + IME diagnostics and regression gates (self-drawn UI pain point):
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
+- Determinism and “repeat-run triage” for flaky regressions:
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+
 ## Why this workstream
 
 The current `diag` workflow is already powerful (bundles + scripts + gates + packing). The scaling risk is not
@@ -47,6 +60,8 @@ This workstream locks the extensibility rules so we can refactor fearlessly.
 4. **Deterministic waits**: prefer `wait_until` predicates and action timeouts; avoid wall-clock sleeps.
 5. **Capabilities are explicit**: missing support must fail fast with a structured reason (not as a timeout).
 6. **Layering stays clean**: no “test-only policy” leaks into `fret-ui`.
+7. **Evidence beats screenshots**: screenshots are useful, but the primary truth for correctness and triage is structured
+   semantics/layout/input evidence that can be asserted and diffed.
 
 ## Contract surface: what ecosystem authors should rely on
 
@@ -74,6 +89,8 @@ Tooling should:
 - refuse to execute scripts that require missing capabilities,
 - emit a machine-readable reason (for CI and AI triage).
 
+See: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
+
 ### 3) Window targeting (future-proofing)
 
 Multi-window is a first-class Fret goal; automation needs a stable way to:
@@ -98,6 +115,23 @@ For canvas-like surfaces:
 - Breaking changes must increment `schema_version`.
 - Tooling should provide “normalize/pretty-print” to keep diffs stable and reviewable.
 
+### 6) Debuggability for self-drawn UI pain points
+
+Self-drawn UI frameworks have predictable pain classes (text/IME composition, layout instability, focus routing,
+“looks right but behaves wrong”). This workstream explicitly treats the following as first-class, contract-backed
+diagnostics surfaces:
+
+- **Structured reasons** (why a selector failed, why a wait timed out, why a click missed).
+- **Traceable input routing** (hit-test, focus, capture/barriers) so interaction bugs are not “only reproducible by hand”.
+- **Text + IME evidence** (composition state, caret geometry, selection boundaries) so regressions are explainable and gateable.
+- **Determinism controls** (environment fingerprints + repeat-run triage) so flaky bugs become actionable.
+
+See:
+
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+
 ## Deliverables
 
 This workstream ships three “stable outcomes”:
@@ -108,6 +142,5 @@ This workstream ships three “stable outcomes”:
 
 See:
 
-- TODO tracker: `docs/workstreams/diag-extensibility-and-capabilities-v1-todo.md`
-- Milestones: `docs/workstreams/diag-extensibility-and-capabilities-v1-milestones.md`
-
+- TODO tracker: `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
+- Milestones: `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`

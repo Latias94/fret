@@ -66,6 +66,11 @@ pub enum UiActionStepV1 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
     },
     ResetDiagnostics,
     MovePointer {
@@ -151,6 +156,11 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
@@ -227,6 +237,11 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
         #[serde(default = "default_click_stable_frames")]
@@ -313,9 +328,14 @@ pub enum UiActionStepV2 {
 impl From<UiActionStepV1> for UiActionStepV2 {
     fn from(value: UiActionStepV1) -> Self {
         match value {
-            UiActionStepV1::Click { target, button } => Self::Click {
+            UiActionStepV1::Click {
                 target,
                 button,
+                click_count,
+            } => Self::Click {
+                target,
+                button,
+                click_count,
                 modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
@@ -379,6 +399,14 @@ fn default_drag_steps() -> u32 {
 
 fn default_move_frames_per_step() -> u32 {
     1
+}
+
+fn default_click_count() -> u8 {
+    1
+}
+
+fn is_default_click_count(v: &u8) -> bool {
+    *v == 1
 }
 
 fn default_click_stable_frames() -> u32 {

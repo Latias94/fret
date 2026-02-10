@@ -61,6 +61,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::Click {
             target,
             button: UiMouseButtonV1::Left,
+            click_count: 1,
             modifiers: None,
         })
     }
@@ -69,6 +70,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::Click {
             target,
             button: UiMouseButtonV1::Left,
+            click_count: 1,
             modifiers: Some(modifiers),
         })
     }
@@ -77,6 +79,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::ClickStable {
             target,
             button: UiMouseButtonV1::Left,
+            click_count: 1,
             modifiers: None,
             stable_frames: 2,
             max_move_px: 1.0,
@@ -92,6 +95,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::ClickStable {
             target,
             button: UiMouseButtonV1::Left,
+            click_count: 1,
             modifiers: Some(modifiers),
             stable_frames: 2,
             max_move_px: 1.0,

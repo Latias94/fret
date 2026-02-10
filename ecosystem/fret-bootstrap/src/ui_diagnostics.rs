@@ -5,6 +5,11 @@ use fret_core::{
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
+use fret_diag_protocol::{
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1, UiKeyModifiersV1,
+    UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1, UiPredicateV1, UiRoleAndNameV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -775,6 +780,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
+                | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
@@ -997,6 +1003,29 @@ impl UiDiagnosticsService {
                         Some(format!("script-step-{step_index:04}-press_key-unknown-key"));
                     stop_script = true;
                     failure_reason = Some(format!("unknown_key: {key}"));
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::PressShortcut { shortcut, repeat } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some((key, modifiers)) = parse_shortcut(&shortcut) {
+                    output
+                        .events
+                        .extend(press_key_events(key, modifiers, repeat));
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-press_shortcut"));
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-press_shortcut-parse-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some(format!("invalid_shortcut: {shortcut}"));
                     output.request_redraw = true;
                 }
             }
@@ -2024,8 +2053,10 @@ impl UiDiagnosticsService {
                 target,
                 delta_x,
                 delta_y,
+                require_fully_within_container,
                 require_fully_within_window,
                 padding_px,
+                padding_insets_px,
                 timeout_frames,
             } => {
                 active.wait_until = None;
@@ -2056,13 +2087,33 @@ impl UiDiagnosticsService {
                             target: target.clone(),
                         }
                     };
-                    if eval_predicate(
+                    let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
                         element_runtime,
                         &target_predicate,
-                    ) {
+                    );
+                    let container_ok = if require_fully_within_container {
+                        let container_node =
+                            select_semantics_node(snapshot, window, element_runtime, &container);
+                        let target_node =
+                            select_semantics_node(snapshot, window, element_runtime, &target);
+                        if let (Some(container_node), Some(target_node)) =
+                            (container_node, target_node)
+                        {
+                            let insets = padding_insets_px
+                                .unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+                            let inner = rect_inset(container_node.bounds, insets);
+                            rect_fully_contains(inner, target_node.bounds)
+                        } else {
+                            false
+                        }
+                    } else {
+                        true
+                    };
+
+                    if visible_ok && container_ok {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -2308,6 +2359,116 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-menu_select-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::MenuSelectPath {
+                path,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if path.len() < 2 {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select_path-invalid"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("menu_select_path_invalid".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                    // Let the common failure handler persist the result.
+                } else if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::MenuSelectPath(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2MenuSelectPathState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            phase: 0,
+                            next_index: 0,
+                        },
+                    };
+
+                    if state.next_index >= path.len() {
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-menu_select_path"));
+                        }
+                    } else {
+                        match state.phase {
+                            0 => {
+                                if select_semantics_node(
+                                    snapshot,
+                                    window,
+                                    element_runtime,
+                                    &path[state.next_index],
+                                )
+                                .is_some()
+                                {
+                                    state.phase = 1;
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                } else if state.remaining_frames == 0 {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-menu_select_path-timeout"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason = Some("menu_select_path_timeout".to_string());
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                } else {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                }
+                            }
+                            _ => {
+                                if let Some(node) = select_semantics_node(
+                                    snapshot,
+                                    window,
+                                    element_runtime,
+                                    &path[state.next_index],
+                                ) {
+                                    let pos =
+                                        center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                    output.events.extend(click_events(
+                                        pos,
+                                        UiMouseButtonV1::Left,
+                                        1,
+                                    ));
+                                    state.next_index = state.next_index.saturating_add(1);
+                                    state.phase = 0;
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                } else {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-menu_select_path-no-match"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason =
+                                        Some("menu_select_path_no_semantics_match".to_string());
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select_path-no-semantics"
                     ));
                     stop_script = true;
                     failure_reason = Some("no_semantics_snapshot".to_string());
@@ -3687,10 +3848,12 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::MenuSelectPath { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
         | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
@@ -4221,545 +4384,550 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
         .collect()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV1 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV1>,
-}
+#[cfg(any())]
+mod legacy_forked_script_protocol {
+    use super::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV1 {
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV2 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV2>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV2 {
-    // v1-compatible steps
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        modifiers: Option<UiKeyModifiersV1>,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    /// Move the pointer along a straight line over multiple frames (one move event per frame).
-    ///
-    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
-    /// `drag_pointer` emits multiple pointer move events in a single frame.
-    MovePointerSweep {
-        target: UiSelectorV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_move_frames_per_step")]
-        frames_per_step: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-
-    // v2 intent-level steps
-    /// Click a target only after its bounds have remained stable for `stable_frames`.
-    ///
-    /// This is useful for virtualized lists where a target's measured bounds can jump
-    /// across frames (e.g. estimate -> measured), causing clicks to land at stale
-    /// positions when using a single-frame snapshot.
-    ClickStable {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        modifiers: Option<UiKeyModifiersV1>,
-        #[serde(default = "default_click_stable_frames")]
-        stable_frames: u32,
-        #[serde(default = "default_click_stable_max_move_px")]
-        max_move_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    EnsureVisible {
-        target: UiSelectorV1,
-        #[serde(default)]
-        within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    ScrollIntoView {
-        container: UiSelectorV1,
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default = "default_scroll_delta_y")]
-        delta_y: f32,
-        #[serde(default)]
-        require_fully_within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    TypeTextInto {
-        target: UiSelectorV1,
-        text: String,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    MenuSelect {
-        menu: UiSelectorV1,
-        item: UiSelectorV1,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    DragTo {
-        from: UiSelectorV1,
-        to: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    SetSliderValue {
-        target: UiSelectorV1,
-        value: f32,
-        #[serde(default = "default_slider_min")]
-        min: f32,
-        #[serde(default = "default_slider_max")]
-        max: f32,
-        #[serde(default = "default_slider_epsilon")]
-        epsilon: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-        #[serde(default = "default_drag_steps")]
-        drag_steps: u32,
-    },
-    /// Request a resize of the active window's inner size (logical px).
-    ///
-    /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
-    /// runners may ignore it on platforms where programmatic resizing is not supported.
-    SetWindowInnerSize {
-        width_px: f32,
-        height_px: f32,
-    },
-}
-
-impl From<UiActionStepV1> for UiActionStepV2 {
-    fn from(value: UiActionStepV1) -> Self {
-        match value {
-            UiActionStepV1::Click {
-                target,
-                button,
-                click_count,
-            } => Self::Click {
-                target,
-                button,
-                click_count,
-                modifiers: None,
-            },
-            UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
-            UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
-            UiActionStepV1::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            } => Self::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            },
-            UiActionStepV1::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            } => Self::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            },
-            UiActionStepV1::PressKey {
-                key,
-                modifiers,
-                repeat,
-            } => Self::PressKey {
-                key,
-                modifiers,
-                repeat,
-            },
-            UiActionStepV1::TypeText { text } => Self::TypeText { text },
-            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
-            UiActionStepV1::WaitUntil {
-                predicate,
-                timeout_frames,
-            } => Self::WaitUntil {
-                predicate,
-                timeout_frames,
-            },
-            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
-            UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
-            UiActionStepV1::CaptureScreenshot {
-                label,
-                timeout_frames,
-            } => Self::CaptureScreenshot {
-                label,
-                timeout_frames,
-            },
-        }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiActionScriptV1 {
+        pub schema_version: u32,
+        pub steps: Vec<UiActionStepV1>,
     }
-}
 
-fn default_drag_steps() -> u32 {
-    8
-}
-
-fn default_click_count() -> u8 {
-    1
-}
-
-fn default_click_stable_frames() -> u32 {
-    2
-}
-
-fn default_click_stable_max_move_px() -> f32 {
-    1.0
-}
-
-fn default_move_frames_per_step() -> u32 {
-    1
-}
-
-fn default_capture_screenshot_timeout_frames() -> u32 {
-    300
-}
-
-fn default_action_timeout_frames() -> u32 {
-    180
-}
-
-fn default_scroll_delta_y() -> f32 {
-    -120.0
-}
-
-fn default_slider_min() -> f32 {
-    0.0
-}
-
-fn default_slider_max() -> f32 {
-    100.0
-}
-
-fn default_slider_epsilon() -> f32 {
-    0.5
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiMouseButtonV1 {
-    Left,
-    Right,
-    Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "type", rename_all = "snake_case")]
+    pub enum UiActionStepV1 {
+        Click {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+        },
+        ResetDiagnostics,
+        MovePointer {
+            target: UiSelectorV1,
+        },
+        DragPointer {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+        },
+        Wheel {
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default)]
+            delta_y: f32,
+        },
+        PressKey {
+            key: String,
+            #[serde(default)]
+            modifiers: UiKeyModifiersV1,
+            #[serde(default)]
+            repeat: bool,
+        },
+        TypeText {
+            text: String,
+        },
+        WaitFrames {
+            n: u32,
+        },
+        WaitUntil {
+            predicate: UiPredicateV1,
+            timeout_frames: u32,
+        },
+        Assert {
+            predicate: UiPredicateV1,
+        },
+        CaptureBundle {
+            label: Option<String>,
+        },
+        CaptureScreenshot {
+            label: Option<String>,
+            #[serde(default = "default_capture_screenshot_timeout_frames")]
+            timeout_frames: u32,
+        },
     }
-}
 
-impl UiMouseButtonV1 {
-    fn from_button(button: fret_core::MouseButton) -> Self {
-        match button {
-            fret_core::MouseButton::Left => Self::Left,
-            fret_core::MouseButton::Right => Self::Right,
-            fret_core::MouseButton::Middle => Self::Middle,
-            fret_core::MouseButton::Back
-            | fret_core::MouseButton::Forward
-            | fret_core::MouseButton::Other(_) => Self::Left,
-        }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiActionScriptV2 {
+        pub schema_version: u32,
+        pub steps: Vec<UiActionStepV2>,
     }
-}
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct UiKeyModifiersV1 {
-    #[serde(default)]
-    pub shift: bool,
-    #[serde(default)]
-    pub ctrl: bool,
-    #[serde(default)]
-    pub alt: bool,
-    #[serde(default)]
-    pub meta: bool,
-}
-
-impl UiKeyModifiersV1 {
-    fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
-        Self {
-            shift: modifiers.shift,
-            ctrl: modifiers.ctrl,
-            alt: modifiers.alt,
-            meta: modifiers.meta,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiPredicateV1 {
-    Exists {
-        target: UiSelectorV1,
-    },
-    NotExists {
-        target: UiSelectorV1,
-    },
-    FocusIs {
-        target: UiSelectorV1,
-    },
-    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
-    ///
-    /// This is intentionally coarse-grained: scripts should be able to assert that close
-    /// transitions keep the pointer barrier active while releasing focus containment (or vice
-    /// versa) without needing stable node ids.
-    BarrierRoots {
-        #[serde(default)]
-        barrier_root: UiOptionalRootStateV1,
-        #[serde(default)]
-        focus_barrier_root: UiOptionalRootStateV1,
-        /// When set, additionally enforces whether the two roots are equal.
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "type", rename_all = "snake_case")]
+    pub enum UiActionStepV2 {
+        // v1-compatible steps
+        Click {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            modifiers: Option<UiKeyModifiersV1>,
+        },
+        ResetDiagnostics,
+        MovePointer {
+            target: UiSelectorV1,
+        },
+        DragPointer {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+        },
+        /// Move the pointer along a straight line over multiple frames (one move event per frame).
         ///
-        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
-        /// - `false`: requires `barrier_root != focus_barrier_root`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        require_equal: Option<bool>,
-    },
-    /// True when the target exists and its semantics bounds intersect the active window bounds.
-    ///
-    /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
-    /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
-    /// update.
-    VisibleInWindow {
-        target: UiSelectorV1,
-    },
-    /// True when the target exists and its semantics bounds are fully contained within the active
-    /// window bounds (optionally padded inward by `padding_px`).
-    BoundsWithinWindow {
-        target: UiSelectorV1,
-        #[serde(default)]
-        padding_px: f32,
-        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+        /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
+        /// `drag_pointer` emits multiple pointer move events in a single frame.
+        MovePointerSweep {
+            target: UiSelectorV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+            #[serde(default = "default_move_frames_per_step")]
+            frames_per_step: u32,
+        },
+        Wheel {
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default)]
+            delta_y: f32,
+        },
+        PressKey {
+            key: String,
+            #[serde(default)]
+            modifiers: UiKeyModifiersV1,
+            #[serde(default)]
+            repeat: bool,
+        },
+        TypeText {
+            text: String,
+        },
+        WaitFrames {
+            n: u32,
+        },
+        WaitUntil {
+            predicate: UiPredicateV1,
+            timeout_frames: u32,
+        },
+        Assert {
+            predicate: UiPredicateV1,
+        },
+        CaptureBundle {
+            label: Option<String>,
+        },
+        CaptureScreenshot {
+            label: Option<String>,
+            #[serde(default = "default_capture_screenshot_timeout_frames")]
+            timeout_frames: u32,
+        },
+
+        // v2 intent-level steps
+        /// Click a target only after its bounds have remained stable for `stable_frames`.
         ///
-        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
-        /// strict edge containment checks by `eps_px`.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when the target exists and its semantics bounds are at least the specified size.
-    ///
-    /// This is useful for demos where the content can legitimately be taller than the window
-    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
-    BoundsMinSize {
-        target: UiSelectorV1,
-        #[serde(default)]
-        min_w_px: f32,
-        #[serde(default)]
-        min_h_px: f32,
-        /// A small tolerance to account for rounding / fractional layout units.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds do not overlap.
-    ///
-    /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
-    BoundsNonOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap.
-    ///
-    /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
-    /// subpixel rounding at fractional DPI).
-    BoundsOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the X axis.
-    ///
-    /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
-    /// and track), but we still want to assert horizontal alignment.
-    BoundsOverlappingX {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the Y axis.
-    BoundsOverlappingY {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-}
+        /// This is useful for virtualized lists where a target's measured bounds can jump
+        /// across frames (e.g. estimate -> measured), causing clicks to land at stale
+        /// positions when using a single-frame snapshot.
+        ClickStable {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            modifiers: Option<UiKeyModifiersV1>,
+            #[serde(default = "default_click_stable_frames")]
+            stable_frames: u32,
+            #[serde(default = "default_click_stable_max_move_px")]
+            max_move_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        EnsureVisible {
+            target: UiSelectorV1,
+            #[serde(default)]
+            within_window: bool,
+            #[serde(default)]
+            padding_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        ScrollIntoView {
+            container: UiSelectorV1,
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default = "default_scroll_delta_y")]
+            delta_y: f32,
+            #[serde(default)]
+            require_fully_within_window: bool,
+            #[serde(default)]
+            padding_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        TypeTextInto {
+            target: UiSelectorV1,
+            text: String,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        MenuSelect {
+            menu: UiSelectorV1,
+            item: UiSelectorV1,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        DragTo {
+            from: UiSelectorV1,
+            to: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        SetSliderValue {
+            target: UiSelectorV1,
+            value: f32,
+            #[serde(default = "default_slider_min")]
+            min: f32,
+            #[serde(default = "default_slider_max")]
+            max: f32,
+            #[serde(default = "default_slider_epsilon")]
+            epsilon: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+            #[serde(default = "default_drag_steps")]
+            drag_steps: u32,
+        },
+        /// Request a resize of the active window's inner size (logical px).
+        ///
+        /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
+        /// runners may ignore it on platforms where programmatic resizing is not supported.
+        SetWindowInnerSize {
+            width_px: f32,
+            height_px: f32,
+        },
+    }
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiOptionalRootStateV1 {
-    /// Do not assert anything about the root (accept both `Some` and `None`).
-    #[default]
-    Any,
-    None,
-    Some,
-}
+    impl From<UiActionStepV1> for UiActionStepV2 {
+        fn from(value: UiActionStepV1) -> Self {
+            match value {
+                UiActionStepV1::Click {
+                    target,
+                    button,
+                    click_count,
+                } => Self::Click {
+                    target,
+                    button,
+                    click_count,
+                    modifiers: None,
+                },
+                UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
+                UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
+                UiActionStepV1::DragPointer {
+                    target,
+                    button,
+                    delta_x,
+                    delta_y,
+                    steps,
+                } => Self::DragPointer {
+                    target,
+                    button,
+                    delta_x,
+                    delta_y,
+                    steps,
+                },
+                UiActionStepV1::Wheel {
+                    target,
+                    delta_x,
+                    delta_y,
+                } => Self::Wheel {
+                    target,
+                    delta_x,
+                    delta_y,
+                },
+                UiActionStepV1::PressKey {
+                    key,
+                    modifiers,
+                    repeat,
+                } => Self::PressKey {
+                    key,
+                    modifiers,
+                    repeat,
+                },
+                UiActionStepV1::TypeText { text } => Self::TypeText { text },
+                UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
+                UiActionStepV1::WaitUntil {
+                    predicate,
+                    timeout_frames,
+                } => Self::WaitUntil {
+                    predicate,
+                    timeout_frames,
+                },
+                UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
+                UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
+                UiActionStepV1::CaptureScreenshot {
+                    label,
+                    timeout_frames,
+                } => Self::CaptureScreenshot {
+                    label,
+                    timeout_frames,
+                },
+            }
+        }
+    }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiSelectorV1 {
-    RoleAndName {
-        role: String,
-        name: String,
-    },
-    RoleAndPath {
-        role: String,
-        name: String,
-        /// Ancestors ordered from outermost -> innermost.
-        ancestors: Vec<UiRoleAndNameV1>,
-    },
-    TestId {
-        id: String,
-    },
-    GlobalElementId {
-        element: u64,
-    },
-    NodeId {
-        node: u64,
-    },
-}
+    fn default_drag_steps() -> u32 {
+        8
+    }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiRoleAndNameV1 {
-    pub role: String,
-    pub name: String,
+    fn default_click_count() -> u8 {
+        1
+    }
+
+    fn default_click_stable_frames() -> u32 {
+        2
+    }
+
+    fn default_click_stable_max_move_px() -> f32 {
+        1.0
+    }
+
+    fn default_move_frames_per_step() -> u32 {
+        1
+    }
+
+    fn default_capture_screenshot_timeout_frames() -> u32 {
+        300
+    }
+
+    fn default_action_timeout_frames() -> u32 {
+        180
+    }
+
+    fn default_scroll_delta_y() -> f32 {
+        -120.0
+    }
+
+    fn default_slider_min() -> f32 {
+        0.0
+    }
+
+    fn default_slider_max() -> f32 {
+        100.0
+    }
+
+    fn default_slider_epsilon() -> f32 {
+        0.5
+    }
+
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiMouseButtonV1 {
+        Left,
+        Right,
+        Middle,
+    }
+
+    impl Default for UiMouseButtonV1 {
+        fn default() -> Self {
+            Self::Left
+        }
+    }
+
+    impl UiMouseButtonV1 {
+        fn from_button(button: fret_core::MouseButton) -> Self {
+            match button {
+                fret_core::MouseButton::Left => Self::Left,
+                fret_core::MouseButton::Right => Self::Right,
+                fret_core::MouseButton::Middle => Self::Middle,
+                fret_core::MouseButton::Back
+                | fret_core::MouseButton::Forward
+                | fret_core::MouseButton::Other(_) => Self::Left,
+            }
+        }
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    pub struct UiKeyModifiersV1 {
+        #[serde(default)]
+        pub shift: bool,
+        #[serde(default)]
+        pub ctrl: bool,
+        #[serde(default)]
+        pub alt: bool,
+        #[serde(default)]
+        pub meta: bool,
+    }
+
+    impl UiKeyModifiersV1 {
+        fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
+            Self {
+                shift: modifiers.shift,
+                ctrl: modifiers.ctrl,
+                alt: modifiers.alt,
+                meta: modifiers.meta,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum UiPredicateV1 {
+        Exists {
+            target: UiSelectorV1,
+        },
+        NotExists {
+            target: UiSelectorV1,
+        },
+        FocusIs {
+            target: UiSelectorV1,
+        },
+        /// Matches the current modal/pointer barrier root and focus barrier root (if any).
+        ///
+        /// This is intentionally coarse-grained: scripts should be able to assert that close
+        /// transitions keep the pointer barrier active while releasing focus containment (or vice
+        /// versa) without needing stable node ids.
+        BarrierRoots {
+            #[serde(default)]
+            barrier_root: UiOptionalRootStateV1,
+            #[serde(default)]
+            focus_barrier_root: UiOptionalRootStateV1,
+            /// When set, additionally enforces whether the two roots are equal.
+            ///
+            /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
+            /// - `false`: requires `barrier_root != focus_barrier_root`.
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            require_equal: Option<bool>,
+        },
+        /// True when the target exists and its semantics bounds intersect the active window bounds.
+        ///
+        /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
+        /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
+        /// update.
+        VisibleInWindow {
+            target: UiSelectorV1,
+        },
+        /// True when the target exists and its semantics bounds are fully contained within the active
+        /// window bounds (optionally padded inward by `padding_px`).
+        BoundsWithinWindow {
+            target: UiSelectorV1,
+            #[serde(default)]
+            padding_px: f32,
+            /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+            ///
+            /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
+            /// strict edge containment checks by `eps_px`.
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when the target exists and its semantics bounds are at least the specified size.
+        ///
+        /// This is useful for demos where the content can legitimately be taller than the window
+        /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
+        BoundsMinSize {
+            target: UiSelectorV1,
+            #[serde(default)]
+            min_w_px: f32,
+            #[serde(default)]
+            min_h_px: f32,
+            /// A small tolerance to account for rounding / fractional layout units.
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds do not overlap.
+        ///
+        /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
+        BoundsNonOverlapping {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap.
+        ///
+        /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
+        /// subpixel rounding at fractional DPI).
+        BoundsOverlapping {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap on the X axis.
+        ///
+        /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
+        /// and track), but we still want to assert horizontal alignment.
+        BoundsOverlappingX {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap on the Y axis.
+        BoundsOverlappingY {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiOptionalRootStateV1 {
+        /// Do not assert anything about the root (accept both `Some` and `None`).
+        #[default]
+        Any,
+        None,
+        Some,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum UiSelectorV1 {
+        RoleAndName {
+            role: String,
+            name: String,
+        },
+        RoleAndPath {
+            role: String,
+            name: String,
+            /// Ancestors ordered from outermost -> innermost.
+            ancestors: Vec<UiRoleAndNameV1>,
+        },
+        TestId {
+            id: String,
+        },
+        GlobalElementId {
+            element: u64,
+        },
+        NodeId {
+            node: u64,
+        },
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiRoleAndNameV1 {
+        pub role: String,
+        pub name: String,
+    }
 }
 
 #[derive(Debug, Default)]
@@ -4767,27 +4935,6 @@ pub struct UiScriptFrameOutput {
     pub events: Vec<Event>,
     pub effects: Vec<Effect>,
     pub request_redraw: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiScriptResultV1 {
-    pub schema_version: u32,
-    pub run_id: u64,
-    pub updated_unix_ms: u64,
-    pub window: Option<u64>,
-    pub stage: UiScriptStageV1,
-    pub step_index: Option<u32>,
-    pub reason: Option<String>,
-    pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiScriptStageV1 {
-    Queued,
-    Running,
-    Passed,
-    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4801,18 +4948,6 @@ pub struct UiPickResultV1 {
     pub selection: Option<UiPickSelectionV1>,
     pub reason: Option<String>,
     pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiInspectConfigV1 {
-    pub schema_version: u32,
-    pub enabled: bool,
-    #[serde(default = "serde_default_true")]
-    pub consume_clicks: bool,
-}
-
-fn serde_default_true() -> bool {
-    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4870,6 +5005,7 @@ struct PendingScript {
 }
 
 impl PendingScript {
+    #[cfg(feature = "diagnostics-ws")]
     fn from_json_value(value: serde_json::Value) -> Option<Self> {
         let schema_version: u32 = value
             .get("schema_version")
@@ -4914,6 +5050,7 @@ enum V2StepState {
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
+    MenuSelectPath(V2MenuSelectPathState),
     DragPointer(V2DragPointerState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
@@ -4952,6 +5089,14 @@ struct V2MenuSelectState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2MenuSelectPathState {
+    step_index: usize,
+    remaining_frames: u32,
+    phase: u32,
+    next_index: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -9573,6 +9718,30 @@ fn eval_predicate(
             };
             node.id == focus
         }
+        UiPredicateV1::RoleIs { target, role } => {
+            let Some(want) = parse_semantics_role(role) else {
+                return false;
+            };
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.role == want
+        }
+        UiPredicateV1::CheckedIs { target, checked } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked == Some(*checked)
+        }
+        UiPredicateV1::CheckedIsNone { target } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked.is_none()
+        }
         UiPredicateV1::BarrierRoots {
             barrier_root,
             focus_barrier_root,
@@ -10286,6 +10455,76 @@ fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
         ..Modifiers::default()
     }
 }
+
+fn parse_shortcut(shortcut: &str) -> Option<(KeyCode, UiKeyModifiersV1)> {
+    let mut parts = shortcut
+        .split('+')
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>();
+
+    if parts.is_empty() {
+        return None;
+    }
+
+    let key = parts.pop()?;
+
+    let mut modifiers = UiKeyModifiersV1::default();
+    for part in parts {
+        match part.to_ascii_lowercase().as_str() {
+            "shift" => modifiers.shift = true,
+            "ctrl" | "control" => modifiers.ctrl = true,
+            "alt" => modifiers.alt = true,
+            "meta" | "cmd" | "command" | "super" => modifiers.meta = true,
+            "primary" => {
+                if cfg!(target_os = "macos") {
+                    modifiers.meta = true;
+                } else {
+                    modifiers.ctrl = true;
+                }
+            }
+            _ => return None,
+        }
+    }
+
+    Some((parse_key_code(key)?, modifiers))
+}
+
+fn rect_inset(rect: Rect, insets: UiPaddingInsetsV1) -> Rect {
+    let left = Px(insets.left_px.max(0.0));
+    let top = Px(insets.top_px.max(0.0));
+    let right = Px(insets.right_px.max(0.0));
+    let bottom = Px(insets.bottom_px.max(0.0));
+
+    let origin = Point {
+        x: rect.origin.x + left,
+        y: rect.origin.y + top,
+    };
+    let w = (rect.size.width.0 - left.0 - right.0).max(0.0);
+    let h = (rect.size.height.0 - top.0 - bottom.0).max(0.0);
+    Rect {
+        origin,
+        size: fret_core::Size {
+            width: Px(w),
+            height: Px(h),
+        },
+    }
+}
+
+fn rect_fully_contains(outer: Rect, inner: Rect) -> bool {
+    let ox0 = outer.origin.x.0;
+    let oy0 = outer.origin.y.0;
+    let ox1 = ox0 + outer.size.width.0;
+    let oy1 = oy0 + outer.size.height.0;
+
+    let ix0 = inner.origin.x.0;
+    let iy0 = inner.origin.y.0;
+    let ix1 = ix0 + inner.size.width.0;
+    let iy1 = iy0 + inner.size.height.0;
+
+    ix0 >= ox0 && iy0 >= oy0 && ix1 <= ox1 && iy1 <= oy1
+}
+
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
@@ -10480,6 +10719,7 @@ mod tests {
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot, Size,
     };
+    use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
 
     #[test]

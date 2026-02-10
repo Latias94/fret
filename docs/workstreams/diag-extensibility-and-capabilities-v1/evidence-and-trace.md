@@ -1,0 +1,94 @@
+---
+title: Diagnostics Extensibility + Capabilities v1 - Evidence & Trace
+status: draft
+date: 2026-02-10
+scope: diagnostics, automation, evidence, trace, triage
+---
+
+# Diagnostics Extensibility + Capabilities v1 - Evidence & Trace
+
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+
+Thesis: screenshots and logs are helpful, but self-drawn UI debugging only scales when failures produce
+**structured evidence** with **explainable reasons**.
+
+## Artifacts (portable evidence units)
+
+Required:
+
+- `bundle.json`: the primary portable artifact (semantics + layout + frame stats + debug surfaces).
+- `script.json`: the portable repro recipe.
+- `script.result.json`: the structured outcome (stage, step index, reason, last bundle dir).
+
+Optional but recommended:
+
+- `triage.json`: a machine-readable summary derived from a bundle (small, AI-friendly).
+- screenshots (bundle-scoped or on-demand): useful as supporting evidence, not the primary truth.
+- `check.*.json`: CI/automation evidence files (capabilities gating, schema validation, lint results).
+
+## Structured failure reasons (reason codes)
+
+Define a stable taxonomy of reason codes for script failures.
+
+Design constraints:
+
+- reason codes MUST be stable across refactors,
+- reason codes MUST be specific enough to triage without reading source,
+- reason codes MUST be machine-readable.
+
+Suggested buckets:
+
+- `capability_missing:*`
+- `selector_resolution:*`
+- `semantics_snapshot_missing`
+- `predicate_timeout:*`
+- `action_timeout:*`
+- `input_routing:*`
+- `text_ime:*`
+
+This workstream treats “why did it fail?” as a first-class contract surface.
+
+## Trace surface (ring buffer, dumped on failure)
+
+When a script fails (or when tooling requests it), the runner SHOULD emit a trace slice for the last K frames:
+
+- step start/end markers (step index, step kind, window scope),
+- selector resolution (how many candidates, why rejected),
+- hit-test chain and routing decisions (capture/barrier/occlusion),
+- focus change events with reasons,
+- predicate evaluation deltas (what changed, what did not).
+
+Properties:
+
+- bounded size (ring buffer),
+- redactable (no raw text unless explicitly enabled),
+- actionable without screenshots.
+
+Recommended output: `trace.json` (or embedded under bundle debug payload).
+
+## “Lint” as a diagnostics mode (no interaction required)
+
+Add a script-independent lint mode that runs on a captured `bundle.json`:
+
+Semantics lint examples:
+
+- duplicate `test_id`,
+- focusable without label,
+- disabled nodes exposing actions,
+- inconsistent role/name across frames for the same id.
+
+Layout lint examples:
+
+- bounds outside window,
+- non-overlapping invariants violated for known layout structures,
+- text bounds overlap or baseline anomalies (when evidence exists).
+
+Output: `check.lint.json` (machine-readable), plus a human-readable summary.
+
+## ROI screenshots (optional, but high leverage)
+
+When screenshots are needed, prefer “ROI-by-selector” (cropped to a node bounds and stabilized by `test_id`)
+over full-frame diffs. This reduces flake and makes diffs reviewable.
+
+This should be capability-gated (`diag.screenshot_png`) and never required for basic correctness gates.
+
