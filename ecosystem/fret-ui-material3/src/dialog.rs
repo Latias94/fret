@@ -152,7 +152,6 @@ impl DialogAction {
     fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        theme: &Theme,
         config: DialogActionConfig,
     ) -> AnyElement {
         let DialogAction {
@@ -217,15 +216,43 @@ impl DialogAction {
                         dialog_tokens::DialogActionInteraction::Default
                     };
 
-                    let label_color = dialog_tokens::action_label_color(theme, interaction);
-                    let state_layer_color =
-                        dialog_tokens::action_state_layer_color(theme, interaction);
-                    let state_layer_target =
-                        dialog_tokens::action_state_layer_target_opacity(theme, interaction);
+                    let (
+                        label_color,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        indication_config,
+                        label_style,
+                    ) = {
+                        let theme = Theme::global(&*cx.app);
+                        let label_color = dialog_tokens::action_label_color(theme, interaction);
+                        let state_layer_color =
+                            dialog_tokens::action_state_layer_color(theme, interaction);
+                        let state_layer_target =
+                            dialog_tokens::action_state_layer_target_opacity(theme, interaction);
 
-                    let ripple_base_opacity =
-                        dialog_tokens::action_pressed_state_layer_opacity(theme);
-                    let indication_config = material_pressable_indication_config(theme, None);
+                        let ripple_base_opacity =
+                            dialog_tokens::action_pressed_state_layer_opacity(theme);
+                        let indication_config = material_pressable_indication_config(theme, None);
+
+                        let label_style = theme
+                            .text_style_by_key("md.sys.typescale.label-large")
+                            .unwrap_or_else(|| {
+                                let mut style = TextStyle::default();
+                                style.size = Px(14.0);
+                                style.weight = fret_core::FontWeight::MEDIUM;
+                                style
+                            });
+
+                        (
+                            label_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            indication_config,
+                            label_style,
+                        )
+                    };
                     let ink = material_ink_layer_for_pressable(
                         cx,
                         pressable_id,
@@ -239,15 +266,6 @@ impl DialogAction {
                         indication_config,
                         false,
                     );
-
-                    let label_style = theme
-                        .text_style_by_key("md.sys.typescale.label-large")
-                        .unwrap_or_else(|| {
-                            let mut style = TextStyle::default();
-                            style.size = Px(14.0);
-                            style.weight = fret_core::FontWeight::MEDIUM;
-                            style
-                        });
 
                     let text = cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
@@ -397,25 +415,31 @@ impl Dialog {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let open_ms = self
-                .open_duration_ms
-                .unwrap_or_else(|| dialog_tokens::default_open_duration_ms(&theme));
-            let close_ms = self
-                .close_duration_ms
-                .unwrap_or_else(|| dialog_tokens::default_close_duration_ms(&theme));
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
             let easing_key = self
                 .easing_key
                 .clone()
                 .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier = dialog_tokens::easing(&theme, Some(easing_key.as_ref()));
+
+            let (open_ms_default, close_ms_default, bezier) = {
+                let theme = Theme::global(&*cx.app);
+                let open_ms = dialog_tokens::default_open_duration_ms(theme);
+                let close_ms = dialog_tokens::default_close_duration_ms(theme);
+                let bezier = dialog_tokens::easing(theme, Some(easing_key.as_ref()));
+                (open_ms, close_ms, bezier)
+            };
+
+            let open_ms = self
+                .open_duration_ms
+                .unwrap_or(open_ms_default);
+            let close_ms = self
+                .close_duration_ms
+                .unwrap_or(close_ms_default);
+            let open_ticks = motion::ms_to_frames(open_ms);
+            let close_ticks = motion::ms_to_frames(close_ms);
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -442,57 +466,109 @@ impl Dialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_color = resolve_override_slot_with(
-                    self.style.scrim_color.as_ref(),
-                    WidgetStates::empty(),
-                    |color| color.resolve(&theme),
-                    || dialog_tokens::scrim_color(&theme),
-                );
-                let scrim_alpha =
-                    (scrim_color.a * self.scrim_opacity * transition.progress).clamp(0.0, 1.0);
-                let scrim_color = with_alpha(scrim_color, scrim_alpha);
-
-                let container_bg = resolve_override_slot_with(
-                    self.style.container_background.as_ref(),
-                    WidgetStates::empty(),
-                    |color| color.resolve(&theme),
-                    || dialog_tokens::container_background(&theme),
-                );
-                let container_shape = resolve_override_slot_with(
-                    self.style.container_corner_radii.as_ref(),
-                    WidgetStates::empty(),
-                    |v| *v,
-                    || dialog_tokens::container_shape(&theme),
-                );
-                let elevation = resolve_override_slot_with(
-                    self.style.container_elevation.as_ref(),
-                    WidgetStates::empty(),
-                    |v| *v,
-                    || dialog_tokens::container_elevation(&theme),
-                );
-                let shadow_color = dialog_tokens::container_shadow_color(&theme);
-                let surface = material_surface_style(
-                    &theme,
+                let (
+                    scrim_color,
                     container_bg,
-                    elevation,
-                    Some(shadow_color),
                     container_shape,
-                );
-                let container_bg = surface.background;
-                let shadow = surface.shadow;
+                    shadow,
+                    headline_color,
+                    supporting_color,
+                    headline_style,
+                    supporting_style,
+                    action_cfg,
+                    panel_padding,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-                let headline_color = resolve_override_slot_with(
-                    self.style.headline_color.as_ref(),
-                    WidgetStates::empty(),
-                    |color| color.resolve(&theme),
-                    || dialog_tokens::headline_color(&theme),
-                );
-                let supporting_color = resolve_override_slot_with(
-                    self.style.supporting_text_color.as_ref(),
-                    WidgetStates::empty(),
-                    |color| color.resolve(&theme),
-                    || dialog_tokens::supporting_text_color(&theme),
-                );
+                    let scrim_color = resolve_override_slot_with(
+                        self.style.scrim_color.as_ref(),
+                        WidgetStates::empty(),
+                        |color| color.resolve(theme),
+                        || dialog_tokens::scrim_color(theme),
+                    );
+                    let scrim_alpha = (scrim_color.a
+                        * self.scrim_opacity
+                        * transition.progress)
+                        .clamp(0.0, 1.0);
+                    let scrim_color = with_alpha(scrim_color, scrim_alpha);
+
+                    let container_bg = resolve_override_slot_with(
+                        self.style.container_background.as_ref(),
+                        WidgetStates::empty(),
+                        |color| color.resolve(theme),
+                        || dialog_tokens::container_background(theme),
+                    );
+                    let container_shape = resolve_override_slot_with(
+                        self.style.container_corner_radii.as_ref(),
+                        WidgetStates::empty(),
+                        |v| *v,
+                        || dialog_tokens::container_shape(theme),
+                    );
+                    let elevation = resolve_override_slot_with(
+                        self.style.container_elevation.as_ref(),
+                        WidgetStates::empty(),
+                        |v| *v,
+                        || dialog_tokens::container_elevation(theme),
+                    );
+                    let shadow_color = dialog_tokens::container_shadow_color(theme);
+                    let surface = material_surface_style(
+                        theme,
+                        container_bg,
+                        elevation,
+                        Some(shadow_color),
+                        container_shape,
+                    );
+                    let container_bg = surface.background;
+                    let shadow = surface.shadow;
+
+                    let headline_color = resolve_override_slot_with(
+                        self.style.headline_color.as_ref(),
+                        WidgetStates::empty(),
+                        |color| color.resolve(theme),
+                        || dialog_tokens::headline_color(theme),
+                    );
+                    let supporting_color = resolve_override_slot_with(
+                        self.style.supporting_text_color.as_ref(),
+                        WidgetStates::empty(),
+                        |color| color.resolve(theme),
+                        || dialog_tokens::supporting_text_color(theme),
+                    );
+
+                    let headline_style = theme
+                        .text_style_by_key("md.sys.typescale.headline-small")
+                        .unwrap_or_else(|| {
+                            let mut style = TextStyle::default();
+                            style.size = Px(24.0);
+                            style
+                        });
+                    let supporting_style = theme
+                        .text_style_by_key("md.sys.typescale.body-medium")
+                        .unwrap_or_else(|| {
+                            let mut style = TextStyle::default();
+                            style.size = Px(14.0);
+                            style
+                        });
+
+                    let action_cfg = DialogActionConfig {
+                        height: dialog_tokens::action_height(theme),
+                        padding: dialog_tokens::action_padding(theme),
+                        corner_radii: dialog_tokens::action_corner_radii(theme),
+                    };
+                    let panel_padding = dialog_tokens::panel_padding(theme);
+
+                    (
+                        scrim_color,
+                        container_bg,
+                        container_shape,
+                        shadow,
+                        headline_color,
+                        supporting_color,
+                        headline_style,
+                        supporting_style,
+                        action_cfg,
+                        panel_padding,
+                    )
+                };
 
                 let overlay_root = cx.named("material3_dialog_root", |cx| {
                     let mut layout = LayoutStyle::default();
@@ -589,7 +665,7 @@ impl Dialog {
                                 center.direction = Axis::Vertical;
                                 center.justify = MainAlign::Center;
                                 center.align = CrossAlign::Center;
-                                center.padding = dialog_tokens::panel_padding(&theme);
+                                center.padding = panel_padding;
 
                                 let content = cx.flex(center, move |cx| {
                                                 let mut panel_layout = LayoutStyle::default();
@@ -600,15 +676,7 @@ impl Dialog {
 
                                                 let mut body = Vec::new();
                                                 if let Some(headline) = self.headline.clone() {
-                                                    let style = theme
-                                                        .text_style_by_key(
-                                                            "md.sys.typescale.headline-small",
-                                                        )
-                                                        .unwrap_or_else(|| {
-                                                            let mut style = TextStyle::default();
-                                                            style.size = Px(24.0);
-                                                            style
-                                                        });
+                                                    let style = headline_style.clone();
                                                     body.push(cx.text_props(TextProps {
                                                         layout: LayoutStyle::default(),
                                                         text: headline,
@@ -619,15 +687,7 @@ impl Dialog {
                                                     }));
                                                 }
                                                 if let Some(text) = self.supporting_text.clone() {
-                                                    let style = theme
-                                                        .text_style_by_key(
-                                                            "md.sys.typescale.body-medium",
-                                                        )
-                                                        .unwrap_or_else(|| {
-                                                            let mut style = TextStyle::default();
-                                                            style.size = Px(14.0);
-                                                            style
-                                                        });
+                                                    let style = supporting_style.clone();
                                                     body.push(cx.text_props(TextProps {
                                                         layout: LayoutStyle::default(),
                                                         text,
@@ -648,18 +708,12 @@ impl Dialog {
                                                     row.gap = Px(8.0);
                                                     row.layout.size.width = Length::Fill;
 
-                                                    let action_cfg = DialogActionConfig {
-                                                        height: dialog_tokens::action_height(&theme),
-                                                        padding: dialog_tokens::action_padding(&theme),
-                                                        corner_radii: dialog_tokens::action_corner_radii(&theme),
-                                                    };
-
                                                     let actions = self
                                                         .actions
                                                         .clone()
                                                         .into_iter()
                                                         .map(|a| {
-                                                            a.into_element(cx, &theme, action_cfg)
+                                                            a.into_element(cx, action_cfg)
                                                         })
                                                         .collect::<Vec<_>>();
 
@@ -673,7 +727,7 @@ impl Dialog {
                                                             background: Some(container_bg),
                                                             shadow,
                                                             corner_radii: container_shape,
-                                                            padding: dialog_tokens::panel_padding(&theme),
+                                                            padding: panel_padding,
                                                             ..Default::default()
                                                         },
                                                         move |_cx| body,
