@@ -69,6 +69,8 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
         let _ = reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
         let _ = reg.alias(ids::ui::FILE, IconId::new("lucide.file"));
+        let _ = reg.alias(ids::ui::EYE, IconId::new("lucide.eye"));
+        let _ = reg.alias(ids::ui::EYE_OFF, IconId::new("lucide.eye-off"));
         // Lucide v0.4x ships `git-commit-horizontal` / `git-commit-vertical` (no `git-commit`).
         let _ = reg.alias(
             ids::ui::GIT_COMMIT,

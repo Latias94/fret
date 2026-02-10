@@ -74,6 +74,8 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
         let _ = reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
         let _ = reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
+        let _ = reg.alias(ids::ui::EYE, IconId::new("radix.eye-open"));
+        let _ = reg.alias(ids::ui::EYE_OFF, IconId::new("radix.eye-closed"));
         let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("radix.cross-circled"));
         let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("radix.circle"));
         let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.dot-filled"));

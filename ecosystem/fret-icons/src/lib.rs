@@ -51,6 +51,8 @@ pub mod ids {
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
+        pub const EYE: IconId = IconId::new_static("ui.eye");
+        pub const EYE_OFF: IconId = IconId::new_static("ui.eye.off");
         pub const FILE: IconId = IconId::new_static("ui.file");
         pub const GIT_COMMIT: IconId = IconId::new_static("ui.git.commit");
         pub const FOLDER: IconId = IconId::new_static("ui.folder");
