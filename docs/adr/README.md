@@ -49,7 +49,7 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
 
 - **Compositing groups and blend modes (isolated saveLayer blends)**
-  - Proposed: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
+  - Proposed: `docs/adr/1190-compositing-groups-and-blend-modes-v1.md`
   - Decide: minimal blend vocabulary for UI-native looks and deterministic degradation under budgets.
 
 - **Sampled materials (v2; fixed binding shapes)**

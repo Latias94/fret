@@ -237,6 +237,7 @@ impl IconButton {
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
                         label: self.a11y_label.clone(),

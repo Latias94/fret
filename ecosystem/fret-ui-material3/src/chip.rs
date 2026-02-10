@@ -222,6 +222,7 @@ impl AssistChip {
                 let pressable_props = PressableProps {
                     enabled,
                     focusable,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),

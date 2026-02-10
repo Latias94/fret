@@ -41,6 +41,12 @@ This derived range is:
 - computed from the *effective* series view selection (after base row range and X dataZoom filtering),
 - derived using the monotonic-X fast path (`row_range_for_x_window`) when the current series selection is contiguous.
 
+Opt-in extension (multi-grid linking):
+
+- When explicitly enabled via `LinkConfig.brush_x_export_policy`, the engine may additionally derive X row ranges
+  for other visible series that share the same `(dataset, encode.x)` as at least one brushed series. This allows
+  cross-grid "X linking" without changing the authoritative brush selection shape (still 2D, still scoped to a grid).
+
 ### 2) Y is not applied in v1 (no sparse selection yet)
 
 The derived output is intentionally **X-only** in v1:

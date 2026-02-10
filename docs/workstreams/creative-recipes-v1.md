@@ -16,7 +16,7 @@ Key ADRs:
 - Paint primitives (gradients): `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
 - Controlled materials registry (Tier B): `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
 - Masks (alpha masks): `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
-- Compositing groups / blend modes: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
+- Compositing groups / blend modes: `docs/adr/1190-compositing-groups-and-blend-modes-v1.md`
 - Frame clock + reduced motion: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
 - Pointer motion snapshots: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
 - Procedural determinism: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`
@@ -85,4 +85,3 @@ Rule of thumb:
   - mask coverage behavior at edges,
   - blend group compositing order,
   - deterministic degradation behavior under reduced budgets.
-

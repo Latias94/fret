@@ -8,7 +8,7 @@ pub mod declarative;
 #[cfg(feature = "echarts")]
 pub mod echarts;
 pub mod input_map;
-pub mod multi_grid;
+pub mod linking;
 pub mod retained;
 
 mod legend_logic;
@@ -16,5 +16,5 @@ mod tooltip_layout;
 
 pub use declarative::*;
 pub use input_map::*;
-pub use multi_grid::*;
+pub use linking::*;
 pub use retained::*;

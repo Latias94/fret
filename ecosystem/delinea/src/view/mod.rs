@@ -155,7 +155,7 @@ impl ViewState {
         self.datasets.clear();
         self.series.clear();
         for (id, _dataset_model) in &model.datasets {
-            let table = datasets.dataset(*id);
+            let table = datasets.dataset(model.root_dataset_id(*id));
             let Some(table) = table else { continue };
             let mut row_range = state
                 .dataset_row_ranges
@@ -163,13 +163,13 @@ impl ViewState {
                 .copied()
                 .unwrap_or(RowRange {
                     start: 0,
-                    end: table.row_count,
+                    end: table.row_count(),
                 });
-            row_range.clamp_to_len(table.row_count);
+            row_range.clamp_to_len(table.row_count());
             self.datasets.push(DatasetView {
                 dataset: *id,
                 revision: self.revision,
-                data_revision: table.revision,
+                data_revision: table.revision(),
                 row_range,
             });
         }
@@ -178,7 +178,7 @@ impl ViewState {
             let Some(series) = model.series.get(series_id) else {
                 continue;
             };
-            let table = datasets.dataset(series.dataset);
+            let table = datasets.dataset(model.root_dataset_id(series.dataset));
             let Some(table) = table else { continue };
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 continue;
@@ -196,9 +196,9 @@ impl ViewState {
                 .copied()
                 .unwrap_or(RowRange {
                     start: 0,
-                    end: table.row_count,
+                    end: table.row_count(),
                 });
-            base_range.clamp_to_len(table.row_count);
+            base_range.clamp_to_len(table.row_count());
 
             let x_axis_range = model
                 .axes
@@ -237,7 +237,7 @@ impl ViewState {
                 dataset: series.dataset,
                 x_axis: series.x_axis,
                 revision: self.revision,
-                data_revision: table.revision,
+                data_revision: table.revision(),
                 selection,
                 x_policy,
                 x_filter_mode,
@@ -282,10 +282,10 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
     hash = fnv1a_step(hash, model.datasets.len() as u64);
     for dataset_id in model.datasets.keys() {
         hash = fnv1a_step(hash, dataset_id.0);
-        if let Some(table) = datasets.dataset(*dataset_id) {
-            hash = fnv1a_step(hash, table.revision.0);
-            hash = fnv1a_step(hash, table.row_count as u64);
-            hash = fnv1a_step(hash, table.columns.len() as u64);
+        if let Some(table) = datasets.dataset(model.root_dataset_id(*dataset_id)) {
+            hash = fnv1a_step(hash, table.revision().0);
+            hash = fnv1a_step(hash, table.row_count() as u64);
+            hash = fnv1a_step(hash, table.column_count() as u64);
         }
     }
     hash
@@ -374,12 +374,12 @@ pub fn table_row_range<'a>(
 ) -> core::ops::Range<usize> {
     let mut range = RowRange {
         start: 0,
-        end: table.row_count,
+        end: table.row_count(),
     };
     if let Some(view) = view {
         range = view.row_range;
     }
-    range.as_std_range(table.row_count)
+    range.as_std_range(table.row_count())
 }
 
 #[cfg(test)]
@@ -419,6 +419,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -511,6 +514,7 @@ mod tests {
         );
 
         state.brush_selection_2d = Some(crate::selection::BrushSelection2D {
+            grid: None,
             x_axis: AxisId::new(1),
             y_axis: AxisId::new(2),
             x: DataWindow { min: 0.0, max: 1.0 },

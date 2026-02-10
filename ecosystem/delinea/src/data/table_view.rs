@@ -21,16 +21,16 @@ impl<'a> DataTableView<'a> {
     }
 
     pub fn raw_len(&self) -> usize {
-        self.table.row_count
+        self.table.row_count()
     }
 
     pub fn len(&self) -> usize {
-        self.selection.view_len(self.table.row_count)
+        self.selection.view_len(self.table.row_count())
     }
 
     pub fn get_raw_index(&self, view_index: usize) -> Option<usize> {
         self.selection
-            .get_raw_index(self.table.row_count, view_index)
+            .get_raw_index(self.table.row_count(), view_index)
     }
 
     pub fn column_f64(&self, index: usize) -> Option<&'a [f64]> {

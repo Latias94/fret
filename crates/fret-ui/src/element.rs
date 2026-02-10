@@ -3,7 +3,7 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
     TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
@@ -832,6 +832,7 @@ pub struct PressableProps {
     /// This is useful when the pressable is wider than the visual control chrome (e.g. a "row"
     /// pressable that should paint focus ring only around an icon-sized control).
     pub focus_ring_bounds: Option<Rect>,
+    pub key_activation: PressableKeyActivation,
     pub a11y: PressableA11y,
 }
 
@@ -844,6 +845,7 @@ impl std::fmt::Debug for PressableProps {
 
         out.field("focus_ring", &self.focus_ring)
             .field("focus_ring_bounds", &self.focus_ring_bounds)
+            .field("key_activation", &self.key_activation)
             .field("a11y", &self.a11y)
             .finish()
     }
@@ -857,7 +859,28 @@ impl Default for PressableProps {
             focusable: true,
             focus_ring: None,
             focus_ring_bounds: None,
+            key_activation: PressableKeyActivation::default(),
             a11y: PressableA11y::default(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum PressableKeyActivation {
+    /// Activate on Enter/NumpadEnter and Space (button-like default).
+    #[default]
+    EnterAndSpace,
+    /// Activate on Enter/NumpadEnter only (link-like).
+    EnterOnly,
+}
+
+impl PressableKeyActivation {
+    pub fn allows(self, key: KeyCode) -> bool {
+        match self {
+            Self::EnterAndSpace => {
+                matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space)
+            }
+            Self::EnterOnly => matches!(key, KeyCode::Enter | KeyCode::NumpadEnter),
         }
     }
 }

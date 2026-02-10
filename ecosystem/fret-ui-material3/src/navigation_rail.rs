@@ -455,6 +455,7 @@ fn navigation_rail_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Tab),
                 label: a11y_label.clone().or_else(|| Some(label.clone())),

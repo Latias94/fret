@@ -51,7 +51,7 @@ pub fn hover_hit_test(
             }
         }
 
-        let table = datasets.dataset(series.dataset);
+        let table = datasets.dataset(model.root_dataset_id(series.dataset));
         let Some(table) = table else {
             continue;
         };
@@ -126,7 +126,7 @@ pub fn hover_hit_test(
 
                     let y_eff_a = if let Some(stack) = series.stack {
                         stack_dims
-                            .stacked_y(stack, series_id, ia, model.revs.marks, table.revision)
+                            .stacked_y(stack, series_id, ia, model.revs.marks, table.revision())
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, ia, y0a)
                                     .map(|b| y0a + b.base)
@@ -137,7 +137,7 @@ pub fn hover_hit_test(
                     };
                     let y_eff_b = if let Some(stack) = series.stack {
                         stack_dims
-                            .stacked_y(stack, series_id, ib, model.revs.marks, table.revision)
+                            .stacked_y(stack, series_id, ib, model.revs.marks, table.revision())
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, ib, y0b)
                                     .map(|b| y0b + b.base)
@@ -216,7 +216,7 @@ pub fn hover_hit_test(
                     let y0 = y[idx];
                     let y_value = if let Some(stack) = series.stack {
                         stack_dims
-                            .stacked_y(stack, series_id, idx, model.revs.marks, table.revision)
+                            .stacked_y(stack, series_id, idx, model.revs.marks, table.revision())
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, idx, y0)
                                     .map(|b| y0 + b.base)
@@ -294,7 +294,13 @@ pub fn hover_hit_test(
 
                     let value = if let Some(stack) = series.stack {
                         stack_dims
-                            .stacked_value(stack, series_id, idx, model.revs.marks, table.revision)
+                            .stacked_value(
+                                stack,
+                                series_id,
+                                idx,
+                                model.revs.marks,
+                                table.revision(),
+                            )
                             .unwrap_or_else(|| {
                                 if is_horizontal_bar {
                                     value0
@@ -477,6 +483,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -613,6 +622,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -759,6 +771,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![crate::spec::GridSpec { id: grid_id }],
             axes: vec![
@@ -892,6 +907,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

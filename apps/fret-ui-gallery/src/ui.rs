@@ -5977,6 +5977,7 @@ fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Ve
                             column: 1,
                         },
                     ],
+                    ..Default::default()
                 }],
                 grids: vec![GridSpec { id: grid_id }],
                 axes: vec![

@@ -46,7 +46,8 @@ extension path to ECharts-class behavior (per-series selection, sparse indices, 
 We introduce a v1 baseline selection shape:
 
 - `BrushSelection2D`: a rectangular selection region expressed as a pair of data windows (X and Y) plus the targeted
-  axis ids (multi-axis aware).
+  axis ids (multi-axis aware). For multi-grid charts, the selection also carries an optional `GridId` so downstream
+  consumers can route without guessing.
 
 This choice is:
 
@@ -79,6 +80,9 @@ This makes brush selection observable for:
 - app-level selection linking,
 - external consumers (exporting selections, driving inspectors),
 - future highlight/masking pipelines.
+
+In multi-grid charts, the engine must keep the selection scoped to a single grid. Implementations should validate
+that `x_axis` and `y_axis` resolve to the same grid; mismatches clear the selection defensively.
 
 ### 5) Future extensions (P1+)
 

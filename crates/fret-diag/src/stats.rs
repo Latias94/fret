@@ -9332,13 +9332,14 @@ pub(super) fn run_script_and_wait(
 
     let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
     let mut target_run_id: Option<u64> = None;
-    let mut did_retouch = false;
 
     write_script(src, script_path)?;
     touch(script_trigger_path)?;
 
     let start_deadline =
         Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
+    let mut next_retouch_at = start_deadline;
+    let mut retouch_interval_ms: u64 = 2_000;
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
     loop {
         if Instant::now() >= deadline {
@@ -9349,10 +9350,17 @@ pub(super) fn run_script_and_wait(
             ));
         }
 
-        if !did_retouch && target_run_id.is_none() && Instant::now() >= start_deadline {
+        if target_run_id.is_none() && Instant::now() >= next_retouch_at {
             // See comment in `start_grace_ms`.
+            //
+            // In `--launch` mode the demo process may start significantly later than the driver
+            // touches the trigger (e.g. due to compilation). The in-app contract intentionally
+            // treats the first observed stamp as a baseline. Periodic re-touching ensures at
+            // least one trigger lands after the app has observed its baseline value, without
+            // requiring any changes to the in-app polling contract.
             touch(script_trigger_path)?;
-            did_retouch = true;
+            retouch_interval_ms = (retouch_interval_ms.saturating_mul(2)).min(10_000);
+            next_retouch_at = Instant::now() + Duration::from_millis(retouch_interval_ms);
         }
 
         if let Some(result) = read_script_result(script_result_path) {

@@ -49,7 +49,8 @@ impl super::TransformGraph {
         };
         let base_range = dataset_view.row_range;
 
-        let Some(table) = datasets.dataset(series_model.dataset) else {
+        let root = model.root_dataset_id(series_model.dataset);
+        let Some(table) = datasets.dataset(root) else {
             return None;
         };
         let Some(dataset) = model.datasets.get(&series_model.dataset) else {
@@ -64,7 +65,7 @@ impl super::TransformGraph {
 
         let signature = x_range_signature(
             model.revs.spec,
-            table.revision,
+            table.revision(),
             series_id,
             base_range,
             x_col,
@@ -170,6 +171,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

@@ -465,14 +465,14 @@ mod tests {
             vec![SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
-                background: Color {
+                background: fret_core::Paint::Solid(Color {
                     r: 1.0,
                     g: 1.0,
                     b: 1.0,
                     a: 1.0,
-                },
+                }),
                 border: fret_core::Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             }],
         );
@@ -542,14 +542,14 @@ mod tests {
                 vec![SceneOp::Quad {
                     order: DrawOrder(0),
                     rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
-                    background: Color {
+                    background: fret_core::Paint::Solid(Color {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
                         a: 1.0,
-                    },
+                    }),
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 }]
             },

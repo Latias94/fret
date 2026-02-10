@@ -611,12 +611,7 @@ pub(super) fn handle_pressable<H: UiHost>(
             if cx.focus != Some(cx.node) {
                 return;
             }
-            if !matches!(
-                key,
-                fret_core::KeyCode::Enter
-                    | fret_core::KeyCode::NumpadEnter
-                    | fret_core::KeyCode::Space
-            ) {
+            if !props.key_activation.allows(*key) {
                 return;
             }
             if let Some(prev_node) =
@@ -632,12 +627,7 @@ pub(super) fn handle_pressable<H: UiHost>(
             if cx.focus != Some(cx.node) {
                 return;
             }
-            if !matches!(
-                key,
-                fret_core::KeyCode::Enter
-                    | fret_core::KeyCode::NumpadEnter
-                    | fret_core::KeyCode::Space
-            ) {
+            if !props.key_activation.allows(*key) {
                 return;
             }
             let pressed = crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);

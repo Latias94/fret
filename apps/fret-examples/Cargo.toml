@@ -34,7 +34,7 @@ fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-launch = { path = "../../crates/fret-launch" }
+fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }

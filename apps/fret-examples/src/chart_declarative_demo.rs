@@ -59,6 +59,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
                     column: 3,
                 },
             ],
+            ..Default::default()
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![

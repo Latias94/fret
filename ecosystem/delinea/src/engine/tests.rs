@@ -38,6 +38,9 @@ fn basic_spec() -> ChartSpec {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec {
             id: crate::ids::GridId::new(1),
@@ -89,6 +92,261 @@ fn basic_spec() -> ChartSpec {
 }
 
 #[test]
+fn multi_grid_plot_viewports_route_mark_mapping_by_grid() {
+    use crate::engine::model::{ChartPatch, PatchMode};
+    use crate::text::{TextMeasurer, TextMetrics};
+
+    #[derive(Debug, Default)]
+    struct NullTextMeasurer;
+
+    impl TextMeasurer for NullTextMeasurer {
+        fn measure(
+            &mut self,
+            _text: crate::ids::StringId,
+            _style: crate::text::TextStyleId,
+        ) -> TextMetrics {
+            TextMetrics::default()
+        }
+    }
+
+    fn rect_contains_point(rect: Rect, point: Point) -> bool {
+        let x0 = rect.origin.x.0;
+        let y0 = rect.origin.y.0;
+        let x1 = x0 + rect.size.width.0;
+        let y1 = y0 + rect.size.height.0;
+        point.x.0 >= x0 && point.x.0 <= x1 && point.y.0 >= y0 && point.y.0 <= y1
+    }
+
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let grid_a = crate::ids::GridId::new(1);
+    let grid_b = crate::ids::GridId::new(2);
+
+    let x_a = crate::ids::AxisId::new(1);
+    let y_a = crate::ids::AxisId::new(2);
+    let x_b = crate::ids::AxisId::new(3);
+    let y_b = crate::ids::AxisId::new(4);
+
+    let s_a = crate::ids::SeriesId::new(1);
+    let s_b = crate::ids::SeriesId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: None,
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
+        axes: vec![
+            AxisSpec {
+                id: x_a,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_a,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x_b,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_b,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: s_a,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_a,
+                y_axis: y_a,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: s_b,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_b,
+                y_axis: y_b,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let viewport_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    let viewport_b = Rect::new(
+        Point::new(Px(200.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    let mut patch = ChartPatch::default();
+    patch
+        .plot_viewports_by_grid
+        .insert(grid_a, Some(viewport_a));
+    patch
+        .plot_viewports_by_grid
+        .insert(grid_b, Some(viewport_b));
+    engine.apply_patch(patch, PatchMode::Merge).unwrap();
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..32 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let output = engine.output();
+    assert_eq!(
+        output.plot_viewports_by_grid.get(&grid_a).copied(),
+        Some(viewport_a)
+    );
+    assert_eq!(
+        output.plot_viewports_by_grid.get(&grid_b).copied(),
+        Some(viewport_b)
+    );
+
+    let mut a_points: Vec<Point> = Vec::new();
+    let mut b_points: Vec<Point> = Vec::new();
+    for node in &output.marks.nodes {
+        let series = match node.source_series {
+            Some(s) => s,
+            None => continue,
+        };
+        let out = if series == s_a {
+            &mut a_points
+        } else if series == s_b {
+            &mut b_points
+        } else {
+            continue;
+        };
+
+        match &node.payload {
+            MarkPayloadRef::Points(p) => {
+                out.extend(p.points.clone().map(|i| output.marks.arena.points[i]));
+            }
+            MarkPayloadRef::Polyline(p) => {
+                out.extend(p.points.clone().map(|i| output.marks.arena.points[i]));
+            }
+            MarkPayloadRef::Rect(r) => {
+                out.extend(
+                    r.rects
+                        .clone()
+                        .map(|i| output.marks.arena.rects[i])
+                        .map(|rect| rect.origin),
+                );
+            }
+            MarkPayloadRef::Text(t) => {
+                out.push(t.rect.origin);
+            }
+            MarkPayloadRef::Group(_) => {}
+        }
+    }
+
+    assert!(!a_points.is_empty());
+    assert!(!b_points.is_empty());
+    for p in a_points {
+        assert!(rect_contains_point(viewport_a, p));
+    }
+    for p in b_points {
+        assert!(rect_contains_point(viewport_b, p));
+    }
+
+    let before_windows = output.axis_windows.clone();
+
+    engine.apply_action(Action::SetAxisWindowPercent {
+        axis: x_a,
+        range: Some((25.0, 75.0)),
+    });
+    for _ in 0..32 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let after_windows = engine.output().axis_windows.clone();
+    assert_ne!(before_windows.get(&x_a), after_windows.get(&x_a));
+    assert_eq!(before_windows.get(&x_b), after_windows.get(&x_b));
+}
+
+#[test]
 fn bar_emits_rect_batch() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
@@ -116,6 +374,9 @@ fn bar_emits_rect_batch() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -217,6 +478,9 @@ fn bar_filter_mode_none_culls_categories_outside_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -329,6 +593,9 @@ fn horizontal_bar_emits_rect_batch() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -437,6 +704,9 @@ fn stacked_bar_uses_stack_base() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -595,6 +865,9 @@ fn grouped_bars_have_distinct_x_offsets() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -751,6 +1024,9 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
                     column: 3,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -938,6 +1214,9 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                     column: 5,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -1234,6 +1513,7 @@ fn brush_selection_updates_state_without_bumping_view_revision_and_is_exposed_in
     assert_eq!(
         engine.state().brush_selection_2d,
         Some(crate::engine::BrushSelection2D {
+            grid: Some(crate::ids::GridId::new(1)),
             x_axis,
             y_axis,
             x: DataWindow {
@@ -1319,6 +1599,205 @@ fn brush_x_row_range_is_derived_for_matching_series_axes() {
 }
 
 #[test]
+fn brush_selection_is_scoped_to_grid_and_filters_series_ranges() {
+    use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+
+    let dataset_id = DatasetId::new(1);
+    let x_field = FieldId::new(1);
+    let y_field = FieldId::new(2);
+
+    let grid_a = GridId::new(1);
+    let grid_b = GridId::new(2);
+
+    let x_a = AxisId::new(1);
+    let y_a = AxisId::new(2);
+    let x_b = AxisId::new(3);
+    let y_b = AxisId::new(4);
+
+    let series_a = SeriesId::new(1);
+    let series_b = SeriesId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
+        axes: vec![
+            AxisSpec {
+                id: x_a,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_a,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x_b,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_b,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_a,
+                y_axis: y_a,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_b,
+                y_axis: y_b,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis: x_a,
+        y_axis: y_a,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let selection = engine
+        .output()
+        .brush_selection_2d
+        .expect("expected brush selection in output");
+    assert_eq!(selection.grid, Some(grid_a));
+
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_a)
+    );
+    assert!(
+        !engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_b)
+    );
+
+    // Opt-in: allow cross-grid X linking by matching `(dataset, encode.x)` across series.
+    engine.apply_action(Action::SetLinkBrushXExportPolicy {
+        policy: crate::link::BrushXExportPolicy::SameDatasetXField,
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_a)
+    );
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_b)
+    );
+
+    // Mismatched grids should clear the selection defensively.
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis: x_a,
+        y_axis: y_b,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+    assert_eq!(engine.state().brush_selection_2d, None);
+}
+
+#[test]
 fn brush_selection_emits_link_event_when_link_group_is_set() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let x_axis = crate::ids::AxisId::new(1);
@@ -1381,6 +1860,153 @@ fn brush_selection_emits_link_event_when_link_group_is_set() {
         matches!(
             e,
             crate::link::LinkEvent::BrushSelectionChanged { selection: None }
+        )
+    }));
+}
+
+#[test]
+fn axis_pointer_emits_link_event_when_link_group_is_set() {
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    ));
+    spec.axis_pointer = Some(AxisPointerSpec::default());
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine
+        .datasets_mut()
+        .insert(crate::ids::DatasetId::new(1), table);
+
+    engine.apply_action(Action::SetLinkGroup {
+        group: Some(crate::ids::LinkGroupId::new(1)),
+    });
+
+    // Hover inside the plot viewport should emit an anchor once.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(50.0), Px(50.0)),
+    });
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged {
+                anchor: Some(anchor)
+            } if anchor.axis == crate::ids::AxisId::new(1)
+                && anchor.axis_kind == AxisKind::X
+                && anchor.value.is_finite()
+        )
+    }));
+
+    // Same hover again should not re-emit.
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().is_empty());
+
+    // Moving the hover should emit a new anchor.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(150.0), Px(50.0)),
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged {
+                anchor: Some(anchor)
+            } if anchor.axis == crate::ids::AxisId::new(1)
+                && anchor.axis_kind == AxisKind::X
+                && anchor.value.is_finite()
+        )
+    }));
+
+    // Leaving the viewport should emit a clear once.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(10_000.0), Px(10_000.0)),
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged { anchor: None }
+        )
+    }));
+}
+
+#[test]
+fn domain_window_emits_link_event_when_link_group_is_set() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine
+        .datasets_mut()
+        .insert(crate::ids::DatasetId::new(1), table);
+
+    engine.apply_action(Action::SetLinkGroup {
+        group: Some(crate::ids::LinkGroupId::new(1)),
+    });
+
+    let window = DataWindow { min: 2.0, max: 5.0 };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(window),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::DomainWindowChanged { axis, window: Some(w) }
+                if *axis == x_axis && *w == window
+        )
+    }));
+
+    // Same window again should not re-emit.
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().is_empty());
+
+    // Clearing should emit once.
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: None,
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::DomainWindowChanged { axis, window: None } if *axis == x_axis
         )
     }));
 }
@@ -2143,6 +2769,9 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_none() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2269,6 +2898,9 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2403,6 +3035,9 @@ fn data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selecti
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2542,6 +3177,9 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_filter() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2664,6 +3302,9 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_weakfilte
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2787,6 +3428,9 @@ fn data_zoom_xy_filter_mode_filter_applies_x_indices_before_y_indices_in_same_fr
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3096,6 +3740,9 @@ fn visual_map_can_emit_stroke_width_for_scatter_buckets() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3228,6 +3875,9 @@ fn band_emits_two_polylines() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3348,6 +3998,9 @@ fn stacked_area_emits_two_polylines() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3466,6 +4119,9 @@ fn row_range_limits_mark_indices() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3575,6 +4231,9 @@ fn x_window_limits_mark_indices() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3689,6 +4348,9 @@ fn category_x_window_updates_axis_window_and_rounds_axis_pointer_value() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3840,6 +4502,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_line_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4006,6 +4671,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4182,6 +4850,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_band_series() {
                     column: 4,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4364,6 +5035,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_ser
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4538,6 +5212,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4722,6 +5399,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_lin
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4896,6 +5576,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_ban
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5066,6 +5749,9 @@ fn axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mas
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5208,6 +5894,9 @@ fn axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empt
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5354,6 +6043,9 @@ fn axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empt
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5495,6 +6187,9 @@ fn axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5652,6 +6347,9 @@ fn axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5824,6 +6522,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5984,6 +6685,9 @@ fn axis_fixed_overrides_data_window_for_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6099,6 +6803,9 @@ fn set_series_visible_hides_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6265,6 +6972,9 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6393,6 +7103,9 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6540,6 +7253,9 @@ fn data_window_filter_mode_resets_to_spec_default() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6660,6 +7376,9 @@ fn data_zoom_x_filter_mode_empty_preserves_base_row_selection_for_monotonic_x() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6774,6 +7493,9 @@ fn filter_mode_empty_line_marks_respect_indices_selection_from_y_filter() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6907,6 +7629,9 @@ fn filter_mode_empty_does_not_cull_y_filtered_row_selection_by_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7040,6 +7765,9 @@ fn data_zoom_x_filter_mode_weakfilter_matches_filter_for_monotonic_x() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7154,6 +7882,9 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7292,6 +8023,9 @@ fn data_zoom_xy_filter_mode_weakfilter_prefers_xy_indices_over_x_only_indices_fo
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7447,6 +8181,9 @@ fn data_zoom_xy_filter_mode_weakfilter_keeps_mixed_side_outliers_for_scatter() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7599,6 +8336,9 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers_for_band() 
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7730,6 +8470,9 @@ fn data_zoom_x_filter_mode_none_vs_filter_vs_empty_y_axis_window_semantics() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -7876,6 +8619,9 @@ fn data_zoom_x_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8007,6 +8753,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_e
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8162,6 +8911,9 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_li
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8325,6 +9077,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_e
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8485,6 +9240,9 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_ba
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8645,6 +9403,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_mark
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8795,6 +9556,9 @@ fn data_zoom_y_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9189,6 +9953,9 @@ fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_win
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9321,6 +10088,9 @@ fn data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9440,6 +10210,9 @@ fn data_zoom_y_filter_mode_empty_masks_bar_marks_outside_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9565,6 +10338,9 @@ fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_o
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9709,6 +10485,9 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9828,6 +10607,9 @@ fn hover_does_not_rebuild_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9927,6 +10709,9 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10046,6 +10831,9 @@ fn axis_pointer_item_trigger_is_suppressed_when_far_from_series() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10162,6 +10950,9 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10308,6 +11099,9 @@ fn output_hover_is_gated_by_axis_trigger_marker_distance() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10426,6 +11220,9 @@ fn axis_pointer_axis_trigger_respects_x_filter_for_non_monotonic_x() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10561,6 +11358,9 @@ fn axis_pointer_axis_trigger_emits_range_for_band_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10681,6 +11481,9 @@ fn axis_pointer_axis_trigger_samples_scatter_by_nearest_point() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10805,6 +11608,9 @@ fn axis_pointer_axis_trigger_handles_indices_selection_from_y_filter() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10975,6 +11781,9 @@ fn axis_pointer_axis_trigger_uses_nearest_x_index_for_large_non_monotonic_views(
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11117,6 +11926,9 @@ fn data_zoom_x_filter_mode_materializes_indices_selection_for_large_non_monotoni
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11250,6 +12062,9 @@ fn data_zoom_x_then_y_filter_materializes_indices_in_order_for_large_non_monoton
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11396,6 +12211,9 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             },
             DatasetSpec {
                 id: dataset2_id,
@@ -11409,6 +12227,9 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             },
         ],
         grids: vec![GridSpec { id: grid1_id }, GridSpec { id: grid2_id }],
@@ -11592,6 +12413,9 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11743,6 +12567,9 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11885,6 +12712,9 @@ fn axis_pointer_item_trigger_snaps_to_hit_point_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11993,6 +12823,9 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12114,6 +12947,9 @@ fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
                 FieldSpec { id: x_b, column: 2 },
                 FieldSpec { id: y_b, column: 3 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12273,6 +13109,9 @@ fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12407,6 +13246,9 @@ fn axis_pointer_axis_trigger_emits_shadow_rect_for_category_trigger_axis() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12534,6 +13376,9 @@ fn axis_pointer_shadow_rect_respects_category_band_edges_under_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12669,6 +13514,9 @@ fn category_x_filter_culls_marks_for_non_monotonic_line_and_samples_first_duplic
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12844,6 +13692,9 @@ fn category_x_filter_materializes_indices_for_scatter_and_respects_base_row_rang
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13005,6 +13856,9 @@ fn scatter_emits_point_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13114,6 +13968,9 @@ fn scatter_filter_mode_none_culls_points_outside_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13239,6 +14096,9 @@ fn scatter_large_mode_is_pixel_bounded() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13362,6 +14222,9 @@ fn scatter_large_threshold_can_force_large_mode() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13504,6 +14367,9 @@ fn scatter_progressive_can_force_multiple_steps() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13617,6 +14483,9 @@ fn scatter_large_mode_respects_y_empty_mask() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13786,6 +14655,9 @@ fn scatter_large_mode_does_not_hit_y_empty_masked_outlier() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13992,6 +14864,9 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14086,7 +14961,7 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
 
     let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
     table.append_row_f64(&[1.0, 0.0]).unwrap();
-    let appended_index = (table.row_count - 1) as u32;
+    let appended_index = (table.row_count() - 1) as u32;
 
     let mut steps = 0;
     let mut result = crate::scheduler::StepResult::default();
@@ -14128,6 +15003,366 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
 }
 
 #[test]
+fn append_only_marks_rebuild_preserves_geometry_while_unfinished_multi_series() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y1_field = crate::ids::FieldId::new(2);
+    let y2_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y2_field,
+                    column: 2,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed { min: 0.0, max: 1.0 }),
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed {
+                    min: -1.5,
+                    max: 1.5,
+                }),
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y1_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y2_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 120_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut y1s = Vec::with_capacity(n);
+    let mut y2s = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n as f64 - 1.0);
+        xs.push(t);
+        y1s.push((t * 20.0).sin());
+        y2s.push((t * 17.0).cos());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(y1s));
+    table.push_column(Column::F64(y2s));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0usize;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 512 {
+            break;
+        }
+    }
+    assert!(steps <= 512);
+
+    let before_marks_rev = engine.output().marks.revision;
+    let before_nodes_len = engine.output().marks.nodes.len();
+    assert!(before_nodes_len > 0);
+
+    for series_id in [series_a, series_b] {
+        assert!(
+            engine
+                .output()
+                .marks
+                .nodes
+                .iter()
+                .any(|n| n.kind == crate::marks::MarkKind::Polyline
+                    && n.source_series == Some(series_id)),
+            "expected a polyline node for series {series_id:?} before append"
+        );
+    }
+
+    let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
+    table.append_row_f64(&[1.0, 0.0, 1.0]).unwrap();
+    let appended_index = (table.row_count() - 1) as u32;
+
+    let mut saw_unfinished = false;
+    let mut last_rev = before_marks_rev;
+    let mut result = crate::scheduler::StepResult::default();
+
+    for _ in 0..512 {
+        result = engine
+            .step(&mut measurer, WorkBudget::new(2048, 0, 8))
+            .unwrap();
+
+        let marks = &engine.output().marks;
+        assert!(marks.nodes.len() >= before_nodes_len);
+        assert!(marks.revision.0 >= last_rev.0);
+        last_rev = marks.revision;
+
+        for series_id in [series_a, series_b] {
+            assert!(
+                marks.nodes.iter().any(|n| {
+                    n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series_id)
+                }),
+                "expected a polyline node for series {series_id:?} during append-only rebuild"
+            );
+        }
+
+        if result.unfinished {
+            saw_unfinished = true;
+        } else {
+            break;
+        }
+    }
+
+    assert!(saw_unfinished, "expected at least one unfinished step");
+    assert!(!result.unfinished, "expected append-only rebuild to finish");
+
+    for series_id in [series_a, series_b] {
+        let has_appended_index = engine
+            .output()
+            .marks
+            .nodes
+            .iter()
+            .filter(|n| {
+                n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series_id)
+            })
+            .any(|node| {
+                let crate::marks::MarkPayloadRef::Polyline(poly) = &node.payload else {
+                    return false;
+                };
+                engine.output().marks.arena.data_indices[poly.points.clone()]
+                    .iter()
+                    .any(|&i| i == appended_index)
+            });
+
+        assert!(
+            has_appended_index,
+            "expected appended raw index to be represented in the LOD output for series {series_id:?}"
+        );
+    }
+}
+
+#[test]
+fn update_mutation_clears_marks_and_forces_rebuild() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+
+            from: None,
+            transforms: Vec::new(),
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed { min: 0.0, max: 1.0 }),
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Some(AxisRange::Fixed {
+                    min: -1.5,
+                    max: 1.5,
+                }),
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+            lod: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 20_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n as f64 - 1.0);
+        xs.push(t);
+        ys.push((t * 20.0).sin());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    assert!(!engine.output().marks.nodes.is_empty());
+    let marks_rev_before = engine.output().marks.revision;
+
+    // In-place update (no row_count growth) must invalidate caches deterministically and must not be
+    // mistaken for append-only rebuild.
+    {
+        let table = engine.datasets_mut().dataset_mut(dataset_id).unwrap();
+        let mid = table.row_count() / 2;
+        let x_mid = table.column_f64(0).unwrap()[mid];
+        table.update_row_f64(mid, &[x_mid, 0.0]).unwrap();
+    }
+
+    // With a zero budget, marks cannot be rebuilt; the engine should have cleared marks due to the
+    // update revision change.
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(0, 0, 0))
+        .unwrap();
+    assert!(step.unfinished);
+    assert!(engine.output().marks.nodes.is_empty());
+    assert!(engine.output().marks.revision.0 > marks_rev_before.0);
+
+    // Rebuild should be possible under a normal budget again.
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+    assert!(!engine.output().marks.nodes.is_empty());
+}
+
+#[test]
 fn bar_item_trigger_does_not_hit_y_empty_masked_outlier() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let zoom_id = crate::ids::DataZoomId::new(1);
@@ -14158,6 +15393,9 @@ fn bar_item_trigger_does_not_hit_y_empty_masked_outlier() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14353,6 +15591,9 @@ fn axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_mas
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14513,6 +15754,9 @@ fn data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection()
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14672,6 +15916,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_s
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14843,6 +16090,9 @@ fn axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15016,6 +16266,9 @@ fn axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_whe
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15189,6 +16442,9 @@ fn axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15345,6 +16601,9 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_un
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15549,6 +16808,9 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15726,6 +16988,9 @@ fn line_large_mode_is_pixel_bounded() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15849,6 +17114,9 @@ fn lod_scatter_large_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15969,6 +17237,9 @@ fn lod_line_large_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16089,6 +17360,9 @@ fn lod_bar_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16249,6 +17523,9 @@ fn stacked_line_series_offsets_y() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16387,6 +17664,9 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16685,6 +17965,9 @@ fn band_missing_upper_breaks_and_preserves_pairing() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![

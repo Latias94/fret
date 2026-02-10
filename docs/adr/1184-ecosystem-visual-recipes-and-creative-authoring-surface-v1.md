@@ -34,7 +34,7 @@ Related ADRs:
 - Controlled materials: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
 - Sampled materials (v2): `docs/adr/1181-sampled-materials-and-fixed-binding-shapes-v2.md`
 - Masks: `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
-- Compositing groups: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
+- Compositing groups: `docs/adr/1190-compositing-groups-and-blend-modes-v1.md`
 - Frame clock and reduced motion: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
 - Pointer motion snapshots: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
 - Procedural determinism: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`

@@ -12,7 +12,7 @@
     }
   ],
   "filter_plan": {
-    "revision": 1,
+    "revision": 2,
     "grids": [
       {
         "grid": 1,
@@ -70,18 +70,33 @@
     ]
   },
   "participation": {
-    "revision": 1,
+    "revision": 2,
     "series": [
       {
         "series": 1,
         "dataset": 2,
-        "revision": 1,
+        "revision": 2,
         "data_revision": 2,
         "selection": {
-          "kind": "range",
-          "start": 0,
-          "end": 10,
-          "view_len": 10
+          "kind": "indices",
+          "view_len": 10,
+          "head": [
+            9,
+            8,
+            7,
+            6,
+            5,
+            4
+          ],
+          "tail": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "hash": 551941413642326388
         },
         "x_filter_mode": "Filter",
         "y_filter_mode": "None",

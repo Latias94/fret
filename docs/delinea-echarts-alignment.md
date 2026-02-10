@@ -503,12 +503,18 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
 - `[~]` Multi-grid layout (multiple independent grids in one chart).
   - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
-    The current UI adapter workaround renders multi-grid charts by splitting the `ChartSpec` into multiple single-grid charts (one viewport per chart) and laying them out side-by-side/stacked.
+
+    - Current (v1): the retained UI adapter hosts a single `ChartEngine` instance and supplies per-grid plot
+      viewports, allowing the engine to emit deterministic per-grid marks and routing surfaces.
+    - Remaining gap (high value): consolidate the UI adapter around **global** controllers (one legend +
+      one tooltip/axisPointer overlay for the multi-grid surface) instead of per-grid duplication (see
+      workstream notes, section “Global controllers (B)”).
   - Evidence:
     - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
-    - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
-    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-grid host)
+    - `ecosystem/fret-chart/src/retained/canvas.rs` (per-grid plot viewport patching via `grid_override`)
     - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
+    - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
@@ -523,7 +529,8 @@ Workstream tracker for engine-level contract closure (multi-grid + transform lin
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
 3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
-   - Note: the current v1 UI shows multi-grid charts via `ChartSpec` splitting; the long-term target is per-grid viewport/layout inside a single chart instance (crosshair/zoom/tooltip linking).
+   - Note: v1 now uses per-grid plot viewports in a single chart instance; the remaining target is
+     global controllers (shared legend + tooltip/axisPointer overlay) and cross-grid linking semantics.
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
 6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).
@@ -564,12 +571,11 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
   - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
 - Missing vs ECharts:
-  - `[~]` `dataset.transform` (ECharts dataset transforms): v1 supports a small eager translator subset:
-    - `filter` (numeric dimension + `gte/gt/lte/lt/eq/ne`)
-    - `sort` (numeric dimension + `order=asc/desc`)
-    - `fromDatasetIndex` chaining for derived datasets
-    - Evidence: `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-*.json`
-    - Known gap: raw-index identity across dataset transforms is not yet modeled as an ECharts-class `DataStore` graph; derived datasets currently re-index rows (needs an engine-level transform graph contract).
+  - `[x]` `dataset.transform` (ECharts dataset transforms): v1 supports a minimal engine-owned subset:
+    - derived datasets via `fromDatasetIndex` + row-preserving transform chains (`filter`, `sort`)
+    - stable raw-index identity (selection and marks refer to the lineage root table indices)
+    - Evidence: `ecosystem/delinea/src/transform_graph/dataset_transform.rs`, `ecosystem/delinea/src/engine/stages/filter_processor.rs`, `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-chain-filter-sort-desc.json`
+    - Remaining gaps: broader transform types (aggregate/group), derived columns beyond category scaffolding, and more complete conformance coverage.
   - `source` object rows, `sourceHeader`, and type inference (P1)
 
 ### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)

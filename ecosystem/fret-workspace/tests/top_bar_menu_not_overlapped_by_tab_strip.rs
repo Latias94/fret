@@ -14,6 +14,19 @@ use std::sync::Arc;
 #[derive(Default)]
 struct FakeServices;
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 impl TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -52,19 +65,6 @@ impl SvgService for FakeServices {
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
         true
-    }
-}
-
-impl MaterialService for FakeServices {
-    fn register_material(
-        &mut self,
-        _desc: MaterialDescriptor,
-    ) -> Result<MaterialId, MaterialRegistrationError> {
-        Err(MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: MaterialId) -> bool {
-        false
     }
 }
 

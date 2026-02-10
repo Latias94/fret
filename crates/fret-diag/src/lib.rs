@@ -1802,6 +1802,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
+            struct StopLaunchedDemoOnDrop<'a> {
+                child: &'a mut Option<LaunchedDemo>,
+                exit_path: &'a Path,
+                poll_ms: u64,
+            }
+
+            impl Drop for StopLaunchedDemoOnDrop<'_> {
+                fn drop(&mut self) {
+                    let _ = stop_launched_demo(self.child, self.exit_path, self.poll_ms);
+                }
+            }
+
             let wants_pack = pack_after_run
                 || pack_out.is_some()
                 || pack_include_root_artifacts
@@ -2073,20 +2085,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
             )?;
+            let _stop_guard = StopLaunchedDemoOnDrop {
+                child: &mut child,
+                exit_path: &resolved_exit_path,
+                poll_ms,
+            };
 
             let required_caps = script_required_capabilities(&src);
             if !required_caps.is_empty() {
                 let available_caps = read_filesystem_capabilities(&resolved_out_dir);
-                if let Err(e) = gate_required_capabilities(
+                gate_required_capabilities(
                     &resolved_out_dir.join("check.capabilities.json"),
                     &required_caps,
                     &available_caps,
-                ) {
-                    let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    return Err(e);
-                }
+                )?;
             }
-
             let mut result = run_script_and_wait(
                 &src,
                 &resolved_script_path,
@@ -2347,7 +2360,6 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
             }
 
-            let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "repro" => {

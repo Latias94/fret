@@ -10,7 +10,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::{AppWindowId, KeyCode, Modifiers};
+use fret_core::{AppWindowId, KeyCode, Modifiers, SemanticsRole};
 use fret_router::{
     HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
@@ -22,7 +22,7 @@ use fret_runtime::{
 };
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::PressableProps;
+use fret_ui::element::{PressableKeyActivation, PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -690,6 +690,11 @@ where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
 {
+    let mut props = props;
+    props.a11y.role.get_or_insert(SemanticsRole::Link);
+    props.key_activation = PressableKeyActivation::EnterOnly;
+
+    let href = link.href.clone();
     let on_activate = store.navigate_link_on_activate(link.clone());
     let on_hover = store.prefetch_link_on_hover_change(link);
     let children: Vec<AnyElement> = children.into_iter().collect();
@@ -699,6 +704,7 @@ where
         cx.pressable_on_hover_change(on_hover);
         (props, children)
     })
+    .attach_semantics(SemanticsDecoration::default().value(href))
 }
 
 /// Build a router link pressable and stamp a diagnostics `test_id`.

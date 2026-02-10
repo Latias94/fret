@@ -1250,6 +1250,7 @@ fn time_input_field<H: UiHost>(
             let pressable_props = PressableProps {
                 enabled,
                 focusable: enabled,
+                key_activation: Default::default(),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::TextField),
                     label: Some(a11y_label.clone()),
@@ -1485,6 +1486,7 @@ fn time_selector_field<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(a11y_label.clone()),
@@ -1888,6 +1890,7 @@ fn dial_label<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(cached_decimal_0_59(label)),
@@ -2089,6 +2092,7 @@ fn time_input_period_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),
@@ -2316,6 +2320,7 @@ fn period_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),

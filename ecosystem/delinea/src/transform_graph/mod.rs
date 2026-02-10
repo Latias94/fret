@@ -8,6 +8,7 @@
 //! For now, we keep the surface intentionally small and migrate behavior incrementally.
 
 mod data_view;
+mod dataset_transform;
 mod filter_plan;
 mod filter_plan_output;
 mod x_range;
@@ -35,6 +36,7 @@ use std::collections::BTreeMap;
 pub struct TransformGraph {
     x_extent_cache: BTreeMap<AxisId, CachedExtent>,
     y_percent_extents_cache: BTreeMap<crate::ids::GridId, CachedYExtents>,
+    dataset_transform_stage: dataset_transform::DatasetTransformStage,
     data_views: DataViewStage,
     filter_plan_output: FilterPlanOutput,
     filter_plan_cache: Option<CachedFilterPlan>,
@@ -65,6 +67,7 @@ impl TransformGraph {
     pub fn clear(&mut self) {
         self.x_extent_cache.clear();
         self.y_percent_extents_cache.clear();
+        self.dataset_transform_stage.clear();
         self.data_views = DataViewStage::default();
         self.filter_plan_output = FilterPlanOutput::default();
         self.filter_plan_cache = None;
@@ -82,6 +85,7 @@ impl TransformGraph {
     }
 
     pub fn begin_frame(&mut self) {
+        self.dataset_transform_stage.begin_frame();
         self.data_views.begin_frame();
     }
 
@@ -177,11 +181,22 @@ impl TransformGraph {
     }
 
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
+        self.dataset_transform_stage.prepare_requests();
         self.data_views.prepare_requests(datasets);
     }
 
-    pub fn step(&mut self, datasets: &DatasetStore, budget: &mut WorkBudget) -> bool {
-        self.data_views.step(datasets, budget)
+    pub fn step(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        budget: &mut WorkBudget,
+    ) -> bool {
+        let dataset_done = self
+            .dataset_transform_stage
+            .step(model, datasets, view, budget);
+        let views_done = self.data_views.step(datasets, budget);
+        dataset_done && views_done
     }
 
     pub fn request_x_filter_for_series(
@@ -240,18 +255,26 @@ impl TransformGraph {
     pub fn selection_for_x_filter(
         &self,
         dataset: crate::ids::DatasetId,
+        root_dataset: crate::ids::DatasetId,
         x_col: usize,
         selection_range: RowRange,
         filter: AxisFilter1D,
         table_rev: Revision,
     ) -> Option<RowSelection> {
-        self.data_views
-            .selection_for(dataset, x_col, selection_range, filter, table_rev)
+        self.data_views.selection_for(
+            dataset,
+            root_dataset,
+            x_col,
+            selection_range,
+            filter,
+            table_rev,
+        )
     }
 
     pub fn selection_for_xy_weak_filter(
         &self,
         dataset: crate::ids::DatasetId,
+        root_dataset: crate::ids::DatasetId,
         x_col: usize,
         y_col: usize,
         selection_range: RowRange,
@@ -261,6 +284,7 @@ impl TransformGraph {
     ) -> Option<RowSelection> {
         self.data_views.selection_for_xy_weak_filter(
             dataset,
+            root_dataset,
             x_col,
             y_col,
             selection_range,
@@ -273,6 +297,7 @@ impl TransformGraph {
     pub fn selection_for_xy_weak_filter_band(
         &self,
         dataset: crate::ids::DatasetId,
+        root_dataset: crate::ids::DatasetId,
         x_col: usize,
         y0_col: usize,
         y1_col: usize,
@@ -283,6 +308,7 @@ impl TransformGraph {
     ) -> Option<RowSelection> {
         self.data_views.selection_for_xy_weak_filter_band(
             dataset,
+            root_dataset,
             x_col,
             y0_col,
             y1_col,
@@ -424,7 +450,7 @@ impl TransformGraph {
             let x_active = !matches!(x_filter_mode, FilterMode::None)
                 && (x_filter.min.is_some() || x_filter.max.is_some());
 
-            let Some(table) = datasets.dataset(series_model.dataset) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(series_model.dataset)) else {
                 continue;
             };
             let Some(dataset) = model.datasets.get(&series_model.dataset) else {
@@ -449,7 +475,7 @@ impl TransformGraph {
             };
             let y1_values = y1_col.and_then(|c| table.column_f64(c));
 
-            let len = table.row_count;
+            let len = table.row_count();
             let view_len = series_view.selection.view_len(len);
             if view_len == 0 {
                 continue;
@@ -572,7 +598,7 @@ fn y_percent_extents_signature(
 
         let table_rev = datasets
             .dataset(series_model.dataset)
-            .map(|t| rev_u64(t.revision))
+            .map(|t| rev_u64(t.revision()))
             .unwrap_or(0);
         h = fnv1a_step(h, table_rev);
 
@@ -621,7 +647,7 @@ fn x_extent_signature(
 
         let table_rev = datasets
             .dataset(series.dataset)
-            .map(|t| rev_u64(t.revision))
+            .map(|t| rev_u64(t.revision()))
             .unwrap_or(0);
         h = fnv1a_step(h, table_rev);
 
@@ -665,7 +691,7 @@ fn scan_x_extent(
         if !series.visible || series.x_axis != axis {
             continue;
         }
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -684,9 +710,9 @@ fn scan_x_extent(
             .copied()
             .unwrap_or(crate::transform::RowRange {
                 start: 0,
-                end: table.row_count,
+                end: table.row_count(),
             });
-        range.clamp_to_len(table.row_count);
+        range.clamp_to_len(table.row_count());
 
         for i in range.start..range.end {
             let v = x_values.get(i).copied().unwrap_or(f64::NAN);

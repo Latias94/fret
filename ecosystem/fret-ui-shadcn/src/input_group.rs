@@ -1085,6 +1085,7 @@ impl InputGroupButton {
                     focusable: !disabled,
                     focus_ring: None,
                     focus_ring_bounds: None,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Button),
                         label: Some(a11y_label.clone().unwrap_or_else(|| label.clone())),

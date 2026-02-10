@@ -62,7 +62,8 @@ impl super::TransformGraph {
             };
         }
 
-        let Some(table) = datasets.dataset(series_model.dataset) else {
+        let root = model.root_dataset_id(series_model.dataset);
+        let Some(table) = datasets.dataset(root) else {
             return YIndicesNodeOutput {
                 result: YIndicesNodeResult::NoChange,
                 x_filter_should_cull_selection: false,
@@ -144,7 +145,7 @@ impl super::TransformGraph {
         let signature = y_indices_signature(
             model.revs.spec,
             view.revision,
-            table.revision,
+            table.revision(),
             series_id,
             series_model.kind,
             x_col,
@@ -330,6 +331,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

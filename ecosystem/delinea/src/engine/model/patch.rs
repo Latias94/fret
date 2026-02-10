@@ -39,6 +39,7 @@ pub struct ChartPatch {
     pub replace_families: BTreeSet<ReplaceFamily>,
 
     pub viewport: Option<Option<Rect>>,
+    pub plot_viewports_by_grid: BTreeMap<GridId, Option<Rect>>,
 
     pub datasets: Vec<DatasetOp>,
     pub grids: Vec<GridOp>,
@@ -52,7 +53,7 @@ impl ChartPatch {
         let mut series_replace_order: Option<Vec<SeriesId>> = None;
 
         if mode == PatchMode::Replace || self.replace_families.contains(&ReplaceFamily::Viewport) {
-            if self.viewport.is_some() {
+            if self.viewport.is_some() || !self.plot_viewports_by_grid.is_empty() {
                 report.viewport_changed = true;
                 report.marks_changed = true;
             }
@@ -83,6 +84,9 @@ impl ChartPatch {
                             dataset.id,
                             DatasetModel {
                                 id: dataset.id,
+                                from: None,
+                                transforms: Vec::new(),
+                                root: dataset.id,
                                 fields: dataset_fields_map(&dataset)?,
                             },
                         );
@@ -97,6 +101,22 @@ impl ChartPatch {
                         }
                         model.grids.insert(id, GridModel { id });
                     }
+                }
+
+                model.plot_viewports_by_grid.clear();
+                for (grid, vp) in self.plot_viewports_by_grid {
+                    if !model.grids.contains_key(&grid) {
+                        return Err(ModelError::MissingReference {
+                            kind: "plot_viewports_by_grid.grid",
+                        });
+                    }
+                    if let Some(vp) = vp {
+                        model.plot_viewports_by_grid.insert(grid, vp);
+                    }
+                }
+                if !model.plot_viewports_by_grid.is_empty() {
+                    model.revs.bump_layout();
+                    report.marks_changed = true;
                 }
 
                 let mut axis_ids = BTreeSet::<AxisId>::new();
@@ -203,12 +223,55 @@ impl ChartPatch {
             report.marks_changed = true;
         }
 
+        if !self.plot_viewports_by_grid.is_empty() {
+            let mut changed = false;
+            for (grid, vp) in self.plot_viewports_by_grid {
+                if !model.grids.contains_key(&grid) {
+                    return Err(ModelError::MissingReference {
+                        kind: "plot_viewports_by_grid.grid",
+                    });
+                }
+                match vp {
+                    Some(vp) => {
+                        if model
+                            .plot_viewports_by_grid
+                            .get(&grid)
+                            .is_none_or(|existing| *existing != vp)
+                        {
+                            model.plot_viewports_by_grid.insert(grid, vp);
+                            changed = true;
+                        }
+                    }
+                    None => {
+                        if model.plot_viewports_by_grid.remove(&grid).is_some() {
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if changed {
+                model.revs.bump_layout();
+                report.viewport_changed = true;
+                report.marks_changed = true;
+            }
+        }
+
         for op in self.datasets {
             match op {
                 DatasetOp::Upsert(dataset) => {
+                    let fields = dataset_fields_map(&dataset)?;
+                    let (from, root, transforms) = match model.datasets.get(&dataset.id) {
+                        Some(existing) => {
+                            (existing.from, existing.root, existing.transforms.clone())
+                        }
+                        None => (None, dataset.id, Vec::new()),
+                    };
                     let next = DatasetModel {
                         id: dataset.id,
-                        fields: dataset_fields_map(&dataset)?,
+                        from,
+                        root,
+                        transforms,
+                        fields,
                     };
                     if model
                         .datasets

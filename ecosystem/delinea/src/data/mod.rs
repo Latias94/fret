@@ -78,12 +78,28 @@ impl Column {
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DataTable {
-    pub revision: Revision,
-    pub columns: Vec<Column>,
-    pub row_count: usize,
+    revision: Revision,
+    columns: Vec<Column>,
+    row_count: usize,
 }
 
 impl DataTable {
+    pub fn revision(&self) -> Revision {
+        self.revision
+    }
+
+    pub fn row_count(&self) -> usize {
+        self.row_count
+    }
+
+    pub fn column_count(&self) -> usize {
+        self.columns.len()
+    }
+
+    pub fn columns(&self) -> &[Column] {
+        &self.columns
+    }
+
     pub fn clear(&mut self) {
         self.columns.clear();
         self.row_count = 0;
@@ -99,6 +115,10 @@ impl DataTable {
         }
         self.columns.push(column);
         self.revision.bump();
+    }
+
+    pub fn append_column(&mut self, column: Column) {
+        self.push_column(column);
     }
 
     /// Appends a single row to a table that contains only f64 columns.
@@ -168,6 +188,95 @@ impl DataTable {
         Ok(())
     }
 
+    /// Updates a single row in a table that contains only f64 columns.
+    ///
+    /// v1 semantics:
+    /// - row count is unchanged (in-place value updates only),
+    /// - `revision` bumps once on success,
+    /// - callers must use this explicit API (no implicit column mutation contract).
+    pub fn update_row_f64(
+        &mut self,
+        row_index: usize,
+        row: &[f64],
+    ) -> Result<(), DataTableUpdateError> {
+        if row_index >= self.row_count {
+            return Err(DataTableUpdateError::RowOutOfBounds {
+                row: row_index,
+                row_count: self.row_count,
+            });
+        }
+        if row.len() != self.columns.len() {
+            return Err(DataTableUpdateError::ColumnCountMismatch {
+                expected: self.columns.len(),
+                actual: row.len(),
+            });
+        }
+
+        for (i, col) in self.columns.iter_mut().enumerate() {
+            let Column::F64(v) = col else {
+                return Err(DataTableUpdateError::NonF64Column { column: i });
+            };
+            if let Some(slot) = v.get_mut(row_index) {
+                *slot = row[i];
+            } else {
+                return Err(DataTableUpdateError::RowOutOfBounds {
+                    row: row_index,
+                    row_count: v.len().min(self.row_count),
+                });
+            }
+        }
+
+        self.revision.bump();
+        Ok(())
+    }
+
+    /// Updates multiple rows in a table that contains only f64 columns.
+    ///
+    /// `columns` is column-major: each slice corresponds to one f64 column and all slices must have
+    /// the same length. The update writes into `row_start..row_start+len`.
+    pub fn update_columns_f64(
+        &mut self,
+        row_start: usize,
+        columns: &[&[f64]],
+    ) -> Result<(), DataTableUpdateError> {
+        if columns.len() != self.columns.len() {
+            return Err(DataTableUpdateError::ColumnCountMismatch {
+                expected: self.columns.len(),
+                actual: columns.len(),
+            });
+        }
+
+        let len = columns.first().map(|c| c.len()).unwrap_or(0);
+        for (i, col) in columns.iter().enumerate() {
+            if col.len() != len {
+                return Err(DataTableUpdateError::ColumnLenMismatch {
+                    expected: len,
+                    actual: col.len(),
+                    column: i,
+                });
+            }
+        }
+
+        if row_start > self.row_count || row_start.saturating_add(len) > self.row_count {
+            return Err(DataTableUpdateError::RowRangeOutOfBounds {
+                row_start,
+                len,
+                row_count: self.row_count,
+            });
+        }
+
+        for (i, col) in self.columns.iter_mut().enumerate() {
+            let Column::F64(v) = col else {
+                return Err(DataTableUpdateError::NonF64Column { column: i });
+            };
+            let end = row_start + len;
+            v[row_start..end].copy_from_slice(columns[i]);
+        }
+
+        self.revision.bump();
+        Ok(())
+    }
+
     pub fn column_f64(&self, index: usize) -> Option<&[f64]> {
         self.columns
             .get(index)?
@@ -175,6 +284,69 @@ impl DataTable {
             .map(|v| &v[..self.row_count])
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DataTableUpdateError {
+    RowOutOfBounds {
+        row: usize,
+        row_count: usize,
+    },
+    RowRangeOutOfBounds {
+        row_start: usize,
+        len: usize,
+        row_count: usize,
+    },
+    ColumnCountMismatch {
+        expected: usize,
+        actual: usize,
+    },
+    ColumnLenMismatch {
+        expected: usize,
+        actual: usize,
+        column: usize,
+    },
+    NonF64Column {
+        column: usize,
+    },
+}
+
+impl core::fmt::Display for DataTableUpdateError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::RowOutOfBounds { row, row_count } => {
+                write!(
+                    f,
+                    "row index {row} is out of bounds (row_count={row_count})"
+                )
+            }
+            Self::RowRangeOutOfBounds {
+                row_start,
+                len,
+                row_count,
+            } => write!(
+                f,
+                "row range {row_start}..{end} is out of bounds (row_count={row_count})",
+                end = row_start.saturating_add(*len)
+            ),
+            Self::ColumnCountMismatch { expected, actual } => write!(
+                f,
+                "column count mismatch (expected {expected}, got {actual})"
+            ),
+            Self::ColumnLenMismatch {
+                expected,
+                actual,
+                column,
+            } => write!(
+                f,
+                "column len mismatch at index {column} (expected {expected}, got {actual})"
+            ),
+            Self::NonF64Column { column } => write!(f, "non-f64 column at index {column}"),
+        }
+    }
+}
+
+impl std::error::Error for DataTableUpdateError {}
 
 #[cfg(test)]
 mod tests {
@@ -188,11 +360,11 @@ mod tests {
         table.push_column(Column::F64(vec![1.0]));
         table.push_column(Column::F64(vec![2.0]));
 
-        let rev0 = table.revision;
+        let rev0 = table.revision();
         table.append_row_f64(&[3.0, 4.0]).unwrap();
 
-        assert!(table.revision.0 > rev0.0);
-        assert_eq!(table.row_count, 2);
+        assert!(table.revision().0 > rev0.0);
+        assert_eq!(table.row_count(), 2);
         assert_eq!(table.column_f64(0).unwrap(), &[1.0, 3.0]);
         assert_eq!(table.column_f64(1).unwrap(), &[2.0, 4.0]);
     }
@@ -227,15 +399,62 @@ mod tests {
         table.push_column(Column::F64(vec![1.0]));
         table.push_column(Column::F64(vec![2.0]));
 
-        let rev0 = table.revision;
+        let rev0 = table.revision();
         table
             .append_columns_f64(&[&[3.0, 5.0], &[4.0, 6.0]])
             .unwrap();
 
-        assert!(table.revision.0 > rev0.0);
-        assert_eq!(table.row_count, 3);
+        assert!(table.revision().0 > rev0.0);
+        assert_eq!(table.row_count(), 3);
         assert_eq!(table.column_f64(0).unwrap(), &[1.0, 3.0, 5.0]);
         assert_eq!(table.column_f64(1).unwrap(), &[2.0, 4.0, 6.0]);
+    }
+
+    #[test]
+    fn update_row_f64_updates_values_and_bumps_revision() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
+
+        let rev0 = table.revision();
+        table.update_row_f64(1, &[200.0, 999.0]).unwrap();
+
+        assert!(table.revision().0 > rev0.0);
+        assert_eq!(table.row_count(), 3);
+        assert_eq!(table.column_f64(0).unwrap(), &[1.0, 200.0, 3.0]);
+        assert_eq!(table.column_f64(1).unwrap(), &[10.0, 999.0, 30.0]);
+    }
+
+    #[test]
+    fn update_row_f64_rejects_out_of_bounds() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        let err = table.update_row_f64(1, &[2.0]).unwrap_err();
+        assert!(matches!(err, DataTableUpdateError::RowOutOfBounds { .. }));
+    }
+
+    #[test]
+    fn update_row_f64_rejects_wrong_width() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+        let err = table.update_row_f64(0, &[3.0]).unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableUpdateError::ColumnCountMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn update_row_f64_rejects_non_f64_columns() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::Bool(vec![true]));
+        let err = table.update_row_f64(0, &[2.0, 3.0]).unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableUpdateError::NonF64Column { column: 1 }
+        ));
     }
 
     #[test]
@@ -279,7 +498,7 @@ mod tests {
         let got = store
             .dataset(dataset_id)
             .expect("dataset should be present");
-        assert_eq!(got.row_count, 3);
+        assert_eq!(got.row_count(), 3);
         assert_eq!(got.column_f64(0).unwrap(), &[1.0, 2.0, 3.0]);
     }
 

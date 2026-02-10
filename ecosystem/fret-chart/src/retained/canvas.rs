@@ -14,7 +14,7 @@ use fret_canvas::cache::{PathCache, SceneOpCache};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton, Paint,
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
     Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
@@ -23,8 +23,11 @@ use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, PrepaintCx, Widget};
 use slotmap::Key;
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
+use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
 use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
@@ -162,7 +165,10 @@ struct ChartLayout {
 }
 
 pub struct ChartCanvas {
-    engine: ChartEngine,
+    engine: ChartCanvasEngine,
+    grid_override: Option<delinea::GridId>,
+    semantics_test_id: Option<String>,
+    mode: ChartCanvasMode,
     style: ChartStyle,
     style_source: ChartStyleSource,
     last_theme_revision: u64,
@@ -204,9 +210,86 @@ pub struct ChartCanvas {
     visual_map_drag: Option<VisualMapDrag>,
     visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
-    linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
+    link_router_cache: Option<(delinea::Revision, ChartLinkRouter)>,
+    explicit_link_axis_map: BTreeMap<delinea::AxisId, LinkAxisKey>,
+    linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
+    linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
+    linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
+    linked_domain_windows_model_revision: Option<u64>,
     output_model: Option<Model<ChartCanvasOutput>>,
     output: ChartCanvasOutput,
+}
+
+type SharedChartEngine = Rc<RefCell<ChartEngine>>;
+
+enum ChartCanvasEngine {
+    Owned(ChartEngine),
+    Shared(SharedChartEngine),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ChartCanvasMode {
+    /// Normal single-surface chart canvas (owned engine).
+    Full,
+    /// A per-grid view into a shared engine (multi-grid).
+    GridView,
+    /// A global controller surface for a shared engine (multi-grid): legend + tooltip overlays.
+    Overlay,
+}
+
+impl ChartCanvasMode {
+    fn renders_legend(self) -> bool {
+        matches!(self, Self::Full | Self::Overlay)
+    }
+
+    fn renders_overlays(self) -> bool {
+        matches!(self, Self::Full | Self::Overlay)
+    }
+
+    fn renders_axes(self) -> bool {
+        matches!(self, Self::Full | Self::GridView)
+    }
+}
+
+enum ChartEngineReadGuard<'a> {
+    Owned(&'a ChartEngine),
+    Shared(Ref<'a, ChartEngine>),
+}
+
+impl core::ops::Deref for ChartEngineReadGuard<'_> {
+    type Target = ChartEngine;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Owned(engine) => engine,
+            Self::Shared(engine) => engine,
+        }
+    }
+}
+
+enum ChartEngineWriteGuard<'a> {
+    Owned(&'a mut ChartEngine),
+    Shared(RefMut<'a, ChartEngine>),
+}
+
+impl core::ops::Deref for ChartEngineWriteGuard<'_> {
+    type Target = ChartEngine;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Owned(engine) => engine,
+            Self::Shared(engine) => engine,
+        }
+    }
+}
+
+impl core::ops::DerefMut for ChartEngineWriteGuard<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Owned(engine) => engine,
+            Self::Shared(engine) => engine,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -249,8 +332,38 @@ impl ChartCanvas {
     pub fn new(spec: delinea::ChartSpec) -> Result<Self, ModelError> {
         let mut spec = spec;
         spec.axis_pointer.get_or_insert_with(Default::default);
-        Ok(Self {
-            engine: ChartEngine::new(spec)?,
+        Ok(Self::new_with_engine(ChartCanvasEngine::Owned(
+            ChartEngine::new(spec)?,
+        )))
+    }
+
+    /// Creates a `ChartCanvas` that renders a shared `ChartEngine`.
+    ///
+    /// This is primarily intended for diagnostics harnesses and multi-surface adapters that need to
+    /// hold an engine handle outside the widget tree.
+    pub fn new_shared(engine: SharedChartEngine) -> Self {
+        Self::new_with_engine(ChartCanvasEngine::Shared(engine))
+    }
+
+    pub fn new_grid_view(engine: SharedChartEngine, grid: delinea::GridId) -> Self {
+        let mut out = Self::new_with_engine(ChartCanvasEngine::Shared(engine));
+        out.grid_override = Some(grid);
+        out.mode = ChartCanvasMode::GridView;
+        out
+    }
+
+    pub fn new_overlay(engine: SharedChartEngine) -> Self {
+        let mut out = Self::new_with_engine(ChartCanvasEngine::Shared(engine));
+        out.mode = ChartCanvasMode::Overlay;
+        out
+    }
+
+    fn new_with_engine(engine: ChartCanvasEngine) -> Self {
+        Self {
+            engine,
+            grid_override: None,
+            semantics_test_id: None,
+            mode: ChartCanvasMode::Full,
             style: ChartStyle::default(),
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
@@ -292,40 +405,81 @@ impl ChartCanvas {
             visual_map_drag: None,
             visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
+            link_router_cache: None,
+            explicit_link_axis_map: BTreeMap::default(),
             linked_brush_model: None,
+            linked_axis_pointer_model: None,
+            linked_domain_windows_model: None,
+            linked_domain_windows_model_revision: None,
             output_model: None,
             output: ChartCanvasOutput::default(),
-        })
+        }
     }
 
     fn sampling_window_key(&self, plot: Rect, scale_factor: f32) -> u64 {
-        let output = self.engine.output();
-        let mut key = KeyBuilder::new();
+        self.with_engine(|engine| {
+            let output = engine.output();
+            let mut key = KeyBuilder::new();
 
-        key.mix_f32_bits(plot.size.width.0);
-        key.mix_f32_bits(plot.size.height.0);
-        key.mix_f32_bits(scale_factor);
+            key.mix_f32_bits(plot.size.width.0);
+            key.mix_f32_bits(plot.size.height.0);
+            key.mix_f32_bits(scale_factor);
 
-        key.mix_u64(output.axis_windows.len() as u64);
-        for (axis, window) in &output.axis_windows {
-            key.mix_u64(axis.0 as u64);
-            key.mix_f64_bits(window.min);
-            key.mix_f64_bits(window.max);
-        }
+            key.mix_u64(output.axis_windows.len() as u64);
+            for (axis, window) in &output.axis_windows {
+                key.mix_u64(axis.0 as u64);
+                key.mix_f64_bits(window.min);
+                key.mix_f64_bits(window.max);
+            }
 
-        key.finish()
+            key.finish()
+        })
     }
 
     pub fn set_text_cache_prune_tuning(&mut self, tuning: ChartTextCachePruneTuning) {
         self.text_cache_prune = tuning;
     }
 
+    fn with_engine<R>(&self, f: impl FnOnce(&ChartEngine) -> R) -> R {
+        let engine = self.engine_read();
+        f(&engine)
+    }
+
+    fn with_engine_mut<R>(&mut self, f: impl FnOnce(&mut ChartEngine) -> R) -> R {
+        let mut engine = self.engine_write();
+        f(&mut engine)
+    }
+
+    fn engine_read(&self) -> ChartEngineReadGuard<'_> {
+        match &self.engine {
+            ChartCanvasEngine::Owned(engine) => ChartEngineReadGuard::Owned(engine),
+            ChartCanvasEngine::Shared(engine) => ChartEngineReadGuard::Shared(engine.borrow()),
+        }
+    }
+
+    fn engine_write(&mut self) -> ChartEngineWriteGuard<'_> {
+        match &mut self.engine {
+            ChartCanvasEngine::Owned(engine) => ChartEngineWriteGuard::Owned(engine),
+            ChartCanvasEngine::Shared(engine) => ChartEngineWriteGuard::Shared(engine.borrow_mut()),
+        }
+    }
+
     pub fn engine(&self) -> &ChartEngine {
-        &self.engine
+        match &self.engine {
+            ChartCanvasEngine::Owned(engine) => engine,
+            ChartCanvasEngine::Shared(_) => {
+                panic!("ChartCanvas::engine is not available for shared-engine grid views")
+            }
+        }
     }
 
     pub fn engine_mut(&mut self) -> &mut ChartEngine {
-        &mut self.engine
+        match &mut self.engine {
+            ChartCanvasEngine::Owned(engine) => engine,
+            ChartCanvasEngine::Shared(_) => {
+                panic!("ChartCanvas::engine_mut is not available for shared-engine grid views")
+            }
+        }
     }
 
     pub fn set_style(&mut self, style: ChartStyle) {
@@ -345,14 +499,74 @@ impl ChartCanvas {
         self.input_map = map;
     }
 
-    pub fn linked_brush(mut self, brush: Model<Option<BrushSelection2D>>) -> Self {
+    pub fn test_id(mut self, id: impl Into<String>) -> Self {
+        self.semantics_test_id = Some(id.into());
+        self
+    }
+
+    pub fn linked_brush(mut self, brush: Model<Option<BrushSelectionLink2D>>) -> Self {
         self.linked_brush_model = Some(brush);
+        self
+    }
+
+    pub fn linked_axis_pointer(
+        mut self,
+        axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    ) -> Self {
+        self.linked_axis_pointer_model = Some(axis_pointer);
+        self
+    }
+
+    pub fn linked_domain_windows(
+        mut self,
+        windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+    ) -> Self {
+        self.linked_domain_windows_model = Some(windows);
+        self.linked_domain_windows_model_revision = None;
+        self
+    }
+
+    pub fn link_axis_map(mut self, map: BTreeMap<delinea::AxisId, LinkAxisKey>) -> Self {
+        self.explicit_link_axis_map = map;
+        self.link_router_cache = None;
         self
     }
 
     pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
         self.output_model = Some(output);
         self
+    }
+
+    fn link_router(&mut self) -> &ChartLinkRouter {
+        let spec_rev = self.with_engine(|engine| engine.model().revs.spec);
+        let needs_rebuild = self
+            .link_router_cache
+            .as_ref()
+            .map(|(rev, _router)| *rev != spec_rev)
+            .unwrap_or(true);
+        if needs_rebuild {
+            let router = self.with_engine(|engine| {
+                let mut router = ChartLinkRouter::from_model(engine.model());
+                if !self.explicit_link_axis_map.is_empty() {
+                    let mut explicit = BTreeMap::new();
+                    for (axis, key) in &self.explicit_link_axis_map {
+                        if engine.model().axes.contains_key(axis) {
+                            explicit.insert(*axis, *key);
+                        }
+                    }
+                    if !explicit.is_empty() {
+                        router = router.with_explicit_axis_map(explicit);
+                    }
+                }
+                router
+            });
+            self.link_router_cache = Some((spec_rev, router));
+        }
+        &self
+            .link_router_cache
+            .as_ref()
+            .expect("router cache must be populated")
+            .1
     }
 
     fn sync_linked_brush<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -364,38 +578,265 @@ impl ChartCanvas {
         let Ok(selection) = model.read(cx.app, |_, s| *s) else {
             return;
         };
-        if selection == self.engine.state().brush_selection_2d {
+
+        let router = self.link_router().clone();
+        let current = self
+            .with_engine(|engine| engine.state().brush_selection_2d)
+            .and_then(|sel| {
+                let x_axis = router.axis_key(sel.x_axis)?;
+                let y_axis = router.axis_key(sel.y_axis)?;
+                Some(BrushSelectionLink2D {
+                    x_axis,
+                    y_axis,
+                    x: sel.x,
+                    y: sel.y,
+                })
+            });
+        if selection == current {
             return;
         }
 
         match selection {
             Some(sel) => {
-                self.engine.apply_action(Action::SetBrushSelection2D {
-                    x_axis: sel.x_axis,
-                    y_axis: sel.y_axis,
-                    x: sel.x,
-                    y: sel.y,
+                let Some(x_axis) = router.axis_for_key(sel.x_axis) else {
+                    return;
+                };
+                let Some(y_axis) = router.axis_for_key(sel.y_axis) else {
+                    return;
+                };
+                self.with_engine_mut(|engine| {
+                    engine.apply_action(Action::SetBrushSelection2D {
+                        x_axis,
+                        y_axis,
+                        x: sel.x,
+                        y: sel.y,
+                    });
                 });
             }
             None => {
-                self.engine.apply_action(Action::ClearBrushSelection);
+                self.with_engine_mut(|engine| {
+                    engine.apply_action(Action::ClearBrushSelection);
+                });
             }
         }
     }
 
-    fn publish_output<H: UiHost>(&mut self, app: &mut H) {
-        let link_events = self.engine.drain_link_events();
-        let snapshot = ChartCanvasOutputSnapshot {
-            brush_selection_2d: self.engine.state().brush_selection_2d,
-            brush_x_row_ranges_by_series: self.engine.output().brush_x_row_ranges_by_series.clone(),
-            link_events,
+    fn linked_axis_pointer_anchor_for_engine(&mut self) -> Option<AxisPointerLinkAnchor> {
+        let router = self.link_router().clone();
+        let (axis, value) = self.with_engine(|engine| {
+            engine
+                .output()
+                .axis_pointer
+                .as_ref()
+                .map(|o| (o.axis, o.axis_value))
+        })?;
+        if !value.is_finite() {
+            return None;
+        }
+        let axis = router.axis_key(axis)?;
+        Some(AxisPointerLinkAnchor { axis, value })
+    }
+
+    fn hover_point_for_axis_pointer_anchor(
+        &mut self,
+        anchor: AxisPointerLinkAnchor,
+    ) -> Option<Point> {
+        let router = self.link_router().clone();
+        let axis = router.axis_for_key(anchor.axis)?;
+
+        let (plot, axis_window) = self.with_engine(|engine| {
+            let output = engine.output();
+            let grid = engine.model().axes.get(&axis).map(|a| a.grid);
+            let plot = grid
+                .and_then(|grid| output.plot_viewports_by_grid.get(&grid).copied())
+                .or(output.viewport)
+                .or_else(|| output.plot_viewports_by_grid.values().next().copied());
+            let axis_window = output.axis_windows.get(&axis).copied();
+            (plot, axis_window)
+        });
+
+        let plot = plot?;
+        let axis_window = axis_window?;
+
+        let px = match anchor.axis.kind {
+            delinea::AxisKind::X => {
+                let x =
+                    delinea::engine::axis::x_px_at_data_in_rect(axis_window, anchor.value, plot);
+                let y = plot.origin.y.0 + 0.5 * plot.size.height.0;
+                Point::new(Px(x), Px(y))
+            }
+            delinea::AxisKind::Y => {
+                let x = plot.origin.x.0 + 0.5 * plot.size.width.0;
+                let y =
+                    delinea::engine::axis::y_px_at_data_in_rect(axis_window, anchor.value, plot);
+                Point::new(Px(x), Px(y))
+            }
         };
 
-        if self.output.snapshot == snapshot {
+        if px.x.0.is_finite() && px.y.0.is_finite() {
+            Some(px)
+        } else {
+            None
+        }
+    }
+
+    fn sync_linked_axis_pointer<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some(model) = &self.linked_axis_pointer_model else {
+            return;
+        };
+        cx.observe_model(model, Invalidation::Paint);
+
+        let Ok(anchor) = model.read(cx.app, |_, a| a.clone()) else {
+            return;
+        };
+
+        let current = self.linked_axis_pointer_anchor_for_engine();
+        if anchor == current {
+            return;
+        }
+
+        let mut changed = false;
+        match anchor {
+            Some(anchor) => {
+                if let Some(point) = self.hover_point_for_axis_pointer_anchor(anchor.clone()) {
+                    self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+                    changed = true;
+                }
+            }
+            None => {
+                // No explicit "clear hover" action exists. Instead, hover far outside any plot viewport.
+                let point = Point::new(Px(1.0e9), Px(1.0e9));
+                self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+                changed = true;
+            }
+        }
+
+        // Linking actions are applied during paint, but the engine is stepped during prepaint.
+        // Request a follow-up frame so linked changes become visible deterministically.
+        if changed {
+            cx.request_animation_frame();
+        }
+    }
+
+    fn sync_linked_domain_windows<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some(model) = &self.linked_domain_windows_model else {
+            return;
+        };
+        cx.observe_model(model, Invalidation::Paint);
+
+        // Only apply linked domain windows when the shared model has changed. This prevents stale
+        // shared state from overwriting locally-produced window changes before they can be
+        // published and routed by the linking layer.
+        let model_rev = model.revision(cx.app);
+        if model_rev == self.linked_domain_windows_model_revision {
+            return;
+        }
+        self.linked_domain_windows_model_revision = model_rev;
+
+        let Ok(windows) = model.read(cx.app, |_, w| w.clone()) else {
+            return;
+        };
+
+        let router = self.link_router().clone();
+        let mut changed = false;
+        for (key, window) in windows {
+            let Some(axis) = router.axis_for_key(key) else {
+                continue;
+            };
+
+            match key.kind {
+                delinea::AxisKind::X => {
+                    let current = self.with_engine(|engine| {
+                        engine.state().data_zoom_x.get(&axis).and_then(|s| s.window)
+                    });
+                    if current == window {
+                        continue;
+                    }
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::SetDataWindowX { axis, window });
+                    });
+                    changed = true;
+                }
+                delinea::AxisKind::Y => {
+                    let current =
+                        self.with_engine(|engine| engine.state().data_window_y.get(&axis).copied());
+                    if current == window {
+                        continue;
+                    }
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::SetDataWindowY { axis, window });
+                    });
+                    changed = true;
+                }
+            }
+        }
+
+        // Same rationale as `sync_linked_axis_pointer`: the engine steps in prepaint, so we need
+        // a follow-up frame after applying linked actions to make the visual update observable.
+        if changed {
+            cx.request_animation_frame();
+        }
+    }
+
+    fn publish_output<H: UiHost>(&mut self, app: &mut H) {
+        let drained_link_events = self.with_engine_mut(|engine| engine.drain_link_events());
+        let (link_events_revision, link_events) = if drained_link_events.is_empty() {
+            (
+                self.output.link_events_revision,
+                self.output.snapshot.link_events.clone(),
+            )
+        } else {
+            (
+                self.output.link_events_revision.wrapping_add(1),
+                drained_link_events,
+            )
+        };
+
+        let router = self.link_router().clone();
+        let domain_windows_by_key = self.with_engine(|engine| {
+            let mut out = BTreeMap::new();
+
+            for (axis, st) in &engine.state().data_zoom_x {
+                let Some(window) = st.window else {
+                    continue;
+                };
+                let Some(key) = router.axis_key(*axis) else {
+                    continue;
+                };
+                if router.axis_for_key(key) != Some(*axis) {
+                    continue;
+                }
+                out.insert(key, Some(window));
+            }
+
+            for (axis, window) in &engine.state().data_window_y {
+                let Some(key) = router.axis_key(*axis) else {
+                    continue;
+                };
+                if router.axis_for_key(key) != Some(*axis) {
+                    continue;
+                }
+                out.insert(key, Some(*window));
+            }
+
+            out
+        });
+        let snapshot = ChartCanvasOutputSnapshot {
+            brush_selection_2d: self.with_engine(|engine| engine.state().brush_selection_2d),
+            brush_x_row_ranges_by_series: self
+                .with_engine(|engine| engine.output().brush_x_row_ranges_by_series.clone()),
+            link_events,
+            domain_windows_by_key,
+        };
+
+        if self.output.snapshot == snapshot
+            && self.output.link_events_revision == link_events_revision
+        {
             return;
         }
 
         self.output.revision = self.output.revision.wrapping_add(1);
+        self.output.link_events_revision = link_events_revision;
         self.output.snapshot = snapshot;
 
         if let Some(model) = &self.output_model {
@@ -422,142 +863,160 @@ impl ChartCanvas {
     }
 
     fn compute_layout(&self, bounds: Rect) -> ChartLayout {
-        let mut inner = bounds;
-        inner.origin.x.0 += self.style.padding.left.0;
-        inner.origin.y.0 += self.style.padding.top.0;
-        inner.size.width.0 =
-            (inner.size.width.0 - self.style.padding.left.0 - self.style.padding.right.0).max(0.0);
-        inner.size.height.0 =
-            (inner.size.height.0 - self.style.padding.top.0 - self.style.padding.bottom.0).max(0.0);
+        self.with_engine(|engine| {
+            let model = engine.model();
 
-        let axis_band_x = self.style.axis_band_x.0.max(0.0);
-        let axis_band_y = self.style.axis_band_y.0.max(0.0);
+            let mut inner = bounds;
+            inner.origin.x.0 += self.style.padding.left.0;
+            inner.origin.y.0 += self.style.padding.top.0;
+            inner.size.width.0 =
+                (inner.size.width.0 - self.style.padding.left.0 - self.style.padding.right.0)
+                    .max(0.0);
+            inner.size.height.0 =
+                (inner.size.height.0 - self.style.padding.top.0 - self.style.padding.bottom.0)
+                    .max(0.0);
 
-        let has_visual_map = !self.engine.model().visual_maps.is_empty();
-        let visual_map_band_x = if has_visual_map {
-            self.style.visual_map_band_x.0.max(0.0)
-        } else {
-            0.0
-        };
+            let axis_band_x = self.style.axis_band_x.0.max(0.0);
+            let axis_band_y = self.style.axis_band_y.0.max(0.0);
 
-        let active_grid = self
-            .primary_axes()
-            .and_then(|(x_axis, _)| self.engine.model().axes.get(&x_axis).map(|a| a.grid));
+            let active_grid = self.grid_override.or_else(|| {
+                let primary = model.series_in_order().find(|s| s.visible)?;
+                model.axes.get(&primary.x_axis).map(|a| a.grid)
+            });
 
-        let mut x_top: Vec<delinea::AxisId> = Vec::new();
-        let mut x_bottom: Vec<delinea::AxisId> = Vec::new();
-        let mut y_left: Vec<delinea::AxisId> = Vec::new();
-        let mut y_right: Vec<delinea::AxisId> = Vec::new();
+            let has_visual_map = active_grid.is_some_and(|grid| {
+                model.series_in_order().any(|s| {
+                    s.visible
+                        && model.axes.get(&s.x_axis).is_some_and(|a| a.grid == grid)
+                        && model.visual_map_by_series.contains_key(&s.id)
+                })
+            });
+            let visual_map_band_x = if has_visual_map {
+                self.style.visual_map_band_x.0.max(0.0)
+            } else {
+                0.0
+            };
 
-        if let Some(grid) = active_grid {
-            for (axis_id, axis) in &self.engine.model().axes {
-                if axis.grid != grid {
-                    continue;
-                }
+            let mut x_top: Vec<delinea::AxisId> = Vec::new();
+            let mut x_bottom: Vec<delinea::AxisId> = Vec::new();
+            let mut y_left: Vec<delinea::AxisId> = Vec::new();
+            let mut y_right: Vec<delinea::AxisId> = Vec::new();
 
-                match (axis.kind, axis.position) {
-                    (delinea::AxisKind::X, delinea::AxisPosition::Top) => x_top.push(*axis_id),
-                    (delinea::AxisKind::X, delinea::AxisPosition::Bottom) => {
-                        x_bottom.push(*axis_id)
+            if let Some(grid) = active_grid {
+                for (axis_id, axis) in &model.axes {
+                    if axis.grid != grid {
+                        continue;
                     }
-                    (delinea::AxisKind::Y, delinea::AxisPosition::Left) => y_left.push(*axis_id),
-                    (delinea::AxisKind::Y, delinea::AxisPosition::Right) => y_right.push(*axis_id),
-                    _ => {}
+
+                    match (axis.kind, axis.position) {
+                        (delinea::AxisKind::X, delinea::AxisPosition::Top) => x_top.push(*axis_id),
+                        (delinea::AxisKind::X, delinea::AxisPosition::Bottom) => {
+                            x_bottom.push(*axis_id)
+                        }
+                        (delinea::AxisKind::Y, delinea::AxisPosition::Left) => {
+                            y_left.push(*axis_id)
+                        }
+                        (delinea::AxisKind::Y, delinea::AxisPosition::Right) => {
+                            y_right.push(*axis_id)
+                        }
+                        _ => {}
+                    }
                 }
             }
-        }
 
-        let left_total = axis_band_x * (y_left.len() as f32);
-        let right_total = axis_band_x * (y_right.len() as f32);
-        let top_total = axis_band_y * (x_top.len() as f32);
-        let bottom_total = axis_band_y * (x_bottom.len() as f32);
+            let left_total = axis_band_x * (y_left.len() as f32);
+            let right_total = axis_band_x * (y_right.len() as f32);
+            let top_total = axis_band_y * (x_top.len() as f32);
+            let bottom_total = axis_band_y * (x_bottom.len() as f32);
 
-        let plot_w = (inner.size.width.0 - left_total - right_total - visual_map_band_x).max(0.0);
-        let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
+            let plot_w =
+                (inner.size.width.0 - left_total - right_total - visual_map_band_x).max(0.0);
+            let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
 
-        let plot = Rect::new(
-            Point::new(
-                Px(inner.origin.x.0 + left_total),
-                Px(inner.origin.y.0 + top_total),
-            ),
-            Size::new(Px(plot_w), Px(plot_h)),
-        );
-
-        let mut x_axes: Vec<AxisBandLayout> = Vec::with_capacity(x_top.len() + x_bottom.len());
-        for (i, axis) in x_top.iter().copied().enumerate() {
-            let rect = Rect::new(
+            let plot = Rect::new(
                 Point::new(
-                    plot.origin.x,
-                    Px(plot.origin.y.0 - axis_band_y * (i as f32 + 1.0)),
+                    Px(inner.origin.x.0 + left_total),
+                    Px(inner.origin.y.0 + top_total),
                 ),
-                Size::new(plot.size.width, Px(axis_band_y)),
+                Size::new(Px(plot_w), Px(plot_h)),
             );
-            x_axes.push(AxisBandLayout {
-                axis,
-                position: delinea::AxisPosition::Top,
-                rect,
-            });
-        }
-        for (i, axis) in x_bottom.iter().copied().enumerate() {
-            let rect = Rect::new(
-                Point::new(
-                    plot.origin.x,
-                    Px(plot.origin.y.0 + plot.size.height.0 + axis_band_y * (i as f32)),
-                ),
-                Size::new(plot.size.width, Px(axis_band_y)),
-            );
-            x_axes.push(AxisBandLayout {
-                axis,
-                position: delinea::AxisPosition::Bottom,
-                rect,
-            });
-        }
 
-        let mut y_axes: Vec<AxisBandLayout> = Vec::with_capacity(y_left.len() + y_right.len());
-        for (i, axis) in y_left.iter().copied().enumerate() {
-            let rect = Rect::new(
-                Point::new(
-                    Px(plot.origin.x.0 - axis_band_x * (i as f32 + 1.0)),
-                    plot.origin.y,
-                ),
-                Size::new(Px(axis_band_x), plot.size.height),
-            );
-            y_axes.push(AxisBandLayout {
-                axis,
-                position: delinea::AxisPosition::Left,
-                rect,
-            });
-        }
-        for (i, axis) in y_right.iter().copied().enumerate() {
-            let rect = Rect::new(
-                Point::new(
-                    Px(plot.origin.x.0 + plot.size.width.0 + axis_band_x * (i as f32)),
-                    plot.origin.y,
-                ),
-                Size::new(Px(axis_band_x), plot.size.height),
-            );
-            y_axes.push(AxisBandLayout {
-                axis,
-                position: delinea::AxisPosition::Right,
-                rect,
-            });
-        }
+            let mut x_axes: Vec<AxisBandLayout> = Vec::with_capacity(x_top.len() + x_bottom.len());
+            for (i, axis) in x_top.iter().copied().enumerate() {
+                let rect = Rect::new(
+                    Point::new(
+                        plot.origin.x,
+                        Px(plot.origin.y.0 - axis_band_y * (i as f32 + 1.0)),
+                    ),
+                    Size::new(plot.size.width, Px(axis_band_y)),
+                );
+                x_axes.push(AxisBandLayout {
+                    axis,
+                    position: delinea::AxisPosition::Top,
+                    rect,
+                });
+            }
+            for (i, axis) in x_bottom.iter().copied().enumerate() {
+                let rect = Rect::new(
+                    Point::new(
+                        plot.origin.x,
+                        Px(plot.origin.y.0 + plot.size.height.0 + axis_band_y * (i as f32)),
+                    ),
+                    Size::new(plot.size.width, Px(axis_band_y)),
+                );
+                x_axes.push(AxisBandLayout {
+                    axis,
+                    position: delinea::AxisPosition::Bottom,
+                    rect,
+                });
+            }
 
-        let visual_map = (visual_map_band_x > 0.0).then(|| {
-            let x0 = plot.origin.x.0 + plot.size.width.0 + axis_band_x * (y_right.len() as f32);
-            Rect::new(
-                Point::new(Px(x0), plot.origin.y),
-                Size::new(Px(visual_map_band_x), plot.size.height),
-            )
-        });
+            let mut y_axes: Vec<AxisBandLayout> = Vec::with_capacity(y_left.len() + y_right.len());
+            for (i, axis) in y_left.iter().copied().enumerate() {
+                let rect = Rect::new(
+                    Point::new(
+                        Px(plot.origin.x.0 - axis_band_x * (i as f32 + 1.0)),
+                        plot.origin.y,
+                    ),
+                    Size::new(Px(axis_band_x), plot.size.height),
+                );
+                y_axes.push(AxisBandLayout {
+                    axis,
+                    position: delinea::AxisPosition::Left,
+                    rect,
+                });
+            }
+            for (i, axis) in y_right.iter().copied().enumerate() {
+                let rect = Rect::new(
+                    Point::new(
+                        Px(plot.origin.x.0 + plot.size.width.0 + axis_band_x * (i as f32)),
+                        plot.origin.y,
+                    ),
+                    Size::new(Px(axis_band_x), plot.size.height),
+                );
+                y_axes.push(AxisBandLayout {
+                    axis,
+                    position: delinea::AxisPosition::Right,
+                    rect,
+                });
+            }
 
-        ChartLayout {
-            bounds,
-            plot,
-            x_axes,
-            y_axes,
-            visual_map,
-        }
+            let visual_map = (visual_map_band_x > 0.0).then(|| {
+                let x0 = plot.origin.x.0 + plot.size.width.0 + axis_band_x * (y_right.len() as f32);
+                Rect::new(
+                    Point::new(Px(x0), plot.origin.y),
+                    Size::new(Px(visual_map_band_x), plot.size.height),
+                )
+            });
+
+            ChartLayout {
+                bounds,
+                plot,
+                x_axes,
+                y_axes,
+                visual_map,
+            }
+        })
     }
 
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
@@ -566,21 +1025,600 @@ impl ChartCanvas {
     }
 
     fn sync_viewport(&mut self, viewport: Rect) {
-        if self.engine.model().viewport == Some(viewport) {
+        if let Some(grid) = self.grid_override {
+            let already = self.with_engine(|engine| {
+                engine.model().plot_viewports_by_grid.get(&grid).copied() == Some(viewport)
+            });
+            if already {
+                return;
+            }
+
+            let mut patch = ChartPatch::default();
+            patch.plot_viewports_by_grid.insert(grid, Some(viewport));
+            let _ = self.with_engine_mut(|engine| engine.apply_patch(patch, PatchMode::Merge));
             return;
         }
-        let _ = self.engine.apply_patch(
-            ChartPatch {
-                viewport: Some(Some(viewport)),
-                ..ChartPatch::default()
-            },
-            PatchMode::Merge,
-        );
+
+        let already = self.with_engine(|engine| engine.model().viewport == Some(viewport));
+        if already {
+            return;
+        }
+        let _ = self.with_engine_mut(|engine| {
+            engine.apply_patch(
+                ChartPatch {
+                    viewport: Some(Some(viewport)),
+                    ..ChartPatch::default()
+                },
+                PatchMode::Merge,
+            )
+        });
+    }
+
+    fn axis_pointer_plot_rect(&self, axis_pointer: &delinea::engine::AxisPointerOutput) -> Rect {
+        if self.grid_override.is_some() {
+            return self.last_layout.plot;
+        }
+
+        if let Some(grid) = axis_pointer.grid {
+            return self
+                .with_engine(|engine| engine.output().plot_viewports_by_grid.get(&grid).copied())
+                .unwrap_or(self.last_layout.plot);
+        }
+
+        self.last_layout.plot
+    }
+
+    fn paint_overlay_only<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let theme = Theme::global(&*cx.app);
+        let style_changed = self.sync_style_from_theme(theme);
+        if style_changed || self.last_bounds != cx.bounds {
+            self.last_bounds = cx.bounds;
+            self.last_layout = self.compute_layout(cx.bounds);
+        }
+
+        self.tooltip_text.begin_frame();
+        self.legend_text.begin_frame();
+
+        let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
+        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
+            self.with_engine(|engine| engine.output().axis_pointer.clone())
+        } else {
+            None
+        };
+
+        let mut axis_pointer_label_rect: Option<Rect> = None;
+
+        if let Some(axis_pointer) = axis_pointer.as_ref() {
+            let pos = axis_pointer.crosshair_px;
+            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
+            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
+            let shadow_order = DrawOrder(self.style.draw_order.0.saturating_add(8_999));
+
+            let (axis_pointer_type, axis_pointer_label_enabled, axis_pointer_label_template) = self
+                .with_engine(|engine| {
+                    let spec = engine.model().axis_pointer.as_ref();
+                    let axis_pointer_type = spec.map(|p| p.pointer_type).unwrap_or_default();
+                    let axis_pointer_label_enabled = spec.is_some_and(|p| p.label.show);
+                    let axis_pointer_label_template = spec
+                        .map(|p| p.label.template.clone())
+                        .unwrap_or_else(|| "{value}".to_string());
+                    (
+                        axis_pointer_type,
+                        axis_pointer_label_enabled,
+                        axis_pointer_label_template,
+                    )
+                });
+            let axis_pointer_label_template = axis_pointer_label_template.as_str();
+
+            let plot = self.axis_pointer_plot_rect(axis_pointer);
+            let crosshair_w = self.style.crosshair_width.0.max(1.0);
+
+            let x = pos
+                .x
+                .0
+                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0);
+            let y = pos
+                .y
+                .0
+                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
+
+            let (draw_x, draw_y) = match &axis_pointer.tooltip {
+                delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                    delinea::AxisKind::X => (true, false),
+                    delinea::AxisKind::Y => (false, true),
+                },
+                delinea::TooltipOutput::Item(_) => (true, true),
+            };
+
+            let shadow = matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_type == delinea::AxisPointerType::Shadow;
+
+            if shadow {
+                if let Some(rect) = axis_pointer.shadow_rect_px {
+                    let color = Color {
+                        a: 0.08,
+                        ..self.style.selection_fill
+                    };
+                    cx.scene.push(SceneOp::Quad {
+                        order: shadow_order,
+                        rect,
+                        background: Paint::Solid(color),
+                        border: Edges::all(Px(0.0)),
+                        border_paint: Paint::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            } else if draw_x {
+                cx.scene.push(SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                        Size::new(Px(crosshair_w), plot.size.height),
+                    ),
+                    background: Paint::Solid(self.style.crosshair_color),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+            if !shadow && draw_y {
+                cx.scene.push(SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                        Size::new(plot.size.width, Px(crosshair_w)),
+                    ),
+                    background: Paint::Solid(self.style.crosshair_color),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            if axis_pointer_label_enabled {
+                let pad_x = 6.0f32;
+                let pad_y = 3.0f32;
+                let text_style = TextStyle {
+                    size: Px(11.0),
+                    weight: FontWeight::MEDIUM,
+                    ..TextStyle::default()
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let rect_union = |a: Rect, b: Rect| {
+                    let x0 = a.origin.x.0.min(b.origin.x.0);
+                    let y0 = a.origin.y.0.min(b.origin.y.0);
+                    let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
+                    let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
+                    Rect::new(
+                        Point::new(Px(x0), Px(y0)),
+                        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+                    )
+                };
+
+                let mut draw_label = |axis_kind: delinea::AxisKind,
+                                      axis_id: delinea::AxisId,
+                                      axis_value: f64| {
+                    let default_tooltip_spec = delinea::TooltipSpecV1::default();
+                    let (axis_window, axis_name, missing_value) = self.with_engine(|engine| {
+                        let axis_window = engine
+                            .output()
+                            .axis_windows
+                            .get(&axis_id)
+                            .copied()
+                            .unwrap_or_default();
+                        let axis_name = engine
+                            .model()
+                            .axes
+                            .get(&axis_id)
+                            .and_then(|a| a.name.as_deref())
+                            .unwrap_or("")
+                            .to_string();
+                        let missing_value = engine
+                            .model()
+                            .tooltip
+                            .as_ref()
+                            .map(|t| t.missing_value.clone())
+                            .unwrap_or_else(|| default_tooltip_spec.missing_value.clone());
+                        (axis_window, axis_name, missing_value)
+                    });
+                    let value_text = if axis_value.is_finite() {
+                        self.with_engine(|engine| {
+                            delinea::engine::axis::format_value_for(
+                                engine.model(),
+                                axis_id,
+                                axis_window,
+                                axis_value,
+                            )
+                        })
+                    } else {
+                        missing_value
+                    };
+
+                    let label_text = if axis_pointer_label_template == "{value}" {
+                        value_text
+                    } else {
+                        axis_pointer_label_template
+                            .replace("{value}", &value_text)
+                            .replace("{axis_name}", &axis_name)
+                    };
+
+                    let prepared = self.tooltip_text.prepare(
+                        cx.services,
+                        &label_text,
+                        &text_style,
+                        constraints,
+                    );
+                    let blob = prepared.blob;
+                    let metrics = prepared.metrics;
+
+                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                    let rect = match axis_kind {
+                        delinea::AxisKind::X => {
+                            let box_x = (x - 0.5 * w)
+                                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0 - w);
+                            Rect::new(
+                                Point::new(Px(box_x), Px(plot.origin.y.0 + plot.size.height.0)),
+                                Size::new(Px(w), Px(h)),
+                            )
+                        }
+                        delinea::AxisKind::Y => {
+                            let box_y = (y - 0.5 * h)
+                                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0 - h);
+                            Rect::new(
+                                Point::new(Px(plot.origin.x.0 - w), Px(box_y)),
+                                Size::new(Px(w), Px(h)),
+                            )
+                        }
+                    };
+
+                    let kind_key: u32 = match axis_kind {
+                        delinea::AxisKind::X => 0,
+                        delinea::AxisKind::Y => 1,
+                    };
+                    let label_order = DrawOrder(
+                        self.style
+                            .draw_order
+                            .0
+                            .saturating_add(9_020 + kind_key.saturating_mul(4)),
+                    );
+                    cx.scene.push(SceneOp::Quad {
+                        order: label_order,
+                        rect,
+                        background: Paint::Solid(self.style.tooltip_background),
+                        border: Edges::all(self.style.tooltip_border_width),
+                        border_paint: Paint::Solid(self.style.tooltip_border_color),
+                        corner_radii: Corners::all(Px(4.0)),
+                    });
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(label_order.0.saturating_add(1)),
+                        origin: Point::new(
+                            Px(rect.origin.x.0 + pad_x),
+                            Px(rect.origin.y.0 + pad_y),
+                        ),
+                        text: blob,
+                        color: self.style.tooltip_text_color,
+                    });
+
+                    axis_pointer_label_rect = Some(match axis_pointer_label_rect {
+                        Some(old) => rect_union(old, rect),
+                        None => rect,
+                    });
+                };
+
+                match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => {
+                        draw_label(axis.axis_kind, axis.axis, axis.axis_value);
+                    }
+                    delinea::TooltipOutput::Item(item) => {
+                        draw_label(delinea::AxisKind::X, item.x_axis, item.x_value);
+                        draw_label(delinea::AxisKind::Y, item.y_axis, item.y_value);
+                    }
+                };
+            }
+
+            if !shadow {
+                if let Some(hit) = axis_pointer.hit {
+                    let r = self.style.hover_point_size.0.max(1.0);
+                    cx.scene.push(SceneOp::Quad {
+                        order: point_order,
+                        rect: Rect::new(
+                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                            Size::new(Px(2.0 * r), Px(2.0 * r)),
+                        ),
+                        background: Paint::Solid(self.style.hover_point_color),
+                        border: Edges::all(Px(0.0)),
+                        border_paint: Paint::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            }
+        }
+
+        if self.mode.renders_legend() {
+            self.draw_legend(cx);
+        }
+
+        if let Some(axis_pointer) = axis_pointer {
+            let tooltip_lines = self.with_engine(|engine| {
+                self.tooltip_formatter.format_axis_pointer(
+                    engine,
+                    &engine.output().axis_windows,
+                    &axis_pointer,
+                )
+            });
+            if !tooltip_lines.is_empty() {
+                let text_style = TextStyle {
+                    size: Px(12.0),
+                    weight: FontWeight::NORMAL,
+                    ..TextStyle::default()
+                };
+                let mut header_text_style = text_style.clone();
+                header_text_style.weight = FontWeight::BOLD;
+                let mut value_text_style = text_style.clone();
+                value_text_style.weight = FontWeight::MEDIUM;
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+                };
+
+                let pad = self.style.tooltip_padding;
+                let swatch_w = self.style.tooltip_marker_size.0.max(0.0);
+                let swatch_gap = self.style.tooltip_marker_gap.0.max(0.0);
+                let col_gap = self.style.tooltip_column_gap.0.max(0.0);
+                let reserve_swatch =
+                    swatch_w > 0.0 && tooltip_lines.iter().any(|l| l.source_series.is_some());
+                let swatch_space = if reserve_swatch {
+                    (swatch_w + swatch_gap).max(0.0)
+                } else {
+                    0.0
+                };
+
+                enum TooltipLineLayout {
+                    Single {
+                        blob: TextBlobId,
+                        metrics: fret_core::TextMetrics,
+                    },
+                    Columns {
+                        left_blob: TextBlobId,
+                        left_metrics: fret_core::TextMetrics,
+                        right_blob: TextBlobId,
+                        right_metrics: fret_core::TextMetrics,
+                    },
+                }
+
+                struct PreparedTooltipLine {
+                    source_series: Option<delinea::SeriesId>,
+                    is_missing: bool,
+                    layout: TooltipLineLayout,
+                }
+
+                let mut prepared_lines = Vec::with_capacity(tooltip_lines.len());
+                let mut max_left_w = 0.0f32;
+                let mut max_right_w = 0.0f32;
+                let mut max_single_w = 0.0f32;
+                let mut total_h = 0.0f32;
+
+                for line in &tooltip_lines {
+                    let label_style = if line.kind == crate::TooltipTextLineKind::AxisHeader {
+                        &header_text_style
+                    } else {
+                        &text_style
+                    };
+                    let value_style = if line.value_emphasis
+                        && line.kind != crate::TooltipTextLineKind::AxisHeader
+                    {
+                        &value_text_style
+                    } else {
+                        &text_style
+                    };
+
+                    if let Some((left, right)) = line.columns.as_ref() {
+                        let prepared_left =
+                            self.tooltip_text
+                                .prepare(cx.services, left, label_style, constraints);
+                        let left_blob = prepared_left.blob;
+                        let left_metrics = prepared_left.metrics;
+                        max_left_w = max_left_w.max(left_metrics.size.width.0);
+
+                        let prepared_right =
+                            self.tooltip_text
+                                .prepare(cx.services, right, value_style, constraints);
+                        let right_blob = prepared_right.blob;
+                        let right_metrics = prepared_right.metrics;
+                        max_right_w = max_right_w.max(right_metrics.size.width.0);
+
+                        let line_height = left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0);
+                        total_h += line_height;
+                        prepared_lines.push(PreparedTooltipLine {
+                            source_series: line.source_series,
+                            is_missing: line.is_missing,
+                            layout: TooltipLineLayout::Columns {
+                                left_blob,
+                                left_metrics,
+                                right_blob,
+                                right_metrics,
+                            },
+                        });
+                    } else {
+                        let prepared = self.tooltip_text.prepare(
+                            cx.services,
+                            &line.text,
+                            label_style,
+                            constraints,
+                        );
+                        let blob = prepared.blob;
+                        let metrics = prepared.metrics;
+                        max_single_w = max_single_w.max(metrics.size.width.0);
+                        total_h += metrics.size.height.0.max(1.0);
+                        prepared_lines.push(PreparedTooltipLine {
+                            source_series: line.source_series,
+                            is_missing: line.is_missing,
+                            layout: TooltipLineLayout::Single { blob, metrics },
+                        });
+                    }
+                }
+
+                let mut w = 1.0f32;
+                if max_left_w > 0.0 || max_right_w > 0.0 {
+                    w = w.max(max_left_w + col_gap + max_right_w);
+                }
+                w = w.max(max_single_w);
+                w = (w + swatch_space + pad.left.0 + pad.right.0).max(1.0);
+                let h = (total_h + pad.top.0 + pad.bottom.0).max(1.0);
+
+                let bounds = self.last_layout.bounds;
+                let anchor = match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(_) => axis_pointer.crosshair_px,
+                    delinea::TooltipOutput::Item(_) => axis_pointer
+                        .hit
+                        .map(|h| h.point_px)
+                        .unwrap_or(axis_pointer.crosshair_px),
+                };
+
+                let offset = 10.0f32;
+                let tooltip_rect = crate::tooltip_layout::place_tooltip_rect(
+                    bounds,
+                    anchor,
+                    Size::new(Px(w), Px(h)),
+                    offset,
+                    axis_pointer_label_rect,
+                );
+                let tip_x = tooltip_rect.origin.x.0;
+                let tip_y = tooltip_rect.origin.y.0;
+
+                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
+                cx.scene.push(SceneOp::Quad {
+                    order: tooltip_order,
+                    rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
+                    background: Paint::Solid(self.style.tooltip_background),
+                    border: Edges::all(self.style.tooltip_border_width),
+                    border_paint: Paint::Solid(self.style.tooltip_border_color),
+                    corner_radii: Corners::all(self.style.tooltip_corner_radius),
+                });
+
+                let mut y = tip_y + pad.top.0;
+                let missing_text_color = Color {
+                    a: (self.style.tooltip_text_color.a * 0.55).clamp(0.0, 1.0),
+                    ..self.style.tooltip_text_color
+                };
+                for (i, line) in prepared_lines.into_iter().enumerate() {
+                    let order_base = tooltip_order
+                        .0
+                        .saturating_add(1 + (i as u32).saturating_mul(3));
+                    let swatch_x = tip_x + pad.left.0;
+                    let text_x0 = swatch_x + swatch_space;
+
+                    let side = self.style.tooltip_marker_size.0.max(0.0);
+                    let line_height = match &line.layout {
+                        TooltipLineLayout::Single { metrics, .. } => metrics.size.height.0.max(1.0),
+                        TooltipLineLayout::Columns {
+                            left_metrics,
+                            right_metrics,
+                            ..
+                        } => left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0),
+                    };
+                    if side > 0.0
+                        && reserve_swatch
+                        && let Some(series) = line.source_series
+                    {
+                        let marker_y = y + (line_height - side) * 0.5;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order_base),
+                            rect: Rect::new(
+                                Point::new(Px(swatch_x), Px(marker_y)),
+                                Size::new(Px(side), Px(side)),
+                            ),
+                            background: Paint::Solid(self.series_color(series)),
+                            border: Edges::all(Px(0.0)),
+                            border_paint: Paint::TRANSPARENT,
+                            corner_radii: Corners::all(Px(side * 0.5)),
+                        });
+                    }
+
+                    match line.layout {
+                        TooltipLineLayout::Single { blob, .. } => {
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(1)),
+                                origin: Point::new(Px(text_x0), Px(y)),
+                                text: blob,
+                                color: if line.is_missing {
+                                    missing_text_color
+                                } else {
+                                    self.style.tooltip_text_color
+                                },
+                            });
+                        }
+                        TooltipLineLayout::Columns {
+                            left_blob,
+                            right_blob,
+                            ..
+                        } => {
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(1)),
+                                origin: Point::new(Px(text_x0), Px(y)),
+                                text: left_blob,
+                                color: self.style.tooltip_text_color,
+                            });
+                            let value_x = text_x0 + max_left_w + col_gap;
+                            let value_color = if line.is_missing {
+                                missing_text_color
+                            } else {
+                                self.style.tooltip_text_color
+                            };
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(2)),
+                                origin: Point::new(Px(value_x), Px(y)),
+                                text: right_blob,
+                                color: value_color,
+                            });
+                        }
+                    }
+
+                    y += line_height;
+                }
+            }
+        }
+
+        let t = self.text_cache_prune;
+        if t.max_entries > 0 && t.max_age_frames > 0 {
+            self.tooltip_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+            self.legend_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+        }
     }
 
     fn primary_axes(&self) -> Option<(delinea::AxisId, delinea::AxisId)> {
-        let primary = self.engine.model().series_in_order().find(|s| s.visible)?;
-        Some((primary.x_axis, primary.y_axis))
+        self.with_engine(|engine| {
+            let model = engine.model();
+            let primary = model.series_in_order().find(|s| {
+                s.visible
+                    && self.grid_override.is_none_or(|grid| {
+                        model.axes.get(&s.x_axis).is_some_and(|a| a.grid == grid)
+                    })
+            })?;
+            Some((primary.x_axis, primary.y_axis))
+        })
     }
 
     fn update_active_axes_for_position(&mut self, layout: &ChartLayout, position: Point) {
@@ -619,12 +1657,14 @@ impl ChartCanvas {
     }
 
     fn axis_range(&self, axis: delinea::AxisId) -> delinea::AxisRange {
-        self.engine
-            .model()
-            .axes
-            .get(&axis)
-            .map(|a| a.range)
-            .unwrap_or_default()
+        self.with_engine(|engine| {
+            engine
+                .model()
+                .axes
+                .get(&axis)
+                .map(|a| a.range)
+                .unwrap_or_default()
+        })
     }
 
     fn axis_is_fixed(&self, axis: delinea::AxisId) -> Option<DataWindow> {
@@ -652,9 +1692,15 @@ impl ChartCanvas {
             return fixed;
         }
 
-        if let Some(zoom) = self.engine.state().data_zoom_x.get(&axis).copied()
-            && let Some(window) = zoom.window
-        {
+        let zoom_window = self.with_engine(|engine| {
+            engine
+                .state()
+                .data_zoom_x
+                .get(&axis)
+                .copied()
+                .and_then(|z| z.window)
+        });
+        if let Some(window) = zoom_window {
             return window;
         }
 
@@ -669,7 +1715,8 @@ impl ChartCanvas {
             return fixed;
         }
 
-        if let Some(window) = self.engine.state().data_window_y.get(&axis).copied() {
+        let window = self.with_engine(|engine| engine.state().data_window_y.get(&axis).copied());
+        if let Some(window) = window {
             return window;
         }
 
@@ -680,100 +1727,103 @@ impl ChartCanvas {
     }
 
     fn compute_axis_extent(&mut self, axis: delinea::AxisId, is_x: bool) -> DataWindow {
-        if let Some(window) = self.engine.output().axis_windows.get(&axis).copied() {
-            return window;
-        }
-
-        let mut min = f64::INFINITY;
-        let mut max = f64::NEG_INFINITY;
-
-        let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
-        let model = self.engine.model();
-        if let Some(axis_model) = model.axes.get(&axis) {
-            if let delinea::AxisScale::Category(scale) = &axis_model.scale
-                && !scale.categories.is_empty()
-            {
-                return DataWindow {
-                    min: -0.5,
-                    max: scale.categories.len() as f64 - 0.5,
-                };
-            }
-        }
-        for series in model.series.values() {
-            let axis_id = if is_x { series.x_axis } else { series.y_axis };
-            if axis_id != axis {
-                continue;
+        self.with_engine_mut(|engine| {
+            if let Some(window) = engine.output().axis_windows.get(&axis).copied() {
+                return window;
             }
 
-            let Some(dataset) = model.datasets.get(&series.dataset) else {
-                continue;
-            };
-
-            if is_x {
-                let Some(col) = dataset.fields.get(&series.encode.x).copied() else {
-                    continue;
-                };
-                series_cols.push((series.dataset, col));
-                continue;
+            let model = engine.model();
+            if let Some(axis_model) = model.axes.get(&axis) {
+                if let delinea::AxisScale::Category(scale) = &axis_model.scale
+                    && !scale.categories.is_empty()
+                {
+                    return DataWindow {
+                        min: -0.5,
+                        max: scale.categories.len() as f64 - 0.5,
+                    };
+                }
             }
 
-            if let Some(col) = dataset.fields.get(&series.encode.y).copied() {
-                series_cols.push((series.dataset, col));
-            }
-            if series.kind == delinea::SeriesKind::Band
-                && let Some(y2) = series.encode.y2
-                && let Some(col) = dataset.fields.get(&y2).copied()
-            {
-                series_cols.push((series.dataset, col));
-            }
-        }
-
-        let store = self.engine.datasets_mut();
-        for (dataset_id, col) in series_cols {
-            let Some(table) = store.dataset_mut(dataset_id) else {
-                continue;
-            };
-            let Some(values) = table.column_f64(col) else {
-                continue;
-            };
-
-            for &v in values {
-                if !v.is_finite() {
+            let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
+            for series in model.series.values() {
+                let axis_id = if is_x { series.x_axis } else { series.y_axis };
+                if axis_id != axis {
                     continue;
                 }
-                min = min.min(v);
-                max = max.max(v);
-            }
-        }
 
-        let mut out = if min.is_finite() && max.is_finite() && max > min {
-            DataWindow { min, max }
-        } else {
-            DataWindow { min: 0.0, max: 1.0 }
-        };
-        out.clamp_non_degenerate();
-        out
+                let Some(dataset) = model.datasets.get(&series.dataset) else {
+                    continue;
+                };
+
+                if is_x {
+                    let Some(col) = dataset.fields.get(&series.encode.x).copied() else {
+                        continue;
+                    };
+                    series_cols.push((series.dataset, col));
+                    continue;
+                }
+
+                if let Some(col) = dataset.fields.get(&series.encode.y).copied() {
+                    series_cols.push((series.dataset, col));
+                }
+                if series.kind == delinea::SeriesKind::Band
+                    && let Some(y2) = series.encode.y2
+                    && let Some(col) = dataset.fields.get(&y2).copied()
+                {
+                    series_cols.push((series.dataset, col));
+                }
+            }
+
+            let store = engine.datasets_mut();
+            let mut min = f64::INFINITY;
+            let mut max = f64::NEG_INFINITY;
+            for (dataset_id, col) in series_cols {
+                let Some(table) = store.dataset_mut(dataset_id) else {
+                    continue;
+                };
+                let Some(values) = table.column_f64(col) else {
+                    continue;
+                };
+
+                for &v in values {
+                    if !v.is_finite() {
+                        continue;
+                    }
+                    min = min.min(v);
+                    max = max.max(v);
+                }
+            }
+
+            let mut out = if min.is_finite() && max.is_finite() && max > min {
+                DataWindow { min, max }
+            } else {
+                DataWindow { min: 0.0, max: 1.0 }
+            };
+            out.clamp_non_degenerate();
+            out
+        })
     }
 
     fn set_data_window_x(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
-        self.engine
-            .apply_action(Action::SetDataWindowX { axis, window });
+        self.with_engine_mut(|engine| engine.apply_action(Action::SetDataWindowX { axis, window }));
     }
 
     fn set_data_window_x_filter_mode(&mut self, axis: delinea::AxisId, mode: Option<FilterMode>) {
-        self.engine
-            .apply_action(Action::SetDataWindowXFilterMode { axis, mode });
+        self.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetDataWindowXFilterMode { axis, mode });
+        });
     }
 
     fn toggle_data_window_x_filter_mode(&mut self, axis: delinea::AxisId) {
-        let current = self
-            .engine
-            .state()
-            .data_zoom_x
-            .get(&axis)
-            .copied()
-            .unwrap_or_default()
-            .filter_mode;
+        let current = self.with_engine(|engine| {
+            engine
+                .state()
+                .data_zoom_x
+                .get(&axis)
+                .copied()
+                .unwrap_or_default()
+                .filter_mode
+        });
 
         match current {
             FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
@@ -786,8 +1836,7 @@ impl ChartCanvas {
     }
 
     fn set_data_window_y(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
-        self.engine
-            .apply_action(Action::SetDataWindowY { axis, window });
+        self.with_engine_mut(|engine| engine.apply_action(Action::SetDataWindowY { axis, window }));
     }
 
     fn view_window_2d_action_from_zoom(
@@ -839,12 +1888,13 @@ impl ChartCanvas {
     }
 
     fn refresh_hover_for_axis_pointer(&mut self, layout: &ChartLayout, position: Point) {
-        let axis_pointer_enabled = self
-            .engine
-            .model()
-            .axis_pointer
-            .as_ref()
-            .is_some_and(|p| p.enabled);
+        let axis_pointer_enabled = self.with_engine(|engine| {
+            engine
+                .model()
+                .axis_pointer
+                .as_ref()
+                .is_some_and(|p| p.enabled)
+        });
         if !axis_pointer_enabled {
             return;
         }
@@ -854,13 +1904,13 @@ impl ChartCanvas {
         let in_axis = matches!(region, AxisRegion::XAxis(_) | AxisRegion::YAxis(_));
         if in_plot || in_axis {
             let point = Self::axis_pointer_hover_point(layout, position);
-            self.engine.apply_action(Action::HoverAt { point });
+            self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
         }
     }
 
     fn clear_brush(&mut self) {
         self.brush_drag = None;
-        self.engine.apply_action(Action::ClearBrushSelection);
+        self.with_engine_mut(|engine| engine.apply_action(Action::ClearBrushSelection));
     }
 
     fn clear_slider_drag(&mut self) {
@@ -983,10 +2033,10 @@ impl ChartCanvas {
     }
 
     fn compute_axis_extent_from_data(&mut self, axis: delinea::AxisId, is_x: bool) -> DataWindow {
-        let (spec_rev, visual_rev) = {
-            let model = self.engine.model();
+        let (spec_rev, visual_rev) = self.with_engine(|engine| {
+            let model = engine.model();
             (model.revs.spec, model.revs.visual)
-        };
+        });
 
         let data_sig = self.data_signature();
         if let Some(entry) = self.axis_extent_cache.get(&axis).copied()
@@ -997,17 +2047,16 @@ impl ChartCanvas {
             return entry.window;
         }
 
-        let series_cols = {
-            let model = self.engine.model();
+        let series_cols = self.with_engine(|engine| {
+            let model = engine.model();
             if let Some(axis_model) = model.axes.get(&axis) {
                 if let delinea::AxisScale::Category(scale) = &axis_model.scale
                     && !scale.categories.is_empty()
                 {
-                    let w = DataWindow {
+                    return Err(DataWindow {
                         min: -0.5,
                         max: scale.categories.len() as f64 - 0.5,
-                    };
-                    return w;
+                    });
                 }
             }
 
@@ -1039,32 +2088,38 @@ impl ChartCanvas {
                 series_cols.push((series.dataset, col));
             }
 
-            series_cols
+            Ok(series_cols)
+        });
+
+        let series_cols = match series_cols {
+            Ok(cols) => cols,
+            Err(window) => return window,
         };
 
-        let mut min = f64::INFINITY;
-        let mut max = f64::NEG_INFINITY;
+        let (min, max) = self.with_engine_mut(|engine| {
+            let mut min = f64::INFINITY;
+            let mut max = f64::NEG_INFINITY;
 
-        for (dataset_id, col) in series_cols {
-            let datasets = &self.engine.datasets_mut().datasets;
-            let Some(table) = datasets
-                .iter()
-                .find_map(|(did, t)| (*did == dataset_id).then_some(t))
-            else {
-                continue;
-            };
-            let Some(values) = table.column_f64(col) else {
-                continue;
-            };
-
-            for &v in values {
-                if !v.is_finite() {
+            let datasets = engine.datasets_mut();
+            for (dataset_id, col) in &series_cols {
+                let Some(table) = datasets.dataset_mut(*dataset_id) else {
                     continue;
+                };
+                let Some(values) = table.column_f64(*col) else {
+                    continue;
+                };
+
+                for &v in values {
+                    if !v.is_finite() {
+                        continue;
+                    }
+                    min = min.min(v);
+                    max = max.max(v);
                 }
-                min = min.min(v);
-                max = max.max(v);
             }
-        }
+
+            (min, max)
+        });
 
         let mut out = if min.is_finite() && max.is_finite() && max > min {
             DataWindow { min, max }
@@ -1091,23 +2146,21 @@ impl ChartCanvas {
     fn data_signature(&mut self) -> u64 {
         use std::hash::{Hash, Hasher};
 
-        let dataset_ids: Vec<delinea::DatasetId> =
-            self.engine.model().datasets.keys().copied().collect();
-        let datasets = self.engine.datasets_mut();
+        self.with_engine_mut(|engine| {
+            let dataset_ids: Vec<delinea::DatasetId> =
+                engine.model().datasets.keys().copied().collect();
 
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        for dataset_id in dataset_ids {
-            dataset_id.0.hash(&mut hasher);
-            if let Some(table) = datasets
-                .datasets
-                .iter()
-                .find_map(|(did, t)| (*did == dataset_id).then_some(t))
-            {
-                table.revision.0.hash(&mut hasher);
-                table.row_count.hash(&mut hasher);
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            let datasets = engine.datasets_mut();
+            for dataset_id in dataset_ids {
+                dataset_id.0.hash(&mut hasher);
+                if let Some(table) = datasets.dataset_mut(dataset_id) {
+                    table.revision().0.hash(&mut hasher);
+                    table.row_count().hash(&mut hasher);
+                }
             }
-        }
-        hasher.finish()
+            hasher.finish()
+        })
     }
 
     fn x_slider_track_for_axis(&self, axis: delinea::AxisId) -> Option<Rect> {
@@ -1142,9 +2195,15 @@ impl ChartCanvas {
             return fixed;
         }
 
-        if let Some(zoom) = self.engine.state().data_zoom_x.get(&axis).copied()
-            && let Some(window) = zoom.window
-        {
+        let zoom_window = self.with_engine(|engine| {
+            engine
+                .state()
+                .data_zoom_x
+                .get(&axis)
+                .copied()
+                .and_then(|z| z.window)
+        });
+        if let Some(window) = zoom_window {
             return window;
         }
 
@@ -1305,7 +2364,8 @@ impl ChartCanvas {
             return fixed;
         }
 
-        if let Some(window) = self.engine.state().data_window_y.get(&axis).copied() {
+        let window = self.with_engine(|engine| engine.state().data_window_y.get(&axis).copied());
+        if let Some(window) = window {
             return window;
         }
 
@@ -1335,12 +2395,14 @@ impl ChartCanvas {
         }
 
         let maps: Vec<(delinea::VisualMapId, delinea::engine::model::VisualMapModel)> = self
-            .engine
-            .model()
-            .visual_maps
-            .iter()
-            .map(|(id, vm)| (*id, *vm))
-            .collect();
+            .with_engine(|engine| {
+                engine
+                    .model()
+                    .visual_maps
+                    .iter()
+                    .map(|(id, vm)| (*id, *vm))
+                    .collect()
+            });
         if maps.is_empty() {
             return Vec::new();
         }
@@ -1400,14 +2462,9 @@ impl ChartCanvas {
         vm: delinea::engine::model::VisualMapModel,
     ) -> DataWindow {
         let domain = Self::visual_map_domain_window(vm);
-        match self
-            .engine
-            .state()
-            .visual_map_range
-            .get(&id)
-            .copied()
-            .flatten()
-        {
+        let range =
+            self.with_engine(|engine| engine.state().visual_map_range.get(&id).copied().flatten());
+        match range {
             Some(r) => DataWindow {
                 min: r.min,
                 max: r.max,
@@ -1427,15 +2484,15 @@ impl ChartCanvas {
         } else {
             (1u64 << buckets) - 1
         };
-        self.engine
-            .state()
-            .visual_map_piece_mask
-            .get(&id)
-            .copied()
-            .flatten()
-            .or(vm.initial_piece_mask)
-            .unwrap_or(full_mask)
-            & full_mask
+        let piece_mask = self.with_engine(|engine| {
+            engine
+                .state()
+                .visual_map_piece_mask
+                .get(&id)
+                .copied()
+                .flatten()
+        });
+        piece_mask.or(vm.initial_piece_mask).unwrap_or(full_mask) & full_mask
     }
 
     fn visual_map_y_at_value(track: Rect, domain: DataWindow, value: f64) -> f32 {
@@ -1559,15 +2616,34 @@ impl ChartCanvas {
             .get(&series)
             .copied()
             .unwrap_or_else(|| {
-                self.engine
-                    .model()
-                    .series_order
-                    .iter()
-                    .position(|id| *id == series)
-                    .unwrap_or(0)
+                self.with_engine(|engine| {
+                    engine
+                        .model()
+                        .series_order
+                        .iter()
+                        .position(|id| *id == series)
+                        .unwrap_or(0)
+                })
             });
         let palette = &self.style.series_palette;
         palette[order_idx % palette.len()]
+    }
+
+    fn series_is_in_view_grid(
+        &self,
+        model: &delinea::engine::model::ChartModel,
+        series: delinea::SeriesId,
+    ) -> bool {
+        let Some(grid) = self.grid_override else {
+            return true;
+        };
+        let Some(series) = model.series.get(&series) else {
+            return false;
+        };
+        model
+            .axes
+            .get(&series.x_axis)
+            .is_some_and(|a| a.grid == grid)
     }
 
     fn paint_color(&self, paint: delinea::PaintId) -> Color {
@@ -1608,49 +2684,53 @@ impl ChartCanvas {
     }
 
     fn apply_legend_select_all(&mut self) -> bool {
-        let updates = crate::legend_logic::legend_select_all_updates(self.engine.model());
+        let updates = self
+            .with_engine(|engine| crate::legend_logic::legend_select_all_updates(engine.model()));
         if updates.is_empty() {
             return false;
         }
-        self.engine
-            .apply_action(Action::SetSeriesVisibility { updates });
+        self.with_engine_mut(|engine| engine.apply_action(Action::SetSeriesVisibility { updates }));
         true
     }
 
     fn apply_legend_select_none(&mut self) -> bool {
-        let updates = crate::legend_logic::legend_select_none_updates(self.engine.model());
+        let updates = self
+            .with_engine(|engine| crate::legend_logic::legend_select_none_updates(engine.model()));
         if updates.is_empty() {
             return false;
         }
-        self.engine
-            .apply_action(Action::SetSeriesVisibility { updates });
+        self.with_engine_mut(|engine| engine.apply_action(Action::SetSeriesVisibility { updates }));
         true
     }
 
     fn apply_legend_invert(&mut self) -> bool {
-        let updates = crate::legend_logic::legend_invert_updates(self.engine.model());
+        let updates =
+            self.with_engine(|engine| crate::legend_logic::legend_invert_updates(engine.model()));
         if updates.is_empty() {
             return false;
         }
-        self.engine
-            .apply_action(Action::SetSeriesVisibility { updates });
+        self.with_engine_mut(|engine| engine.apply_action(Action::SetSeriesVisibility { updates }));
         true
     }
 
     fn apply_legend_double_click(&mut self, clicked: delinea::SeriesId) {
-        let updates =
-            crate::legend_logic::legend_double_click_updates(self.engine.model(), clicked);
+        let updates = self.with_engine(|engine| {
+            crate::legend_logic::legend_double_click_updates(engine.model(), clicked)
+        });
         if !updates.is_empty() {
-            self.engine
-                .apply_action(Action::SetSeriesVisibility { updates });
+            self.with_engine_mut(|engine| {
+                engine.apply_action(Action::SetSeriesVisibility { updates });
+            });
         }
     }
 
     fn apply_legend_reset(&mut self) {
-        let updates = crate::legend_logic::legend_reset_updates(self.engine.model());
+        let updates =
+            self.with_engine(|engine| crate::legend_logic::legend_reset_updates(engine.model()));
         if !updates.is_empty() {
-            self.engine
-                .apply_action(Action::SetSeriesVisibility { updates });
+            self.with_engine_mut(|engine| {
+                engine.apply_action(Action::SetSeriesVisibility { updates })
+            });
         }
     }
 
@@ -1659,14 +2739,13 @@ impl ChartCanvas {
         anchor: delinea::SeriesId,
         clicked: delinea::SeriesId,
     ) {
-        let updates = crate::legend_logic::legend_shift_range_toggle_updates(
-            self.engine.model(),
-            anchor,
-            clicked,
-        );
+        let updates = self.with_engine(|engine| {
+            crate::legend_logic::legend_shift_range_toggle_updates(engine.model(), anchor, clicked)
+        });
         if !updates.is_empty() {
-            self.engine
-                .apply_action(Action::SetSeriesVisibility { updates });
+            self.with_engine_mut(|engine| {
+                engine.apply_action(Action::SetSeriesVisibility { updates })
+            });
         }
     }
 
@@ -1682,8 +2761,14 @@ impl ChartCanvas {
             return;
         }
 
-        let model = self.engine.model();
-        let series: Vec<_> = model.series_in_order().collect();
+        let series: Vec<delinea::engine::model::SeriesModel> = self.with_engine(|engine| {
+            let model = engine.model();
+            model
+                .series_in_order()
+                .filter(|s| self.series_is_in_view_grid(model, s.id))
+                .cloned()
+                .collect()
+        });
         if series.is_empty() {
             return;
         }
@@ -2074,6 +3159,8 @@ impl ChartCanvas {
             return;
         }
 
+        let model = self.with_engine(|engine| engine.model().clone());
+
         let x_bands: Vec<(AxisBandLayout, DataWindow)> = x_axes
             .iter()
             .map(|band| (*band, self.current_window_x(band.axis)))
@@ -2134,7 +3221,6 @@ impl ChartCanvas {
 
         // X axes: baseline + ticks + labels.
         for (band, window) in &x_bands {
-            let model = self.engine.model();
             let baseline_y = match band.position {
                 delinea::AxisPosition::Bottom => band.rect.origin.y.0,
                 delinea::AxisPosition::Top => band.rect.origin.y.0 + band.rect.size.height.0,
@@ -2157,7 +3243,7 @@ impl ChartCanvas {
 
             let mut last_right = f32::NEG_INFINITY;
             for (value, label) in
-                Self::axis_ticks_with_labels(model, band.axis, *window, x_tick_count)
+                Self::axis_ticks_with_labels(&model, band.axis, *window, x_tick_count)
             {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let x_px = plot.origin.x.0 + t * plot.size.width.0;
@@ -2208,7 +3294,6 @@ impl ChartCanvas {
 
         // Y axes: baseline + ticks + labels.
         for (band, window) in &y_bands {
-            let model = self.engine.model();
             let baseline_x = match band.position {
                 delinea::AxisPosition::Left => band.rect.origin.x.0 + band.rect.size.width.0,
                 delinea::AxisPosition::Right => band.rect.origin.x.0,
@@ -2231,7 +3316,7 @@ impl ChartCanvas {
 
             let mut last_bottom = f32::NEG_INFINITY;
             for (value, label) in
-                Self::axis_ticks_with_labels(model, band.axis, *window, y_tick_count)
+                Self::axis_ticks_with_labels(&model, band.axis, *window, y_tick_count)
             {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let y_px = plot.origin.y.0 + (1.0 - t) * plot.size.height.0;
@@ -2288,7 +3373,7 @@ impl ChartCanvas {
     }
 
     fn rebuild_paths_if_needed<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
-        let marks_rev = self.engine.output().marks.revision;
+        let marks_rev = self.with_engine(|engine| engine.output().marks.revision);
         let scale_factor_bits = cx.scale_factor.to_bits();
 
         if marks_rev == self.last_marks_rev && scale_factor_bits == self.last_scale_factor_bits {
@@ -2306,12 +3391,15 @@ impl ChartCanvas {
 
         let plot_h = self.last_layout.plot.size.height.0;
         let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
-            .engine
-            .model()
-            .series_in_order()
-            .filter(|s| s.kind == delinea::SeriesKind::Area && s.visible)
-            .map(|s| (s.id, s.y_axis, s.area_baseline))
-            .collect();
+            .with_engine(|engine| {
+                let model = engine.model();
+                model
+                    .series_in_order()
+                    .filter(|s| s.kind == delinea::SeriesKind::Area && s.visible)
+                    .filter(|s| self.series_is_in_view_grid(model, s.id))
+                    .map(|s| (s.id, s.y_axis, s.area_baseline))
+                    .collect()
+            });
 
         let mut area_baseline_y_local: BTreeMap<delinea::SeriesId, f32> = BTreeMap::new();
         for (series_id, y_axis, baseline) in area_series {
@@ -2329,9 +3417,9 @@ impl ChartCanvas {
             area_baseline_y_local.insert(series_id, y);
         }
 
-        let marks = &self.engine.output().marks;
         let origin = self.last_layout.plot.origin;
-        let model = self.engine.model();
+        let (marks, model) =
+            self.with_engine(|engine| (engine.output().marks.clone(), engine.model().clone()));
 
         self.series_rank_by_id.clear();
         for (i, series_id) in model.series_order.iter().enumerate() {
@@ -2348,6 +3436,12 @@ impl ChartCanvas {
         let mut band_segments: BTreeMap<delinea::SeriesId, Vec<BandSegment>> = BTreeMap::new();
 
         for node in &marks.nodes {
+            if let Some(series_id) = node.source_series
+                && !self.series_is_in_view_grid(&model, series_id)
+            {
+                continue;
+            }
+
             if node.kind != MarkKind::Polyline {
                 continue;
             }
@@ -2552,6 +3646,12 @@ impl ChartCanvas {
         }
 
         for node in &marks.nodes {
+            if let Some(series_id) = node.source_series
+                && !self.series_is_in_view_grid(&model, series_id)
+            {
+                continue;
+            }
+
             if node.kind != MarkKind::Rect {
                 continue;
             }
@@ -2582,6 +3682,12 @@ impl ChartCanvas {
         }
 
         for node in &marks.nodes {
+            if let Some(series_id) = node.source_series
+                && !self.series_is_in_view_grid(&model, series_id)
+            {
+                continue;
+            }
+
             if node.kind != MarkKind::Points {
                 continue;
             }
@@ -2619,8 +3725,36 @@ impl ChartCanvas {
 }
 
 impl<H: UiHost> Widget<H> for ChartCanvas {
+    fn semantics(&mut self, cx: &mut fret_ui::retained_bridge::SemanticsCx<'_, H>) {
+        cx.set_role(fret_core::SemanticsRole::Viewport);
+
+        if let Some(id) = self.semantics_test_id.as_deref() {
+            cx.set_test_id(id);
+            return;
+        }
+
+        match (self.mode, self.grid_override) {
+            (ChartCanvasMode::GridView, Some(grid)) => {
+                cx.set_test_id(format!("fret-chart-grid-{}", grid.0));
+            }
+            (ChartCanvasMode::GridView, None) => {}
+            (ChartCanvasMode::Overlay, _) => {
+                cx.set_test_id("fret-chart-overlay");
+            }
+            (ChartCanvasMode::Full, _) => {}
+        }
+    }
+
     fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
         self.force_uncached_paint.then_some(Transform2D::IDENTITY)
+    }
+
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        if self.mode != ChartCanvasMode::Overlay {
+            return true;
+        }
+        self.legend_panel_rect
+            .is_some_and(|rect| rect.contains(position))
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -2658,34 +3792,42 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     match Self::axis_region(&layout, pos) {
                         AxisRegion::XAxis(axis) => {
                             if toggle_both || toggle_pan {
-                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                self.with_engine_mut(|engine| {
+                                    engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                });
                             }
                             if toggle_both || toggle_zoom {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis });
+                                self.with_engine_mut(|engine| {
+                                    engine.apply_action(Action::ToggleAxisZoomLock { axis });
+                                });
                             }
                         }
                         AxisRegion::YAxis(axis) => {
                             if toggle_both || toggle_pan {
-                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                self.with_engine_mut(|engine| {
+                                    engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                });
                             }
                             if toggle_both || toggle_zoom {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis });
+                                self.with_engine_mut(|engine| {
+                                    engine.apply_action(Action::ToggleAxisZoomLock { axis });
+                                });
                             }
                         }
                         AxisRegion::Plot => {
                             if toggle_both || toggle_pan {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
-                                self.engine
-                                    .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                                self.with_engine_mut(|engine| {
+                                    engine.apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                                    engine.apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                                });
                             }
                             if toggle_both || toggle_zoom {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
-                                self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                                self.with_engine_mut(|engine| {
+                                    engine
+                                        .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                    engine
+                                        .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                                });
                             }
                         }
                     }
@@ -2827,9 +3969,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             delta_value,
                             drag.kind,
                         );
-                        self.engine.apply_action(Action::SetVisualMapRange {
-                            visual_map: drag.visual_map,
-                            range: Some((window.min, window.max)),
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Action::SetVisualMapRange {
+                                visual_map: drag.visual_map,
+                                range: Some((window.min, window.max)),
+                            });
                         });
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -2868,11 +4012,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                         SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
                                         SliderDragKind::Pan => WindowSpanAnchor::Center,
                                     };
-                                    self.engine.apply_action(Action::SetDataWindowXFromZoom {
-                                        axis: drag.axis,
-                                        base: drag.start_window,
-                                        window,
-                                        anchor,
+                                    self.with_engine_mut(|engine| {
+                                        engine.apply_action(Action::SetDataWindowXFromZoom {
+                                            axis: drag.axis,
+                                            base: drag.start_window,
+                                            window,
+                                            anchor,
+                                        });
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
@@ -2911,11 +4057,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                         SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
                                         SliderDragKind::Pan => WindowSpanAnchor::Center,
                                     };
-                                    self.engine.apply_action(Action::SetDataWindowYFromZoom {
-                                        axis: drag.axis,
-                                        base: drag.start_window,
-                                        window,
-                                        anchor,
+                                    self.with_engine_mut(|engine| {
+                                        engine.apply_action(Action::SetDataWindowYFromZoom {
+                                            axis: drag.axis,
+                                            base: drag.start_window,
+                                            window,
+                                            anchor,
+                                        });
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
@@ -2968,39 +4116,44 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let dx = position.x.0 - drag.start_pos.x.0;
                         let dy = position.y.0 - drag.start_pos.y.0;
 
-                        let x_pan_locked = self
-                            .engine
-                            .state()
-                            .axis_locks
-                            .get(&drag.x_axis)
-                            .copied()
-                            .unwrap_or_default()
-                            .pan_locked;
-                        let y_pan_locked = self
-                            .engine
-                            .state()
-                            .axis_locks
-                            .get(&drag.y_axis)
-                            .copied()
-                            .unwrap_or_default()
-                            .pan_locked;
+                        let (x_pan_locked, y_pan_locked) = self.with_engine(|engine| {
+                            let x_pan_locked = engine
+                                .state()
+                                .axis_locks
+                                .get(&drag.x_axis)
+                                .copied()
+                                .unwrap_or_default()
+                                .pan_locked;
+                            let y_pan_locked = engine
+                                .state()
+                                .axis_locks
+                                .get(&drag.y_axis)
+                                .copied()
+                                .unwrap_or_default()
+                                .pan_locked;
+                            (x_pan_locked, y_pan_locked)
+                        });
 
                         if drag.pan_x && self.axis_is_fixed(drag.x_axis).is_none() && !x_pan_locked
                         {
-                            self.engine.apply_action(Action::PanDataWindowXFromBase {
-                                axis: drag.x_axis,
-                                base: drag.start_x,
-                                delta_px: dx,
-                                viewport_span_px: width,
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::PanDataWindowXFromBase {
+                                    axis: drag.x_axis,
+                                    base: drag.start_x,
+                                    delta_px: dx,
+                                    viewport_span_px: width,
+                                });
                             });
                         }
                         if drag.pan_y && self.axis_is_fixed(drag.y_axis).is_none() && !y_pan_locked
                         {
-                            self.engine.apply_action(Action::PanDataWindowYFromBase {
-                                axis: drag.y_axis,
-                                base: drag.start_y,
-                                delta_px: -dy,
-                                viewport_span_px: height,
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::PanDataWindowYFromBase {
+                                    axis: drag.y_axis,
+                                    base: drag.start_y,
+                                    delta_px: -dy,
+                                    viewport_span_px: height,
+                                });
                             });
                         }
 
@@ -3013,8 +4166,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 let hover_point = Self::axis_pointer_hover_point(&layout, *position);
-                self.engine
-                    .apply_action(Action::HoverAt { point: hover_point });
+                self.with_engine_mut(|engine| {
+                    engine.apply_action(Action::HoverAt { point: hover_point });
+                });
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -3062,16 +4216,19 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         {
                             self.apply_legend_shift_range_toggle(anchor, series);
                         } else {
-                            let visible = self
-                                .engine
-                                .model()
-                                .series
-                                .get(&series)
-                                .map(|s| s.visible)
-                                .unwrap_or(true);
-                            self.engine.apply_action(Action::SetSeriesVisible {
-                                series,
-                                visible: !visible,
+                            let visible = self.with_engine(|engine| {
+                                engine
+                                    .model()
+                                    .series
+                                    .get(&series)
+                                    .map(|s| s.visible)
+                                    .unwrap_or(true)
+                            });
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::SetSeriesVisible {
+                                    series,
+                                    visible: !visible,
+                                });
                             });
                         }
                     }
@@ -3133,9 +4290,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             && !modifiers.alt_gr)
                             || (*button == MouseButton::Left && *click_count == 2);
                         if wants_reset {
-                            self.engine.apply_action(Action::SetVisualMapPieceMask {
-                                visual_map: vm_id,
-                                mask: None,
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::SetVisualMapPieceMask {
+                                    visual_map: vm_id,
+                                    mask: None,
+                                });
                             });
                             self.visual_map_piece_anchor = None;
                             cx.invalidate_self(Invalidation::Paint);
@@ -3173,9 +4332,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         }
                         next &= full_mask;
                         let mask = (next != full_mask).then_some(next);
-                        self.engine.apply_action(Action::SetVisualMapPieceMask {
-                            visual_map: vm_id,
-                            mask,
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Action::SetVisualMapPieceMask {
+                                visual_map: vm_id,
+                                mask,
+                            });
                         });
                         self.visual_map_piece_anchor = Some((vm_id, bucket));
                         cx.invalidate_self(Invalidation::Paint);
@@ -3211,9 +4372,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         )
                     };
 
-                    self.engine.apply_action(Action::SetVisualMapRange {
-                        visual_map: vm_id,
-                        range: Some((start_window.min, start_window.max)),
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::SetVisualMapRange {
+                            visual_map: vm_id,
+                            range: Some((start_window.min, start_window.max)),
+                        });
                     });
                     self.visual_map_drag = Some(VisualMapDrag {
                         visual_map: vm_id,
@@ -3296,25 +4459,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     match Self::axis_region(&layout, *position) {
                         AxisRegion::XAxis(axis) => {
                             self.active_x_axis = Some(axis);
-                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis });
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                engine.apply_action(Action::ToggleAxisZoomLock { axis });
+                            });
                         }
                         AxisRegion::YAxis(axis) => {
                             self.active_y_axis = Some(axis);
-                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis });
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::ToggleAxisPanLock { axis });
+                                engine.apply_action(Action::ToggleAxisZoomLock { axis });
+                            });
                         }
                         AxisRegion::Plot => {
-                            self.engine
-                                .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                            self.with_engine_mut(|engine| {
+                                engine.apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                                engine.apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                engine.apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                                engine.apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                            });
                         }
                     }
 
@@ -3341,14 +4504,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let region = Self::axis_region(&layout, *position);
                     match region {
                         AxisRegion::XAxis(axis) => {
-                            let zoom_locked = self
-                                .engine
-                                .state()
-                                .axis_locks
-                                .get(&axis)
-                                .copied()
-                                .unwrap_or_default()
-                                .zoom_locked;
+                            let zoom_locked = self.with_engine(|engine| {
+                                engine
+                                    .state()
+                                    .axis_locks
+                                    .get(&axis)
+                                    .copied()
+                                    .unwrap_or_default()
+                                    .zoom_locked
+                            });
                             if zoom_locked || self.axis_is_fixed(axis).is_some() {
                                 return;
                             }
@@ -3430,14 +4594,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             }
                         }
                         AxisRegion::YAxis(axis) => {
-                            let zoom_locked = self
-                                .engine
-                                .state()
-                                .axis_locks
-                                .get(&axis)
-                                .copied()
-                                .unwrap_or_default()
-                                .zoom_locked;
+                            let zoom_locked = self.with_engine(|engine| {
+                                engine
+                                    .state()
+                                    .axis_locks
+                                    .get(&axis)
+                                    .copied()
+                                    .unwrap_or_default()
+                                    .zoom_locked
+                            });
                             if zoom_locked || self.axis_is_fixed(axis).is_some() {
                                 return;
                             }
@@ -3544,22 +4709,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         return;
                     };
 
-                    let x_zoom_locked = self
-                        .engine
-                        .state()
-                        .axis_locks
-                        .get(&x_axis)
-                        .copied()
-                        .unwrap_or_default()
-                        .zoom_locked;
-                    let y_zoom_locked = self
-                        .engine
-                        .state()
-                        .axis_locks
-                        .get(&y_axis)
-                        .copied()
-                        .unwrap_or_default()
-                        .zoom_locked;
+                    let (x_zoom_locked, y_zoom_locked) = self.with_engine(|engine| {
+                        let x_zoom_locked = engine
+                            .state()
+                            .axis_locks
+                            .get(&x_axis)
+                            .copied()
+                            .unwrap_or_default()
+                            .zoom_locked;
+                        let y_zoom_locked = engine
+                            .state()
+                            .axis_locks
+                            .get(&y_axis)
+                            .copied()
+                            .unwrap_or_default()
+                            .zoom_locked;
+                        (x_zoom_locked, y_zoom_locked)
+                    });
                     if x_zoom_locked || y_zoom_locked {
                         return;
                     }
@@ -3660,22 +4826,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     pan_y = false;
                 }
 
-                let x_pan_locked = self
-                    .engine
-                    .state()
-                    .axis_locks
-                    .get(&x_axis)
-                    .copied()
-                    .unwrap_or_default()
-                    .pan_locked;
-                let y_pan_locked = self
-                    .engine
-                    .state()
-                    .axis_locks
-                    .get(&y_axis)
-                    .copied()
-                    .unwrap_or_default()
-                    .pan_locked;
+                let (x_pan_locked, y_pan_locked) = self.with_engine(|engine| {
+                    let x_pan_locked = engine
+                        .state()
+                        .axis_locks
+                        .get(&x_axis)
+                        .copied()
+                        .unwrap_or_default()
+                        .pan_locked;
+                    let y_pan_locked = engine
+                        .state()
+                        .axis_locks
+                        .get(&y_axis)
+                        .copied()
+                        .unwrap_or_default()
+                        .pan_locked;
+                    (x_pan_locked, y_pan_locked)
+                });
                 if pan_x && x_pan_locked {
                     pan_x = false;
                 }
@@ -3731,8 +4898,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     ) {
                         let x_window = (self.axis_is_fixed(drag.x_axis).is_none()).then_some(x);
                         let y_window = (self.axis_is_fixed(drag.y_axis).is_none()).then_some(y);
-                        self.engine
-                            .apply_action(Self::view_window_2d_action_from_zoom(
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Self::view_window_2d_action_from_zoom(
                                 drag.x_axis,
                                 drag.y_axis,
                                 drag.start_x,
@@ -3740,6 +4907,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 x_window,
                                 y_window,
                             ));
+                        });
                         self.refresh_hover_for_axis_pointer(&layout, *position);
                     }
 
@@ -3768,14 +4936,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         *modifiers,
                         drag.required_mods,
                     ) {
-                        self.engine.apply_action(Action::SetBrushSelection2D {
-                            x_axis: drag.x_axis,
-                            y_axis: drag.y_axis,
-                            x,
-                            y,
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Action::SetBrushSelection2D {
+                                x_axis: drag.x_axis,
+                                y_axis: drag.y_axis,
+                                x,
+                                y,
+                            });
                         });
                     } else {
-                        self.engine.apply_action(Action::ClearBrushSelection);
+                        self.with_engine_mut(|engine| {
+                            engine.apply_action(Action::ClearBrushSelection);
+                        });
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -3888,22 +5060,26 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 if zoom_x && self.axis_is_fixed(x_axis).is_none() {
                     let w = self.current_window_x(x_axis);
-                    self.engine.apply_action(Action::ZoomDataWindowXFromBase {
-                        axis: x_axis,
-                        base: w,
-                        center_px: center_x,
-                        log2_scale,
-                        viewport_span_px: width,
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::ZoomDataWindowXFromBase {
+                            axis: x_axis,
+                            base: w,
+                            center_px: center_x,
+                            log2_scale,
+                            viewport_span_px: width,
+                        });
                     });
                 }
                 if zoom_y && self.axis_is_fixed(y_axis).is_none() {
                     let w = self.current_window_y(y_axis);
-                    self.engine.apply_action(Action::ZoomDataWindowYFromBase {
-                        axis: y_axis,
-                        base: w,
-                        center_px: center_y_from_bottom,
-                        log2_scale,
-                        viewport_span_px: height,
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::ZoomDataWindowYFromBase {
+                            axis: y_axis,
+                            base: w,
+                            center_px: center_y_from_bottom,
+                            log2_scale,
+                            viewport_span_px: height,
+                        });
                     });
                 }
 
@@ -3922,11 +5098,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.last_bounds = cx.bounds;
         self.last_layout = self.compute_layout(cx.bounds);
-        self.sync_viewport(self.last_layout.plot);
+        if self.mode != ChartCanvasMode::Overlay {
+            self.sync_viewport(self.last_layout.plot);
+        }
         cx.available
     }
 
     fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        if self.mode == ChartCanvasMode::Overlay {
+            return;
+        }
+
         let mut measurer = NullTextMeasurer::default();
 
         // P0: run the engine synchronously, but allow multiple internal steps per frame so that
@@ -3942,12 +5124,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 WorkBudget::new(32_768, 0, 8)
             };
 
-            let step = self.engine.step(&mut measurer, budget);
+            let step = self.with_engine_mut(|engine| engine.step(&mut measurer, budget));
             match step {
                 Ok(step) => {
                     unfinished = step.unfinished;
                 }
-                Err(EngineError::MissingViewport) => {
+                Err(EngineError::MissingViewport | EngineError::MissingPlotViewport { .. }) => {
                     unfinished = false;
                 }
             }
@@ -3967,6 +5149,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        if self.mode == ChartCanvasMode::Overlay {
+            self.paint_overlay_only(cx);
+            return;
+        }
+
         let theme = Theme::global(&*cx.app);
         let style_changed = self.sync_style_from_theme(theme);
         if style_changed {
@@ -3985,6 +5172,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.last_layout = self.compute_layout(cx.bounds);
             self.sync_viewport(self.last_layout.plot);
         }
+
+        self.sync_linked_domain_windows(cx);
+        self.sync_linked_axis_pointer(cx);
 
         // Advance per-frame counters for optional cache pruning.
         self.axis_text.begin_frame();
@@ -4068,14 +5258,50 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             rect: self.last_layout.plot,
         });
 
-        let brush = self.engine.state().brush_selection_2d;
+        let brush = self
+            .with_engine(|engine| engine.state().brush_selection_2d)
+            .and_then(|brush| {
+                if let Some(grid) = self.grid_override
+                    && brush.grid != Some(grid)
+                {
+                    return None;
+                }
+                Some(brush)
+            });
         let brush_rect_px = if let Some(brush) = brush {
             self.brush_rect_px(brush)
                 .filter(|rect| rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0)
         } else {
             None
         };
-        let model = self.engine.model();
+
+        #[derive(Clone, Copy)]
+        struct SeriesSnapshot {
+            x_axis: delinea::AxisId,
+            y_axis: delinea::AxisId,
+            kind: delinea::SeriesKind,
+            stack: Option<delinea::StackId>,
+        }
+
+        let series_by_id: BTreeMap<delinea::SeriesId, SeriesSnapshot> =
+            self.with_engine(|engine| {
+                engine
+                    .model()
+                    .series
+                    .iter()
+                    .map(|(id, s)| {
+                        (
+                            *id,
+                            SeriesSnapshot {
+                                x_axis: s.x_axis,
+                                y_axis: s.y_axis,
+                                kind: s.kind,
+                                stack: s.stack,
+                            },
+                        )
+                    })
+                    .collect()
+            });
 
         let mut style_sig = KeyBuilder::new();
         style_sig.mix_f32_bits(self.style.stroke_color.r);
@@ -4131,7 +5357,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
                 fill_color.a *= cached.opacity_mul;
                 if let Some(series_id) = cached.source_series {
-                    let brush_dim = if brush.is_some() && model.series.get(&series_id).is_some() {
+                    let brush_dim = if brush.is_some() && series_by_id.contains_key(&series_id) {
                         0.25
                     } else {
                         1.0
@@ -4202,7 +5428,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
             if let Some(series_id) = cached.source_series {
                 let brush_dim = if let Some(brush) = brush
-                    && let Some(series) = model.series.get(&series_id)
+                    && let Some(series) = series_by_id.get(&series_id)
                 {
                     if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
                         0.25
@@ -4238,8 +5464,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
 
             let suppress_stroke = cached.source_series.is_some_and(|series_id| {
-                model
-                    .series
+                series_by_id
                     .get(&series_id)
                     .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
                     && delinea::ids::mark_variant(*mark_id) == 1
@@ -4301,7 +5526,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
                 fill_color.a *= cached.opacity_mul;
                 if let Some(series_id) = cached.source_series {
-                    let brush_dim = if brush.is_some() && model.series.get(&series_id).is_some() {
+                    let brush_dim = if brush.is_some() && series_by_id.contains_key(&series_id) {
                         0.25
                     } else {
                         1.0
@@ -4372,7 +5597,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let Some(series_id) = cached.source_series else {
                     continue;
                 };
-                let Some(series) = model.series.get(&series_id) else {
+                let Some(series) = series_by_id.get(&series_id) else {
                     continue;
                 };
                 if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
@@ -4426,7 +5651,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let Some(series_id) = cached.source_series else {
                     continue;
                 };
-                let Some(series) = model.series.get(&series_id) else {
+                let Some(series) = series_by_id.get(&series_id) else {
                     continue;
                 };
                 if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
@@ -4464,12 +5689,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     }
                 }
 
-                let suppress_stroke =
-                    cached.source_series.is_some_and(|series_id| {
-                        model.series.get(&series_id).is_some_and(|s| {
-                            s.kind == delinea::SeriesKind::Area && s.stack.is_some()
-                        }) && delinea::ids::mark_variant(*mark_id) == 1
-                    });
+                let suppress_stroke = cached.source_series.is_some_and(|series_id| {
+                    series_by_id
+                        .get(&series_id)
+                        .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
+                        && delinea::ids::mark_variant(*mark_id) == 1
+                });
                 if !suppress_stroke {
                     if let Some((stroke, _metrics)) = self
                         .path_cache
@@ -4491,7 +5716,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let Some(series_id) = cached.source_series else {
                     continue;
                 };
-                let Some(series) = model.series.get(&series_id) else {
+                let Some(series) = series_by_id.get(&series_id) else {
                     continue;
                 };
                 if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
@@ -4541,24 +5766,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         if let Some((x_axis, _y_axis)) = self.active_axes(&self.last_layout)
-            && self
-                .engine
-                .state()
-                .data_zoom_x
-                .get(&x_axis)
-                .copied()
-                .unwrap_or_default()
-                .window
-                .is_some()
-            && self
-                .engine
-                .state()
-                .data_zoom_x
-                .get(&x_axis)
-                .copied()
-                .unwrap_or_default()
-                .filter_mode
-                == FilterMode::None
+            && self.with_engine(|engine| {
+                let dz = engine
+                    .state()
+                    .data_zoom_x
+                    .get(&x_axis)
+                    .copied()
+                    .unwrap_or_default();
+                dz.window.is_some() && dz.filter_mode == FilterMode::None
+            })
         {
             let label = "Y bounds: global (M)";
             let text_style = TextStyle {
@@ -4589,11 +5805,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
-        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
-            self.engine.output().axis_pointer.clone()
-        } else {
-            None
-        };
+        let axis_pointer =
+            if self.mode.renders_overlays() && interaction_idle && self.legend_hover.is_none() {
+                self.with_engine(|engine| engine.output().axis_pointer.clone())
+                    .and_then(|axis_pointer| {
+                        if let Some(grid) = self.grid_override
+                            && axis_pointer.grid != Some(grid)
+                        {
+                            return None;
+                        }
+                        Some(axis_pointer)
+                    })
+            } else {
+                None
+            };
         let mut axis_pointer_label_rect: Option<Rect> = None;
 
         if let Some(axis_pointer) = axis_pointer.as_ref() {
@@ -4602,28 +5827,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
             let shadow_order = DrawOrder(self.style.draw_order.0.saturating_add(8_999));
 
-            let axis_pointer_type = self
-                .engine
-                .model()
-                .axis_pointer
-                .as_ref()
-                .map(|p| p.pointer_type)
-                .unwrap_or_default();
-            let axis_pointer_label_enabled = self
-                .engine
-                .model()
-                .axis_pointer
-                .as_ref()
-                .is_some_and(|p| p.label.show);
-            let axis_pointer_label_template = self
-                .engine
-                .model()
-                .axis_pointer
-                .as_ref()
-                .map(|p| p.label.template.as_str())
-                .unwrap_or("{value}");
+            let (axis_pointer_type, axis_pointer_label_enabled, axis_pointer_label_template) = self
+                .with_engine(|engine| {
+                    let spec = engine.model().axis_pointer.as_ref();
+                    let axis_pointer_type = spec.map(|p| p.pointer_type).unwrap_or_default();
+                    let axis_pointer_label_enabled = spec.is_some_and(|p| p.label.show);
+                    let axis_pointer_label_template = spec
+                        .map(|p| p.label.template.clone())
+                        .unwrap_or_else(|| "{value}".to_string());
+                    (
+                        axis_pointer_type,
+                        axis_pointer_label_enabled,
+                        axis_pointer_label_template,
+                    )
+                });
+            let axis_pointer_label_template = axis_pointer_label_template.as_str();
 
-            let plot = self.last_layout.plot;
+            let plot = self.axis_pointer_plot_rect(axis_pointer);
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
 
             let x = pos
@@ -4737,37 +5957,40 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             return;
                         };
 
-                        let axis_window = self
-                            .engine
-                            .output()
-                            .axis_windows
-                            .get(&axis_id)
-                            .copied()
-                            .unwrap_or_default();
-                        let axis_name = self
-                            .engine
-                            .model()
-                            .axes
-                            .get(&axis_id)
-                            .and_then(|a| a.name.as_deref())
-                            .unwrap_or("");
-
                         let default_tooltip_spec = delinea::TooltipSpecV1::default();
-                        let tooltip_spec = self
-                            .engine
-                            .model()
-                            .tooltip
-                            .as_ref()
-                            .unwrap_or(&default_tooltip_spec);
+                        let (axis_window, axis_name, missing_value) = self.with_engine(|engine| {
+                            let axis_window = engine
+                                .output()
+                                .axis_windows
+                                .get(&axis_id)
+                                .copied()
+                                .unwrap_or_default();
+                            let axis_name = engine
+                                .model()
+                                .axes
+                                .get(&axis_id)
+                                .and_then(|a| a.name.as_deref())
+                                .unwrap_or("")
+                                .to_string();
+                            let missing_value = engine
+                                .model()
+                                .tooltip
+                                .as_ref()
+                                .map(|t| t.missing_value.clone())
+                                .unwrap_or_else(|| default_tooltip_spec.missing_value.clone());
+                            (axis_window, axis_name, missing_value)
+                        });
                         let value_text = if axis_value.is_finite() {
-                            delinea::engine::axis::format_value_for(
-                                self.engine.model(),
-                                axis_id,
-                                axis_window,
-                                axis_value,
-                            )
+                            self.with_engine(|engine| {
+                                delinea::engine::axis::format_value_for(
+                                    engine.model(),
+                                    axis_id,
+                                    axis_window,
+                                    axis_value,
+                                )
+                            })
                         } else {
-                            tooltip_spec.missing_value.clone()
+                            missing_value
                         };
 
                         let label_text = if axis_pointer_label_template == "{value}" {
@@ -4775,7 +5998,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         } else {
                             axis_pointer_label_template
                                 .replace("{value}", &value_text)
-                                .replace("{axis_name}", axis_name)
+                                .replace("{axis_name}", &axis_name)
                         };
 
                         let text_style = TextStyle {
@@ -5091,13 +6314,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         self.draw_visual_map(cx);
 
         if let Some(axis_pointer) = axis_pointer {
-            let tooltip_lines = self.tooltip_formatter.format_axis_pointer(
-                &self.engine,
-                &self.engine.output().axis_windows,
-                &axis_pointer,
-            );
+            let tooltip_lines = self.with_engine(|engine| {
+                self.tooltip_formatter.format_axis_pointer(
+                    engine,
+                    &engine.output().axis_windows,
+                    &axis_pointer,
+                )
+            });
             if tooltip_lines.is_empty() {
-                self.draw_axes(cx);
+                if self.mode.renders_axes() {
+                    self.draw_axes(cx);
+                }
                 return;
             }
 
@@ -5366,7 +6593,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
         }
 
-        self.draw_axes(cx);
+        if self.mode.renders_axes() {
+            self.draw_axes(cx);
+        }
 
         // Conservative hygiene: long-lived charts should not grow text caches unbounded.
         let t = self.text_cache_prune;
@@ -5475,9 +6704,11 @@ mod tests {
             assert!(canvas.engine().model().series.get(id).unwrap().visible);
         }
 
-        canvas.engine.apply_action(Action::SetSeriesVisible {
-            series: ids[0],
-            visible: false,
+        canvas.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetSeriesVisible {
+                series: ids[0],
+                visible: false,
+            });
         });
         canvas.apply_legend_invert();
         assert!(canvas.engine().model().series.get(&ids[0]).unwrap().visible);
@@ -5688,6 +6919,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

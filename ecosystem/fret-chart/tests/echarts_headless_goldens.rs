@@ -322,7 +322,7 @@ fn run_option_snapshot_with_viewport(option_json: &str, viewport: Rect) -> Headl
 
     let mut row_count_by_dataset: BTreeMap<u64, usize> = BTreeMap::new();
     for (id, table) in &translated.datasets {
-        row_count_by_dataset.insert(id.0 as u64, table.row_count);
+        row_count_by_dataset.insert(id.0 as u64, table.row_count());
     }
 
     let mut engine = ChartEngine::new(spec).expect("engine");
@@ -593,4 +593,85 @@ fn golden_dataset_transform_sort_desc_from_dataset() {
     });
     let json = serde_json::to_string(&option).expect("option json");
     assert_matches_golden("dataset-transform-sort-desc", &json);
+}
+
+#[test]
+fn golden_dataset_transform_chain_filter_then_sort_desc_from_dataset() {
+    let mut source = Vec::with_capacity(1 + 20);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..20 {
+        source.push(serde_json::json!([i as f64, i as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": [
+        { "source": source },
+        {
+          "fromDatasetIndex": 0,
+          "transform": { "type": "filter", "config": { "dimension": "y", "gte": 5, "lte": 14 } }
+        },
+        {
+          "fromDatasetIndex": 1,
+          "transform": { "type": "sort", "config": { "dimension": "y", "order": "desc" } }
+        }
+      ],
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "series": [
+        { "type": "scatter", "datasetIndex": 2, "encode": { "x": "x", "y": "y" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+    assert_matches_golden("dataset-transform-chain-filter-sort-desc", &json);
+}
+
+#[test]
+fn golden_filter_mode_weakfilter_x_and_empty_y() {
+    let mut source = Vec::with_capacity(1 + 12);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..12 {
+        source.push(serde_json::json!([i as f64, i as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": { "source": source },
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "dataZoom": [
+        { "type": "inside", "xAxisIndex": 0, "filterMode": "weakFilter", "startValue": 3, "endValue": 8 },
+        { "type": "inside", "yAxisIndex": 0, "filterMode": "empty", "startValue": 3, "endValue": 8 }
+      ],
+      "series": [
+        { "type": "line", "datasetIndex": 0, "encode": { "x": "x", "y": "y" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+    assert_matches_golden("filtermode-weakfilter-x-empty-y", &json);
+}
+
+#[test]
+fn golden_filter_mode_y_indices_skips_when_view_len_exceeds_cap() {
+    // The engine currently caps Y-indices filtering at 200k rows per grid step (v1 subset).
+    // This test ensures we stay deterministic when the dataset exceeds that cap.
+    //
+    // NOTE: we keep the option JSON minimal and generate the large dataset programmatically to
+    // avoid checking huge fixtures into the repo.
+    let n = 200_001usize;
+
+    let mut option = String::with_capacity(n * 18);
+    option.push_str("{\"dataset\":{\"source\":[[\"x\",\"y\"]");
+    for i in 0..n {
+        use std::fmt::Write as _;
+        let _ = write!(&mut option, ",[{x},{y}]", x = i, y = (i % 1000) as u32);
+    }
+    option.push_str(
+        "]},\
+\"xAxis\":[{\"type\":\"value\"}],\
+\"yAxis\":[{\"type\":\"value\"}],\
+\"dataZoom\":[{\"type\":\"slider\",\"yAxisIndex\":0,\"orient\":\"vertical\",\"filterMode\":\"filter\",\"startValue\":50000,\"endValue\":50010}],\
+\"series\":[{\"type\":\"scatter\",\"datasetIndex\":0,\"encode\":{\"x\":\"x\",\"y\":\"y\"},\"progressive\":5000,\"progressiveThreshold\":1,\"large\":true,\"largeThreshold\":1}]\
+}",
+    );
+
+    assert_matches_golden("filtermode-y-indices-view-len-cap", &option);
 }

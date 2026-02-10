@@ -181,6 +181,7 @@ impl Switch {
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Switch),
                         label: self.a11y_label.clone(),

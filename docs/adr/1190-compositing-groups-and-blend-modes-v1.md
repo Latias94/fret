@@ -1,4 +1,4 @@
-# ADR 1180: Compositing Groups and Blend Modes (v1)
+# ADR 1190: Compositing Groups and Blend Modes (v1)
 
 Status: Proposed
 

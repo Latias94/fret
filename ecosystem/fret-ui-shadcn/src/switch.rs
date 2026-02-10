@@ -624,9 +624,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app).clone();
-        let track_bg = switch_bg_off(&theme);
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(&theme));
         let thumb_size = switch_thumb(&theme);
-        let thumb_bg = switch_thumb_bg(&theme);
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(&theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -640,12 +640,12 @@ mod tests {
 
             let is_thumb = (rect.size.width.0 - thumb_size.0).abs() <= 0.1
                 && (rect.size.height.0 - thumb_size.0).abs() <= 0.1
-                && *background == fret_core::Paint::Solid(thumb_bg);
+                && *background == thumb_bg;
             if is_thumb {
                 thumb_rect = Some(*rect);
             }
 
-            if *background == fret_core::Paint::Solid(track_bg) {
+            if *background == track_bg {
                 let score = overlap_area(*rect, switch_bounds);
                 if score <= 0.0 {
                     continue;
