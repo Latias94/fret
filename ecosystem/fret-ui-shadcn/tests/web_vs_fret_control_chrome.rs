@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Point, Px, Rect, Scene, SceneOp,
+    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Paint, Point, Px, Rect, Scene, SceneOp,
     SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
@@ -550,11 +550,20 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             background,
             border,
             corner_radii,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
+        };
+
+        let background = match background {
+            Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
+        };
+        let border_color = match border_paint {
+            Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
         };
 
         if background != Color::TRANSPARENT {
