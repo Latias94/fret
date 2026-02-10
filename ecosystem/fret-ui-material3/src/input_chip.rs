@@ -705,19 +705,44 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             layout.size.width = Length::Px(width);
             layout.size.height = Length::Px(min_touch);
 
-            let test_id = chip_test_id
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{id}.trailing-icon")));
-            let a11y_label = trailing_icon_a11y_label
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from(format!("Remove {chip_label}")));
+            #[derive(Default)]
+            struct DerivedTrailingActionStrings {
+                base_test_id: Option<Arc<str>>,
+                chip_label: Option<Arc<str>>,
+                explicit_a11y_label: Option<Arc<str>>,
+                test_id: Option<Arc<str>>,
+                a11y_label: Option<Arc<str>>,
+            }
+
+            let (test_id, a11y_label) =
+                cx.with_state(DerivedTrailingActionStrings::default, |st| {
+                    if st.base_test_id.as_deref() != chip_test_id.as_deref() {
+                        st.base_test_id = chip_test_id.clone();
+                        st.test_id = st
+                            .base_test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}.trailing-icon")));
+                    }
+
+                    if st.chip_label.as_deref() != Some(chip_label.as_ref())
+                        || st.explicit_a11y_label.as_deref() != trailing_icon_a11y_label.as_deref()
+                    {
+                        st.chip_label = Some(chip_label.clone());
+                        st.explicit_a11y_label = trailing_icon_a11y_label.clone();
+                        st.a11y_label = Some(st.explicit_a11y_label.clone().unwrap_or_else(|| {
+                            Arc::<str>::from(format!("Remove {}", chip_label.as_ref()))
+                        }));
+                    }
+
+                    (st.test_id.clone(), st.a11y_label.clone())
+                });
 
             let pressable_props = PressableProps {
                 enabled,
                 focusable: false,
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
-                    label: Some(a11y_label),
+                    label: a11y_label,
                     test_id,
                     ..Default::default()
                 },
