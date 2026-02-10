@@ -468,6 +468,10 @@ fn window_created(app: &mut App, request: &fret_app::CreateWindowRequest, new_wi
                 sender,
             }));
         }
+        if diag_enabled() {
+            app.request_redraw(new_window);
+            app.push_effect(Effect::RequestAnimationFrame(new_window));
+        }
     }
     let _ = dock_runtime::handle_dock_window_created(app, request, new_window);
 }
