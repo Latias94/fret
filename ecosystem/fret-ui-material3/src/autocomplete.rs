@@ -8,6 +8,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     AttributedText, Axis, Edges, FontWeight, KeyCode, Px, SemanticsRole, Size, TextOverflow,
@@ -39,6 +40,12 @@ use crate::motion::ms_to_frames;
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
+
+fn default_autocomplete_listbox_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete-listbox"))
+        .clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AutocompleteVariant {
@@ -929,15 +936,27 @@ fn autocomplete_listbox_panel<H: UiHost>(
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
 ) -> AnyElement {
-    let listbox_test_id = test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{}-listbox", id)));
+    #[derive(Default)]
+    struct DerivedTestIds {
+        base: Option<Arc<str>>,
+        listbox: Option<Arc<str>>,
+    }
+
+    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+        if st.base.as_deref() != test_id.as_deref() {
+            st.base = test_id.clone();
+            st.listbox = st
+                .base
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
+        }
+        st.listbox.clone()
+    });
 
     let sem = SemanticsProps {
         role: SemanticsRole::ListBox,
         label: a11y_label.clone(),
-        test_id: listbox_test_id
-            .or_else(|| Some(Arc::<str>::from("material3-autocomplete-listbox"))),
+        test_id: listbox_test_id.or_else(|| Some(default_autocomplete_listbox_test_id())),
         labelled_by_element,
         ..Default::default()
     };
