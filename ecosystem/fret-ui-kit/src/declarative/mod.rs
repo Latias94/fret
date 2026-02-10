@@ -8,10 +8,12 @@ pub mod collapsible_motion;
 pub mod collection_semantics;
 pub mod color_scheme_queries;
 pub mod container_queries;
+pub mod contrast_queries;
 pub mod controllable_state;
 pub mod dismissible;
 pub mod file_tree;
 pub mod focus_scope;
+pub mod forced_colors_queries;
 pub mod form;
 #[cfg(feature = "recipes")]
 pub mod glass;
@@ -52,6 +54,8 @@ pub use container_queries::{
     ContainerQueryHysteresis, container_breakpoints, container_query_region,
     container_query_region_with_id, container_width_at_least,
 };
+pub use contrast_queries::{contrast_preference, prefers_more_contrast};
+pub use forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 pub use occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};

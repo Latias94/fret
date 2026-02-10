@@ -6,6 +6,8 @@ pub use super::container_queries::{
     ContainerQueryHysteresis, container_breakpoints, container_query_region,
     container_query_region_with_id, container_width_at_least,
 };
+pub use super::contrast_queries::{contrast_preference, prefers_more_contrast};
+pub use super::forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use super::global_watch::GlobalWatchExt;
 pub use super::model_watch::ModelWatchExt;
 pub use super::occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};

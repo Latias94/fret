@@ -8,6 +8,28 @@ pub enum ColorScheme {
     Dark,
 }
 
+/// User contrast preference for accessibility.
+///
+/// This is based on the `prefers-contrast` media query vocabulary used on the web. Runners may
+/// supply best-effort values and leave it `None` when unavailable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContrastPreference {
+    NoPreference,
+    More,
+    Less,
+    Custom,
+}
+
+/// Forced colors mode (high contrast) preference.
+///
+/// This is based on the `forced-colors` media query vocabulary used on the web. Runners may
+/// supply best-effort values and leave it `None` when unavailable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ForcedColorsMode {
+    None,
+    Active,
+}
+
 /// Window position in screen space, expressed in **logical pixels** (see ADR 0017).
 ///
 /// This is intended for best-effort window placement persistence and multi-window orchestration.
@@ -31,6 +53,8 @@ pub struct WindowMetricsService {
     focused: HashMap<AppWindowId, bool>,
     prefers_reduced_motion: HashMap<AppWindowId, Option<bool>>,
     color_scheme: HashMap<AppWindowId, Option<ColorScheme>>,
+    contrast_preference: HashMap<AppWindowId, Option<ContrastPreference>>,
+    forced_colors_mode: HashMap<AppWindowId, Option<ForcedColorsMode>>,
     safe_area_insets: HashMap<AppWindowId, Option<Edges>>,
     occlusion_insets: HashMap<AppWindowId, Option<Edges>>,
 }
@@ -92,6 +116,34 @@ impl WindowMetricsService {
         self.color_scheme.contains_key(&window)
     }
 
+    pub fn set_contrast_preference(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ContrastPreference>,
+    ) {
+        self.contrast_preference.insert(window, value);
+    }
+
+    pub fn contrast_preference(&self, window: AppWindowId) -> Option<ContrastPreference> {
+        self.contrast_preference.get(&window).copied().flatten()
+    }
+
+    pub fn contrast_preference_is_known(&self, window: AppWindowId) -> bool {
+        self.contrast_preference.contains_key(&window)
+    }
+
+    pub fn set_forced_colors_mode(&mut self, window: AppWindowId, value: Option<ForcedColorsMode>) {
+        self.forced_colors_mode.insert(window, value);
+    }
+
+    pub fn forced_colors_mode(&self, window: AppWindowId) -> Option<ForcedColorsMode> {
+        self.forced_colors_mode.get(&window).copied().flatten()
+    }
+
+    pub fn forced_colors_mode_is_known(&self, window: AppWindowId) -> bool {
+        self.forced_colors_mode.contains_key(&window)
+    }
+
     pub fn set_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
         self.safe_area_insets.insert(window, insets);
     }
@@ -146,6 +198,8 @@ impl WindowMetricsService {
         self.focused.remove(&window);
         self.prefers_reduced_motion.remove(&window);
         self.color_scheme.remove(&window);
+        self.contrast_preference.remove(&window);
+        self.forced_colors_mode.remove(&window);
         self.safe_area_insets.remove(&window);
         self.occlusion_insets.remove(&window);
     }
@@ -200,6 +254,8 @@ mod tests {
         svc.set_focused(window, true);
         svc.set_prefers_reduced_motion(window, Some(true));
         svc.set_color_scheme(window, Some(ColorScheme::Dark));
+        svc.set_contrast_preference(window, Some(ContrastPreference::More));
+        svc.set_forced_colors_mode(window, Some(ForcedColorsMode::Active));
         svc.set_safe_area_insets(window, Some(Edges::all(Px(1.0))));
         svc.set_occlusion_insets(window, Some(Edges::all(Px(2.0))));
         svc.remove(window);
@@ -210,6 +266,8 @@ mod tests {
         assert_eq!(svc.focused(window), None);
         assert_eq!(svc.prefers_reduced_motion(window), None);
         assert_eq!(svc.color_scheme(window), None);
+        assert_eq!(svc.contrast_preference(window), None);
+        assert_eq!(svc.forced_colors_mode(window), None);
         assert_eq!(svc.safe_area_insets(window), None);
         assert_eq!(svc.occlusion_insets(window), None);
     }
@@ -248,5 +306,27 @@ mod tests {
 
         assert_eq!(svc.color_scheme(window), None);
         assert!(svc.color_scheme_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_contrast_preference_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(6));
+
+        svc.set_contrast_preference(window, None);
+
+        assert_eq!(svc.contrast_preference(window), None);
+        assert!(svc.contrast_preference_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_forced_colors_mode_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(7));
+
+        svc.set_forced_colors_mode(window, None);
+
+        assert_eq!(svc.forced_colors_mode(window), None);
+        assert!(svc.forced_colors_mode_is_known(window));
     }
 }

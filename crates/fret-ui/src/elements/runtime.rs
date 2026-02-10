@@ -5,7 +5,10 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, ColorScheme, Edges, NodeId, PointerType, Rect};
+use fret_core::{
+    AppWindowId, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId, PointerType,
+    Rect,
+};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -24,6 +27,8 @@ pub(crate) enum EnvironmentQueryKey {
     ScaleFactor,
     ColorScheme,
     PrefersReducedMotion,
+    PrefersContrast,
+    ForcedColorsMode,
     PrimaryPointerType,
     SafeAreaInsets,
     OcclusionInsets,
@@ -104,6 +109,8 @@ pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub scale_factor: f32,
     pub color_scheme: Option<ColorScheme>,
     pub prefers_reduced_motion: Option<bool>,
+    pub contrast_preference: Option<ContrastPreference>,
+    pub forced_colors_mode: Option<ForcedColorsMode>,
     pub primary_pointer_type: PointerType,
     pub safe_area_insets: Option<Edges>,
     pub occlusion_insets: Option<Edges>,
@@ -170,6 +177,24 @@ impl ElementRuntime {
     pub fn set_window_color_scheme(&mut self, window: AppWindowId, scheme: Option<ColorScheme>) {
         self.for_window_mut(window)
             .set_committed_color_scheme(scheme);
+    }
+
+    pub fn set_window_contrast_preference(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ContrastPreference>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_contrast_preference(value);
+    }
+
+    pub fn set_window_forced_colors_mode(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ForcedColorsMode>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_forced_colors_mode(value);
     }
 
     pub fn set_window_primary_pointer_type(
@@ -300,6 +325,8 @@ pub struct WindowElementState {
     committed_scale_factor: f32,
     committed_color_scheme: Option<ColorScheme>,
     committed_prefers_reduced_motion: Option<bool>,
+    committed_contrast_preference: Option<ContrastPreference>,
+    committed_forced_colors_mode: Option<ForcedColorsMode>,
     committed_primary_pointer_type: Option<PointerType>,
     committed_safe_area_insets: Option<Edges>,
     committed_occlusion_insets: Option<Edges>,
@@ -667,6 +694,8 @@ impl WindowElementState {
             EnvironmentQueryKey::PrimaryPointerType => 4u8,
             EnvironmentQueryKey::SafeAreaInsets => 5u8,
             EnvironmentQueryKey::OcclusionInsets => 6u8,
+            EnvironmentQueryKey::PrefersContrast => 7u8,
+            EnvironmentQueryKey::ForcedColorsMode => 8u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1247,6 +1276,14 @@ impl WindowElementState {
         self.committed_prefers_reduced_motion
     }
 
+    pub(crate) fn committed_contrast_preference(&self) -> Option<ContrastPreference> {
+        self.committed_contrast_preference
+    }
+
+    pub(crate) fn committed_forced_colors_mode(&self) -> Option<ForcedColorsMode> {
+        self.committed_forced_colors_mode
+    }
+
     pub(crate) fn committed_primary_pointer_type(&self) -> PointerType {
         self.committed_primary_pointer_type
             .unwrap_or(PointerType::Unknown)
@@ -1284,6 +1321,32 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::ColorScheme);
+    }
+
+    pub(crate) fn set_committed_contrast_preference(&mut self, value: Option<ContrastPreference>) {
+        if self.committed_contrast_preference == value {
+            return;
+        }
+        self.committed_contrast_preference = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersContrast)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersContrast);
+    }
+
+    pub(crate) fn set_committed_forced_colors_mode(&mut self, value: Option<ForcedColorsMode>) {
+        if self.committed_forced_colors_mode == value {
+            return;
+        }
+        self.committed_forced_colors_mode = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ForcedColorsMode)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ForcedColorsMode);
     }
 
     pub(crate) fn record_committed_primary_pointer_type(&mut self, pointer_type: PointerType) {
@@ -1385,6 +1448,8 @@ impl WindowElementState {
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
             EnvironmentQueryKey::ColorScheme => "color_scheme",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+            EnvironmentQueryKey::PrefersContrast => "prefers_contrast",
+            EnvironmentQueryKey::ForcedColorsMode => "forced_colors_mode",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
             EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
             EnvironmentQueryKey::OcclusionInsets => "occlusion_insets",
@@ -1516,6 +1581,8 @@ impl WindowElementState {
             scale_factor: self.committed_scale_factor,
             color_scheme: self.committed_color_scheme,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
+            contrast_preference: self.committed_contrast_preference,
+            forced_colors_mode: self.committed_forced_colors_mode,
             primary_pointer_type: self.committed_primary_pointer_type(),
             safe_area_insets: self.committed_safe_area_insets,
             occlusion_insets: self.committed_occlusion_insets,

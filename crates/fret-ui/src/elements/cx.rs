@@ -7,7 +7,8 @@ use std::sync::Arc;
 use smallvec::SmallVec;
 
 use fret_core::{
-    AppWindowId, ColorScheme, Edges, EffectChain, EffectMode, NodeId, PointerType, Px, Rect,
+    AppWindowId, ColorScheme, ContrastPreference, Edges, EffectChain, EffectMode, ForcedColorsMode,
+    NodeId, PointerType, Px, Rect,
 };
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
@@ -110,6 +111,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             }
             if metrics.color_scheme_is_known(window) {
                 window_state.set_committed_color_scheme(metrics.color_scheme(window));
+            }
+            if metrics.contrast_preference_is_known(window) {
+                window_state.set_committed_contrast_preference(metrics.contrast_preference(window));
+            }
+            if metrics.forced_colors_mode_is_known(window) {
+                window_state.set_committed_forced_colors_mode(metrics.forced_colors_mode(window));
             }
             if metrics.safe_area_insets_is_known(window) {
                 window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
@@ -580,6 +587,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> Option<bool> {
         self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
         self.window_state.committed_prefers_reduced_motion()
+    }
+
+    pub fn environment_prefers_contrast(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ContrastPreference> {
+        self.observe_environment_query(EnvironmentQueryKey::PrefersContrast, invalidation);
+        self.window_state.committed_contrast_preference()
+    }
+
+    pub fn environment_forced_colors_mode(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ForcedColorsMode> {
+        self.observe_environment_query(EnvironmentQueryKey::ForcedColorsMode, invalidation);
+        self.window_state.committed_forced_colors_mode()
     }
 
     pub fn environment_safe_area_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
@@ -3366,6 +3389,8 @@ mod tests {
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
             svc.set_prefers_reduced_motion(window, Some(true));
             svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
+            svc.set_contrast_preference(window, Some(fret_core::ContrastPreference::More));
+            svc.set_forced_colors_mode(window, Some(fret_core::ForcedColorsMode::Active));
             svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
             svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
             svc.set_scale_factor(window, 2.0);
@@ -3382,6 +3407,14 @@ mod tests {
         assert_eq!(
             state.committed_color_scheme(),
             Some(fret_core::ColorScheme::Dark)
+        );
+        assert_eq!(
+            state.committed_contrast_preference(),
+            Some(fret_core::ContrastPreference::More)
+        );
+        assert_eq!(
+            state.committed_forced_colors_mode(),
+            Some(fret_core::ForcedColorsMode::Active)
         );
         assert_eq!(
             state.committed_safe_area_insets(),

@@ -1,4 +1,7 @@
-use fret_core::{AppWindowId, ColorScheme, Edges, Point, Px, Rect, Size, WindowMetricsService};
+use fret_core::{
+    AppWindowId, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, Point, Px, Rect, Size,
+    WindowMetricsService,
+};
 use fret_render::RenderSceneParams;
 use fret_runtime::apply_window_metrics_event;
 use wasm_bindgen::JsCast;
@@ -17,6 +20,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let color_scheme = read_color_scheme(&web_window);
+        let contrast_preference = read_contrast_preference(&web_window);
+        let forced_colors_mode = read_forced_colors_mode(&web_window);
         let prefers_reduced_motion = read_prefers_reduced_motion(&web_window);
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
@@ -30,6 +35,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.app
                 .with_global_mut(WindowMetricsService::default, |svc, _app| {
                     svc.set_color_scheme(self.app_window, color_scheme);
+                });
+        }
+
+        let prev_contrast_known =
+            metrics.is_some_and(|svc| svc.contrast_preference_is_known(self.app_window));
+        let prev_contrast = metrics.and_then(|svc| svc.contrast_preference(self.app_window));
+        if !prev_contrast_known || prev_contrast != contrast_preference {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_contrast_preference(self.app_window, contrast_preference);
+                });
+        }
+
+        let prev_forced_known =
+            metrics.is_some_and(|svc| svc.forced_colors_mode_is_known(self.app_window));
+        let prev_forced = metrics.and_then(|svc| svc.forced_colors_mode(self.app_window));
+        if !prev_forced_known || prev_forced != forced_colors_mode {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_forced_colors_mode(self.app_window, forced_colors_mode);
                 });
         }
 
@@ -373,6 +398,36 @@ fn read_color_scheme(window: &web_sys::Window) -> Option<ColorScheme> {
         Some(ColorScheme::Dark)
     } else {
         Some(ColorScheme::Light)
+    }
+}
+
+fn read_contrast_preference(window: &web_sys::Window) -> Option<ContrastPreference> {
+    // Match in decreasing specificity. If the media query is supported, at least one of these
+    // should evaluate to true.
+    let matches = |q: &str| window.match_media(q).ok().flatten().map(|m| m.matches());
+
+    if matches("(prefers-contrast: more)")? {
+        return Some(ContrastPreference::More);
+    }
+    if matches("(prefers-contrast: less)")? {
+        return Some(ContrastPreference::Less);
+    }
+    if matches("(prefers-contrast: custom)")? {
+        return Some(ContrastPreference::Custom);
+    }
+    if matches("(prefers-contrast: no-preference)")? {
+        return Some(ContrastPreference::NoPreference);
+    }
+
+    None
+}
+
+fn read_forced_colors_mode(window: &web_sys::Window) -> Option<ForcedColorsMode> {
+    let list = window.match_media("(forced-colors: active)").ok()??;
+    if list.matches() {
+        Some(ForcedColorsMode::Active)
+    } else {
+        Some(ForcedColorsMode::None)
     }
 }
 

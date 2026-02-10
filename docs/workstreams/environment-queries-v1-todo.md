@@ -52,12 +52,27 @@ ADR anchor:
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits from `WindowMetricsService`)
   - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional preferences)
 
+- [x] Web/wasm runner commits prefers-contrast (best-effort, via `prefers-contrast` media queries)
+  into the per-window environment snapshot seam (`None` when unsupported).
+  - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits from `WindowMetricsService`)
+  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional preferences)
+
+- [x] Web/wasm runner commits forced-colors mode (`window.matchMedia("(forced-colors: active)")`)
+  into the per-window environment snapshot seam (`None` when unsupported).
+  - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits from `WindowMetricsService`)
+  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional preferences)
+
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
 - [x] Add environment query helper surface:
   - [x] viewport breakpoint tokens (Tailwind-aligned labels, optional),
   - [x] pointer capability gates (hover vs touch-first),
   - [x] reduced-motion preference helpers (if available),
+  - [x] color-scheme preference helpers (if available),
+  - [x] contrast preference helpers (if available),
+  - [x] forced-colors mode helpers (if available),
   - [x] safe-area insets helpers (future mobile).
   - [x] occlusion insets helpers (virtual keyboard / transient obstructions).
 - [x] Add unit tests for hysteresis / non-oscillation where applicable.

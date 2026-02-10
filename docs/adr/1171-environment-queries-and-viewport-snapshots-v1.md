@@ -104,6 +104,8 @@ Per-window snapshot fields:
 - `pointer: { primary_kind, coarse, hover }` (capability summary).
 - `safe_area_insets_logical: Option<Edges<Px>>` (future mobile).
 - `prefers_reduced_motion: Option<bool>` (runner-provided or app-provided).
+- `prefers_contrast: Option<ContrastPreference>` (runner-provided; best-effort).
+- `forced_colors_mode: Option<ForcedColorsMode>` (runner-provided; best-effort).
 
 ## v1 Implementation Status (as of 2026-02-09)
 
@@ -120,6 +122,14 @@ The current implementation provides a small set of typed environment query keys 
   - Best-effort: on web/wasm, the runner commits this preference via
     `window.matchMedia("(prefers-reduced-motion: reduce)")` when supported. On native desktop, this
     is currently `None` unless committed by a runner/app integration.
+- `prefers_contrast: Option<ContrastPreference>` (key: `PrefersContrast`)
+  - Best-effort: on web/wasm, the runner commits this preference via `prefers-contrast` media
+    queries when supported. On native desktop, this is currently `None` unless committed by a
+    runner/app integration.
+- `forced_colors_mode: Option<ForcedColorsMode>` (key: `ForcedColorsMode`)
+  - Best-effort: on web/wasm, the runner commits this mode via
+    `window.matchMedia("(forced-colors: active)")` when supported. On native desktop, this is
+    currently `None` unless committed by a runner/app integration.
 - `primary_pointer_type: PointerType` (key: `PrimaryPointerType`)
   - Best-effort: `PointerType::Unknown` is returned until a pointer event is observed for the
     window (native and wasm).
