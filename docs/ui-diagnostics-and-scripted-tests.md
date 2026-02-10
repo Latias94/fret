@@ -424,11 +424,12 @@ Supported intent steps (v2):
 - `menu_select` (wait + open menu + click item)
 - `menu_select_path` (wait + open nested menus + click final item)
 - `drag_to` (drag between two semantics targets)
+- `drag_pointer_path` (drag a continuous press along a segmented path; useful for docking tear-off roundtrips)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
 
-Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
+Note: `drag_pointer` and `drag_pointer_path` also emit `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
 diagnostics runs, and is ignored unless a matching cross-window drag session is active.
 
@@ -629,6 +630,9 @@ you can gate on forwarded viewport input events exported in `bundle.json`:
 
 - `--check-viewport-input-min N` counts `debug.viewport_input[]` events in snapshots after `--warmup-frames`.
 - `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
+- `--check-dock-drag-cross-window-max N` fails if more than `N` snapshots have `debug.docking_interaction.dock_drag.cross_window_hover=true` (helps catch “hover leaked to another OS window” regressions during docking tear-off).
+- `--check-dock-drag-source-windows-min N` counts distinct `debug.docking_interaction.dock_drag.source_window` values (helps ensure a scenario actually exercised multiple windows).
+- `--check-dock-drop-resolve-min N` counts snapshots where `debug.docking_interaction.dock_drop_resolve` is present (helps ensure a scenario actually exercised drop-target resolution).
 - `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 
 ### Matrix runner (uncached vs cached)

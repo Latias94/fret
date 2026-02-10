@@ -744,6 +744,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }
+                | UiActionStepV2::DragPointerPath { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
                 | UiActionStepV2::MovePointerSweep { .. }
@@ -1274,6 +1275,104 @@ impl UiDiagnosticsService {
                     }
                 } else {
                     active.v2_step_state = Some(V2StepState::DragPointer(state));
+                }
+            }
+            UiActionStepV2::DragPointerPath {
+                target,
+                button,
+                segments,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::DragPointerPath(state)) if state.step_index == step_index => {
+                        state
+                    }
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-drag_pointer_path-no-semantics"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("no_semantics_snapshot".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+                        let Some(node) =
+                            select_semantics_node(snapshot, window, element_runtime, &target)
+                        else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-drag_pointer_path-no-semantics-match"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("drag_pointer_path_no_semantics_match".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+
+                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        let mut current = start;
+                        let mut points: Vec<(Point, u32)> = Vec::new();
+                        for seg in segments {
+                            current = Point::new(
+                                fret_core::Px(current.x.0 + seg.delta_x),
+                                fret_core::Px(current.y.0 + seg.delta_y),
+                            );
+                            points.push((current, seg.steps.max(1)));
+                        }
+
+                        V2DragPointerPathState {
+                            step_index,
+                            button,
+                            start,
+                            points,
+                            segment_ix: 0,
+                            frame_in_segment: 0,
+                            phase: 0,
+                        }
+                    }
+                };
+
+                let done = push_drag_pointer_path_playback_frame(&mut state, &mut output.events);
+                if done {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-drag_pointer_path"));
+                    }
+                } else {
+                    active.v2_step_state = Some(V2StepState::DragPointerPath(state));
                 }
             }
             UiActionStepV2::MovePointerSweep {
@@ -3216,6 +3315,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
+        | UiActionStepV2::DragPointerPath { .. }
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
         | UiActionStepV2::WaitUntil { .. }
@@ -3894,6 +3994,14 @@ pub struct UiActionScriptV2 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDragPointerPathSegmentV1 {
+    pub delta_x: f32,
+    pub delta_y: f32,
+    #[serde(default = "default_drag_steps")]
+    pub steps: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
     // v1-compatible steps
@@ -3914,6 +4022,16 @@ pub enum UiActionStepV2 {
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
         steps: u32,
+    },
+    /// Drag the pointer along a segmented path (continuous press; single down/up).
+    ///
+    /// This is intended for editor-like tear-off workflows where the drag must remain active
+    /// while a new OS window is created and the dock graph is updated.
+    DragPointerPath {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        segments: Vec<UiDragPointerPathSegmentV1>,
     },
     /// Move the pointer along a straight line over multiple frames (one move event per frame).
     ///
@@ -4476,6 +4594,7 @@ enum V2StepState {
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
     DragPointer(V2DragPointerState),
+    DragPointerPath(V2DragPointerPathState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
@@ -4527,6 +4646,19 @@ struct V2DragPointerState {
     /// - `1..=steps`: emit a pressed `move` (and `InternalDrag::Over`) at interpolated positions
     /// - `steps + 1`: emit `up` at `end` (and `InternalDrag::Drop`)
     frame: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2DragPointerPathState {
+    step_index: usize,
+    button: UiMouseButtonV1,
+    start: Point,
+    points: Vec<(Point, u32)>,
+    segment_ix: usize,
+    frame_in_segment: u32,
+    /// - `0`: emit `move+down` at `start`
+    /// - `1`: emit pressed `move` frames across segments
+    phase: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -4982,7 +5114,7 @@ impl UiTreeDebugSnapshotV1 {
             paint_text_prepare_hotspots: ui
                 .debug_paint_text_prepare_hotspots()
                 .iter()
-                .map(UiPaintTextPrepareHotspotV1::from_hotspot)
+                .map(|h| UiPaintTextPrepareHotspotV1::from_hotspot(ui, h))
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -7025,6 +7157,20 @@ pub struct UiPaintTextPrepareHotspotV1 {
     pub prepare_time_us: u64,
     pub text_len: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_max_width: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_wrap: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_overflow: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_metrics_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_metrics_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_baseline: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_width: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wrap: Option<String>,
@@ -7032,12 +7178,26 @@ pub struct UiPaintTextPrepareHotspotV1 {
     pub overflow: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metrics_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metrics_h: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds_x: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds_y: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds_h: Option<f32>,
     #[serde(default)]
     pub reasons_mask: u16,
 }
 
 impl UiPaintTextPrepareHotspotV1 {
-    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintTextPrepareHotspot) -> Self {
+    fn from_hotspot(ui: &UiTree<App>, h: &fret_ui::tree::UiDebugPaintTextPrepareHotspot) -> Self {
         fn wrap_as_str(wrap: fret_core::TextWrap) -> &'static str {
             match wrap {
                 fret_core::TextWrap::None => "none",
@@ -7053,16 +7213,33 @@ impl UiPaintTextPrepareHotspotV1 {
             }
         }
 
+        let measured = ui.debug_text_constraints_snapshot(h.node).measured;
+        let measured_metrics = ui.debug_text_metrics_measured(h.node);
+
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
             element_kind: Some(h.element_kind.to_string()),
             prepare_time_us: h.prepare_time.as_micros().min(u64::MAX as u128) as u64,
             text_len: h.text_len,
+            measured_max_width: measured.and_then(|c| c.max_width.map(|v| v.0)),
+            measured_wrap: measured.map(|c| wrap_as_str(c.wrap).to_string()),
+            measured_overflow: measured.map(|c| overflow_as_str(c.overflow).to_string()),
+            measured_scale_factor: measured.map(|c| c.scale_factor),
+            measured_metrics_w: measured_metrics.map(|m| m.size.width.0),
+            measured_metrics_h: measured_metrics.map(|m| m.size.height.0),
+            measured_baseline: measured_metrics.map(|m| m.baseline.0),
             max_width: h.constraints.max_width.map(|v| v.0),
             wrap: Some(wrap_as_str(h.constraints.wrap).to_string()),
             overflow: Some(overflow_as_str(h.constraints.overflow).to_string()),
             scale_factor: Some(h.constraints.scale_factor),
+            metrics_w: Some(h.metrics.size.width.0),
+            metrics_h: Some(h.metrics.size.height.0),
+            baseline: Some(h.metrics.baseline.0),
+            bounds_x: Some(h.bounds.origin.x.0),
+            bounds_y: Some(h.bounds.origin.y.0),
+            bounds_w: Some(h.bounds.size.width.0),
+            bounds_h: Some(h.bounds.size.height.0),
             reasons_mask: h.reasons_mask,
         }
     }
@@ -10026,6 +10203,134 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
     }
 }
 
+fn push_drag_pointer_path_playback_frame(
+    state: &mut V2DragPointerPathState,
+    events: &mut Vec<Event>,
+) -> bool {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let (button, pressed_buttons) = match state.button {
+        UiMouseButtonV1::Left => (
+            MouseButton::Left,
+            MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+        ),
+        UiMouseButtonV1::Right => (
+            MouseButton::Right,
+            MouseButtons {
+                right: true,
+                ..Default::default()
+            },
+        ),
+        UiMouseButtonV1::Middle => (
+            MouseButton::Middle,
+            MouseButtons {
+                middle: true,
+                ..Default::default()
+            },
+        ),
+    };
+
+    if state.phase == 0 {
+        events.push(Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: state.start,
+            buttons: MouseButtons::default(),
+            modifiers,
+            pointer_type,
+        }));
+        events.push(Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: state.start,
+            button,
+            modifiers,
+            click_count: 1,
+            pointer_type,
+        }));
+        state.phase = 1;
+        return false;
+    }
+
+    if state.points.is_empty() {
+        events.push(Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: state.start,
+            button,
+            modifiers,
+            is_click: false,
+            click_count: 1,
+            pointer_type,
+        }));
+        events.push(Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id,
+            position: state.start,
+            kind: fret_core::InternalDragKind::Drop,
+            modifiers,
+        }));
+        return true;
+    }
+
+    if state.segment_ix >= state.points.len() {
+        let end = state.points.last().map(|(p, _)| *p).unwrap_or(state.start);
+        events.push(Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: end,
+            button,
+            modifiers,
+            is_click: false,
+            click_count: 1,
+            pointer_type,
+        }));
+        events.push(Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id,
+            position: end,
+            kind: fret_core::InternalDragKind::Drop,
+            modifiers,
+        }));
+        return true;
+    }
+
+    let (seg_end, seg_steps) = state.points[state.segment_ix];
+    let seg_steps = seg_steps.max(1);
+    let seg_start = if state.segment_ix == 0 {
+        state.start
+    } else {
+        state.points[state.segment_ix.saturating_sub(1)].0
+    };
+
+    let next_frame = state.frame_in_segment.saturating_add(1);
+    let t = next_frame as f32 / seg_steps as f32;
+    let x = seg_start.x.0 + (seg_end.x.0 - seg_start.x.0) * t;
+    let y = seg_start.y.0 + (seg_end.y.0 - seg_start.y.0) * t;
+    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+
+    events.push(Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: pressed_buttons,
+        modifiers,
+        pointer_type,
+    }));
+    events.push(Event::InternalDrag(fret_core::InternalDragEvent {
+        pointer_id,
+        position,
+        kind: fret_core::InternalDragKind::Over,
+        modifiers,
+    }));
+
+    state.frame_in_segment = next_frame;
+    if state.frame_in_segment >= seg_steps {
+        state.segment_ix = state.segment_ix.saturating_add(1);
+        state.frame_in_segment = 0;
+    }
+
+    false
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = Modifiers {
         shift: modifiers.shift,
@@ -10482,6 +10787,22 @@ mod tests {
                 [UiActionStepV2::MovePointerSweep { .. }]
             ),
             "expected move_pointer_sweep step"
+        );
+    }
+
+    #[test]
+    fn scripts_support_drag_pointer_path_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"drag_pointer_path","target":{"kind":"test_id","id":"x"},"segments":[{"delta_x":0.0,"delta_y":-20.0,"steps":3},{"delta_x":10.0,"delta_y":0.0,"steps":2}]}]}"#,
+        )
+        .expect("parse drag_pointer_path step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::DragPointerPath { .. }]
+            ),
+            "expected drag_pointer_path step"
         );
     }
 

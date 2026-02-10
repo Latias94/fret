@@ -25,9 +25,10 @@ use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path,
     check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_cross_window_max,
-    check_bundle_for_dock_drag_min, check_bundle_for_dock_drop_resolve_min,
-    check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
+    check_bundle_for_dock_drag_min, check_bundle_for_dock_drag_source_windows_min,
+    check_bundle_for_dock_drop_resolve_min, check_bundle_for_drag_cache_root_paint_only,
+    check_bundle_for_gc_sweep_liveness, check_bundle_for_layout_fast_path_min,
+    check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
@@ -198,6 +199,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
     let mut check_dock_drag_cross_window_max: Option<u64> = None;
+    let mut check_dock_drag_source_windows_min: Option<u64> = None;
     let mut check_dock_drop_resolve_min: Option<u64> = None;
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
@@ -1019,6 +1021,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--check-dock-drag-source-windows-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-dock-drag-source-windows-min".to_string()
+                    );
+                };
+                check_dock_drag_source_windows_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-dock-drag-source-windows-min".to_string()
+                })?);
+                i += 1;
+            }
             "--check-dock-drop-resolve-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1655,6 +1669,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
                     || check_dock_drag_cross_window_max.is_some()
+                    || check_dock_drag_source_windows_min.is_some()
                     || check_dock_drop_resolve_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
@@ -1722,6 +1737,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_input_min,
                         check_dock_drag_min,
                         check_dock_drag_cross_window_max,
+                        check_dock_drag_source_windows_min,
                         check_dock_drop_resolve_min,
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
@@ -2035,6 +2051,7 @@ See: `docs/tracy.md`.\n";
                         || check_viewport_input_min.is_some()
                         || check_dock_drag_min.is_some()
                         || check_dock_drag_cross_window_max.is_some()
+                        || check_dock_drag_source_windows_min.is_some()
                         || check_dock_drop_resolve_min.is_some()
                         || check_viewport_capture_min.is_some()
                         || check_retained_vlist_reconcile_no_notify_min.is_some()
@@ -2100,6 +2117,7 @@ See: `docs/tracy.md`.\n";
                             check_viewport_input_min,
                             check_dock_drag_min,
                             check_dock_drag_cross_window_max,
+                            check_dock_drag_source_windows_min,
                             check_dock_drop_resolve_min,
                             check_viewport_capture_min,
                             check_retained_vlist_reconcile_no_notify_min,
@@ -3417,6 +3435,7 @@ See: `docs/tracy.md`.\n";
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
                         check_dock_drag_cross_window_max,
+                        check_dock_drag_source_windows_min,
                         check_dock_drop_resolve_min,
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script
@@ -5347,6 +5366,15 @@ See: `docs/tracy.md`.\n";
                     warmup_frames,
                 )?;
             }
+            if let Some(min) = check_dock_drag_source_windows_min
+                && min > 0
+            {
+                check_bundle_for_dock_drag_source_windows_min(
+                    bundle_path.as_path(),
+                    min,
+                    warmup_frames,
+                )?;
+            }
             if let Some(min) = check_dock_drop_resolve_min
                 && min > 0
             {
@@ -7030,6 +7058,7 @@ fn apply_post_run_checks(
     check_viewport_input_min: Option<u64>,
     check_dock_drag_min: Option<u64>,
     check_dock_drag_cross_window_max: Option<u64>,
+    check_dock_drag_source_windows_min: Option<u64>,
     check_dock_drop_resolve_min: Option<u64>,
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
@@ -7235,6 +7264,11 @@ fn apply_post_run_checks(
     }
     if let Some(max_allowed) = check_dock_drag_cross_window_max {
         check_bundle_for_dock_drag_cross_window_max(bundle_path, max_allowed, warmup_frames)?;
+    }
+    if let Some(min) = check_dock_drag_source_windows_min
+        && min > 0
+    {
+        check_bundle_for_dock_drag_source_windows_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_dock_drop_resolve_min
         && min > 0
