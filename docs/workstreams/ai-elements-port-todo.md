@@ -199,7 +199,7 @@ Prioritize thin adapters over new engines:
 - [x] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
   - Notes: `fret-ui-ai::FileTree` now flattens items via UI Kit `TreeItem` + `flatten_tree`, and renders via `VirtualList` when the host provides a height constraint.
   - Gate: `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json` (expand → scroll to row → click select).
-- [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
+- [x] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
   - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
@@ -222,7 +222,7 @@ Prioritize thin adapters over new engines:
       - stack trace: file path click / open file
       - test results: test click / open test output
       - Done: `Test::on_activate(OnTestActivate)` exists and is used by the large demo gate.
-    - [ ] Re-audit upstream TS (`commit.tsx`, `stack-trace.tsx`, `test-results.tsx`) and document known deltas in `docs/workstreams/ai-elements-port.md`.
+    - [x] Re-audit upstream TS (`commit.tsx`, `stack-trace.tsx`, `test-results.tsx`) and document known deltas in `docs/workstreams/ai-elements-port.md`.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)

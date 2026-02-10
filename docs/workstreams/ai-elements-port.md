@@ -123,6 +123,17 @@ an interactive chat demo:
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
+## Alignment notes (code artifacts)
+
+These notes document **intentional** differences from the upstream TS surfaces to keep
+effects/policy app-owned and to fit Fret’s action-hook model. If upstream behavior changes, update
+this section as part of the “Version stamp” bump.
+
+- `CommitCopyButton` (`commit.tsx`): upstream suppresses repeated copy while `Copied` is active; Fret matches this and also exposes an `on_copy` hook so apps can own side effects.
+- `StackTraceCopyButton` (`stack-trace.tsx`): upstream allows repeated copy even while `Copied` is active; Fret preserves that semantic and exposes `on_copy`.
+- `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.
+- `Test` rows (`test-results.tsx`): upstream renders tests as a non-interactive row by default; Fret keeps the default non-interactive but adds an optional activation seam (`Test::on_activate(OnTestActivate)`) for editor-style “open test output” flows.
+
 ## Workstream goals
 
 P0 (MVP usability):
