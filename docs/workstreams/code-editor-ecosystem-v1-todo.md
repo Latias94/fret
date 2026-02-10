@@ -306,9 +306,11 @@ Evidence anchors:
     - Applies to: caret mapping, hit-testing mapping, selection normalization, and a11y range conversion.
     - Evidence:
       - `ecosystem/fret-code-editor-view/src/lib.rs` (clamp-to-anchor mapping for preedit fragments).
-  - [~] Provide a view-owned way to materialize the composed display text for a windowed export range.
+  - [x] Provide a view-owned way to materialize the composed display text for a windowed export range.
     - Used by: paint row text, a11y `TextField.value`, and debug snapshots.
     - Must remain bounded: produce windowed slices only (ADR 0190), not full-document strings.
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::materialize_display_row_text` + tests).
   - [~] Update the editor surface to consume the composed DisplayMap for:
     - paint row text (no preedit injection in `fret-code-editor`),
     - caret/selection/hit-test mapping (single source of truth),
