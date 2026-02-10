@@ -44,11 +44,13 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace.md`
 
-- [ ] Define a stable reason-code taxonomy for script failures (“why did this fail?”).
+- [x] Add a stable `reason_code` surface to `script.result.json` (`UiScriptResultV1.reason_code`).
+- [x] Add selector resolution evidence to `script.result.json` (`evidence.selector_resolution_trace`).
+- [ ] Expand the reason-code taxonomy as new evidence surfaces land (avoid premature over-taxonomy).
 - [ ] Add bounded trace evidence (ring buffer) dumped on failure:
-  - [ ] selector resolution evidence,
-  - [ ] input routing evidence (hit-test, capture/barriers, focus changes),
-  - [ ] predicate evaluation deltas.
+  - [ ] hit-test + routing evidence (capture/barriers/occlusion),
+  - [ ] focus change evidence with reasons,
+  - [ ] predicate evaluation deltas (what changed, what did not).
 - [ ] Add `diag lint` mode for captured bundles:
   - [ ] semantics lint (duplicate `test_id`, missing labels, inconsistent flags),
   - [ ] layout lint (bounds outside window, overlap invariants, basic stability checks),

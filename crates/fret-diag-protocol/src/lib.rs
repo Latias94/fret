@@ -707,8 +707,42 @@ pub struct UiScriptResultV1 {
     pub window: Option<u64>,
     pub stage: UiScriptStageV1,
     pub step_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
     pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<UiScriptEvidenceV1>,
     pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiScriptEvidenceV1 {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSelectorResolutionTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    #[serde(default)]
+    pub match_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidates: Vec<UiSelectorResolutionCandidateV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSelectorResolutionCandidateV1 {
+    pub node_id: u64,
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub test_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -36,17 +36,46 @@ Design constraints:
 - reason codes MUST be specific enough to triage without reading source,
 - reason codes MUST be machine-readable.
 
-Suggested buckets:
+Reason codes are stable strings (prefer dotted namespaces). Start small and expand only when the
+new code is clearly more actionable than existing evidence surfaces.
 
-- `capability_missing:*`
-- `selector_resolution:*`
-- `semantics_snapshot_missing`
-- `predicate_timeout:*`
-- `action_timeout:*`
-- `input_routing:*`
-- `text_ime:*`
+Initial v1 codes (implemented):
+
+- `semantics.missing` (runner has no semantics snapshot for the step)
+- `selector.not_found` (selector resolution produced zero matches)
+- `timeout` (the step timed out waiting for a condition)
+- `assert.failed` (an explicit `assert` predicate failed)
+
+Planned namespaces (future expansion):
+
+- `capability.*`
+- `selector.*`
+- `routing.*` (hit-test / capture / barrier / occlusion)
+- `focus.*`
+- `text_ime.*`
 
 This workstream treats “why did it fail?” as a first-class contract surface.
+
+## Script result evidence surface (`script.result.json`)
+
+`script.result.json` is the machine-readable outcome of a run.
+
+Current additions:
+
+- `UiScriptResultV1.reason_code` (optional): stable reason code string.
+- `UiScriptResultV1.evidence.selector_resolution_trace` (optional, bounded): a compact per-step
+  explanation of selector resolution.
+
+Selector resolution trace entry fields:
+
+- `step_index`
+- `selector` (the input selector)
+- `match_count` (number of matching nodes)
+- `chosen_node_id` (the runner-chosen node id, if any)
+- `candidates` (top-N ranked candidates with `role` / optional `name` / optional `test_id`)
+- `note` (optional hint, e.g. `invalid_role`, `fallback_hidden_nodes`)
+
+Redaction: when `redact_text` is enabled, candidate `name` is omitted.
 
 ## Trace surface (ring buffer, dumped on failure)
 
@@ -91,4 +120,3 @@ When screenshots are needed, prefer “ROI-by-selector” (cropped to a node bou
 over full-frame diffs. This reduces flake and makes diffs reviewable.
 
 This should be capability-gated (`diag.screenshot_png`) and never required for basic correctness gates.
-

@@ -73,9 +73,17 @@ Definition of done:
 
 ### M4: Evidence & trace closure (explainability)
 
-- [ ] Define a stable reason-code taxonomy for script failures.
-- [ ] Add a bounded trace surface dumped on failure (selector resolution + routing + focus + predicate deltas).
-- [ ] Add `diag lint` for bundles and emit `check.lint.json`.
+- [x] M4a: Selector resolution explainability:
+  - [x] add `reason_code` to `script.result.json`,
+  - [x] add `evidence.selector_resolution_trace` to `script.result.json`.
+- [ ] M4b: Hit-test + input routing explainability (why did the click/drag not land?):
+  - [ ] capture/barrier/occlusion evidence,
+  - [ ] “chosen point” vs “hit-test path” mismatch evidence.
+- [ ] M4c: Focus + text/IME explainability:
+  - [ ] focus change trace with reasons,
+  - [ ] composition state summary (redaction-friendly).
+- [ ] M4d: Bundle lint closure:
+  - [ ] add `diag lint` and emit `check.lint.json`.
 
 Definition of done:
 

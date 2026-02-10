@@ -8,7 +8,8 @@ use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTrans
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
     UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1,
-    UiPredicateV1, UiRoleAndNameV1, UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+    UiPredicateV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -712,6 +713,7 @@ impl UiDiagnosticsService {
                     screenshot_wait: None,
                     v2_step_state: None,
                     last_reported_step: Some(0),
+                    selector_resolution_trace: Vec::new(),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -721,7 +723,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(0),
+                reason_code: None,
                 reason: None,
+                evidence: None,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -745,7 +749,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason_code: None,
                 reason: None,
+                evidence: None,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -768,6 +774,11 @@ impl UiDiagnosticsService {
         let Some(step) = step else {
             return UiScriptFrameOutput::default();
         };
+
+        // Keep selector resolution evidence scoped to the active step so failures remain focused.
+        active
+            .selector_resolution_trace
+            .retain(|e| e.step_index == step_index.min(u32::MAX as usize) as u32);
 
         let mut output = UiScriptFrameOutput::default();
         let mut force_dump_label: Option<String> = None;
@@ -1129,7 +1140,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1137,8 +1150,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1151,7 +1171,11 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("click_no_semantics_match".to_string()),
+                        evidence: Some(UiScriptEvidenceV1 {
+                            selector_resolution_trace: active.selector_resolution_trace.clone(),
+                        }),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1196,9 +1220,15 @@ impl UiDiagnosticsService {
                 // can jump across frames (e.g. estimate -> measured), causing clicks to land at
                 // stale coordinates when using a single-frame snapshot.
                 if let Some(snapshot) = semantics_snapshot {
-                    if let Some(node) =
-                        select_semantics_node(snapshot, window, element_runtime, &target)
-                    {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
                         let stable_required = stable_frames.max(1);
                         let max_move_px = max_move_px.max(0.0);
 
@@ -1681,7 +1711,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1689,8 +1721,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label =
                         format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
@@ -1704,7 +1743,11 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("move_pointer_no_semantics_match".to_string()),
+                        evidence: Some(UiScriptEvidenceV1 {
+                            selector_resolution_trace: active.selector_resolution_trace.clone(),
+                        }),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1754,7 +1797,9 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("semantics.missing".to_string()),
                                 reason: Some("no_semantics_snapshot".to_string()),
+                                evidence: None,
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1762,9 +1807,15 @@ impl UiDiagnosticsService {
                             });
                             return output;
                         };
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-drag_pointer-no-semantics-match"
@@ -1779,7 +1830,13 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("drag_pointer_no_semantics_match".to_string()),
+                                evidence: Some(UiScriptEvidenceV1 {
+                                    selector_resolution_trace: active
+                                        .selector_resolution_trace
+                                        .clone(),
+                                }),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1840,7 +1897,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1856,9 +1915,15 @@ impl UiDiagnosticsService {
                         state
                     }
                     _ => {
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
@@ -1873,7 +1938,13 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                evidence: Some(UiScriptEvidenceV1 {
+                                    selector_resolution_trace: active
+                                        .selector_resolution_trace
+                                        .clone(),
+                                }),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1942,7 +2013,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1950,8 +2023,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1964,7 +2044,11 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("wheel_no_semantics_match".to_string()),
+                        evidence: Some(UiScriptEvidenceV1 {
+                            selector_resolution_trace: active.selector_resolution_trace.clone(),
+                        }),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -2096,10 +2180,24 @@ impl UiDiagnosticsService {
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
-                        let container_node =
-                            select_semantics_node(snapshot, window, element_runtime, &container);
-                        let target_node =
-                            select_semantics_node(snapshot, window, element_runtime, &target);
+                        let container_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &container,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
+                        let target_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
                         if let (Some(container_node), Some(target_node)) =
                             (container_node, target_node)
                         {
@@ -2131,8 +2229,15 @@ impl UiDiagnosticsService {
                         active.v2_step_state = None;
                         output.request_redraw = true;
                     } else {
-                        let container_node =
-                            select_semantics_node(snapshot, window, element_runtime, &container);
+                        let container_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &container,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
                         if let Some(container_node) = container_node {
                             let pos = center_of_rect_clamped_to_rect(
                                 container_node.bounds,
@@ -2180,8 +2285,16 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &target)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &target,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::TypeTextInto(state));
@@ -2201,9 +2314,15 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &target)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &target,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
@@ -2268,8 +2387,16 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &menu)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &menu,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
@@ -2289,9 +2416,15 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &menu)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &menu,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
@@ -2311,8 +2444,16 @@ impl UiDiagnosticsService {
                             }
                         }
                         2 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &item)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &item,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 3;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
@@ -2332,9 +2473,15 @@ impl UiDiagnosticsService {
                             }
                         }
                         _ => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &item)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &item,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
                                 let pos = center_of_rect(node.bounds);
                                 output
                                     .events
@@ -2410,11 +2557,14 @@ impl UiDiagnosticsService {
                     } else {
                         match state.phase {
                             0 => {
-                                if select_semantics_node(
+                                if select_semantics_node_with_trace(
                                     snapshot,
                                     window,
                                     element_runtime,
                                     &path[state.next_index],
+                                    step_index as u32,
+                                    self.cfg.redact_text,
+                                    &mut active.selector_resolution_trace,
                                 )
                                 .is_some()
                                 {
@@ -2437,11 +2587,14 @@ impl UiDiagnosticsService {
                                 }
                             }
                             _ => {
-                                if let Some(node) = select_semantics_node(
+                                if let Some(node) = select_semantics_node_with_trace(
                                     snapshot,
                                     window,
                                     element_runtime,
                                     &path[state.next_index],
+                                    step_index as u32,
+                                    self.cfg.redact_text,
+                                    &mut active.selector_resolution_trace,
                                 ) {
                                     let pos =
                                         center_of_rect_clamped_to_rect(node.bounds, window_bounds);
@@ -2503,9 +2656,24 @@ impl UiDiagnosticsService {
                     let mut playback = if let Some(playback) = state.playback.take() {
                         playback
                     } else {
-                        let from_node =
-                            select_semantics_node(snapshot, window, element_runtime, &from);
-                        let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
+                        let from_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &from,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
+                        let to_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &to,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
                             let start =
                                 center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
@@ -2531,7 +2699,16 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: reason_code_for_script_failure("drag_to_timeout")
+                                    .map(|s| s.to_string()),
                                 reason: Some("drag_to_timeout".to_string()),
+                                evidence: (!active.selector_resolution_trace.is_empty()).then(
+                                    || UiScriptEvidenceV1 {
+                                        selector_resolution_trace: active
+                                            .selector_resolution_trace
+                                            .clone(),
+                                    },
+                                ),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -2595,7 +2772,15 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    let node = select_semantics_node(snapshot, window, element_runtime, &target);
+                    let node = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    );
                     if let Some(node) = node {
                         if node.flags.disabled {
                             force_dump_label = Some(format!(
@@ -2732,6 +2917,14 @@ impl UiDiagnosticsService {
                 self.request_force_dump(label);
             }
 
+            let reason_code = failure_reason
+                .as_deref()
+                .and_then(reason_code_for_script_failure)
+                .map(|s| s.to_string());
+            let evidence =
+                (!active.selector_resolution_trace.is_empty()).then(|| UiScriptEvidenceV1 {
+                    selector_resolution_trace: active.selector_resolution_trace.clone(),
+                });
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
@@ -2739,7 +2932,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Failed,
                 step_index: Some(step_index as u32),
+                reason_code,
                 reason: failure_reason,
+                evidence,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -2758,7 +2953,9 @@ impl UiDiagnosticsService {
                     window: Some(window.data().as_ffi()),
                     stage: UiScriptStageV1::Passed,
                     step_index: Some(active.next_step.saturating_sub(1) as u32),
+                    reason_code: None,
                     reason: None,
+                    evidence: None,
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -3503,7 +3700,9 @@ impl UiDiagnosticsService {
                     window: None,
                     stage: UiScriptStageV1::Queued,
                     step_index: None,
+                    reason_code: None,
                     reason: None,
+                    evidence: None,
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -3583,7 +3782,9 @@ impl UiDiagnosticsService {
             window: None,
             stage: UiScriptStageV1::Queued,
             step_index: None,
+            reason_code: None,
             reason: None,
+            evidence: None,
             last_bundle_dir: self
                 .last_dump_dir
                 .as_ref()
@@ -5036,6 +5237,7 @@ struct ActiveScript {
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
+    selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -9569,6 +9771,270 @@ fn select_semantics_node<'a>(
                 .copied()
                 .filter(|n| index.is_selectable(n.id.data().as_ffi()))
         }
+    }
+}
+
+const MAX_SELECTOR_TRACE_ENTRIES: usize = 64;
+const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
+
+fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
+    match (a, b) {
+        (
+            UiSelectorV1::RoleAndName {
+                role: a_role,
+                name: a_name,
+            },
+            UiSelectorV1::RoleAndName {
+                role: b_role,
+                name: b_name,
+            },
+        ) => a_role == b_role && a_name == b_name,
+        (
+            UiSelectorV1::RoleAndPath {
+                role: a_role,
+                name: a_name,
+                ancestors: a_ancestors,
+            },
+            UiSelectorV1::RoleAndPath {
+                role: b_role,
+                name: b_name,
+                ancestors: b_ancestors,
+            },
+        ) => {
+            a_role == b_role
+                && a_name == b_name
+                && a_ancestors.len() == b_ancestors.len()
+                && a_ancestors
+                    .iter()
+                    .zip(b_ancestors.iter())
+                    .all(|(a, b)| a.role == b.role && a.name == b.name)
+        }
+        (UiSelectorV1::TestId { id: a_id }, UiSelectorV1::TestId { id: b_id }) => a_id == b_id,
+        (
+            UiSelectorV1::GlobalElementId { element: a_el },
+            UiSelectorV1::GlobalElementId { element: b_el },
+        ) => a_el == b_el,
+        (UiSelectorV1::NodeId { node: a_node }, UiSelectorV1::NodeId { node: b_node }) => {
+            a_node == b_node
+        }
+        _ => false,
+    }
+}
+
+fn push_selector_resolution_trace(
+    trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+    entry: UiSelectorResolutionTraceEntryV1,
+) {
+    if let Some(existing) = trace.iter_mut().rev().find(|e| {
+        e.step_index == entry.step_index && selector_trace_eq(&e.selector, &entry.selector)
+    }) {
+        *existing = entry;
+        return;
+    }
+
+    trace.push(entry);
+    if trace.len() > MAX_SELECTOR_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_SELECTOR_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn select_semantics_node_with_trace<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    selector: &UiSelectorV1,
+    step_index: u32,
+    redact_text: bool,
+    trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    let mut matches: Vec<&'a fret_core::SemanticsNode> = Vec::new();
+    let mut note: Option<String> = None;
+
+    match selector {
+        UiSelectorV1::NodeId { node } => {
+            if let Some(n) = index
+                .by_id
+                .get(node)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+            {
+                matches.push(n);
+            }
+        }
+        UiSelectorV1::RoleAndName { role, name } => {
+            let Some(role) = parse_semantics_role(role) else {
+                note = Some("invalid_role".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id) && n.role == role && n.label.as_deref() == Some(name)
+            }));
+        }
+        UiSelectorV1::RoleAndPath {
+            role,
+            name,
+            ancestors,
+        } => {
+            let Some(role) = parse_semantics_role(role) else {
+                note = Some("invalid_role".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+
+            let mut parsed_ancestors: Vec<(SemanticsRole, &str)> =
+                Vec::with_capacity(ancestors.len());
+            for a in ancestors {
+                let Some(r) = parse_semantics_role(&a.role) else {
+                    note = Some("invalid_ancestor_role".to_string());
+                    push_selector_resolution_trace(
+                        trace,
+                        UiSelectorResolutionTraceEntryV1 {
+                            step_index,
+                            selector: selector.clone(),
+                            match_count: 0,
+                            chosen_node_id: None,
+                            candidates: Vec::new(),
+                            note,
+                        },
+                    );
+                    return None;
+                };
+                parsed_ancestors.push((r, a.name.as_str()));
+            }
+
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id)
+                    && n.role == role
+                    && n.label.as_deref() == Some(name)
+                    && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
+            }));
+        }
+        UiSelectorV1::TestId { id } => {
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                index.is_selectable(node_id) && n.test_id.as_deref() == Some(id)
+            }));
+            if matches.is_empty() {
+                // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
+                note = Some("fallback_hidden_nodes".to_string());
+                matches.extend(
+                    snapshot
+                        .nodes
+                        .iter()
+                        .filter(|n| n.test_id.as_deref() == Some(id)),
+                );
+            }
+        }
+        UiSelectorV1::GlobalElementId { element } => {
+            let Some(node) = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            }) else {
+                note = Some("element_runtime_missing".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+            let node_id = node.data().as_ffi();
+            if let Some(n) = index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+            {
+                matches.push(n);
+            }
+        }
+    }
+
+    let match_count = matches.len().min(u32::MAX as usize) as u32;
+    let chosen = pick_best_match(matches.iter().copied(), &index);
+    let chosen_node_id = chosen.map(|n| n.id.data().as_ffi());
+
+    let mut ranked: Vec<((u32, u32, u64), &'a fret_core::SemanticsNode)> = matches
+        .iter()
+        .copied()
+        .map(|n| {
+            let id = n.id.data().as_ffi();
+            ((index.root_z_for(id), index.depth_for(id), id), n)
+        })
+        .collect();
+    ranked.sort_by(|(a, _), (b, _)| b.cmp(a));
+
+    let candidates: Vec<UiSelectorResolutionCandidateV1> = ranked
+        .into_iter()
+        .take(MAX_SELECTOR_TRACE_CANDIDATES)
+        .map(|(_rank, n)| UiSelectorResolutionCandidateV1 {
+            node_id: n.id.data().as_ffi(),
+            role: semantics_role_label(n.role).to_string(),
+            name: if redact_text { None } else { n.label.clone() },
+            test_id: n.test_id.clone(),
+        })
+        .collect();
+
+    push_selector_resolution_trace(
+        trace,
+        UiSelectorResolutionTraceEntryV1 {
+            step_index,
+            selector: selector.clone(),
+            match_count,
+            chosen_node_id,
+            candidates,
+            note,
+        },
+    );
+
+    chosen
+}
+
+fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return None;
+    }
+
+    match reason {
+        "no_semantics_snapshot" => Some("semantics.missing"),
+        "assert_failed" => Some("assert.failed"),
+        _ if reason.ends_with("_timeout") => Some("timeout"),
+        _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
+            Some("selector.not_found")
+        }
+        _ => None,
     }
 }
 
