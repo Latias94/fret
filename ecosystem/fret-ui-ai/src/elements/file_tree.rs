@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use fret_core::{
@@ -12,6 +12,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
     VisualTransformProps,
 };
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -22,11 +23,19 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
 };
 
+use crate::model::item_key_from_salted_external_id;
+
 pub type OnFileTreeSelect = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 pub type OnFileTreeExpandedChange =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<[Arc<str>]>) + 'static>;
 pub type OnFileTreeActionActivate =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
+
+const FILE_TREE_ITEM_SALT: u64 = 0x6f2b_53d0_8a62_0d11;
+
+fn file_tree_item_id(path: &str) -> fret_ui_kit::TreeItemId {
+    item_key_from_salted_external_id(FILE_TREE_ITEM_SALT, path)
+}
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -68,6 +77,62 @@ fn sorted_arc_slice_from_set(set: &HashSet<Arc<str>>) -> Arc<[Arc<str>]> {
 }
 
 #[derive(Debug, Clone)]
+enum FileTreeRowPayload {
+    Folder {
+        path: Arc<str>,
+        name: Arc<str>,
+        actions: Vec<FileTreeAction>,
+        test_id: Option<Arc<str>>,
+    },
+    File {
+        path: Arc<str>,
+        name: Arc<str>,
+        icon: Option<fret_icons::IconId>,
+        actions: Vec<FileTreeAction>,
+        test_id: Option<Arc<str>>,
+    },
+}
+
+fn build_tree_items_and_rows(
+    items: &[FileTreeItem],
+    rows_by_id: &mut HashMap<fret_ui_kit::TreeItemId, FileTreeRowPayload>,
+) -> Vec<fret_ui_kit::TreeItem> {
+    items
+        .iter()
+        .map(|item| match item {
+            FileTreeItem::Folder(folder) => {
+                let id = file_tree_item_id(folder.path.as_ref());
+                rows_by_id.insert(
+                    id,
+                    FileTreeRowPayload::Folder {
+                        path: folder.path.clone(),
+                        name: folder.name.clone(),
+                        actions: folder.actions.clone(),
+                        test_id: folder.test_id.clone(),
+                    },
+                );
+                let children = build_tree_items_and_rows(&folder.children, rows_by_id);
+                fret_ui_kit::TreeItem::new(id, folder.name.clone()).children(children)
+            }
+            FileTreeItem::File(file) => {
+                let id = file_tree_item_id(file.path.as_ref());
+                rows_by_id.insert(
+                    id,
+                    FileTreeRowPayload::File {
+                        path: file.path.clone(),
+                        name: file.name.clone(),
+                        icon: file.icon.clone(),
+                        actions: file.actions.clone(),
+                        test_id: file.test_id.clone(),
+                    },
+                );
+                fret_ui_kit::TreeItem::new(id, file.name.clone())
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone)]
 pub enum FileTreeItem {
     Folder(FileTreeFolder),
     File(FileTreeFile),
@@ -89,8 +154,8 @@ impl From<FileTreeFile> for FileTreeItem {
 /// AI Elements-aligned `FileTree` surface (`file-tree.tsx`).
 ///
 /// Notes:
-/// - This is a small, nested tree surface (no virtualization). For large outlines / file trees,
-///   prefer the UI Kit retained/virtualized helpers under `fret-ui-kit`.
+/// - This surface uses a flattened list representation so it can be virtualized under height
+///   constraints (e.g. when hosted inside a panel).
 /// - Expansion state uses a set of paths (`expanded_paths`), matching the upstream contract.
 pub struct FileTree {
     items: Vec<FileTreeItem>,
@@ -200,7 +265,7 @@ impl FileTree {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Arc::new(Theme::global(&*cx.app).clone());
 
         let expanded_model = self.resolve_expanded_model(cx);
         let expanded: HashSet<Arc<str>> = cx
@@ -208,43 +273,152 @@ impl FileTree {
             .layout()
             .cloned()
             .unwrap_or_default();
+        let expanded_ids: HashSet<fret_ui_kit::TreeItemId> = expanded
+            .iter()
+            .map(|p| file_tree_item_id(p.as_ref()))
+            .collect();
 
         let chrome = ChromeRefinement::default()
             .p(Space::N2)
             .rounded(Radius::Lg)
             .border_1()
-            .bg(ColorRef::Color(resolve_background(&theme)))
-            .border_color(ColorRef::Color(resolve_border(&theme)))
+            .bg(ColorRef::Color(resolve_background(theme.as_ref())))
+            .border_color(ColorRef::Color(resolve_border(theme.as_ref())))
             .merge(self.chrome);
         let layout = LayoutRefinement::default().min_w_0().merge(self.layout);
+        let has_height_constraint = layout
+            .size
+            .as_ref()
+            .map(|s| s.height.is_some() || s.max_height.is_some())
+            .unwrap_or(false);
 
-        let props = decl_style::container_props(&theme, chrome, layout);
+        let props = decl_style::container_props(theme.as_ref(), chrome, layout);
         let selected_path = self.selected_path;
         let on_select = self.on_select;
         let on_expanded_change = self.on_expanded_change;
         let items = self.items;
         let test_id_root = self.test_id_root;
 
-        let tree = cx.container(props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N0),
-                move |cx| {
-                    render_items(
+        let mut rows_by_id: HashMap<fret_ui_kit::TreeItemId, FileTreeRowPayload> = HashMap::new();
+        let tree_items = build_tree_items_and_rows(&items, &mut rows_by_id);
+        let entries: Arc<Vec<fret_ui_kit::TreeEntry>> =
+            Arc::new(fret_ui_kit::flatten_tree(&tree_items, &expanded_ids));
+        let rows_by_id: Arc<HashMap<fret_ui_kit::TreeItemId, FileTreeRowPayload>> =
+            Arc::new(rows_by_id);
+
+        let scroll = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+        let row_height = theme
+            .metric_by_key("fret.ai.file_tree.row_height")
+            .unwrap_or(Px(26.0));
+        let row_height = Px(row_height.0.max(0.0));
+
+        let overscan = theme
+            .metric_by_key("fret.ai.file_tree.overscan")
+            .map(|v| v.0.round().max(0.0) as usize)
+            .unwrap_or(12);
+
+        let mut options = fret_ui::element::VirtualListOptions::fixed(row_height, overscan)
+            .keep_alive(overscan.saturating_mul(2));
+        options.items_revision = cx.app.models().revision(&expanded_model).unwrap_or(0);
+        if entries.len() > 10_000 {
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+        }
+
+        let list_layout = LayoutStyle {
+            size: fret_ui::element::SizeStyle {
+                width: Length::Fill,
+                height: if has_height_constraint {
+                    Length::Fill
+                } else {
+                    Length::Auto
+                },
+                ..Default::default()
+            },
+            overflow: fret_ui::element::Overflow::Clip,
+            ..Default::default()
+        };
+
+        let expanded_snapshot: Arc<HashSet<Arc<str>>> = Arc::new(expanded);
+
+        let row: Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement> = Arc::new({
+            let theme = Arc::clone(&theme);
+            let entries = Arc::clone(&entries);
+            let rows_by_id = Arc::clone(&rows_by_id);
+            let expanded_model = expanded_model.clone();
+            let expanded_snapshot = Arc::clone(&expanded_snapshot);
+            move |cx, index| {
+                let Some(entry) = entries.get(index) else {
+                    return cx.text("");
+                };
+                let Some(payload) = rows_by_id.get(&entry.id).cloned() else {
+                    return cx.text("");
+                };
+
+                match payload {
+                    FileTreeRowPayload::Folder {
+                        path,
+                        name,
+                        actions,
+                        test_id,
+                    } => render_folder_row(
                         cx,
-                        &theme,
-                        expanded_model.clone(),
-                        &expanded,
+                        theme.as_ref(),
+                        row_height,
+                        entry.depth,
+                        &expanded_model,
+                        expanded_snapshot.as_ref(),
                         selected_path.as_ref(),
                         on_select.as_ref(),
                         on_expanded_change.as_ref(),
-                        &items,
-                    )
-                },
-            )]
+                        FileTreeFolder {
+                            path,
+                            name,
+                            children: Vec::new(),
+                            actions,
+                            test_id,
+                        },
+                    ),
+                    FileTreeRowPayload::File {
+                        path,
+                        name,
+                        icon,
+                        actions,
+                        test_id,
+                    } => render_file_row(
+                        cx,
+                        theme.as_ref(),
+                        row_height,
+                        entry.depth,
+                        selected_path.as_ref(),
+                        on_select.as_ref(),
+                        FileTreeFile {
+                            path,
+                            name,
+                            icon,
+                            actions,
+                            test_id,
+                        },
+                    ),
+                }
+            }
         });
+
+        let key_at: Arc<dyn Fn(usize) -> fret_ui::ItemKey> = Arc::new({
+            let entries: Arc<Vec<fret_ui_kit::TreeEntry>> = Arc::clone(&entries);
+            move |i: usize| -> fret_ui::ItemKey { entries.get(i).map(|e| e.id).unwrap_or_default() }
+        });
+
+        let list = cx.virtual_list_keyed_retained_with_layout(
+            list_layout,
+            entries.len(),
+            options,
+            &scroll,
+            key_at,
+            row,
+        );
+
+        let tree = cx.container(props, move |_cx| vec![list]);
 
         tree.attach_semantics(fret_ui::element::SemanticsDecoration {
             // Fret currently does not model a distinct `Tree` role at the contract layer; we
@@ -559,49 +733,103 @@ fn render_actions<H: UiHost + 'static>(
     Some(group)
 }
 
-fn render_items<H: UiHost + 'static>(
+fn file_tree_indent_el<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
-    expanded_model: Model<HashSet<Arc<str>>>,
-    expanded: &HashSet<Arc<str>>,
-    selected_path: Option<&Arc<str>>,
-    on_select: Option<&OnFileTreeSelect>,
-    on_expanded_change: Option<&OnFileTreeExpandedChange>,
-    items: &[FileTreeItem],
-) -> Vec<AnyElement> {
-    let mut out = Vec::with_capacity(items.len());
-    for item in items {
-        match item {
-            FileTreeItem::Folder(folder) => {
-                let path = folder.path.clone();
-                out.push(cx.keyed(path, |cx| {
-                    render_folder(
-                        cx,
-                        theme,
-                        expanded_model.clone(),
-                        expanded,
-                        selected_path,
-                        on_select,
-                        on_expanded_change,
-                        folder.clone(),
-                    )
-                }));
-            }
-            FileTreeItem::File(file) => {
-                let path = file.path.clone();
-                out.push(cx.keyed(path, |cx| {
-                    render_file(cx, theme, selected_path, on_select, file.clone())
-                }));
-            }
-        }
+    row_height: Px,
+    depth: usize,
+) -> AnyElement {
+    let indent_ml = MetricRef::space(Space::N4).resolve(theme);
+    let indent_pl = MetricRef::space(Space::N2).resolve(theme);
+    let pad_x = MetricRef::space(Space::N2).resolve(theme);
+    let border = resolve_border(theme);
+
+    let mut segments: Vec<AnyElement> = Vec::new();
+    for _ in 0..depth {
+        let spacer_ml = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(indent_ml),
+                        height: Length::Px(row_height),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+        let border_line = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(1.0)),
+                        height: Length::Px(row_height),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                background: Some(border),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+        let spacer_pl = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(indent_pl),
+                        height: Length::Px(row_height),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+        segments.push(spacer_ml);
+        segments.push(border_line);
+        segments.push(spacer_pl);
     }
-    out
+
+    let pad = cx.container(
+        ContainerProps {
+            layout: LayoutStyle {
+                size: fret_ui::element::SizeStyle {
+                    width: Length::Px(pad_x),
+                    height: Length::Px(row_height),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        |_cx| Vec::new(),
+    );
+    segments.push(pad);
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(
+                LayoutRefinement::default()
+                    .h_px(MetricRef::Px(row_height))
+                    .flex_shrink_0(),
+            )
+            .gap(Space::N0)
+            .items(Items::Center),
+        move |_cx| segments,
+    )
 }
 
-fn render_folder<H: UiHost + 'static>(
+fn render_folder_row<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
-    expanded_model: Model<HashSet<Arc<str>>>,
+    row_height: Px,
+    depth: usize,
+    expanded_model: &Model<HashSet<Arc<str>>>,
     expanded: &HashSet<Arc<str>>,
     selected_path: Option<&Arc<str>>,
     on_select: Option<&OnFileTreeSelect>,
@@ -623,28 +851,25 @@ fn render_folder<H: UiHost + 'static>(
             let expanded_model = expanded_model.clone();
             let on_select = on_select.cloned();
             let on_expanded_change = on_expanded_change.cloned();
-            let has_children = !folder.children.is_empty();
             Arc::new(move |host, action_cx, _reason| {
                 if let Some(on_select) = on_select.as_ref() {
                     on_select(host, action_cx, path.clone());
                 }
 
-                if has_children {
-                    let expanded_snapshot = host
-                        .models_mut()
-                        .update(&expanded_model, |set| {
-                            if !set.insert(path.clone()) {
-                                set.remove(path.as_ref());
-                            }
-                            sorted_arc_slice_from_set(set)
-                        })
-                        .ok();
+                let expanded_snapshot = host
+                    .models_mut()
+                    .update(&expanded_model, |set| {
+                        if !set.insert(path.clone()) {
+                            set.remove(path.as_ref());
+                        }
+                        sorted_arc_slice_from_set(set)
+                    })
+                    .ok();
 
-                    if let (Some(on_expanded_change), Some(expanded_snapshot)) =
-                        (on_expanded_change.as_ref(), expanded_snapshot)
-                    {
-                        on_expanded_change(host, action_cx, expanded_snapshot);
-                    }
+                if let (Some(on_expanded_change), Some(expanded_snapshot)) =
+                    (on_expanded_change.as_ref(), expanded_snapshot)
+                {
+                    on_expanded_change(host, action_cx, expanded_snapshot);
                 }
 
                 host.notify(action_cx);
@@ -676,13 +901,14 @@ fn render_folder<H: UiHost + 'static>(
             top: MetricRef::space(Space::N1).resolve(theme),
             right: MetricRef::space(Space::N2).resolve(theme),
             bottom: MetricRef::space(Space::N1).resolve(theme),
-            left: MetricRef::space(Space::N2).resolve(theme),
+            left: Px(0.0),
         };
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));
         chrome.layout =
             decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
+        chrome.layout.size.height = Length::Px(row_height);
 
         let chevron_fg = resolve_muted_fg(theme);
         let chevron_rotation = if is_expanded { 90.0 } else { 0.0 };
@@ -730,8 +956,9 @@ fn render_folder<H: UiHost + 'static>(
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
                 .items(Items::Center),
-            move |_cx| {
-                let mut out = vec![chevron, folder_icon, name];
+            move |cx| {
+                let indent = file_tree_indent_el(cx, theme, row_height, depth);
+                let mut out = vec![indent, chevron, folder_icon, name];
                 if let Some(actions) = actions.clone() {
                     out.push(actions);
                 }
@@ -742,68 +969,14 @@ fn render_folder<H: UiHost + 'static>(
         (pressable, chrome, move |_cx| vec![row_contents])
     });
 
-    if !is_expanded || folder.children.is_empty() {
-        return row;
-    }
-
-    let indent_ml = MetricRef::space(Space::N4).resolve(theme);
-    let indent_pl = MetricRef::space(Space::N2).resolve(theme);
-    let border = resolve_border(theme);
-
-    let mut content_props = ContainerProps::default();
-    content_props.layout = {
-        let mut layout = LayoutStyle::default();
-        layout.margin.left = fret_ui::element::MarginEdge::Px(indent_ml);
-        layout
-    };
-    content_props.padding = Edges {
-        top: Px(0.0),
-        right: Px(0.0),
-        bottom: Px(0.0),
-        left: indent_pl,
-    };
-    content_props.border = Edges {
-        top: Px(0.0),
-        right: Px(0.0),
-        bottom: Px(0.0),
-        left: Px(1.0),
-    };
-    content_props.border_color = Some(border);
-
-    let children = folder.children;
-    let content = cx.container(content_props, move |cx| {
-        vec![stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0),
-            move |cx| {
-                render_items(
-                    cx,
-                    theme,
-                    expanded_model.clone(),
-                    expanded,
-                    selected_path,
-                    on_select,
-                    on_expanded_change,
-                    &children,
-                )
-            },
-        )]
-    });
-
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N0),
-        move |_cx| vec![row, content],
-    )
+    row
 }
 
-fn render_file<H: UiHost + 'static>(
+fn render_file_row<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    row_height: Px,
+    depth: usize,
     selected_path: Option<&Arc<str>>,
     on_select: Option<&OnFileTreeSelect>,
     file: FileTreeFile,
@@ -852,13 +1025,14 @@ fn render_file<H: UiHost + 'static>(
             top: MetricRef::space(Space::N1).resolve(theme),
             right: MetricRef::space(Space::N2).resolve(theme),
             bottom: MetricRef::space(Space::N1).resolve(theme),
-            left: MetricRef::space(Space::N2).resolve(theme),
+            left: Px(0.0),
         };
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));
         chrome.layout =
             decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
+        chrome.layout.size.height = Length::Px(row_height);
 
         let spacer = cx.container(
             ContainerProps {
@@ -885,8 +1059,9 @@ fn render_file<H: UiHost + 'static>(
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
                 .items(Items::Center),
-            move |_cx| {
-                let mut out = vec![spacer, icon, name];
+            move |cx| {
+                let indent = file_tree_indent_el(cx, theme, row_height, depth);
+                let mut out = vec![indent, spacer, icon, name];
                 if let Some(actions) = actions.clone() {
                     out.push(actions);
                 }

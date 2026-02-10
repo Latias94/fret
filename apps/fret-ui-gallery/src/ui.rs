@@ -19328,13 +19328,15 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     use fret_ui::action::ActionCx;
     use fret_ui::element::SemanticsProps;
     use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+    use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 
     #[derive(Default)]
     struct FileTreeModels {
         expanded: Option<Model<HashSet<Arc<str>>>>,
         selected: Option<Model<Option<Arc<str>>>>,
         last_action: Option<Model<Option<Arc<str>>>>,
+        expanded_large: Option<Model<HashSet<Arc<str>>>>,
+        selected_large: Option<Model<Option<Arc<str>>>>,
     }
 
     let expanded = cx.with_state(FileTreeModels::default, |st| st.expanded.clone());
@@ -19375,6 +19377,32 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
 
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
     let last_action_value = cx.watch_model(&last_action).layout().cloned().flatten();
+
+    let expanded_large = cx.with_state(FileTreeModels::default, |st| st.expanded_large.clone());
+    let expanded_large = match expanded_large {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
+            cx.with_state(FileTreeModels::default, |st| {
+                st.expanded_large = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_large = cx.with_state(FileTreeModels::default, |st| st.selected_large.clone());
+    let selected_large = match selected_large {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(FileTreeModels::default, |st| {
+                st.selected_large = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_large_value = cx.watch_model(&selected_large).layout().cloned().flatten();
 
     let tree = ui_ai::FileTree::new([
         ui_ai::FileTreeFolder::new("src", "src")
@@ -19460,6 +19488,56 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         )
     });
 
+    let large_children: Vec<ui_ai::FileTreeItem> = (0..2000)
+        .map(|i| {
+            let name: Arc<str> = Arc::from(format!("file_{i:04}.rs"));
+            let path: Arc<str> = Arc::from(format!("big/{name}"));
+            let mut file = ui_ai::FileTreeFile::new(path.clone(), name.clone());
+            if i == 0 {
+                file = file.test_id("ui-ai-file-tree-large-file-0000");
+            }
+            if i == 500 {
+                file = file.test_id("ui-ai-file-tree-large-file-500");
+            }
+            file.into()
+        })
+        .collect();
+
+    let large_tree = ui_ai::FileTree::new([ui_ai::FileTreeFolder::new("big", "big")
+        .test_id("ui-ai-file-tree-large-folder-big")
+        .children(large_children)
+        .into()])
+    .expanded_paths(expanded_large.clone())
+    .selected_path(selected_large_value.clone())
+    .on_select(Arc::new({
+        let selected_large = selected_large.clone();
+        move |host, _action_cx: ActionCx, path| {
+            let _ = host
+                .models_mut()
+                .update(&selected_large, |v| *v = Some(path));
+        }
+    }))
+    .test_id_root("ui-ai-file-tree-large-root")
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .h_px(MetricRef::Px(fret_core::Px(240.0))),
+    )
+    .into_element(cx);
+
+    let large_selected_marker =
+        (selected_large_value.as_deref() == Some("big/file_0500.rs")).then(|| {
+            cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Generic,
+                    test_id: Some(Arc::<str>::from("ui-ai-file-tree-large-selected-marker")),
+                    ..Default::default()
+                },
+                move |_cx| vec![],
+            )
+        });
+
     vec![stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -19472,6 +19550,9 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
                 selected_label,
                 selected_marker.unwrap_or_else(|| cx.text("")),
                 action_marker.unwrap_or_else(|| cx.text("")),
+                cx.text("FileTree (large / virtualized)"),
+                large_tree,
+                large_selected_marker.unwrap_or_else(|| cx.text("")),
             ]
         },
     )]
