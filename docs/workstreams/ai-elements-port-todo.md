@@ -51,10 +51,10 @@ Status legend:
 | `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
 | `reasoning` | Prototype | `fret-ui-ai` | `Reasoning` + `ReasoningTrigger` + `ReasoningContent` exist with streaming-driven auto-open + timed auto-close; UI Gallery demo + diag gate added. |
 | `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
-| `queue` | Not started | `fret-ui-ai` | Optional. |
+| `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
 | `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
-| `attachments` | Not started | `fret-ui-ai` | Requires host effects (file pick); keep policy-only in components. |
+| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
 | `checkpoint` | Not started | `fret-ui-ai` | Likely a styling recipe. |
 | `confirmation` | Not started | `fret-ui-ai` | Likely maps to shadcn alert/dialog. |
@@ -84,7 +84,7 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `image` | Not started | `fret-ui-ai` or `fret-ui-shadcn` | Decide whether it is generic enough to live in shadcn. |
+| `image` | Prototype | `fret-ui-ai` or `fret-ui-shadcn` | `Image` surface exists (renders `ImageId`; decoding/upload is app-owned). Decide later if it belongs in shadcn. |
 | `open-in-chat` | Not started | `fret-ui-ai` | Likely app-level wiring; component is just chrome. |
 
 ### Workflow
@@ -103,7 +103,10 @@ Status legend:
 
 - [x] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
 - [x] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
-- [ ] AIEL-MVP1-chat-007 Port `MessageBranch` surfaces (branch content + selector controls).
+- [x] AIEL-MVP1-chat-007 Port `MessageBranch` surfaces (branch content + selector controls).
+  - Implemented: `ecosystem/fret-ui-ai/src/elements/message_branch.rs`
+  - Demo: `apps/fret-ui-gallery` page `ai_message_branch_demo`
+  - Gate: `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
 - [x] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + initial code actions).
 - [x] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
 - [x] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
@@ -113,7 +116,7 @@ Status legend:
 
 - [~] AIEL-MVP2-tools-001 Port `Tool` (input/output blocks, running/success/error states, collapse).
 - [~] AIEL-MVP2-tools-002 Port `Sources` and `InlineCitation` (stable linking and display).
-- [ ] AIEL-MVP2-tools-003 Port `Suggestion` and `Queue` (optional; only if apps need them).
+- [ ] AIEL-MVP2-tools-003 Port `Suggestion` (optional; only if apps need it).
 
 ## Regression gates (scripts)
 
@@ -135,6 +138,10 @@ Existing gates (UI Gallery `ai_artifact_demo`):
 Existing gates (UI Gallery `ai_shimmer_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
+
+Existing gates (UI Gallery `ai_attachments_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`
 
 Existing gates (UI Gallery `ai_suggestions_demo`):
 
@@ -310,7 +317,16 @@ Keep this list in sync with the pinned upstream commit recorded in
 ### PromptInput
 
 - [x] AIEL-MVP1-chat-080 Prompt input MVP: text input + send + stop + loading spinner.
-- [ ] AIEL-MVP1-chat-081 Optional attachments chips: add/remove/clear (app performs file picker effects).
+- [x] AIEL-MVP1-chat-081 Optional attachments chips: add/remove/clear (app performs file picker effects).
+  - Outcomes: render chips row, allow remove per item, expose `clear` intent at the app boundary.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json` (add → remove via Backspace → send).
+- [x] AIEL-MVP1-chat-084 Textarea keyboard parity: `Enter` submits, `Shift+Enter` inserts newline (IME-safe).
+- [x] AIEL-MVP1-chat-085 Backspace parity: when textarea is empty, `Backspace` removes the last attachment.
+- [!] AIEL-MVP1-chat-086 Clipboard file paste parity: `paste` adds file/image attachments.
+  - Blocker: Fret runtime currently supports clipboard *text* effects only; file/image clipboard needs a new platform capability.
+- [ ] AIEL-MVP1-chat-087 PromptInput add-attachments action parity: plus-button action emits an app-owned “open file dialog” intent.
+- [ ] AIEL-MVP1-chat-088 PromptInput drag-and-drop fallback: accept external file drops as attachments (primary path while clipboard files are unsupported).
+- [ ] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
 
@@ -359,5 +375,14 @@ Keep this list in sync with the pinned upstream commit recorded in
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 - [x] AIEL-MVP1-gates-011 Gate reasoning auto-open/auto-close via diag.
   - Script: `tools/diag-scripts/ui-gallery-ai-reasoning-demo-auto-open-close.json`
+- [x] AIEL-MVP1-gates-012 Gate queue sections + scroll + hover actions via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-queue-demo-section-scroll-action.json`
+  - Note: exercises scrolling via `wheel`; does not assert post-scroll item hit-testing (scroll offset is HitTest-only).
+- [x] AIEL-MVP1-gates-013 Gate attachments hover-remove via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`
+  - Verified PASS: 2026-02-09 (local).
+- [x] AIEL-MVP1-gates-014 Gate message branch wrap-around via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
+  - Verified PASS: 2026-02-09 (local).
 - [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
   (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).

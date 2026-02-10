@@ -57,6 +57,17 @@ Notes:
 
 - `Reasoning` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-reasoning-demo-auto-open-close.json`
+- `Queue` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-queue-demo-section-scroll-action.json`
+- `Attachments` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`
+  - Verified PASS: 2026-02-10 (local).
+- `MessageBranch` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
+  - Verified PASS: 2026-02-10 (local).
+- `PromptInput` attachments + keyboard behavior (Enter/Backspace) is aligned with upstream `prompt-input.tsx` and gated:
+  - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
+- Next parity focus inside M1 is clipboard file/image paste (blocked on a runtime/platform capability; clipboard effects are text-only today).
 
 ### M2 — Tooling UIs (sources + citations)
 
