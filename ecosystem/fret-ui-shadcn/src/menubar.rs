@@ -4603,6 +4603,9 @@ mod tests {
             else {
                 continue;
             };
+            let fret_core::Paint::Solid(background) = *background else {
+                continue;
+            };
             if background.a <= 0.01 {
                 continue;
             }
@@ -4611,7 +4614,7 @@ mod tests {
                 continue;
             }
             if best.is_none_or(|(_, _, best_score)| score > best_score) {
-                best = Some((*rect, *background, score));
+                best = Some((*rect, background, score));
             }
         }
         let (_, bg, _) = best.expect("hovered menu item background quad");
