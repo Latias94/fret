@@ -10611,6 +10611,258 @@ mod tests {
     }
 
     #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_gate_passes() {
+        let out_dir =
+            tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, folds: bool, inlays: bool| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "folds_fixture": folds,
+                        "inlays_fixture": inlays,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "----ab----",
+                                "text_selection": [6, 6],
+                                "text_composition": [4, 6]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        snapshot(10, true, true),
+                        snapshot(11, false, true),
+                        snapshot(12, false, false),
+                        snapshot(13, true, true)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_gate_fails_on_mismatched_preedit_text()
+     {
+        let out_dir =
+            tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_a11y_toggle_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 10,
+                            "frame_id": 10,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 11,
+                            "frame_id": 11,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": false,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 12,
+                            "frame_id": 12,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": false,
+                                    "inlays_fixture": false,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 13,
+                            "frame_id": 13,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "----ac----",
+                                            "text_selection": [6, 6],
+                                            "text_composition": [4, 6]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        assert!(
+            check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+                &bundle_path,
+                0,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
         let bundle = json!({
             "schema_version": 1,
