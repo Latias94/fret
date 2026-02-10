@@ -93,7 +93,9 @@ Focus trace entry fields:
 
 - `step_index`
 - `note` (phase marker, e.g. `type_text_into.wait_focus`)
+- `reason_code` (best-effort inference, e.g. `focus.blocked_by_focus_barrier`)
 - `expected_node_id` / `expected_test_id` (when waiting for a specific focus target)
+- `modal_barrier_root` / `focus_barrier_root` + pointer capture/occlusion hints (from the UI input arbitration snapshot)
 - `focused_element` / `focused_element_path` (element-runtime view)
 - `focused_node_id` / `focused_test_id` / `focused_role` (best-effort semantics view)
 - `matches_expected` (best-effort)
@@ -110,6 +112,15 @@ Web IME trace entry fields (wasm only, ADR 0195; debug-only, redactable):
 - `last_input_type`
 - `last_preedit_len` / `last_preedit_cursor_utf16` / `last_commit_len` (no raw text by default)
 - `beforeinput_seen` / `input_seen` / `suppressed_input_seen` / `composition_*_seen` / `cursor_area_set_seen`
+
+IME event trace entry fields (native + web, runner-driven, no raw text):
+
+- `step_index`
+- `note`
+- `kind` (`enabled`, `disabled`, `preedit`, `commit`, `delete_surrounding`)
+- `preedit_len` / `preedit_cursor` (cursor range in UTF-8 bytes within the preedit string)
+- `commit_len`
+- `delete_surrounding` (before_bytes, after_bytes)
 
 ## Trace surface (ring buffer, dumped on failure)
 

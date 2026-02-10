@@ -7,11 +7,11 @@ use fret_core::{
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiInspectConfigV1,
-    UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1, UiPointV1,
-    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1,
-    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
-    UiSelectorV1, UiWebImeTraceEntryV1,
+    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
+    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1,
+    UiOptionalRootStateV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
+    UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -720,6 +720,7 @@ impl UiDiagnosticsService {
                     hit_test_trace: Vec::new(),
                     focus_trace: Vec::new(),
                     web_ime_trace: Vec::new(),
+                    ime_event_trace: Vec::new(),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -794,6 +795,9 @@ impl UiDiagnosticsService {
             .retain(|e| e.step_index == step_index_u32);
         active
             .web_ime_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .ime_event_trace
             .retain(|e| e.step_index == step_index_u32);
 
         let mut output = UiScriptFrameOutput::default();
@@ -1022,6 +1026,7 @@ impl UiDiagnosticsService {
                         window,
                         element_runtime,
                         semantics_snapshot,
+                        ui,
                         step_index as u32,
                         None,
                         None,
@@ -1063,6 +1068,7 @@ impl UiDiagnosticsService {
                         window,
                         element_runtime,
                         semantics_snapshot,
+                        ui,
                         step_index as u32,
                         None,
                         None,
@@ -2506,6 +2512,7 @@ impl UiDiagnosticsService {
                                     window,
                                     element_runtime,
                                     Some(snapshot),
+                                    ui,
                                     step_index as u32,
                                     state.expected_node_id,
                                     state.expected_test_id.as_deref(),
@@ -2540,6 +2547,7 @@ impl UiDiagnosticsService {
                                 window,
                                 element_runtime,
                                 Some(snapshot),
+                                ui,
                                 step_index as u32,
                                 state.expected_node_id,
                                 state.expected_test_id.as_deref(),
@@ -2568,6 +2576,7 @@ impl UiDiagnosticsService {
                                     window,
                                     element_runtime,
                                     Some(snapshot),
+                                    ui,
                                     step_index as u32,
                                     state.expected_node_id,
                                     state.expected_test_id.as_deref(),
@@ -3724,6 +3733,13 @@ impl UiDiagnosticsService {
         let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
+
+        if let Some(active) = self.active_scripts.get_mut(&window)
+            && let Event::Ime(ime) = event
+        {
+            let step_index = active.next_step.min(u32::MAX as usize) as u32;
+            record_ime_event_trace(&mut active.ime_event_trace, step_index, "record_event", ime);
+        }
     }
 
     pub fn record_viewport_input(&mut self, event: fret_core::ViewportInputEvent) {
@@ -5589,6 +5605,7 @@ struct ActiveScript {
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     focus_trace: Vec<UiFocusTraceEntryV1>,
     web_ime_trace: Vec<UiWebImeTraceEntryV1>,
+    ime_event_trace: Vec<UiImeEventTraceEntryV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -10132,6 +10149,7 @@ const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
 const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
 const MAX_FOCUS_TRACE_ENTRIES: usize = 64;
 const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
+const MAX_IME_EVENT_TRACE_ENTRIES: usize = 64;
 
 fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
     match (a, b) {
@@ -10224,6 +10242,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         && active.hit_test_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.web_ime_trace.is_empty()
+        && active.ime_event_trace.is_empty()
     {
         return None;
     }
@@ -10232,6 +10251,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         hit_test_trace: active.hit_test_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         web_ime_trace: active.web_ime_trace.clone(),
+        ime_event_trace: active.ime_event_trace.clone(),
     })
 }
 
@@ -10278,11 +10298,20 @@ fn push_web_ime_trace(trace: &mut Vec<UiWebImeTraceEntryV1>, entry: UiWebImeTrac
     }
 }
 
+fn push_ime_event_trace(trace: &mut Vec<UiImeEventTraceEntryV1>, entry: UiImeEventTraceEntryV1) {
+    trace.push(entry);
+    if trace.len() > MAX_IME_EVENT_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_IME_EVENT_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
 fn record_focus_trace(
     trace: &mut Vec<UiFocusTraceEntryV1>,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    ui: Option<&UiTree<App>>,
     step_index: u32,
     expected_node_id: Option<u64>,
     expected_test_id: Option<&str>,
@@ -10323,13 +10352,72 @@ fn record_focus_trace(
         _ => None,
     };
 
+    let (
+        modal_barrier_root,
+        focus_barrier_root,
+        pointer_occlusion,
+        pointer_occlusion_layer_id,
+        pointer_capture_active,
+        pointer_capture_layer_id,
+        pointer_capture_multiple_layers,
+    ) = if let Some(ui) = ui {
+        let arbitration = ui.input_arbitration_snapshot();
+        (
+            arbitration.modal_barrier_root.map(key_to_u64),
+            arbitration.focus_barrier_root.map(key_to_u64),
+            Some(pointer_occlusion_label(arbitration.pointer_occlusion)),
+            arbitration
+                .pointer_occlusion_layer
+                .map(|l| l.data().as_ffi()),
+            Some(arbitration.pointer_capture_active),
+            arbitration.pointer_capture_layer.map(|l| l.data().as_ffi()),
+            Some(arbitration.pointer_capture_multiple_layers),
+        )
+    } else {
+        (None, None, None, None, None, None, None)
+    };
+
+    let reason_code = {
+        if matches_expected == Some(true) {
+            Some("focus.matches_expected".to_string())
+        } else if let (Some(expected), Some(barrier), Some(snapshot)) =
+            (expected_node_id, focus_barrier_root, semantics_snapshot)
+        {
+            let index = SemanticsIndex::new(snapshot);
+            if !index.is_descendant_of_or_self(expected, barrier) {
+                Some("focus.blocked_by_focus_barrier".to_string())
+            } else {
+                Some("focus.mismatch".to_string())
+            }
+        } else if let (Some(expected), Some(barrier), Some(snapshot)) =
+            (expected_node_id, modal_barrier_root, semantics_snapshot)
+        {
+            let index = SemanticsIndex::new(snapshot);
+            if !index.is_descendant_of_or_self(expected, barrier) {
+                Some("focus.blocked_by_modal_barrier".to_string())
+            } else {
+                Some("focus.mismatch".to_string())
+            }
+        } else {
+            Some("focus.mismatch".to_string())
+        }
+    };
+
     push_focus_trace(
         trace,
         UiFocusTraceEntryV1 {
             step_index,
             note: Some(note.to_string()),
+            reason_code,
             expected_node_id,
             expected_test_id: expected_test_id.map(|s| s.to_string()),
+            modal_barrier_root,
+            focus_barrier_root,
+            pointer_occlusion,
+            pointer_occlusion_layer_id,
+            pointer_capture_active,
+            pointer_capture_layer_id,
+            pointer_capture_multiple_layers,
             focused_element,
             focused_element_path,
             focused_node_id,
@@ -10395,6 +10483,60 @@ fn record_web_ime_trace(
             composition_update_seen: snapshot.composition_update_seen,
             composition_end_seen: snapshot.composition_end_seen,
             cursor_area_set_seen: snapshot.cursor_area_set_seen,
+        },
+    );
+}
+
+fn record_ime_event_trace(
+    trace: &mut Vec<UiImeEventTraceEntryV1>,
+    step_index: u32,
+    note: &str,
+    event: &fret_core::input::ImeEvent,
+) {
+    let mut preedit_len: Option<u32> = None;
+    let mut preedit_cursor: Option<(u32, u32)> = None;
+    let mut commit_len: Option<u32> = None;
+    let mut delete_surrounding: Option<(u32, u32)> = None;
+
+    let kind: &'static str = match event {
+        fret_core::input::ImeEvent::Enabled => "enabled",
+        fret_core::input::ImeEvent::Disabled => "disabled",
+        fret_core::input::ImeEvent::Commit(text) => {
+            commit_len = Some(text.len().min(u32::MAX as usize) as u32);
+            "commit"
+        }
+        fret_core::input::ImeEvent::Preedit { text, cursor } => {
+            preedit_len = Some(text.len().min(u32::MAX as usize) as u32);
+            preedit_cursor = cursor.map(|(a, b)| {
+                (
+                    a.min(u32::MAX as usize) as u32,
+                    b.min(u32::MAX as usize) as u32,
+                )
+            });
+            "preedit"
+        }
+        fret_core::input::ImeEvent::DeleteSurrounding {
+            before_bytes,
+            after_bytes,
+        } => {
+            delete_surrounding = Some((
+                (*before_bytes).min(u32::MAX as usize) as u32,
+                (*after_bytes).min(u32::MAX as usize) as u32,
+            ));
+            "delete_surrounding"
+        }
+    };
+
+    push_ime_event_trace(
+        trace,
+        UiImeEventTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            kind: kind.to_string(),
+            preedit_len,
+            preedit_cursor,
+            commit_len,
+            delete_surrounding,
         },
     );
 }

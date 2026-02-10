@@ -725,6 +725,8 @@ pub struct UiScriptEvidenceV1 {
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -814,9 +816,25 @@ pub struct UiFocusTraceEntryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modal_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_active: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_multiple_layers: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focused_element: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -893,6 +911,22 @@ pub struct UiWebImeTraceEntryV1 {
     pub composition_end_seen: u64,
     #[serde(default)]
     pub cursor_area_set_seen: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiImeEventTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preedit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preedit_cursor: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delete_surrounding: Option<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

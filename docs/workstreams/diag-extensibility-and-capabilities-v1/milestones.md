@@ -83,8 +83,10 @@ Definition of done:
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
   - [x] emit `evidence.web_ime_trace` (wasm textarea bridge summary; debug-only),
-  - [ ] focus change trace with reasons (why focus moved / why it did not),
-  - [ ] composition state summary for non-web runners (capability-gated).
+  - [x] include best-effort focus mismatch reasons (barrier/occlusion/capture hints via input arbitration snapshot),
+  - [x] emit `evidence.ime_event_trace` (native + web IME event kinds + length/cursor summaries; no raw text),
+  - [ ] focus change trace with reasons (why focus moved / why it did not) beyond barrier inference,
+  - [ ] composition state summary for non-web runners (capability-gated, stable across backends).
 - [ ] M4d: Bundle lint closure:
   - [ ] add `diag lint` and emit `check.lint.json`.
 

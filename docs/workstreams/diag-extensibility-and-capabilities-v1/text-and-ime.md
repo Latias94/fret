@@ -39,6 +39,7 @@ Current script-level evidence surface (implemented):
 - `script.result.json`:
   - `evidence.focus_trace` (focused element/node + expected target for focus waits)
   - `evidence.web_ime_trace` (wasm textarea bridge snapshot summary; debug-only; no raw preedit/commit text by default)
+  - `evidence.ime_event_trace` (IME event kinds + length/cursor summaries; no raw text)
 
 ## Suggested regression gates (script + assertions)
 
