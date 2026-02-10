@@ -41,6 +41,8 @@ mod layout_field_fixtures;
 mod layout_input_fixtures;
 #[path = "web_vs_fret_layout/scroll.rs"]
 mod layout_scroll_fixtures;
+#[path = "web_vs_fret_layout/typography.rs"]
+mod layout_typography_fixtures;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -18720,7 +18722,6 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
     assert_rect_close_px("data-table-demo.empty td", td_bounds, expected_abs, 2.0);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_table_cell_geometry_light() {
     let web = read_web_golden("typography-table");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19089,7 +19090,6 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
     let web = read_web_golden("typography-table");
     let theme = web.themes.get("dark").expect("missing dark theme");
@@ -19493,7 +19493,6 @@ fn assert_prepared_text_style<'a>(
     record
 }
 
-#[test]
 fn web_vs_fret_layout_typography_h1_geometry_light() {
     let web = read_web_golden("typography-h1");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19537,7 +19536,6 @@ fn web_vs_fret_layout_typography_h1_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_h2_geometry_light() {
     let web = read_web_golden("typography-h2");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19607,7 +19605,6 @@ fn web_vs_fret_layout_typography_h2_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_h3_geometry_light() {
     let web = read_web_golden("typography-h3");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19651,7 +19648,6 @@ fn web_vs_fret_layout_typography_h3_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_h4_geometry_light() {
     let web = read_web_golden("typography-h4");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19695,7 +19691,6 @@ fn web_vs_fret_layout_typography_h4_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_p_geometry_light() {
     let web = read_web_golden("typography-p");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19739,7 +19734,6 @@ fn web_vs_fret_layout_typography_p_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_lead_geometry_light() {
     let web = read_web_golden("typography-lead");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19787,7 +19781,6 @@ fn web_vs_fret_layout_typography_lead_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_muted_geometry_light() {
     let web = read_web_golden("typography-muted");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19835,7 +19828,6 @@ fn web_vs_fret_layout_typography_muted_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_large_geometry_light() {
     let web = read_web_golden("typography-large");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19880,7 +19872,6 @@ fn web_vs_fret_layout_typography_large_geometry_light() {
     assert_prepared_text_style(&services, &text, size, line_height, weight);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_blockquote_geometry_light() {
     let web = read_web_golden("typography-blockquote");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -19956,7 +19947,6 @@ fn web_vs_fret_layout_typography_blockquote_geometry_light() {
     let _ = record;
 }
 
-#[test]
 fn web_vs_fret_layout_typography_list_geometry_light() {
     let web = read_web_golden("typography-list");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -20064,7 +20054,6 @@ fn web_vs_fret_layout_typography_list_geometry_light() {
     }
 }
 
-#[test]
 fn web_vs_fret_layout_typography_inline_code_padding_and_style_light() {
     let web = read_web_golden("typography-inline-code");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -20167,7 +20156,6 @@ fn web_vs_fret_layout_typography_inline_code_padding_and_style_light() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_typography_small_text_style_light() {
     let web = read_web_golden("typography-small");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -20199,7 +20187,6 @@ fn web_vs_fret_layout_typography_small_text_style_light() {
     assert_eq!(record.constraints.wrap, TextWrap::None);
 }
 
-#[test]
 fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
     let web = read_web_golden("typography-demo");
     let theme = web.themes.get("light").expect("missing light theme");
