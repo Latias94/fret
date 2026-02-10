@@ -1,6 +1,7 @@
 use std::panic::Location;
 
 use fret_ui::ElementContext;
+use fret_ui::Invalidation;
 use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::theme::CubicBezier;
@@ -17,6 +18,15 @@ struct TransitionDriverState {
     configured_close_ticks: u64,
     timeline: TransitionTimeline,
     lease: Option<ContinuousFrames>,
+}
+
+fn settled_transition_output(open: bool) -> TransitionOutput {
+    TransitionOutput {
+        present: open,
+        linear: if open { 1.0 } else { 0.0 },
+        progress: if open { 1.0 } else { 0.0 },
+        animating: false,
+    }
 }
 
 #[track_caller]
@@ -66,6 +76,23 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
     ease: fn(f32) -> f32,
     animate_on_mount: bool,
 ) -> TransitionOutput {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
+        let app_tick = cx.app.tick_id().0;
+        let frame_tick = cx.frame_id.0;
+        cx.with_state(TransitionDriverState::default, |st| {
+            st.initialized = true;
+            st.last_app_tick = app_tick;
+            st.last_frame_tick = frame_tick;
+            st.tick = 0;
+            st.configured_open_ticks = open_ticks;
+            st.configured_close_ticks = close_ticks;
+            st.timeline.set_durations(open_ticks, close_ticks);
+            st.lease = None;
+        });
+        return settled_transition_output(open);
+    }
+
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 
@@ -198,6 +225,23 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
     cx.keyed(
         (loc.file(), loc.line(), loc.column(), "cubic_bezier"),
         |cx| {
+            let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+            if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
+                let app_tick = cx.app.tick_id().0;
+                let frame_tick = cx.frame_id.0;
+                cx.with_state(TransitionDriverState::default, |st| {
+                    st.initialized = true;
+                    st.last_app_tick = app_tick;
+                    st.last_frame_tick = frame_tick;
+                    st.tick = 0;
+                    st.configured_open_ticks = open_ticks;
+                    st.configured_close_ticks = close_ticks;
+                    st.timeline.set_durations(open_ticks, close_ticks);
+                    st.lease = None;
+                });
+                return settled_transition_output(open);
+            }
+
             let app_tick = cx.app.tick_id().0;
             let frame_tick = cx.frame_id.0;
 
@@ -255,6 +299,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
+    use fret_core::window::WindowMetricsService;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_runtime::{Effect, FrameId, TickId};
 
@@ -346,5 +391,41 @@ mod tests {
         assert!(!close.present);
         assert!(!close.animating);
         assert_eq!(close.progress, 0.0);
+    }
+
+    #[test]
+    fn transition_respects_reduced_motion_and_does_not_request_frames() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_prefers_reduced_motion(window, Some(true));
+        });
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t3", |cx| {
+            drive_transition_with_durations(cx, true, 6, 6)
+        });
+        let effects0 = app.flush_effects();
+
+        assert!(out0.present);
+        assert!(!out0.animating);
+        assert_eq!(out0.progress, 1.0);
+        assert!(effects0.is_empty());
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+
+        let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t3", |cx| {
+            drive_transition_with_durations(cx, false, 6, 6)
+        });
+        let effects1 = app.flush_effects();
+
+        assert!(!out1.present);
+        assert!(!out1.animating);
+        assert_eq!(out1.progress, 0.0);
+        assert!(effects1.is_empty());
     }
 }

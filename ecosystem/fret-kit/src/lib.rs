@@ -426,6 +426,9 @@ pub fn app_with_hooks<S: 'static>(
 ) -> Result<UiAppBuilder<S>> {
     let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
         .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+    #[cfg(feature = "shadcn")]
+    let driver = driver
+        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
@@ -457,6 +460,25 @@ pub fn app_with_hooks<S: 'static>(
     let builder = builder.preload_icon_svgs_on_gpu_ready();
 
     Ok(UiAppBuilder::new(builder))
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
+fn shadcn_sync_theme_from_environment_on_global_changes<S>(
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut S,
+    changed: &[std::any::TypeId],
+) {
+    if !changed.contains(&std::any::TypeId::of::<fret_core::WindowMetricsService>()) {
+        return;
+    }
+    let config = app
+        .global::<fret_ui_shadcn::ShadcnInstallConfig>()
+        .copied()
+        .unwrap_or_default();
+    let _ =
+        fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
 }
 
 /// Same as [`app_with_hooks`], but without a driver configuration hook.

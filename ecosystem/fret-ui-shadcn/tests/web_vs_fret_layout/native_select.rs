@@ -1,5 +1,22 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+struct FixtureSuite<T> {
+    schema_version: u32,
+    cases: Vec<T>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutNativeSelectCase {
+    id: String,
+    web_name: String,
+    label_text: String,
+    #[serde(default)]
+    disabled: bool,
+    #[serde(default)]
+    aria_invalid: bool,
+}
+
 #[test]
 fn web_vs_fret_layout_native_select_heights_match_web_fixtures() {
     let raw = include_str!(concat!(

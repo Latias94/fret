@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::{
@@ -6,7 +8,9 @@ use fret_ui::action::{
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 
-use super::{ToastPosition, ToastStore, ToastVariant, toast_layer_root_name};
+use super::{
+    DEFAULT_VISIBLE_TOASTS, ToastPosition, ToastStore, ToastVariant, toast_layer_root_name,
+};
 
 #[derive(Debug, Clone)]
 pub struct ToastVariantColors {
@@ -377,6 +381,11 @@ pub struct ToastLayerRequest {
     pub store: Model<ToastStore>,
     pub position: ToastPosition,
     pub style: ToastLayerStyle,
+    pub toaster_id: Option<Arc<str>>,
+    pub visible_toasts: usize,
+    pub expand_by_default: bool,
+    pub rich_colors: bool,
+    pub invert: bool,
     pub margin: Option<Px>,
     pub gap: Option<Px>,
     pub toast_min_width: Option<Px>,
@@ -391,6 +400,11 @@ impl std::fmt::Debug for ToastLayerRequest {
             .field("store", &"<model>")
             .field("position", &self.position)
             .field("style", &self.style)
+            .field("toaster_id", &self.toaster_id)
+            .field("visible_toasts", &self.visible_toasts)
+            .field("expand_by_default", &self.expand_by_default)
+            .field("rich_colors", &self.rich_colors)
+            .field("invert", &self.invert)
             .field("margin", &self.margin)
             .field("gap", &self.gap)
             .field("toast_min_width", &self.toast_min_width)
@@ -407,6 +421,11 @@ impl ToastLayerRequest {
             store,
             position: ToastPosition::default(),
             style: ToastLayerStyle::default(),
+            toaster_id: None,
+            visible_toasts: DEFAULT_VISIBLE_TOASTS,
+            expand_by_default: false,
+            rich_colors: false,
+            invert: false,
             margin: None,
             gap: None,
             toast_min_width: None,
@@ -426,6 +445,31 @@ impl ToastLayerRequest {
 
     pub fn style(mut self, style: ToastLayerStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    pub fn toaster_id_opt(mut self, id: Option<Arc<str>>) -> Self {
+        self.toaster_id = id;
+        self
+    }
+
+    pub fn visible_toasts(mut self, visible_toasts: usize) -> Self {
+        self.visible_toasts = visible_toasts.max(1);
+        self
+    }
+
+    pub fn expand_by_default(mut self, expand: bool) -> Self {
+        self.expand_by_default = expand;
+        self
+    }
+
+    pub fn rich_colors(mut self, rich_colors: bool) -> Self {
+        self.rich_colors = rich_colors;
+        self
+    }
+
+    pub fn invert(mut self, invert: bool) -> Self {
+        self.invert = invert;
         self
     }
 

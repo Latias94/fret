@@ -1469,7 +1469,11 @@ impl ContextMenuContentRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 let geometry_hint = has_submenu.then(|| {
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
                     let submenu_max_h = submenu_max_height_metric
                         .map(|h| Px(h.0.min(outer.size.height.0)))
                         .unwrap_or(outer.size.height);
@@ -2759,7 +2763,11 @@ impl ContextMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
 
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
@@ -3103,11 +3111,11 @@ impl ContextMenu {
                                                                 move |cx, st, item_id| {
                                                                     let geometry_hint =
                                                                         has_submenu.then(|| {
-                                                                            let outer =
-                                                                                overlay::outer_bounds_with_window_margin(
-                                                                                    cx.bounds,
-                                                                                    window_margin,
-                                                                                );
+                                                                            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                                                                                cx,
+                                                                                fret_ui::Invalidation::Layout,
+                                                                                window_margin,
+                                                                            );
                                                                             let submenu_max_h =
                                                                                 submenu_max_height_metric
                                                                                     .map(|h| {
@@ -3663,6 +3671,15 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
+                let (on_dismiss_request, on_close_auto_focus) =
+                    menu::root::menu_close_auto_focus_guard_hooks(
+                        cx,
+                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal),
+                        open.clone(),
+                        on_dismiss_request.clone(),
+                        on_close_auto_focus.clone(),
+                    );
+
                 let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
@@ -3675,8 +3692,8 @@ impl ContextMenu {
                         .pointer_content_focus(content_focus_id.get())
                         .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     on_open_auto_focus.clone(),
-                    on_close_auto_focus.clone(),
-                    on_dismiss_request.clone(),
+                    on_close_auto_focus,
+                    on_dismiss_request,
                     dismissible_on_pointer_move,
                     modal,
                 );

@@ -78,6 +78,7 @@ pub(super) struct ActiveHoverOverlay {
 #[derive(Default)]
 pub(super) struct WindowOverlays {
     pub(super) windows: HashMap<AppWindowId, WindowOverlayFrame>,
+    pub(super) toast_viewport_restore_focus: HashMap<AppWindowId, Option<NodeId>>,
     /// Last-known request declarations for a given window/id.
     ///
     /// These are persisted across frames so per-frame request lists can be treated as an

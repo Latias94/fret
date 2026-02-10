@@ -103,6 +103,7 @@ impl SceneRecording {
                     }
                     true
                 }
+                Paint::Material { params, .. } => params.is_finite(),
             }
         }
 

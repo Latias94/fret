@@ -18,6 +18,10 @@ Baseline: Radix Popover outcomes (dismiss semantics and focus behavior; click-th
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/popover.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/popover.rs`
 
+Key implementation anchors (dismiss reasons → close auto-focus outcomes):
+
+- `ecosystem/fret-ui-kit/src/primitives/popover.rs` (`popover_close_auto_focus_guard_hooks`)
+
 Related tests/gates:
 
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`
@@ -34,6 +38,7 @@ Scripted repros (existing; not exhaustive):
 
 - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`
+- `tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
 - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json` (popover open snapshot)
 
 ---
@@ -56,4 +61,4 @@ Invariants:
 ## Audit checklist (dimension-driven)
 
 - [ ] `M` Document dismiss + focus restore outcomes, including `preventDefault`-style hooks.
-- [ ] `G` Keep at least one diag script gating: clamp under scroll + escape/outside dismiss.
+- [x] `G` Keep at least one diag script gating: click-through outside press does not steal focus.

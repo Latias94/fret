@@ -179,7 +179,11 @@ impl DropdownMenu {
                 let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                     return trigger;
                 };
-                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, self.window_margin);
+                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    self.window_margin,
+                );
 
                 let (menu_item_height, divider_height, divider_margin, collision_padding) = {
                     let theme = Theme::global(&*cx.app);

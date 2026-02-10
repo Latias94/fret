@@ -18,6 +18,11 @@ Baseline: Radix Navigation Menu outcomes (hover intent, delayed close, indicator
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
 
+Shared popover substrate (dismiss + click-through focus outcomes):
+
+- `ecosystem/fret-ui-kit/src/primitives/popover.rs`:
+  - `popover_close_auto_focus_guard_hooks` (suppress close auto-focus for click-through outside presses)
+
 Related tests/gates:
 
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`

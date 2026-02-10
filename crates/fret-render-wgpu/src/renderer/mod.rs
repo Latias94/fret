@@ -212,6 +212,17 @@ pub struct Renderer {
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
     scene_encoding_scratch: SceneEncoding,
+
+    materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
+    materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
+    material_paint_budget_per_frame: u64,
+    material_distinct_budget_per_frame: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MaterialEntry {
+    desc: fret_core::MaterialDescriptor,
+    refs: u32,
 }
 
 pub struct RenderSceneParams<'a> {

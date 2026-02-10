@@ -851,7 +851,11 @@ impl Popover {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_shift_cross_axis(shift_cross_axis)
@@ -1044,6 +1048,20 @@ impl Popover {
                 if let Some(initial_focus) = initial_focus {
                     options = options.initial_focus(initial_focus);
                 }
+
+                let policy = radix_popover::PopoverCloseAutoFocusGuardPolicy::for_variant(
+                    options.variant,
+                    options.consume_outside_pointer_events,
+                );
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_popover::popover_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        on_dismiss_request_for_request,
+                        options.on_close_auto_focus.clone(),
+                    );
+                options.on_close_auto_focus = on_close_auto_focus;
 
                 let mut request = radix_popover::popover_request_with_anchor_and_dismiss_handler(
                     trigger_id,

@@ -25,7 +25,8 @@ use crate::calendar::{
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, DateRangeSelection, month_grid_compact, week_number,
+    CalendarMonth, DateRangeSelection, DayMatcher, DayPickerModifiers, day_picker_day_modifiers,
+    month_grid, month_grid_compact, week_number,
 };
 
 #[derive(Clone)]
@@ -36,13 +37,18 @@ pub struct CalendarRange {
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
+    required: bool,
+    min_days: i64,
+    max_days: i64,
+    exclude_disabled: bool,
     week_start: Weekday,
+    fixed_weeks: bool,
     show_outside_days: bool,
     disable_outside_days: bool,
     show_week_number: bool,
     cell_size: Option<Px>,
     today: Option<Date>,
-    disabled: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: DayPickerModifiers,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     chrome: ChromeRefinement,
@@ -58,10 +64,16 @@ impl std::fmt::Debug for CalendarRange {
             .field("locale", &self.locale)
             .field("month_bounds", &self.month_bounds)
             .field("disable_navigation", &self.disable_navigation)
+            .field("required", &self.required)
+            .field("min_days", &self.min_days)
+            .field("max_days", &self.max_days)
+            .field("exclude_disabled", &self.exclude_disabled)
             .field("week_start", &self.week_start)
+            .field("fixed_weeks", &self.fixed_weeks)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
-            .field("disabled", &self.disabled.is_some())
+            .field("disabled_matchers", &self.modifiers.disabled.len())
+            .field("hidden_matchers", &self.modifiers.hidden.len())
             .field("close_on_select", &self.close_on_select.is_some())
             .field("initial_focus_out", &self.initial_focus_out.is_some())
             .finish()
@@ -77,13 +89,18 @@ impl CalendarRange {
             locale: CalendarLocale::default(),
             month_bounds: None,
             disable_navigation: false,
+            required: false,
+            min_days: 0,
+            max_days: 0,
+            exclude_disabled: false,
             week_start: Weekday::Monday,
+            fixed_weeks: false,
             show_outside_days: true,
             disable_outside_days: true,
             show_week_number: false,
             cell_size: None,
             today: None,
-            disabled: None,
+            modifiers: DayPickerModifiers::default(),
             close_on_select: None,
             initial_focus_out: None,
             chrome: ChromeRefinement::default(),
@@ -93,6 +110,14 @@ impl CalendarRange {
 
     pub fn week_start(mut self, week_start: Weekday) -> Self {
         self.week_start = week_start;
+        self
+    }
+
+    /// Mirrors the upstream DayPicker `fixedWeeks` prop.
+    ///
+    /// When enabled, the calendar grid always contains 6 weeks (42 days).
+    pub fn fixed_weeks(mut self, fixed: bool) -> Self {
+        self.fixed_weeks = fixed;
         self
     }
 
@@ -117,6 +142,26 @@ impl CalendarRange {
 
     pub fn disable_navigation(mut self, disable: bool) -> Self {
         self.disable_navigation = disable;
+        self
+    }
+
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    pub fn min_days(mut self, min_days: i64) -> Self {
+        self.min_days = min_days.max(0);
+        self
+    }
+
+    pub fn max_days(mut self, max_days: i64) -> Self {
+        self.max_days = max_days.max(0);
+        self
+    }
+
+    pub fn exclude_disabled(mut self, exclude_disabled: bool) -> Self {
+        self.exclude_disabled = exclude_disabled;
         self
     }
 
@@ -148,8 +193,26 @@ impl CalendarRange {
         self
     }
 
+    pub fn disabled(mut self, matcher: DayMatcher) -> Self {
+        self.modifiers.disabled.push(matcher);
+        self
+    }
+
+    pub fn hidden(mut self, matcher: DayMatcher) -> Self {
+        self.modifiers.hidden.push(matcher);
+        self
+    }
+
+    pub fn modifiers(mut self, modifiers: DayPickerModifiers) -> Self {
+        self.modifiers = modifiers;
+        self
+    }
+
     pub fn disabled_by(mut self, f: impl Fn(Date) -> bool + Send + Sync + 'static) -> Self {
-        self.disabled = Some(Arc::new(f));
+        self.modifiers.disabled.clear();
+        self.modifiers
+            .disabled
+            .push(DayMatcher::Predicate(Arc::new(f)));
         self
     }
 
@@ -186,11 +249,16 @@ impl CalendarRange {
         let locale = self.locale;
         let month_bounds = self.month_bounds;
         let disable_navigation = self.disable_navigation;
+        let required = self.required;
+        let min_days = self.min_days;
+        let max_days = self.max_days;
+        let exclude_disabled = self.exclude_disabled;
         let week_start = self.week_start;
+        let fixed_weeks = self.fixed_weeks;
         let show_outside_days = self.show_outside_days;
         let disable_outside_days = self.disable_outside_days;
         let show_week_number = self.show_week_number;
-        let disabled_predicate = self.disabled.clone();
+        let modifiers: Arc<DayPickerModifiers> = Arc::new(self.modifiers);
         let close_on_select = self.close_on_select.clone();
         let initial_focus_out = self.initial_focus_out.clone();
 
@@ -200,40 +268,40 @@ impl CalendarRange {
             .unwrap_or_else(|| CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
         let selected = cx.watch_model(&selected_model).cloned().unwrap_or_default();
 
-        let grid = month_grid_compact(month, week_start);
+        let grid = if fixed_weeks {
+            month_grid(month, week_start).to_vec()
+        } else {
+            month_grid_compact(month, week_start)
+        };
         let today = self
             .today
             .unwrap_or_else(|| OffsetDateTime::now_utc().date());
         let in_bounds =
             |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
 
+        let mut hidden = Vec::with_capacity(grid.len());
         let mut disabled = Vec::with_capacity(grid.len());
         for day in grid.iter() {
-            let mut is_disabled = false;
-            if !in_bounds(day.date) {
+            let base = day_picker_day_modifiers(*day, show_outside_days, modifiers.as_ref());
+            let is_hidden = base.hidden || !in_bounds(day.date);
+            let mut is_disabled =
+                base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
+            if is_hidden {
                 is_disabled = true;
             }
-            if !day.in_month && (!show_outside_days || disable_outside_days) {
-                is_disabled = true;
-            }
-            if let Some(pred) = disabled_predicate.as_ref() {
-                if pred(day.date) {
-                    is_disabled = true;
-                }
-            }
+            hidden.push(is_hidden);
             disabled.push(is_disabled);
         }
         let disabled: Arc<[bool]> = disabled.into();
+        let hidden: Arc<[bool]> = hidden.into();
 
         let focus_date = {
             let preferred = selected.from.or(selected.to);
             let preferred_idx = preferred.and_then(|d| grid.iter().position(|it| it.date == d));
             let today_idx = grid.iter().position(|it| it.date == today);
 
-            let visible = |idx: usize| {
-                grid.get(idx)
-                    .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
-            };
+            let visible =
+                |idx: usize| !hidden.get(idx).copied().unwrap_or(true) && grid.get(idx).is_some();
             let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
             preferred_idx
@@ -247,12 +315,8 @@ impl CalendarRange {
                 .or_else(|| {
                     grid.iter()
                         .enumerate()
-                        .find(|(idx, day)| {
-                            (day.in_month || show_outside_days)
-                                && in_bounds(day.date)
-                                && enabled(*idx)
-                        })
-                        .map(|(_, day)| day.date)
+                        .find(|(idx, _day)| visible(*idx) && enabled(*idx))
+                        .and_then(|(idx, _day)| grid.get(idx).map(|d| d.date))
                 })
         };
 
@@ -307,11 +371,19 @@ impl CalendarRange {
             region_props,
             move |cx, region_id| {
                 let is_row = if number_of_months > 1 {
+                    // Container queries are read from last-committed bounds. In single-pass layout
+                    // environments (e.g. snapshot tests), the region width can be temporarily
+                    // unknown. Fall back to the viewport width so the initial layout matches the
+                    // web Tailwind breakpoint behavior when the calendar is effectively
+                    // unconstrained by a smaller container.
+                    let default_when_unknown =
+                        cx.environment_viewport_width(Invalidation::Layout).0
+                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
                     fret_ui_kit::declarative::container_width_at_least(
                         cx,
                         region_id,
                         Invalidation::Layout,
-                        false,
+                        default_when_unknown,
                         fret_ui_kit::declarative::container_queries::tailwind::MD,
                         fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
                     )
@@ -342,11 +414,16 @@ impl CalendarRange {
                             month,
                             month_model.clone(),
                             selected_model.clone(),
+                            required,
+                            min_days,
+                            max_days,
+                            exclude_disabled,
                             number_of_months,
                             locale,
                             month_bounds,
                             disable_navigation,
                             week_start,
+                            fixed_weeks,
                             weekday_labels.clone(),
                             selected,
                             today,
@@ -357,7 +434,7 @@ impl CalendarRange {
                             month_width,
                             day_grid_width,
                             week_row_gap,
-                            disabled_predicate.clone(),
+                            modifiers.clone(),
                             close_on_select.clone(),
                             initial_focus_out.clone(),
                             grid_text_style.clone(),
@@ -379,7 +456,7 @@ impl CalendarRange {
                             let month_model_days = month_model.clone();
                             let selected_model = selected_model.clone();
                             let close_on_select = close_on_select.clone();
-                            let disabled_predicate = disabled_predicate.clone();
+                            let modifiers = modifiers.clone();
 
                             let header = stack::hstack(
                                 cx,
@@ -601,8 +678,7 @@ impl CalendarRange {
                                 grid.iter()
                                     .enumerate()
                                     .map(|(idx, day)| {
-                                        let is_hidden = (!day.in_month && !show_outside_days)
-                                            || !in_bounds(day.date);
+                                        let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                                         if is_hidden {
                                             return calendar_range_hidden_day_cell(
                                                 cx,
@@ -636,8 +712,12 @@ impl CalendarRange {
                                             day_size,
                                             week_row_gap,
                                             &selected_model,
+                                            required,
+                                            min_days,
+                                            max_days,
+                                            exclude_disabled,
                                             close_on_select.clone(),
-                                            disabled_predicate.clone(),
+                                            modifiers.clone(),
                                             initial_focus_out.clone(),
                                         )
                                     })
@@ -737,11 +817,16 @@ fn calendar_range_multi_month_view<H: UiHost>(
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
     selected_model: Model<DateRangeSelection>,
+    required: bool,
+    min_days: i64,
+    max_days: i64,
+    exclude_disabled: bool,
     number_of_months: usize,
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
     week_start: Weekday,
+    fixed_weeks: bool,
     weekday_labels: Arc<[Arc<str>]>,
     selected: DateRangeSelection,
     today: Date,
@@ -752,7 +837,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
     month_width: Px,
     day_grid_width: Px,
     week_row_gap: Px,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: Arc<DayPickerModifiers>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
@@ -856,6 +941,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         locale,
                         month_bounds,
                         week_start,
+                        fixed_weeks,
                         weekday_labels.clone(),
                         selected,
                         today,
@@ -868,7 +954,11 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         week_row_gap,
                         month_model.clone(),
                         selected_model.clone(),
-                        disabled_predicate.clone(),
+                        required,
+                        min_days,
+                        max_days,
+                        exclude_disabled,
+                        modifiers.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -893,6 +983,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         locale,
                         month_bounds,
                         week_start,
+                        fixed_weeks,
                         weekday_labels.clone(),
                         selected,
                         today,
@@ -905,7 +996,11 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         week_row_gap,
                         month_model.clone(),
                         selected_model.clone(),
-                        disabled_predicate.clone(),
+                        required,
+                        min_days,
+                        max_days,
+                        exclude_disabled,
+                        modifiers.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -935,6 +1030,7 @@ fn calendar_range_month_view<H: UiHost>(
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     week_start: Weekday,
+    fixed_weeks: bool,
     weekday_labels: Arc<[Arc<str>]>,
     selected: DateRangeSelection,
     today: Date,
@@ -947,42 +1043,46 @@ fn calendar_range_month_view<H: UiHost>(
     week_row_gap: Px,
     month_model: Model<CalendarMonth>,
     selected_model: Model<DateRangeSelection>,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    required: bool,
+    min_days: i64,
+    max_days: i64,
+    exclude_disabled: bool,
+    modifiers: Arc<DayPickerModifiers>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
 ) -> AnyElement {
-    let grid = month_grid_compact(month, week_start);
+    let grid = if fixed_weeks {
+        month_grid(month, week_start).to_vec()
+    } else {
+        month_grid_compact(month, week_start)
+    };
     let in_bounds =
         |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
 
+    let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
     for day in grid.iter() {
-        let mut is_disabled = false;
-        if !in_bounds(day.date) {
+        let base = day_picker_day_modifiers(*day, show_outside_days, modifiers.as_ref());
+        let is_hidden = base.hidden || !in_bounds(day.date);
+        let mut is_disabled =
+            base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
+        if is_hidden {
             is_disabled = true;
         }
-        if !day.in_month && (!show_outside_days || disable_outside_days) {
-            is_disabled = true;
-        }
-        if let Some(pred) = disabled_predicate.as_ref() {
-            if pred(day.date) {
-                is_disabled = true;
-            }
-        }
+        hidden.push(is_hidden);
         disabled.push(is_disabled);
     }
     let disabled: Arc<[bool]> = disabled.into();
+    let hidden: Arc<[bool]> = hidden.into();
 
     let focus_date = {
         let preferred = selected.from.or(selected.to);
         let preferred_idx = preferred.and_then(|d| grid.iter().position(|it| it.date == d));
         let today_idx = grid.iter().position(|it| it.date == today);
 
-        let visible = |idx: usize| {
-            grid.get(idx)
-                .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
-        };
+        let visible =
+            |idx: usize| !hidden.get(idx).copied().unwrap_or(true) && grid.get(idx).is_some();
         let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
         preferred_idx
@@ -996,10 +1096,8 @@ fn calendar_range_month_view<H: UiHost>(
             .or_else(|| {
                 grid.iter()
                     .enumerate()
-                    .find(|(idx, day)| {
-                        (day.in_month || show_outside_days) && in_bounds(day.date) && enabled(*idx)
-                    })
-                    .map(|(_, day)| day.date)
+                    .find(|(idx, _day)| visible(*idx) && enabled(*idx))
+                    .and_then(|(idx, _day)| grid.get(idx).map(|d| d.date))
             })
     };
 
@@ -1177,7 +1275,7 @@ fn calendar_range_month_view<H: UiHost>(
         grid.iter()
             .enumerate()
             .map(|(idx, day)| {
-                let is_hidden = (!day.in_month && !show_outside_days) || !in_bounds(day.date);
+                let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                 if is_hidden {
                     return calendar_range_hidden_day_cell(
                         cx,
@@ -1210,8 +1308,12 @@ fn calendar_range_month_view<H: UiHost>(
                     day_size,
                     week_row_gap,
                     &selected_model,
+                    required,
+                    min_days,
+                    max_days,
+                    exclude_disabled,
                     close_on_select.clone(),
-                    disabled_predicate.clone(),
+                    modifiers.clone(),
                     initial_focus_out.clone(),
                 )
             })
@@ -1441,8 +1543,12 @@ fn calendar_range_day_cell<H: UiHost>(
     size: Px,
     week_row_gap: Px,
     selected_model: &Model<DateRangeSelection>,
+    required: bool,
+    min_days: i64,
+    max_days: i64,
+    exclude_disabled: bool,
     close_on_select: Option<Model<bool>>,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: Arc<DayPickerModifiers>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
@@ -1496,7 +1602,7 @@ fn calendar_range_day_cell<H: UiHost>(
 
         let selected_model = selected_model.clone();
         let close_on_select = close_on_select.clone();
-        let disabled_predicate = disabled_predicate.clone();
+        let modifiers = modifiers.clone();
 
         let complete_out = Rc::new(Cell::new(false));
         let complete_out_for_update = Rc::clone(&complete_out);
@@ -1505,16 +1611,21 @@ fn calendar_range_day_cell<H: UiHost>(
             if disabled {
                 return;
             }
-            if let Some(pred) = disabled_predicate.as_ref()
-                && pred(date)
-            {
-                return;
-            }
 
             complete_out_for_update.set(false);
             let complete_out_in_update = Rc::clone(&complete_out_for_update);
             let _ = host.models_mut().update(&selected_model, |v| {
-                v.apply_click(date);
+                let predicate = |d: Date| modifiers.disabled.iter().any(|m| m.is_match(d));
+                let disabled_predicate =
+                    (!modifiers.disabled.is_empty()).then_some(&predicate as &dyn Fn(Date) -> bool);
+                v.apply_click_with(
+                    date,
+                    min_days,
+                    max_days,
+                    required,
+                    exclude_disabled,
+                    disabled_predicate,
+                );
                 complete_out_in_update.set(v.is_complete());
             });
 

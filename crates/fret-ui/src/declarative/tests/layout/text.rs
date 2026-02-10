@@ -78,6 +78,19 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
         }
     }
 
+    impl fret_core::MaterialService for RecordingTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -218,6 +231,19 @@ fn text_measurement_and_paint_agree_on_overflow_and_scale_factor() {
 
         fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
             true
+        }
+    }
+
+    impl fret_core::MaterialService for RecordingTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
         }
     }
 

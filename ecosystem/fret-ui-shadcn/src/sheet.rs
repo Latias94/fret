@@ -8,10 +8,11 @@ use fret_ui::element::{
     PositionStyle, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{occlusion_insets_or_zero, safe_area_insets_or_zero};
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
@@ -315,9 +316,17 @@ impl Sheet {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_dialog::dialog_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        self.on_dismiss_request.clone(),
+                        self.on_close_auto_focus.clone(),
+                    );
 
-                let open = self.open;
+                let open = self.open.clone();
                 let open_for_children = open.clone();
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
@@ -326,7 +335,7 @@ impl Sheet {
                     .dismiss_on_overlay_press(overlay_closable)
                     .initial_focus(None)
                     .on_open_auto_focus(self.on_open_auto_focus.clone())
-                    .on_close_auto_focus(self.on_close_auto_focus.clone());
+                    .on_close_auto_focus(on_close_auto_focus);
 
                 let size_override = self.size_override;
                 let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
@@ -363,7 +372,7 @@ impl Sheet {
 
                     let content = with_sheet_side_provider(cx, sheet_side, |cx| content(cx));
 
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let max_w = outer.size.width;
                     let max_h = outer.size.height;
 
@@ -596,6 +605,42 @@ impl SheetContent {
 
         let props = {
             let mut props = decl_style::container_props(&theme, chrome, layout);
+
+            // Apply environment-driven window insets to avoid system UI and virtual keyboard
+            // occlusion on future mobile targets (ADR 1171).
+            let safe = safe_area_insets_or_zero(cx, Invalidation::Layout);
+            let occlusion = occlusion_insets_or_zero(cx, Invalidation::Layout);
+            let max_px = |a: Px, b: Px| if a.0 > b.0 { a } else { b };
+            let insets = Edges {
+                top: max_px(safe.top, occlusion.top),
+                right: max_px(safe.right, occlusion.right),
+                bottom: max_px(safe.bottom, occlusion.bottom),
+                left: max_px(safe.left, occlusion.left),
+            };
+
+            match side {
+                SheetSide::Left => {
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.bottom.0 += insets.bottom.0;
+                }
+                SheetSide::Right => {
+                    props.padding.right.0 += insets.right.0;
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.bottom.0 += insets.bottom.0;
+                }
+                SheetSide::Top => {
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.right.0 += insets.right.0;
+                }
+                SheetSide::Bottom => {
+                    props.padding.bottom.0 += insets.bottom.0;
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.right.0 += insets.right.0;
+                }
+            }
+
             let border_w = props.border.top;
             props.border = match side {
                 SheetSide::Left => Edges {
@@ -772,12 +817,12 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{AppWindowId, Edges, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
-    use fret_ui::element::PressableProps;
+    use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -855,6 +900,67 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn sheet_content_padding_includes_window_insets_for_bottom_side() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.with_global_mut_untracked(fret_ui::elements::ElementRuntime::new, |rt, _| {
+            rt.set_window_safe_area_insets(window, None);
+            rt.set_window_occlusion_insets(window, None);
+        });
+        let base_padding =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
+                    SheetContent::new([cx.text("child")]).into_element(cx)
+                });
+                match element.kind {
+                    ElementKind::Container(ContainerProps { padding, .. }) => padding,
+                    other => panic!("expected container root, got {other:?}"),
+                }
+            });
+
+        // Safe area contributes left/right, occlusion contributes bottom and should win via max().
+        app.with_global_mut_untracked(fret_ui::elements::ElementRuntime::new, |rt, _| {
+            rt.set_window_safe_area_insets(
+                window,
+                Some(Edges {
+                    top: Px(0.0),
+                    right: Px(8.0),
+                    bottom: Px(20.0),
+                    left: Px(6.0),
+                }),
+            );
+            rt.set_window_occlusion_insets(
+                window,
+                Some(Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(48.0),
+                    left: Px(0.0),
+                }),
+            );
+        });
+        let inset_padding =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
+                    SheetContent::new([cx.text("child")]).into_element(cx)
+                });
+                match element.kind {
+                    ElementKind::Container(ContainerProps { padding, .. }) => padding,
+                    other => panic!("expected container root, got {other:?}"),
+                }
+            });
+
+        assert_eq!(inset_padding.left.0 - base_padding.left.0, 6.0);
+        assert_eq!(inset_padding.right.0 - base_padding.right.0, 8.0);
+        assert_eq!(inset_padding.bottom.0 - base_padding.bottom.0, 48.0);
     }
 
     #[derive(Default)]
@@ -1543,6 +1649,63 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_escape_closes_by_default_when_handler_allows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+        });
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::Escape)
+        );
     }
 
     #[test]

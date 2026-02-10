@@ -59,12 +59,14 @@ pub use overlay_controller::{
     OverlayStackEntryKind, ToastLayerSpec, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
 };
 pub use window_overlays::{
-    DEFAULT_MAX_TOASTS, ToastAction, ToastButtonStyle, ToastIconButtonStyle, ToastId,
-    ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant,
-    ToastVariantColors, ToastVariantPalette,
+    DEFAULT_MAX_TOASTS, DEFAULT_TOAST_DURATION, DEFAULT_VISIBLE_TOASTS, ToastAction, ToastAsyncMsg,
+    ToastAsyncQueueHandle, ToastButtonStyle, ToastIconButtonStyle, ToastId, ToastLayerStyle,
+    ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant, ToastVariantColors,
+    ToastVariantPalette, toast_async_queue,
 };
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
+pub use window_overlays::TOAST_VIEWPORT_RESTORE_COMMAND;
 
 // Diagnostics-only exports: used by `fret-bootstrap` to export bundle.json fields.
 #[doc(hidden)]

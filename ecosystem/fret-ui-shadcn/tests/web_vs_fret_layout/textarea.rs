@@ -1,5 +1,22 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutTextareaRecipe {
+    Demo,
+    Disabled,
+    WithButton,
+    WithLabel,
+    WithText,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutTextareaCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutTextareaRecipe,
+}
+
 #[test]
 fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(

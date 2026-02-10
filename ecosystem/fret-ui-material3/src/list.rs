@@ -148,10 +148,9 @@ impl List {
                 ..Default::default()
             };
 
+            let items: Arc<[ListItem]> = Arc::from(items.into_boxed_slice());
             let disabled_items: Arc<[bool]> =
                 Arc::from(items.iter().map(|it| it.disabled).collect::<Vec<_>>());
-            let values_for_roving: Arc<[Arc<str>]> =
-                Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let count = items.len();
 
             let selected_idx = cx
@@ -165,6 +164,7 @@ impl List {
 
             let tab_stop = selected_idx.or_else(|| disabled_items.iter().position(|&d| !d));
             let model_for_roving = model.clone();
+            let items_for_roving = items.clone();
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
@@ -241,7 +241,9 @@ impl List {
                             }));
 
                             cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
-                                let Some(value) = values_for_roving.get(idx).cloned() else {
+                                let Some(value) =
+                                    items_for_roving.get(idx).map(|it| it.value.clone())
+                                else {
                                     return;
                                 };
                                 let already_selected = host

@@ -1478,7 +1478,11 @@ impl DropdownMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
 
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
@@ -2175,11 +2179,11 @@ impl DropdownMenu {
                                                                 out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(|cx, st, item_id| {
                                                                 let geometry_hint = has_submenu.then(|| {
-                                                                    let outer =
-                                                                        overlay::outer_bounds_with_window_margin(
-                                                                            cx.bounds,
-                                                                            window_margin,
-                                                                        );
+                                                                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                                                                        cx,
+                                                                        fret_ui::Invalidation::Layout,
+                                                                        window_margin,
+                                                                    );
                                                                     let submenu_max_h =
                                                                         submenu_max_height_metric
                                                                             .map(|h| {
@@ -3333,6 +3337,15 @@ impl DropdownMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
+                let (on_dismiss_request, on_close_auto_focus) =
+                    menu::root::menu_close_auto_focus_guard_hooks(
+                        cx,
+                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal),
+                        open.clone(),
+                        on_dismiss_request.clone(),
+                        None,
+                    );
+
                 let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     overlay_id,
@@ -3349,8 +3362,8 @@ impl DropdownMenu {
                             first_item_focus_id_for_request.get()
                         }),
                     None,
-                    None,
-                    on_dismiss_request.clone(),
+                    on_close_auto_focus,
+                    on_dismiss_request,
                     dismissible_on_pointer_move,
                     modal,
                 );
@@ -4258,6 +4271,106 @@ mod tests {
                             },
                             move |_cx| entries,
                         );
+
+                        vec![underlay, dropdown_menu]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_unfocusable_underlay_non_modal(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-unfocusable-underlay",
+            move |cx| {
+                let trigger_id_out = trigger_id_out.clone();
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Relative;
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let underlay = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(380.0));
+                                    layout.inset.top = Some(Px(200.0));
+                                    layout.size.width = Length::Px(Px(220.0));
+                                    layout.size.height = Length::Px(Px(120.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            |_cx, _st| Vec::new(),
+                        );
+
+                        let dropdown_menu = DropdownMenu::new(open)
+                            .modal(false)
+                            .on_dismiss_request(on_dismiss_request.clone())
+                            .into_element(
+                                cx,
+                                move |cx| {
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.position =
+                                                    fret_ui::element::PositionStyle::Absolute;
+                                                layout.inset.left = Some(Px(0.0));
+                                                layout.inset.top = Some(Px(0.0));
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
+                                },
+                                move |_cx| entries,
+                            );
 
                         vec![underlay, dropdown_menu]
                     },
@@ -5364,6 +5477,151 @@ mod tests {
         assert_ne!(
             focus, trigger,
             "pointer-open should focus menu content/roving container rather than keeping trigger focus"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(700.0), Px(400.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let dismiss_calls = Arc::new(AtomicUsize::new(0));
+        let dismiss_calls_for_hook = dismiss_calls.clone();
+        let dismiss_hook: OnDismissRequest = Arc::new(move |_host, _cx, _req| {
+            dismiss_calls_for_hook.fetch_add(1, Ordering::SeqCst);
+        });
+
+        // Frame 0: establish stable trigger bounds.
+        let _root = render_frame_with_unfocusable_underlay_non_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(dismiss_hook.clone()),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        // Pointer-open and flip the caller-owned open model like a trigger would.
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_pos = rect_center(trigger_bounds);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 1: open and focus should be inside the overlay layer (not on the trigger).
+        let _root = render_frame_with_unfocusable_underlay_non_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(dismiss_hook.clone()),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_ne!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected pointer-open to move focus inside the overlay"
+        );
+
+        // Outside press on a non-focusable underlay region: menu closes, but should not steal
+        // focus back to the trigger.
+        let underlay_pos = Point::new(Px(420.0), Px(240.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _root = render_frame_with_unfocusable_underlay_non_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(dismiss_hook),
+            trigger_id_out,
+            entries,
+        );
+
+        assert!(
+            dismiss_calls.load(Ordering::SeqCst) > 0,
+            "expected outside press to route through dismiss handler"
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert!(
+            ui.focus().is_none(),
+            "expected focus to clear (and not restore to the trigger) when dismissing via outside press on an unfocusable underlay"
         );
     }
 

@@ -36,6 +36,15 @@ pub(super) struct EncodeState<'a> {
 
     pub(super) transform_stack: Vec<Transform2D>,
     pub(super) opacity_stack: Vec<f32>,
+
+    pub(super) material_paint_budget_per_frame: u64,
+    pub(super) material_distinct_budget_per_frame: usize,
+    pub(super) material_paints_used: u64,
+    pub(super) material_seen: Vec<fret_core::MaterialId>,
+    pub(super) material_quad_ops: &'a mut u64,
+    pub(super) material_distinct: &'a mut u64,
+    pub(super) material_unknown_ids: &'a mut u64,
+    pub(super) material_degraded_due_to_budget: &'a mut u64,
 }
 
 impl<'a> EncodeState<'a> {
@@ -49,6 +58,8 @@ impl<'a> EncodeState<'a> {
         text_gamma_ratios: [f32; 4],
         text_grayscale_enhanced_contrast: f32,
         text_subpixel_enhanced_contrast: f32,
+        material_paint_budget_per_frame: u64,
+        material_distinct_budget_per_frame: usize,
     ) -> Self {
         let instances = &mut encoding.instances;
         let viewport_vertices = &mut encoding.viewport_vertices;
@@ -58,6 +69,11 @@ impl<'a> EncodeState<'a> {
         let uniforms = &mut encoding.uniforms;
         let ordered_draws = &mut encoding.ordered_draws;
         let effect_markers = &mut encoding.effect_markers;
+
+        let material_quad_ops = &mut encoding.material_quad_ops;
+        let material_distinct = &mut encoding.material_distinct;
+        let material_unknown_ids = &mut encoding.material_unknown_ids;
+        let material_degraded_due_to_budget = &mut encoding.material_degraded_due_to_budget;
 
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         let mut state = Self {
@@ -84,6 +100,15 @@ impl<'a> EncodeState<'a> {
             quad_batch: None,
             transform_stack: vec![Transform2D::IDENTITY],
             opacity_stack: vec![1.0],
+
+            material_paint_budget_per_frame,
+            material_distinct_budget_per_frame,
+            material_paints_used: 0,
+            material_seen: Vec::new(),
+            material_quad_ops,
+            material_distinct,
+            material_unknown_ids,
+            material_degraded_due_to_budget,
         };
 
         state.current_uniform_index = state.push_uniform_snapshot(0, 0);
