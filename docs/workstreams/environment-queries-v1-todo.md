@@ -72,8 +72,10 @@ ADR anchor:
   - prefers-reduced-motion (best-effort; `None` when unavailable)
   - prefers-contrast (best-effort; `None` when unavailable)
   - forced-colors mode (best-effort; `None` when unavailable)
+  - Linux: reads preferences from the xdg-desktop-portal Settings API (best-effort; falls back to
+    `winit::window::Window::theme()` when available).
   - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs`
-  - Evidence: `crates/fret-launch/src/runner/desktop/app_handler.rs` (polling + per-frame refresh)
+  - Evidence: `crates/fret-launch/src/runner/desktop/app_handler.rs` (polling + ThemeChanged refresh)
 
 - [x] Web/wasm runner uses `MediaQueryList` change listeners for environment preferences, writing to
   `WindowMetricsService` only when the relevant media queries change (safe-area / occlusion remain

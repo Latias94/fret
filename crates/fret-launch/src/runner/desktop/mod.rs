@@ -1217,6 +1217,102 @@ struct DesktopEnvironmentSnapshot {
     forced_colors_mode: Option<ForcedColorsMode>,
 }
 
+#[cfg(target_os = "linux")]
+mod linux_portal_settings {
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+
+    use zbus::blocking::{Connection, Proxy};
+    use zbus::zvariant::OwnedValue;
+
+    const SETTINGS_SERVICE: &str = "org.freedesktop.portal.Desktop";
+    const SETTINGS_PATH: &str = "/org/freedesktop/portal/desktop";
+    const SETTINGS_INTERFACE: &str = "org.freedesktop.portal.Settings";
+
+    pub const APPEARANCE_NAMESPACE: &str = "org.freedesktop.appearance";
+
+    struct PortalCache {
+        connection: Option<Connection>,
+        next_retry_at: Instant,
+    }
+
+    static CACHE: OnceLock<Mutex<PortalCache>> = OnceLock::new();
+
+    fn with_settings_proxy<T>(f: impl FnOnce(&Proxy<'_>) -> zbus::Result<T>) -> Option<T> {
+        let cache_lock = CACHE.get_or_init(|| {
+            Mutex::new(PortalCache {
+                connection: None,
+                next_retry_at: Instant::now(),
+            })
+        });
+
+        let mut cache = cache_lock.lock().ok()?;
+        let now = Instant::now();
+
+        if cache.connection.is_none() && now < cache.next_retry_at {
+            return None;
+        }
+
+        if cache.connection.is_none() {
+            match Connection::session() {
+                Ok(connection) => cache.connection = Some(connection),
+                Err(_) => {
+                    cache.next_retry_at = now + Duration::from_secs(5);
+                    return None;
+                }
+            }
+        }
+
+        let connection = cache.connection.as_ref()?;
+        drop(cache);
+
+        let proxy = Proxy::new(
+            connection,
+            SETTINGS_SERVICE,
+            SETTINGS_PATH,
+            SETTINGS_INTERFACE,
+        )
+        .ok()?;
+        f(&proxy).ok()
+    }
+
+    fn read_owned_value(namespace: &str, key: &str) -> Option<OwnedValue> {
+        with_settings_proxy(|proxy| proxy.call("Read", &(namespace, key)))
+    }
+
+    pub fn read_u32(namespace: &str, key: &str) -> Option<u32> {
+        let value = read_owned_value(namespace, key)?;
+
+        if let Ok(v) = u32::try_from(&value) {
+            return Some(v);
+        }
+        if let Ok(v) = i32::try_from(&value) {
+            return u32::try_from(v).ok();
+        }
+        if let Ok(v) = bool::try_from(&value) {
+            return Some(if v { 1 } else { 0 });
+        }
+
+        None
+    }
+
+    pub fn read_bool(namespace: &str, key: &str) -> Option<bool> {
+        let value = read_owned_value(namespace, key)?;
+
+        if let Ok(v) = bool::try_from(&value) {
+            return Some(v);
+        }
+        if let Ok(v) = u32::try_from(&value) {
+            return Some(v != 0);
+        }
+        if let Ok(v) = i32::try_from(&value) {
+            return Some(v != 0);
+        }
+
+        None
+    }
+}
+
 fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentSnapshot {
     DesktopEnvironmentSnapshot {
         color_scheme: read_desktop_color_scheme(window),
@@ -1227,10 +1323,40 @@ fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentS
 }
 
 fn read_desktop_color_scheme(window: &dyn Window) -> Option<ColorScheme> {
-    window.theme().map(|theme| match theme {
+    let from_window = window.theme().map(|theme| match theme {
         winit::window::Theme::Light => ColorScheme::Light,
         winit::window::Theme::Dark => ColorScheme::Dark,
-    })
+    });
+
+    #[cfg(target_os = "linux")]
+    {
+        from_window.or_else(read_linux_portal_color_scheme)
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        from_window
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_linux_portal_color_scheme() -> Option<ColorScheme> {
+    // Best-effort fallback for compositors/toolkits where `winit::window::Window::theme()` is
+    // unavailable (`None`). The portal uses an enum-like integer value.
+    //
+    // - 0: no preference / unknown
+    // - 1: prefer dark
+    // - 2: prefer light
+    let value = linux_portal_settings::read_u32(
+        linux_portal_settings::APPEARANCE_NAMESPACE,
+        "color-scheme",
+    )?;
+
+    match value {
+        1 => Some(ColorScheme::Dark),
+        2 => Some(ColorScheme::Light),
+        _ => None,
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -1276,7 +1402,22 @@ fn read_desktop_prefers_reduced_motion() -> Option<bool> {
     }
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(target_os = "linux")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    // Best-effort mapping of portal appearance preference to the web vocabulary:
+    // `prefers-reduced-motion`.
+    //
+    // Portal keys differ across versions; try both spellings.
+    linux_portal_settings::read_bool(linux_portal_settings::APPEARANCE_NAMESPACE, "reduce-motion")
+        .or_else(|| {
+            linux_portal_settings::read_bool(
+                linux_portal_settings::APPEARANCE_NAMESPACE,
+                "reduced-motion",
+            )
+        })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn read_desktop_prefers_reduced_motion() -> Option<bool> {
     None
 }
@@ -1337,7 +1478,24 @@ fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
     }
 }
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+#[cfg(target_os = "linux")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    // Best-effort mapping to the web vocabulary: `prefers-contrast`.
+    //
+    // We intentionally keep this runner-owned and optional; when unavailable we return `None`.
+    let value =
+        linux_portal_settings::read_u32(linux_portal_settings::APPEARANCE_NAMESPACE, "contrast")?;
+
+    Some(match value {
+        0 => ContrastPreference::NoPreference,
+        1 => ContrastPreference::More,
+        2 => ContrastPreference::Less,
+        3 => ContrastPreference::Custom,
+        _ => return None,
+    })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
     None
 }
@@ -1370,7 +1528,23 @@ fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "linux")]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    // Best-effort mapping to the web vocabulary: `forced-colors`.
+    //
+    // Linux doesn't have a single canonical source. We currently infer it from portal appearance
+    // contrast when available.
+    let Some(contrast) = read_desktop_contrast_preference() else {
+        return None;
+    };
+
+    Some(match contrast {
+        ContrastPreference::More | ContrastPreference::Custom => ForcedColorsMode::Active,
+        ContrastPreference::NoPreference | ContrastPreference::Less => ForcedColorsMode::None,
+    })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
 fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
     None
 }
