@@ -39,6 +39,8 @@ use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 mod chart;
 #[path = "web_vs_fret_layout/dashboard.rs"]
 mod dashboard;
+#[path = "web_vs_fret_layout/kbd.rs"]
+mod kbd;
 #[path = "web_vs_fret_layout/chart_scaffold.rs"]
 mod layout_chart_scaffold_fixtures;
 #[path = "web_vs_fret_layout/field.rs"]
@@ -26027,75 +26029,4 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
         fret_input.bounds
     );
     assert_close_px("field-responsive input dx", Px(fret_dx), web_dx, 12.0);
-}
-
-fn assert_kbd_first_height_matches_web(web_name: &str, text: &str) {
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
-
-    let web_kbd = find_first(&theme.root, &|n| n.tag == "kbd").expect("web kbd");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let label = format!("Golden:{web_name}:kbd");
-    let snap = run_fret_root(bounds, |cx| {
-        let kbd = fret_ui_shadcn::Kbd::new(text).into_element(cx);
-        vec![cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from(label.clone())),
-                ..Default::default()
-            },
-            move |_cx| vec![kbd],
-        )]
-    });
-
-    let kbd = find_semantics(&snap, SemanticsRole::Panel, Some(&label)).expect("fret kbd");
-
-    assert_close_px("kbd height", kbd.bounds.size.height, web_kbd.rect.h, 1.0);
-}
-
-#[test]
-fn web_vs_fret_layout_kbd_button_kbd_height_matches_web() {
-    assert_kbd_first_height_matches_web("kbd-button", "Esc");
-}
-
-#[test]
-fn web_vs_fret_layout_kbd_group_kbd_height_matches_web() {
-    assert_kbd_first_height_matches_web("kbd-group", "Esc");
-}
-
-#[test]
-fn web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web() {
-    let web = read_web_golden("kbd-tooltip");
-    let theme = web_theme(&web);
-    let web_button = web_find_by_tag_and_text(&theme.root, "button", "Save").expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        vec![
-            fret_ui_shadcn::Button::new("Save")
-                .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                .size(fret_ui_shadcn::ButtonSize::Sm)
-                .into_element(cx),
-        ]
-    });
-
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Save"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret button");
-
-    assert_close_px(
-        "kbd-tooltip button h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
 }
