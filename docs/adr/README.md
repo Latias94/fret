@@ -90,6 +90,10 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
   - Implement: docking host rendering in `ecosystem/fret-docking`, runtime substrate in `crates/fret-ui`.
 
+- **Effect vocabulary extensions (color matrix + alpha threshold)**
+  - Proposed: `docs/adr/1175-effect-steps-color-matrix-and-alpha-threshold-v1.md`
+  - Decide: minimal postprocessing steps needed for SVG-filter-class recipes without going full material graphs.
+
 - **Text input semantics for multiline + IME composition ranges**
   - Update: `docs/adr/0071-text-input-multiline-composition-contract.md` (Accepted)
   - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
