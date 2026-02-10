@@ -1,7 +1,7 @@
 # imui ↔ Dear ImGui Parity Audit (v1)
 
 Status: Draft (audit note; not an ADR)
-Last updated: 2026-02-09
+Last updated: 2026-02-10
 
 This document records a *behavior-focused* audit of Fret's immediate-mode ecosystem facade
 (`ecosystem/fret-ui-kit::imui` + `ecosystem/fret-imui`) against Dear ImGui (C++).
@@ -69,6 +69,13 @@ Legend:
     - `no_inputs=true`: click-through and skipped by focus traversal.
 - **Focus vs z-order split**: **Aligned**
   - Fret can take focus without z-order activation: `focus_on_click=true` with `activate_on_click=false`.
+- **Other window flags and platform viewports**: **Intentional divergence / not mirrored**
+  - Fret currently mirrors only a *small subset* of `ImGuiWindowFlags_*` via `FloatingWindowOptions`
+    (`movable`, `resizable`, `collapsible`, `closable`, `activate_on_click`, `focus_on_click`, plus input policy flags).
+  - ImGui window-level flags that affect decorations/appearance/scrolling (e.g. "no title bar", "no scrollbar",
+    "no background") are not modeled as immediate-mode flags today; Fret prefers theme + declarative chrome policy.
+  - ImGui multi-viewport / platform window promotion is out of scope for the in-window `imui` floating surface:
+    it is tracked under docking + runner workstreams (platform-owned).
 
 ### 1.1.2 Floating window content clipping / wrapping under fractional DPI (Windows)
 

@@ -1,7 +1,7 @@
 # imui Ecosystem Facade v3 - TODO Tracker
 
 Status: In progress (M0+ pending)
-Last updated: 2026-02-07
+Last updated: 2026-02-10
 
 This tracker covers:
 
@@ -155,6 +155,18 @@ Exit criteria:
   - Evidence (mechanism): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiSharedHoverDelayState`, `shared_hover_delay_on_hover_change`,
     `install_hover_query_hooks_for_pressable`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`no_shared_delay_disables_window_scoped_hover_delay_sharing`).
+
+- [ ] IMUIECO3-float-024 Audit the remaining `ImGuiWindowFlags_*` surface and record explicit non-goals for v3.
+  - Goal: keep the facade small, but make any divergences around decorations/scrolling/appearance explicit so ports
+    can compensate without guessing.
+  - Output: add a short "not mirrored" list (by flag family) to `docs/workstreams/imui-imgui-parity-audit-v1.md`
+    and link it from the v3 note.
+- [ ] IMUIECO3-resp-024 Decide whether to implement ImGui-style "active item blocks hover" semantics.
+  - Reference: `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`.
+  - Rationale: this can affect editor hand-feel when dragging (window move/resize, docking drags, slider drags)
+    and then hovering unrelated items.
+  - If adopted: implement a minimal "active item blocks hover unless opted out" policy at the facade level and add
+    at least one nextest + one diag repro gate.
 
 ---
 

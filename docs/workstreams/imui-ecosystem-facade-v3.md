@@ -1,7 +1,7 @@
 # imui Ecosystem Facade v3 (ImGui Parity + Ecosystem ABI + Perf Ceilings)
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-07
+Last updated: 2026-02-10
 
 This workstream starts after `imui` ecosystem facade v2 is locked and complete.
 
