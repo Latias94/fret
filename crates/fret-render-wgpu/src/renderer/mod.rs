@@ -73,6 +73,8 @@ pub struct Renderer {
     viewport_sampler: wgpu::Sampler,
 
     instance_buffers: Vec<wgpu::Buffer>,
+    quad_instance_bind_group_layout: wgpu::BindGroupLayout,
+    quad_instance_bind_groups: Vec<wgpu::BindGroup>,
     instance_buffer_index: usize,
     instance_capacity: usize,
 

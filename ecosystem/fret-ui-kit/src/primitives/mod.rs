@@ -31,6 +31,7 @@ pub mod avatar;
 pub mod checkbox;
 pub mod collapsible;
 pub mod collection;
+pub mod combobox;
 pub mod context_menu;
 pub mod controllable_state;
 pub mod dialog;

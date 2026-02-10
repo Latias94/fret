@@ -382,7 +382,6 @@ fn autocomplete_into_element<H: UiHost>(
     autocomplete: Autocomplete,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
         let runtime = autocomplete_runtime_models(cx);
 
         let open_now = cx
@@ -478,8 +477,11 @@ fn autocomplete_into_element<H: UiHost>(
             let _ = cx.app.models_mut().update(&runtime.active_index, |v| *v = None);
         }
 
-        let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme)));
-        let motion = drive_overlay_open_close_motion(cx, &theme, open_now, close_grace_frames);
+        let close_grace_frames = {
+            let theme = Theme::global(&*cx.app);
+            Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(theme)))
+        };
+        let motion = drive_overlay_open_close_motion(cx, open_now, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: open_now,
@@ -503,9 +505,14 @@ fn autocomplete_into_element<H: UiHost>(
 
         let now_frame = cx.frame_id.0;
         let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
-            let open_duration_ms = dropdown_menu_tokens::open_duration_ms(&theme);
-            let close_duration_ms = dropdown_menu_tokens::close_duration_ms(&theme);
-            let easing = dropdown_menu_tokens::easing(&theme);
+            let (open_duration_ms, close_duration_ms, easing) = {
+                let theme = Theme::global(&*cx.app);
+                (
+                    dropdown_menu_tokens::open_duration_ms(theme),
+                    dropdown_menu_tokens::close_duration_ms(theme),
+                    dropdown_menu_tokens::easing(theme),
+                )
+            };
             cx.with_state(AutocompleteChevronRuntime::default, |rt| {
                 if rt.target_open != open_now {
                     rt.target_open = open_now;
@@ -622,8 +629,13 @@ fn autocomplete_into_element<H: UiHost>(
 
             let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
 
-            let item_height =
-                autocomplete_tokens::menu_list_item_height(&theme, autocomplete.variant.as_text_field_variant());
+            let item_height = {
+                let theme = Theme::global(&*cx.app);
+                autocomplete_tokens::menu_list_item_height(
+                    theme,
+                    autocomplete.variant.as_text_field_variant(),
+                )
+            };
             let vertical_padding = Px(8.0);
             let desired_width = anchor.size.width;
             let desired_height = Px(
@@ -676,7 +688,6 @@ fn autocomplete_into_element<H: UiHost>(
                     move |cx| {
                         vec![autocomplete_listbox_panel(
                             cx,
-                            &theme,
                             variant,
                             labelled_by,
                             a11y_label.clone(),
@@ -894,7 +905,6 @@ fn install_input_key_handlers<H: UiHost>(
 
 fn autocomplete_listbox_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: AutocompleteVariant,
     labelled_by_element: Option<u64>,
     a11y_label: Option<Arc<str>>,
@@ -928,35 +938,49 @@ fn autocomplete_listbox_panel<H: UiHost>(
         ..Default::default()
     };
 
-    let menu_bg =
-        autocomplete_tokens::menu_container_background(theme, variant.as_text_field_variant());
-    let elevation =
-        autocomplete_tokens::menu_container_elevation(theme, variant.as_text_field_variant());
-    let shadow_color =
-        autocomplete_tokens::menu_container_shadow_color(theme, variant.as_text_field_variant());
-    let corner = autocomplete_tokens::menu_container_shape(theme, variant.as_text_field_variant());
-    let surface = material_surface_style(theme, menu_bg, elevation, Some(shadow_color), corner);
+    let (surface, corner, selected_bg, label_style, label_color, item_height) = {
+        let theme = Theme::global(&*cx.app);
+        let menu_bg =
+            autocomplete_tokens::menu_container_background(theme, variant.as_text_field_variant());
+        let elevation =
+            autocomplete_tokens::menu_container_elevation(theme, variant.as_text_field_variant());
+        let shadow_color = autocomplete_tokens::menu_container_shadow_color(
+            theme,
+            variant.as_text_field_variant(),
+        );
+        let corner =
+            autocomplete_tokens::menu_container_shape(theme, variant.as_text_field_variant());
+        let surface = material_surface_style(theme, menu_bg, elevation, Some(shadow_color), corner);
 
-    let selected_bg = autocomplete_tokens::menu_list_item_selected_container_color(
-        theme,
-        variant.as_text_field_variant(),
-    );
-    let label_style = autocomplete_tokens::menu_list_item_label_text_style(
-        theme,
-        variant.as_text_field_variant(),
-    )
-    .unwrap_or_else(|| {
-        theme
-            .text_style_by_key("md.sys.typescale.body-large")
-            .unwrap_or_default()
-    });
-    let label_color = autocomplete_tokens::menu_list_item_label_text_color(
-        theme,
-        variant.as_text_field_variant(),
-    );
+        let selected_bg = autocomplete_tokens::menu_list_item_selected_container_color(
+            theme,
+            variant.as_text_field_variant(),
+        );
+        let label_style = autocomplete_tokens::menu_list_item_label_text_style(
+            theme,
+            variant.as_text_field_variant(),
+        )
+        .unwrap_or_else(|| {
+            theme
+                .text_style_by_key("md.sys.typescale.body-large")
+                .unwrap_or_default()
+        });
+        let label_color = autocomplete_tokens::menu_list_item_label_text_color(
+            theme,
+            variant.as_text_field_variant(),
+        );
+        let item_height =
+            autocomplete_tokens::menu_list_item_height(theme, variant.as_text_field_variant());
 
-    let item_height =
-        autocomplete_tokens::menu_list_item_height(theme, variant.as_text_field_variant());
+        (
+            surface,
+            corner,
+            selected_bg,
+            label_style,
+            label_color,
+            item_height,
+        )
+    };
     let vertical_padding = Px(8.0);
 
     cx.semantics_with_id(sem, move |cx, listbox_id| {

@@ -1,3 +1,5 @@
+#![allow(clippy::arc_with_non_send_sync)]
+
 use fret_app::{
     ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
     LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
@@ -5,8 +7,8 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, SemanticsRole, TimerToken,
-    UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, SemanticsRole,
+    TimerToken, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -22,8 +24,9 @@ use fret_router::{
     SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
 };
 use fret_runtime::{
-    DefaultKeybinding, KeyChord, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
-    PlatformFilter, WindowCommandAvailabilityService, WindowCommandEnabledService,
+    DefaultKeybinding, ImageUpdateToken, KeyChord, MenuItemToggle, MenuItemToggleKind,
+    PlatformCapabilities, PlatformFilter, WindowCommandAvailabilityService,
+    WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -379,6 +382,14 @@ struct UiGalleryWindowState {
     avatar_demo_image: Model<Option<ImageId>>,
     avatar_demo_image_token: Option<ImageUploadToken>,
     avatar_demo_image_retry_count: u8,
+    image_fit_demo_wide_image: Model<Option<ImageId>>,
+    image_fit_demo_wide_token: Option<ImageUploadToken>,
+    image_fit_demo_tall_image: Model<Option<ImageId>>,
+    image_fit_demo_tall_token: Option<ImageUploadToken>,
+    image_fit_demo_streaming_image: Model<Option<ImageId>>,
+    image_fit_demo_streaming_token: Option<ImageUploadToken>,
+    image_fit_demo_streaming_frame: u64,
+    image_fit_demo_streaming_size: (u32, u32),
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -426,10 +437,67 @@ struct UiGalleryWindowState {
 #[derive(Default)]
 struct UiGalleryDriver;
 
+#[derive(Debug, Clone)]
+pub(crate) struct UiGalleryImageSourceDemoAssets {
+    pub wide_png: fret_ui_assets::ImageSource,
+    pub tall_png: fret_ui_assets::ImageSource,
+    pub square_png: fret_ui_assets::ImageSource,
+}
+
 impl UiGalleryDriver {
     const AVATAR_DEMO_IMAGE_WIDTH: u32 = 96;
     const AVATAR_DEMO_IMAGE_HEIGHT: u32 = 96;
     const AVATAR_DEMO_IMAGE_RETRY_MAX: u8 = 8;
+
+    const IMAGE_FIT_DEMO_WIDE_SIZE: (u32, u32) = (320, 180);
+    const IMAGE_FIT_DEMO_TALL_SIZE: (u32, u32) = (180, 320);
+    const IMAGE_FIT_DEMO_STREAMING_SIZE: (u32, u32) = (320, 200);
+
+    fn ensure_image_source_demo_assets_installed(app: &mut App) {
+        if app.global::<UiGalleryImageSourceDemoAssets>().is_some() {
+            return;
+        }
+
+        // Encode a few tiny demo images to PNG and load them through the ecosystem `ImageSource`
+        // path. This exercises the decode/load + `ImageAssetCache` integration without requiring
+        // external files.
+        let wide_rgba = Self::generate_fit_demo_image_rgba8(
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.0,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.1,
+            (120, 190, 255),
+        );
+        let tall_rgba = Self::generate_fit_demo_image_rgba8(
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.0,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.1,
+            (255, 160, 120),
+        );
+        let square_rgba = Self::generate_avatar_demo_image_rgba8(
+            Self::AVATAR_DEMO_IMAGE_WIDTH,
+            Self::AVATAR_DEMO_IMAGE_HEIGHT,
+        );
+
+        let wide_png = Self::encode_rgba8_png_bytes(
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.0,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.1,
+            &wide_rgba,
+        );
+        let tall_png = Self::encode_rgba8_png_bytes(
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.0,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.1,
+            &tall_rgba,
+        );
+        let square_png = Self::encode_rgba8_png_bytes(
+            Self::AVATAR_DEMO_IMAGE_WIDTH,
+            Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            &square_rgba,
+        );
+
+        app.set_global(UiGalleryImageSourceDemoAssets {
+            wide_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(wide_png)),
+            tall_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(tall_png)),
+            square_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(square_png)),
+        });
+    }
 
     fn enqueue_avatar_demo_image_register(
         app: &mut App,
@@ -450,21 +518,25 @@ impl UiGalleryDriver {
         });
     }
 
-    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
-        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
-        cmds.open = Some(CommandId::new(CMD_APP_OPEN));
-        cmds.save = Some(CommandId::new(CMD_APP_SAVE));
-        cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
-        cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-        cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
-        cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
-        cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
-        cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
-        cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
-        cmds.switch_locale = Some(CommandId::new(
-            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
-        ));
+    fn enqueue_image_fit_demo_image_register(
+        app: &mut App,
+        window: AppWindowId,
+        token: ImageUploadToken,
+        size: (u32, u32),
+        accent: (u8, u8, u8),
+    ) {
+        app.push_effect(Effect::ImageRegisterRgba8 {
+            window,
+            token,
+            width: size.0,
+            height: size.1,
+            bytes: Self::generate_fit_demo_image_rgba8(size.0, size.1, accent),
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
+        });
+    }
 
+    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
         let resolve_menu_title = |key: &'static str, fallback: &'static str| -> Arc<str> {
             app.global::<fret_runtime::fret_i18n::I18nService>()
                 .map(|i18n| {
@@ -477,12 +549,29 @@ impl UiGalleryDriver {
                 })
                 .unwrap_or_else(|| Arc::from(fallback))
         };
-        cmds.file_menu_title = Some(resolve_menu_title("workspace-menu-file", "File"));
-        cmds.edit_menu_title = Some(resolve_menu_title("workspace-menu-edit", "Edit"));
-        cmds.view_menu_title = Some(resolve_menu_title("workspace-menu-view", "View"));
-        cmds.window_menu_title = Some(resolve_menu_title("workspace-menu-window", "Window"));
 
-        if Platform::current() == Platform::Macos {
+        let platform = Platform::current();
+        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands {
+            open: Some(CommandId::new(CMD_APP_OPEN)),
+            save: Some(CommandId::new(CMD_APP_SAVE)),
+            undo: Some(CommandId::new(fret_app::core_commands::EDIT_UNDO)),
+            redo: Some(CommandId::new(fret_app::core_commands::EDIT_REDO)),
+            cut: Some(CommandId::new(fret_app::core_commands::EDIT_CUT)),
+            copy: Some(CommandId::new(fret_app::core_commands::EDIT_COPY)),
+            paste: Some(CommandId::new(fret_app::core_commands::EDIT_PASTE)),
+            select_all: Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL)),
+            command_palette: Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE)),
+            switch_locale: Some(CommandId::new(
+                fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
+            )),
+            file_menu_title: Some(resolve_menu_title("workspace-menu-file", "File")),
+            edit_menu_title: Some(resolve_menu_title("workspace-menu-edit", "Edit")),
+            view_menu_title: Some(resolve_menu_title("workspace-menu-view", "View")),
+            window_menu_title: Some(resolve_menu_title("workspace-menu-window", "Window")),
+            ..Default::default()
+        };
+
+        if platform == Platform::Macos {
             cmds.app_menu_title = Some(Arc::from("Fret"));
             cmds.include_services_menu = true;
             cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
@@ -578,60 +667,57 @@ impl UiGalleryDriver {
             .menus
             .iter_mut()
             .find(|m| m.role == Some(MenuRole::File) || m.title.as_ref() == "File")
-        {
-            if let Some(MenuItem::Submenu {
+            && let Some(MenuItem::Submenu {
                 title: _, items, ..
             }) = menu.items.iter_mut().find(
                 |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Recent"),
-            ) {
-                *items = if recent_items.is_empty() {
-                    vec![MenuItem::Label {
-                        title: Arc::from("No recent items"),
-                    }]
-                } else {
-                    recent_items
-                        .iter()
-                        .take(10)
-                        .enumerate()
-                        .map(|(index, _title)| MenuItem::Command {
-                            command: Self::recent_open_command(index),
-                            when: None,
-                            toggle: None,
-                        })
-                        .collect()
-                };
-            }
+            )
+        {
+            *items = if recent_items.is_empty() {
+                vec![MenuItem::Label {
+                    title: Arc::from("No recent items"),
+                }]
+            } else {
+                recent_items
+                    .iter()
+                    .take(10)
+                    .enumerate()
+                    .map(|(index, _title)| MenuItem::Command {
+                        command: Self::recent_open_command(index),
+                        when: None,
+                        toggle: None,
+                    })
+                    .collect()
+            };
         }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             let windows = Self::window_menu_items(app);
             let focused_window = Self::focused_window_menu_item(app);
-            if !windows.is_empty() {
-                if let Some(menu) = menu_bar
+            if !windows.is_empty()
+                && let Some(menu) = menu_bar
                     .menus
                     .iter_mut()
                     .find(|m| m.role == Some(MenuRole::Window) || m.title.as_ref() == "Window")
-                {
-                    if let Some(MenuItem::Submenu { title: _, items, .. }) =
-                        menu.items.iter_mut().find(|i| {
-                            matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows")
-                        })
-                    {
-                        *items = windows
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, window_id)| MenuItem::Command {
-                                command: Self::window_activate_command(index),
-                                when: None,
-                                toggle: Some(MenuItemToggle {
-                                    kind: MenuItemToggleKind::Radio,
-                                    checked: Some(window_id) == focused_window,
-                                }),
-                            })
-                            .collect();
-                    }
-                }
+                && let Some(MenuItem::Submenu {
+                    title: _, items, ..
+                }) = menu.items.iter_mut().find(
+                    |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows"),
+                )
+            {
+                *items = windows
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, window_id)| MenuItem::Command {
+                        command: Self::window_activate_command(index),
+                        when: None,
+                        toggle: Some(MenuItemToggle {
+                            kind: MenuItemToggleKind::Radio,
+                            checked: Some(window_id) == focused_window,
+                        }),
+                    })
+                    .collect();
             }
         }
 
@@ -765,7 +851,7 @@ impl UiGalleryDriver {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
 
-        let _ = app.with_global_mut(
+        app.with_global_mut(
             || UndoService::<ValueTx<f32>>::with_limit(256),
             |undo_svc, _app| {
                 undo_svc.set_active_document(window, doc.clone());
@@ -820,6 +906,61 @@ impl UiGalleryDriver {
             }
         }
 
+        out
+    }
+
+    fn generate_fit_demo_image_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> {
+        let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+        let w = (width.saturating_sub(1)).max(1) as f32;
+        let h = (height.saturating_sub(1)).max(1) as f32;
+
+        let cx = (width / 2) as i32;
+        let cy = (height / 2) as i32;
+
+        for y in 0..height {
+            for x in 0..width {
+                let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                let fx = x as f32 / w;
+                let fy = y as f32 / h;
+
+                let mut r = (20.0 + (accent.0 as f32) * (0.25 + 0.75 * fx)) as u8;
+                let mut g = (20.0 + (accent.1 as f32) * (0.25 + 0.75 * (1.0 - fy))) as u8;
+                let mut b =
+                    (20.0 + (accent.2 as f32) * (0.25 + 0.75 * (0.5 + 0.5 * (fx - fy)))) as u8;
+
+                let border = x < 2 || y < 2 || x + 2 >= width || y + 2 >= height;
+                if border {
+                    r = 245;
+                    g = 245;
+                    b = 245;
+                }
+
+                let dx = (x as i32 - cx).abs();
+                let dy = (y as i32 - cy).abs();
+                if dx <= 1 || dy <= 1 {
+                    r = 10;
+                    g = 10;
+                    b = 10;
+                }
+
+                out[idx] = r;
+                out[idx + 1] = g;
+                out[idx + 2] = b;
+                out[idx + 3] = 255;
+            }
+        }
+
+        out
+    }
+
+    fn encode_rgba8_png_bytes(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
+        use image::codecs::png::PngEncoder;
+        use image::{ColorType, ImageEncoder as _};
+
+        let mut out: Vec<u8> = Vec::new();
+        PngEncoder::new(&mut out)
+            .write_image(rgba, width, height, ColorType::Rgba8.into())
+            .expect("png encode must succeed for demo bytes");
         out
     }
 
@@ -1028,9 +1169,41 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("item-1")));
 
+        Self::ensure_image_source_demo_assets_installed(app);
+
         let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
         let avatar_demo_image_token = app.next_image_upload_token();
         Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
+
+        let image_fit_demo_wide_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_wide_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_wide_token,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE,
+            (120, 190, 255),
+        );
+
+        let image_fit_demo_tall_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_tall_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_tall_token,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE,
+            (255, 160, 120),
+        );
+
+        let image_fit_demo_streaming_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_streaming_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_streaming_token,
+            Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
+            (140, 230, 170),
+        );
 
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -1169,6 +1342,14 @@ impl UiGalleryDriver {
             avatar_demo_image,
             avatar_demo_image_token: Some(avatar_demo_image_token),
             avatar_demo_image_retry_count: 0,
+            image_fit_demo_wide_image,
+            image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
+            image_fit_demo_tall_image,
+            image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
+            image_fit_demo_streaming_image,
+            image_fit_demo_streaming_token: Some(image_fit_demo_streaming_token),
+            image_fit_demo_streaming_frame: 0,
+            image_fit_demo_streaming_size: Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
             progress,
             checkbox,
             switch,
@@ -1801,7 +1982,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before + 10.0).min(100.0);
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -1819,7 +2000,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before - 10.0).max(0.0);
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -1837,7 +2018,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = 35.0;
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -2134,6 +2315,9 @@ impl UiGalleryDriver {
         let tabs_value = state.tabs_value.clone();
         let accordion_value = state.accordion_value.clone();
         let avatar_demo_image = state.avatar_demo_image.clone();
+        let image_fit_demo_wide_image = state.image_fit_demo_wide_image.clone();
+        let image_fit_demo_tall_image = state.image_fit_demo_tall_image.clone();
+        let image_fit_demo_streaming_image = state.image_fit_demo_streaming_image.clone();
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
@@ -2533,6 +2717,9 @@ impl UiGalleryDriver {
                                             tabs_value.clone(),
                                             accordion_value.clone(),
                                             avatar_demo_image.clone(),
+                                            image_fit_demo_wide_image.clone(),
+                                            image_fit_demo_tall_image.clone(),
+                                            image_fit_demo_streaming_image.clone(),
                                             progress.clone(),
                                             checkbox.clone(),
                                             switch.clone(),
@@ -2634,6 +2821,9 @@ impl UiGalleryDriver {
                                         tabs_value.clone(),
                                         accordion_value.clone(),
                                         avatar_demo_image.clone(),
+                                        image_fit_demo_wide_image.clone(),
+                                        image_fit_demo_tall_image.clone(),
+                                        image_fit_demo_streaming_image.clone(),
                                         progress.clone(),
                                         checkbox.clone(),
                                         switch.clone(),
@@ -3099,17 +3289,26 @@ impl UiGalleryDriver {
                     if show_debug_hud {
                         let debug_hud_lines = debug_hud_lines.clone();
                         content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
-                            let mut hud_layout = fret_ui::element::LayoutStyle::default();
-                            hud_layout.position = fret_ui::element::PositionStyle::Absolute;
-                            hud_layout.inset.top = Some(Px(8.0));
-                            hud_layout.inset.right = Some(Px(8.0));
-                            hud_layout.size.width = fret_ui::element::Length::Px(Px(520.0));
-                            hud_layout.size.height = fret_ui::element::Length::Px(Px(220.0));
+                            let hud_layout = fret_ui::element::LayoutStyle {
+                                position: fret_ui::element::PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    top: Some(Px(8.0)),
+                                    right: Some(Px(8.0)),
+                                    ..Default::default()
+                                },
+                                size: fret_ui::element::SizeStyle {
+                                    width: fret_ui::element::Length::Px(Px(520.0)),
+                                    height: fret_ui::element::Length::Px(Px(220.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
 
-                            let mut gate = fret_ui::element::InteractivityGateProps::default();
-                            gate.layout = hud_layout;
-                            gate.present = true;
-                            gate.interactive = false;
+                            let gate = fret_ui::element::InteractivityGateProps {
+                                layout: hud_layout,
+                                present: true,
+                                interactive: false,
+                            };
 
                             cx.interactivity_gate_props(gate, |cx| {
                                 let mut container_props = decl_style::container_props(
@@ -3472,9 +3671,36 @@ pub fn build_app() -> App {
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
                             let stats = handle.cache_stats();
+                            let paint_perf = handle.paint_perf_frame().map(|frame| {
+                                serde_json::json!({
+                                    "schema_version": 1,
+                                    "frame_seq": frame.frame_seq,
+                                    "visible_start": frame.visible_start,
+                                    "visible_end": frame.visible_end,
+                                    "visible_rows": frame.visible_rows,
+                                    "rows_painted": frame.rows_painted,
+                                    "rows_drew_rich": frame.rows_drew_rich,
+                                    "quads_background": frame.quads_background,
+                                    "quads_selection": frame.quads_selection,
+                                    "quads_caret": frame.quads_caret,
+                                    "us_total": frame.us_total,
+                                    "us_row_text": frame.us_row_text,
+                                    "us_baseline_measure": frame.us_baseline_measure,
+                                    "us_syntax_spans": frame.us_syntax_spans,
+                                    "us_rich_materialize": frame.us_rich_materialize,
+                                    "us_text_draw": frame.us_text_draw,
+                                    "us_selection_rects": frame.us_selection_rects,
+                                    "us_caret_x": frame.us_caret_x,
+                                    "us_caret_stops": frame.us_caret_stops,
+                                    "us_caret_rect": frame.us_caret_rect,
+                                })
+                            });
                             let preedit_active = handle.preedit_active();
+                            let allow_decorations_under_inline_preedit =
+                                handle.allow_decorations_under_inline_preedit();
+                            let compose_inline_preedit = handle.compose_inline_preedit();
                             let interaction = handle.interaction();
-                            let buffer_revision = handle.buffer_revision().0 as u64;
+                            let buffer_revision = handle.buffer_revision().0;
                             let fold_placeholder_present = handle
                                 .debug_decorated_line_text(0)
                                 .is_some_and(|t| t.contains('…'));
@@ -3485,6 +3711,8 @@ pub fn build_app() -> App {
                                 "schema_version": 1,
                                 "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                                 "preedit_active": preedit_active,
+                                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                                "compose_inline_preedit": compose_inline_preedit,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3493,7 +3721,7 @@ pub fn build_app() -> App {
                                 },
                                 "buffer_revision": buffer_revision,
                                 "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
-                                "inlays": { "enabled": inlays, "line0_present": inlay_present },
+                                "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                                 "cache_stats": {
@@ -3502,6 +3730,11 @@ pub fn build_app() -> App {
                                     "row_text_misses": stats.row_text_misses,
                                     "row_text_evictions": stats.row_text_evictions,
                                     "row_text_resets": stats.row_text_resets,
+                                    "row_rich_get_calls": stats.row_rich_get_calls(),
+                                    "row_rich_hits": stats.row_rich_hits(),
+                                    "row_rich_misses": stats.row_rich_misses(),
+                                    "row_rich_evictions": stats.row_rich_evictions(),
+                                    "row_rich_resets": stats.row_rich_resets(),
                                     "geom_pointer_hit_test_fallbacks": stats.geom_pointer_hit_test_fallbacks,
                                     "geom_caret_rect_fallbacks": stats.geom_caret_rect_fallbacks,
                                     "geom_vertical_move_fallbacks": stats.geom_vertical_move_fallbacks,
@@ -3511,6 +3744,7 @@ pub fn build_app() -> App {
                                     "syntax_evictions": stats.syntax_evictions,
                                     "syntax_resets": stats.syntax_resets,
                                 },
+                                "paint_perf": paint_perf,
                             })
                         })
                         ;
@@ -3523,10 +3757,32 @@ pub fn build_app() -> App {
                             let selection = handle.selection();
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
+                            let preedit_active = handle.preedit_active();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let fold_fixture_span_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .and_then(|line| {
+                                    let start = line.find("Editor").unwrap_or(2).min(line.len());
+                                    let end = line.len();
+                                    (start < end).then_some(serde_json::json!({
+                                        "start": start as u64,
+                                        "end": end as u64,
+                                    }))
+                                });
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
+                            let inlay_fixture_byte_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .map(|line| 2usize.min(line.len()) as u64)
+                                .unwrap_or(0);
                             serde_json::json!({
                                 "schema_version": 1,
+                                "preedit_active": preedit_active,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3534,6 +3790,16 @@ pub fn build_app() -> App {
                                     "editable": interaction.editable,
                                 },
                                 "buffer_revision": buffer_revision,
+                                "folds": {
+                                    "enabled": folds,
+                                    "line0_placeholder_present": fold_placeholder_present,
+                                    "fixture_span_line0": fold_fixture_span_line0,
+                                },
+                                "inlays": {
+                                    "enabled": inlays,
+                                    "line0_present": inlay_present,
+                                    "fixture_byte_line0": inlay_fixture_byte_line0,
+                                },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                             })
@@ -3624,7 +3890,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    UiGalleryDriver::default()
+    UiGalleryDriver
 }
 
 #[cfg(test)]
@@ -3698,65 +3964,65 @@ impl WinitAppDriver for UiGalleryDriver {
                 .app
                 .global::<fret_app::ConfigFilesWatcherStatus>()
                 .map(|svc| (svc.seq(), svc.last_tick().cloned()))
+            && seq != 0
+            && context.state.last_config_files_status_seq != seq
         {
-            if seq != 0 && context.state.last_config_files_status_seq != seq {
-                context.state.last_config_files_status_seq = seq;
+            context.state.last_config_files_status_seq = seq;
 
-                if let Some(tick) = tick {
-                    let has_error = tick.settings_error.is_some()
-                        || tick.keymap_error.is_some()
-                        || tick.menu_bar_error.is_some()
-                        || tick.actionable_keymap_conflicts > 0;
+            if let Some(tick) = tick {
+                let has_error = tick.settings_error.is_some()
+                    || tick.keymap_error.is_some()
+                    || tick.menu_bar_error.is_some()
+                    || tick.actionable_keymap_conflicts > 0;
 
-                    let title = if has_error {
-                        "Config reload failed"
-                    } else {
-                        "Config reloaded"
-                    };
+                let title = if has_error {
+                    "Config reload failed"
+                } else {
+                    "Config reloaded"
+                };
 
-                    let mut details: Vec<String> = Vec::new();
-                    if tick.reloaded_settings {
-                        details.push("settings.json".to_string());
-                    }
-                    if tick.reloaded_keymap {
-                        details.push("keymap.json".to_string());
-                    }
-                    if tick.reloaded_menu_bar {
-                        details.push("menubar.json".to_string());
-                    }
-                    if let Some(err) = tick.settings_error.as_deref() {
-                        details.push(format!("settings: {err}"));
-                    }
-                    if let Some(err) = tick.keymap_error.as_deref() {
-                        details.push(format!("keymap: {err}"));
-                    }
-                    if let Some(err) = tick.menu_bar_error.as_deref() {
-                        details.push(format!("menubar: {err}"));
-                    }
-                    if tick.actionable_keymap_conflicts > 0 {
-                        details.push(format!(
-                            "keymap conflicts: {}",
-                            tick.actionable_keymap_conflicts
-                        ));
-                    }
+                let mut details: Vec<String> = Vec::new();
+                if tick.reloaded_settings {
+                    details.push("settings.json".to_string());
+                }
+                if tick.reloaded_keymap {
+                    details.push("keymap.json".to_string());
+                }
+                if tick.reloaded_menu_bar {
+                    details.push("menubar.json".to_string());
+                }
+                if let Some(err) = tick.settings_error.as_deref() {
+                    details.push(format!("settings: {err}"));
+                }
+                if let Some(err) = tick.keymap_error.as_deref() {
+                    details.push(format!("keymap: {err}"));
+                }
+                if let Some(err) = tick.menu_bar_error.as_deref() {
+                    details.push(format!("menubar: {err}"));
+                }
+                if tick.actionable_keymap_conflicts > 0 {
+                    details.push(format!(
+                        "keymap conflicts: {}",
+                        tick.actionable_keymap_conflicts
+                    ));
+                }
 
-                    let description = if details.is_empty() {
-                        None
-                    } else {
-                        Some(details.join(" | "))
-                    };
+                let description = if details.is_empty() {
+                    None
+                } else {
+                    Some(details.join(" | "))
+                };
 
-                    let sonner = shadcn::Sonner::global(context.app);
-                    let mut host = UiActionHostAdapter { app: context.app };
-                    let opts = shadcn::ToastMessageOptions::new()
-                        .description(description.unwrap_or_else(|| "OK".to_string()))
-                        .duration(Duration::from_secs(6));
+                let sonner = shadcn::Sonner::global(context.app);
+                let mut host = UiActionHostAdapter { app: context.app };
+                let opts = shadcn::ToastMessageOptions::new()
+                    .description(description.unwrap_or_else(|| "OK".to_string()))
+                    .duration(Duration::from_secs(6));
 
-                    if has_error {
-                        sonner.toast_error_message(&mut host, context.window, title, opts);
-                    } else {
-                        sonner.toast_success_message(&mut host, context.window, title, opts);
-                    }
+                if has_error {
+                    sonner.toast_error_message(&mut host, context.window, title, opts);
+                } else {
+                    sonner.toast_success_message(&mut host, context.window, title, opts);
                 }
             }
         }
@@ -3796,7 +4062,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         if command.as_str() == fret_app::core_commands::EDIT_UNDO {
             let mut did_apply = false;
-            let _ = app.with_global_mut(
+            app.with_global_mut(
                 || UndoService::<ValueTx<f32>>::with_limit(256),
                 |undo_svc, app| {
                     undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -3822,7 +4088,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         if command.as_str() == fret_app::core_commands::EDIT_REDO {
             let mut did_apply = false;
-            let _ = app.with_global_mut(
+            app.with_global_mut(
                 || UndoService::<ValueTx<f32>>::with_limit(256),
                 |undo_svc, app| {
                     undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -4038,8 +4304,8 @@ impl WinitAppDriver for UiGalleryDriver {
                     let result =
                         Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
                             let paths = LayeredConfigPaths::for_project_root(".");
-                            let (settings, _report) = load_layered_settings(&paths)
-                                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                            let (settings, _report) =
+                                load_layered_settings(&paths).map_err(std::io::Error::other)?;
                             fret_app::settings::apply_settings_globals(app, &settings);
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
@@ -4327,6 +4593,50 @@ impl WinitAppDriver for UiGalleryDriver {
                     let _ = app
                         .models_mut()
                         .update(&state.avatar_demo_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(
+                            *image,
+                            (
+                                Self::AVATAR_DEMO_IMAGE_WIDTH,
+                                Self::AVATAR_DEMO_IMAGE_HEIGHT,
+                            ),
+                        );
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_wide_token == Some(*token) {
+                    state.image_fit_demo_wide_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_wide_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_WIDE_SIZE);
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_tall_token == Some(*token) {
+                    state.image_fit_demo_tall_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_tall_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_TALL_SIZE);
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_streaming_token == Some(*token) {
+                    state.image_fit_demo_streaming_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_streaming_image, |v| {
+                            *v = Some(*image);
+                        });
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_STREAMING_SIZE);
+                    });
                     app.request_redraw(window);
                 }
             }
@@ -4345,6 +4655,25 @@ impl WinitAppDriver for UiGalleryDriver {
                         tracing::error!(message, "ui-gallery avatar demo image register failed");
                         app.request_redraw(window);
                     }
+                }
+
+                if state.image_fit_demo_wide_token == Some(*token) {
+                    state.image_fit_demo_wide_token = None;
+                    tracing::error!(message, "ui-gallery image fit wide image register failed");
+                    app.request_redraw(window);
+                }
+                if state.image_fit_demo_tall_token == Some(*token) {
+                    state.image_fit_demo_tall_token = None;
+                    tracing::error!(message, "ui-gallery image fit tall image register failed");
+                    app.request_redraw(window);
+                }
+                if state.image_fit_demo_streaming_token == Some(*token) {
+                    state.image_fit_demo_streaming_token = None;
+                    tracing::error!(
+                        message,
+                        "ui-gallery image fit streaming image register failed"
+                    );
+                    app.request_redraw(window);
                 }
             }
             Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {
@@ -4434,7 +4763,6 @@ impl WinitAppDriver for UiGalleryDriver {
 
         scene.clear();
 
-        #[cfg(not(target_arch = "wasm32"))]
         if app
             .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
         {
@@ -4464,10 +4792,7 @@ impl WinitAppDriver for UiGalleryDriver {
                     request.filename_tag.as_ref(),
                 )
             } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "missing UiTree root",
-                ))
+                Err(std::io::Error::other("missing UiTree root"))
             };
 
             let sonner = shadcn::Sonner::global(app);
@@ -4499,86 +4824,125 @@ impl WinitAppDriver for UiGalleryDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        if app
+            .models()
+            .get_cloned(&state.selected_page)
+            .is_some_and(|page| page.as_ref() == PAGE_IMAGE_OBJECT_FIT)
+            && let Some(image) = app
+                .models()
+                .get_cloned(&state.image_fit_demo_streaming_image)
+                .flatten()
         {
-            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
-            // VirtualList) have their realized item subtrees available for hit-testing.
-            let semantics_snapshot = state.ui.semantics_snapshot();
-            let drive = app.with_global_mut_untracked(
-                UiDiagnosticsService::default,
-                |svc: &mut UiDiagnosticsService, app| {
-                    let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                    svc.drive_script_for_window(
-                        &*app,
-                        window,
-                        bounds,
-                        scale_factor,
-                        semantics_snapshot,
-                        element_runtime,
-                    )
-                },
-            );
+            let (width, height) = state.image_fit_demo_streaming_size;
 
-            for effect in drive.effects {
-                app.push_effect(effect);
+            let bar_w = 24u32;
+            let max_x = width.saturating_sub(bar_w).max(1);
+            let bar_x = (state.image_fit_demo_streaming_frame as u32) % max_x;
+
+            let mut bytes = vec![0u8; (bar_w as usize) * (height as usize) * 4];
+            for px in bytes.chunks_exact_mut(4) {
+                px[0] = 240;
+                px[1] = 90;
+                px[2] = 80;
+                px[3] = 255;
             }
 
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
+            app.push_effect(Effect::ImageUpdateRgba8 {
+                window: Some(window),
+                token: ImageUpdateToken(state.image_fit_demo_streaming_frame),
+                image,
+                stream_generation: 0,
+                width,
+                height,
+                update_rect_px: Some(RectPx::new(bar_x, 0, bar_w, height)),
+                bytes_per_row: bar_w * 4,
+                bytes,
+                color_info: ImageColorInfo::srgb_rgba(),
+                alpha_mode: AlphaMode::Opaque,
+            });
 
-            let mut injected_any = false;
-            for event in drive.events {
-                injected_any = true;
-                state.ui.dispatch_event(app, services, &event);
-            }
+            state.image_fit_demo_streaming_frame =
+                state.image_fit_demo_streaming_frame.saturating_add(1);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
 
-            if injected_any {
-                // Script-driven events bypass the winit event loop, so we must apply any generated
-                // command effects (e.g. Tab => focus traversal) before we record snapshots.
-                //
-                // Keep non-command effects queued for the runner to handle after `render` returns.
-                let mut deferred_effects: Vec<Effect> = Vec::new();
-                loop {
-                    let effects = app.flush_effects();
-                    if effects.is_empty() {
-                        break;
-                    }
+        // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
+        // VirtualList) have their realized item subtrees available for hit-testing.
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.drive_script_for_window(
+                    &*app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            },
+        );
 
-                    let mut applied_any_command = false;
-                    for effect in effects {
-                        match effect {
-                            Effect::Command { window: w, command } => {
-                                if w.is_none() || w == Some(window) {
-                                    self.handle_command(
-                                        WinitCommandContext {
-                                            app,
-                                            services,
-                                            window,
-                                            state,
-                                        },
-                                        command,
-                                    );
-                                    applied_any_command = true;
-                                } else {
-                                    deferred_effects.push(Effect::Command { window: w, command });
-                                }
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            // Script-driven events bypass the winit event loop, so we must apply any generated
+            // command effects (e.g. Tab => focus traversal) before we record snapshots.
+            //
+            // Keep non-command effects queued for the runner to handle after `render` returns.
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                self.handle_command(
+                                    WinitCommandContext {
+                                        app,
+                                        services,
+                                        window,
+                                        state,
+                                    },
+                                    command,
+                                );
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
                             }
-                            other => deferred_effects.push(other),
                         }
+                        other => deferred_effects.push(other),
                     }
+                }
 
-                    if !applied_any_command {
-                        break;
-                    }
+                if !applied_any_command {
+                    break;
                 }
-                for effect in deferred_effects {
-                    app.push_effect(effect);
-                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
             }
         }
 

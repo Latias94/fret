@@ -62,6 +62,24 @@ Scale factor note:
 - The code editor becomes “just another consumer” of the same text contract, with more sophisticated caching.
 - `fret-core` stays wgpu-free; all GPU specifics live in `fret-render`.
 
+## Implementation Notes (2026-02)
+
+This ADR defines the boundary. The current implementation intentionally makes a few pragmatic choices that matter for
+perf workstreams (non-normative):
+
+- `TextSystem::release(TextBlobId)` eagerly removes the blob from `blob_cache` and frees it when the refcount reaches
+  zero. This keeps memory predictable, but it also means that “width jitter” (wrap width changes back-and-forth) can
+  turn into repeated `prepare()` work unless the UI layer holds onto multiple widths.
+- The UI layer has an interactive-resize concept (`UiTree::interactive_resize_active`) that allows guarded
+  “live-resize” policies:
+  - wrap-width bucketing during resize: `UiTree::maybe_bucket_text_wrap_width` (knobs:
+    `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX`, `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`),
+  - optional per-widget multi-width prepared blob caching for wrapped text during resize (knob:
+    `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES`, default off).
+
+For the current “Zed smoothness” effort, the workstream log is the canonical evidence trail for these experiments:
+`docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+
 ## Notes / Future Work
 
 - Implementation direction reference (GPUI-inspired pipeline and atlas strategy):

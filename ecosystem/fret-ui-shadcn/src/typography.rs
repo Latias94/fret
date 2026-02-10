@@ -72,83 +72,99 @@ fn container_props(
 }
 
 pub fn h1<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = heading_style(&theme, 40.0, FontWeight::EXTRA_BOLD);
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        heading_style(theme, 40.0, FontWeight::EXTRA_BOLD)
+    };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn h2<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = heading_style(&theme, 32.0, FontWeight::BOLD);
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        heading_style(theme, 32.0, FontWeight::BOLD)
+    };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn h3<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = heading_style(&theme, 24.0, FontWeight::BOLD);
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        heading_style(theme, 24.0, FontWeight::BOLD)
+    };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn h4<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = heading_style(&theme, 20.0, FontWeight::SEMIBOLD);
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        heading_style(theme, 20.0, FontWeight::SEMIBOLD)
+    };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn p<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    cx.text_props(text_props(
-        text.into(),
-        Some(base_text_style(&theme)),
-        None,
-        TextWrap::Word,
-    ))
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        base_text_style(theme)
+    };
+    cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn lead<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = TextStyle {
-        size: Px(18.0),
-        ..base_text_style(&theme)
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = TextStyle {
+            size: Px(18.0),
+            ..base_text_style(theme)
+        };
+        (style, muted_color(theme))
     };
     cx.text_props(text_props(
         text.into(),
         Some(style),
-        Some(muted_color(&theme)),
+        Some(color),
         TextWrap::Word,
     ))
 }
 
 pub fn large<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = TextStyle {
-        size: Px(18.0),
-        weight: FontWeight::SEMIBOLD,
-        ..base_text_style(&theme)
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        TextStyle {
+            size: Px(18.0),
+            weight: FontWeight::SEMIBOLD,
+            ..base_text_style(theme)
+        }
     };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn small<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = TextStyle {
-        size: Px(12.0),
-        weight: FontWeight::MEDIUM,
-        ..base_text_style(&theme)
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        TextStyle {
+            size: Px(12.0),
+            weight: FontWeight::MEDIUM,
+            ..base_text_style(theme)
+        }
     };
     cx.text_props(text_props(text.into(), Some(style), None, TextWrap::Word))
 }
 
 pub fn muted<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let style = TextStyle {
-        size: Px(12.0),
-        ..base_text_style(&theme)
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = TextStyle {
+            size: Px(12.0),
+            ..base_text_style(theme)
+        };
+        (style, muted_color(theme))
     };
     cx.text_props(text_props(
         text.into(),
         Some(style),
-        Some(muted_color(&theme)),
+        Some(color),
         TextWrap::Word,
     ))
 }
@@ -157,19 +173,23 @@ pub fn inline_code<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let chrome = ChromeRefinement::default()
-        .bg(ColorRef::Color(theme.color_required("muted")))
-        .rounded(Radius::Sm)
-        .px(Space::N2)
-        .py(Space::N1);
-    let layout = LayoutRefinement::default();
-    let props = container_props(&theme, chrome, layout);
+    let (props, base_style) = {
+        let theme = Theme::global(&*cx.app);
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(theme.color_required("muted")))
+            .rounded(Radius::Sm)
+            .px(Space::N2)
+            .py(Space::N1);
+        let layout = LayoutRefinement::default();
+        let props = container_props(theme, chrome, layout);
+        let base_style = base_text_style(theme);
+        (props, base_style)
+    };
     cx.container(props, move |cx| {
         let style = TextStyle {
             size: Px(12.0),
             weight: FontWeight::MEDIUM,
-            ..base_text_style(&theme)
+            ..base_style.clone()
         };
         [cx.text_props(text_props(text.into(), Some(style), None, TextWrap::None))]
     })
@@ -179,9 +199,15 @@ pub fn blockquote<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let mut layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-    layout.size.min_width = Some(Px(0.0));
+    let (layout, border_color, muted, base_style) = {
+        let theme = Theme::global(&*cx.app);
+        let mut layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+        layout.size.min_width = Some(Px(0.0));
+        let border_color = theme.color_required("border");
+        let muted = muted_color(theme);
+        let base_style = base_text_style(theme);
+        (layout, border_color, muted, base_style)
+    };
     let props = ContainerProps {
         layout,
         padding: Edges {
@@ -196,7 +222,7 @@ pub fn blockquote<H: UiHost>(
             left: Px(2.0),
             ..Edges::all(Px(0.0))
         },
-        border_color: Some(theme.color_required("border")),
+        border_color: Some(border_color),
         corner_radii: Corners::all(Px(0.0)),
         ..Default::default()
     };
@@ -205,12 +231,12 @@ pub fn blockquote<H: UiHost>(
             size: Px(14.0),
             weight: FontWeight::MEDIUM,
             slant: TextSlant::Italic,
-            ..base_text_style(&theme)
+            ..base_style.clone()
         };
         [cx.text_props(text_props(
             text.into(),
             Some(style),
-            Some(muted_color(&theme)),
+            Some(muted),
             TextWrap::Word,
         ))]
     })
@@ -220,8 +246,10 @@ pub fn list<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: impl IntoIterator<Item = Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let item_style = base_text_style(&theme);
+    let item_style = {
+        let theme = Theme::global(&*cx.app);
+        base_text_style(theme)
+    };
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     cx.flex(

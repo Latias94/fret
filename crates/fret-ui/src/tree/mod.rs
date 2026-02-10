@@ -1739,7 +1739,7 @@ impl LayoutNodeProfileState {
             node,
             pass_kind,
             bounds,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1800,7 +1800,7 @@ struct LayoutNodeProfileStackEntry {
     node: NodeId,
     pass_kind: crate::layout_pass::LayoutPassKind,
     bounds: Rect,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -1871,7 +1871,7 @@ impl MeasureNodeProfileState {
         self.stack.push(MeasureNodeProfileStackEntry {
             node,
             constraints,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1928,7 +1928,7 @@ impl MeasureNodeProfileState {
 struct MeasureNodeProfileStackEntry {
     node: NodeId,
     constraints: crate::layout_constraints::LayoutConstraints,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -2552,6 +2552,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_hotspot(
         &mut self,
         node: NodeId,
@@ -2587,6 +2588,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_reasons(
         &mut self,
         blob_missing: bool,
@@ -2992,15 +2994,27 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
-        self.debug_layout_engine_solves
-            .push(UiDebugLayoutEngineSolve {
-                root,
-                solve_time,
-                measure_calls,
-                measure_cache_hits,
-                measure_time,
-                top_measures,
-            });
+        // Keep bundles bounded: barrier layouts may solve many child roots in a single frame.
+        const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
+        let record = UiDebugLayoutEngineSolve {
+            root,
+            solve_time,
+            measure_calls,
+            measure_cache_hits,
+            measure_time,
+            top_measures,
+        };
+
+        let idx = self
+            .debug_layout_engine_solves
+            .iter()
+            .position(|h| h.solve_time < record.solve_time)
+            .unwrap_or(self.debug_layout_engine_solves.len());
+        self.debug_layout_engine_solves.insert(idx, record);
+        if self.debug_layout_engine_solves.len() > MAX_LAYOUT_ENGINE_SOLVES {
+            self.debug_layout_engine_solves
+                .truncate(MAX_LAYOUT_ENGINE_SOLVES);
+        }
     }
 
     pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
@@ -3299,11 +3313,15 @@ impl<H: UiHost> UiTree<H> {
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            n.view_cache = ViewCacheFlags {
+            let next = ViewCacheFlags {
                 enabled,
                 contained_layout,
                 layout_definite,
             };
+            if n.view_cache == next {
+                return;
+            }
+            n.view_cache = next;
         }
     }
 
@@ -3518,9 +3536,7 @@ impl<H: UiHost> UiTree<H> {
         wrap: fret_core::TextWrap,
         max_width: Option<fret_core::Px>,
     ) -> Option<fret_core::Px> {
-        let Some(max_width) = max_width else {
-            return None;
-        };
+        let max_width = max_width?;
         Some(self.maybe_bucket_text_wrap_width(wrap, max_width))
     }
 
@@ -3541,10 +3557,15 @@ impl<H: UiHost> UiTree<H> {
             // where we want accurate layout and can accept the one-off cost.
             //
             // The env knob still takes precedence; this is only a default for the common
-            // "drag jitter" class.
+            // "drag jitter" class. Treat small-step as symmetric (back-and-forth resizes should
+            // keep the same policy/caches enabled).
             let small_step = self
                 .interactive_resize_last_bounds_delta
-                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0);
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                });
             if !small_step {
                 return width;
             }
@@ -3567,6 +3588,17 @@ impl<H: UiHost> UiTree<H> {
             }
             fret_core::TextWrap::None => width,
         }
+    }
+
+    pub(crate) fn interactive_resize_is_small_step(&self) -> bool {
+        self.interactive_resize_active()
+            && self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                })
     }
 
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
@@ -7534,6 +7566,21 @@ fn text_wrap_width_small_step_bucket_px() -> u8 {
             .and_then(|v| v.parse::<u8>().ok())
             .unwrap_or(32)
             .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_max_dw_px() -> u8 {
+    static MAX_DW: OnceLock<u8> = OnceLock::new();
+    *MAX_DW.get_or_init(|| {
+        // Default: 64px. This defines what “small-step” means for the default interactive-resize
+        // wrap-width bucketing. Increasing this makes the bucketing kick in at higher live-resize
+        // speeds, at the cost of less accurate wrapping while the user is dragging.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(64)
+            .max(1)
+            .min(255)
     })
 }
 

@@ -1,0 +1,56 @@
+# Bottom-Up Fearless Refactor v1 — Crate Audits
+
+Status: Draft (tracking index; per-crate notes should stay evidence-backed)
+
+This is the progress index for the “code-quality audit” pass described in:
+
+- `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+
+Template for per-crate notes:
+
+- `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+
+## Tracking legend
+
+- `Not started`: no audit note yet
+- `L0`: quick scan complete
+- `L1`: targeted deep dive complete
+- `L2`: closure audit complete
+
+## `crates/` (kernel + backends + renderer)
+
+| crate | status | note |
+| --- | --- | --- |
+| `fret-core` | L1 | `docs/workstreams/crate-audits/fret-core.l1.md` |
+| `fret-runtime` | L1 | `docs/workstreams/crate-audits/fret-runtime.l1.md` |
+| `fret-app` | L1 | `docs/workstreams/crate-audits/fret-app.l1.md` |
+| `fret-ui` | L1 | `docs/workstreams/crate-audits/fret-ui.l1.md` |
+| `fret-render-core` | L0 | `docs/workstreams/crate-audits/fret-render-core.l0.md` |
+| `fret-render-wgpu` | L0 | `docs/workstreams/crate-audits/fret-render-wgpu.l0.md` |
+| `fret-render` | L0 | `docs/workstreams/crate-audits/fret-render.l0.md` |
+| `fret-platform` | L0 | `docs/workstreams/crate-audits/fret-platform.l0.md` |
+| `fret-platform-native` | L0 | `docs/workstreams/crate-audits/fret-platform-native.l0.md` |
+| `fret-platform-web` | L0 | `docs/workstreams/crate-audits/fret-platform-web.l0.md` |
+| `fret-runner-winit` | L0 | `docs/workstreams/crate-audits/fret-runner-winit.l0.md` |
+| `fret-runner-web` | L0 | `docs/workstreams/crate-audits/fret-runner-web.l0.md` |
+| `fret-launch` | L0 | `docs/workstreams/crate-audits/fret-launch.l0.md` |
+| `fret` | L0 | `docs/workstreams/crate-audits/fret.l0.md` |
+
+## `ecosystem/` (policy + components + tools)
+
+We keep this list selective: ecosystem is larger and more experimental, so the audits focus on
+crates that are likely to produce long-lived contracts or that sit on major interaction seams.
+
+| crate | status | note |
+| --- | --- | --- |
+| `fret-ui-headless` | L0 | `docs/workstreams/crate-audits/fret-ui-headless.l0.md` |
+| `fret-ui-kit` | L0 | `docs/workstreams/crate-audits/fret-ui-kit.l0.md` |
+| `fret-ui-shadcn` | L0 | `docs/workstreams/crate-audits/fret-ui-shadcn.l0.md` |
+| `fret-docking` | L0 | `docs/workstreams/crate-audits/fret-docking.l0.md` |
+
+## `apps/` (demo shells)
+
+App audits focus on “golden path” quality and diagnostics, not on long-lived contracts.
+
+- `fretboard`
+- `fret-ui-gallery`

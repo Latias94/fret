@@ -20,7 +20,7 @@ Tracking format:
 ## Baseline (keep honest)
 
 - [x] SWG-base-001 Tracked-only coverage is 100% gated/targeted/smoke-parse for `v4/new-york-v4`.
-  - Evidence: `pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly`
+  - Evidence: `python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only`
 - [x] SWG-base-002 Deterministic date-dependent goldens supported via extractor `--freezeDate`.
   - Evidence: `goldens/shadcn-web/scripts/extract-golden.mts`
 
@@ -30,7 +30,7 @@ Tracking format:
 
 - [x] SWG-ovl-010 Constrained-viewport menu/list overlays have “height as styling” gates for `vp375x240`.
   - Scope: overlays whose UX contract is viewport-constrained (menu/listbox-like surfaces that clamp / scroll / show scroll buttons under low height).
-  - Tooling: run `pwsh -NoProfile -File tools/golden_overlay_depth.ps1 -TrackedOnly -Style v4/new-york-v4 -OverlayFamily menu-list -ConstrainedViewportToken vp375x240 -GroupMissingByPrefix`.
+  - Tooling: run `python3 tools/golden_overlay_depth.py --tracked-only --style v4/new-york-v4 --overlay-family menu-list --constrained-viewport-token vp375x240 --group-missing-by-prefix`.
 - 2026-02-01: gated NavigationMenu underlay scroll anchor stability and fixed paint-cache replay to keep last-frame visual bounds in sync (prevents scroll-induced anchor drift).
 - 2026-02-02: added `context-menu-demo.vp375x240` + `menubar-demo.vp375x240` panel-size gates (light/dark) to treat constrained viewport menu height as a styling outcome.
 - 2026-02-02: added `context-menu-demo.submenu-kbd-vp375x240` + `menubar-demo.submenu-kbd-vp375x240` submenu panel-size + surface-color + shadow-insets gates (light/dark) to lock in constrained viewport clamping behavior for nested menus.
@@ -46,7 +46,7 @@ Tracking format:
 
 - [ ] SWG-ovl-011 Decide the gating boundary for “non-menu” overlays under tiny viewports (popover / hover-card / dialog / alert-dialog / sheet / drawer / date-picker).
   - Rationale: upstream web behavior may allow modal surfaces to overflow/translate (not necessarily “clamp”), and a panel-size gate is only meaningful when the Rust test page is a 1:1 replica of the web page content.
-  - Tooling (discovery only, not a completion gate yet): run `pwsh -NoProfile -File tools/golden_overlay_depth.ps1 -TrackedOnly -Style v4/new-york-v4 -OverlayFamily all-overlays -ConstrainedViewportToken vp375x240 -GroupMissingByPrefix`.
+  - Tooling (discovery only, not a completion gate yet): run `python3 tools/golden_overlay_depth.py --tracked-only --style v4/new-york-v4 --overlay-family all-overlays --constrained-viewport-token vp375x240 --group-missing-by-prefix`.
   - Snapshot (2026-02-04): `all-overlays` reports 14 missing keys (sheet/date/drawer/alert/dialog/hover), see script output for the exact list.
 - [x] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
@@ -104,11 +104,11 @@ Tracking format:
 
 ## P2 — Tooling (avoid doc drift)
 
-- [x] SWG-tool-010 Extend `tools/golden_coverage.ps1` to report coverage in explicit dimensions:
+- [x] SWG-tool-010 Extend `tools/golden_coverage.py` to report coverage in explicit dimensions:
   - smoke-parse coverage (dynamic traversal),
   - referenced-by-tests coverage (string-literal heuristic),
   - high-signal targeted gates (excluding broad files).
-- 2026-02-01: `tools/golden_coverage.ps1` reports `Gated`, `Targeted`, and `Smoke` coverage for `shadcn-web/v4/new-york-v4`.
+- 2026-02-01: `tools/golden_coverage.py` reports `Gated`, `Targeted`, and `Smoke` coverage for `shadcn-web/v4/new-york-v4`.
 
 ---
 

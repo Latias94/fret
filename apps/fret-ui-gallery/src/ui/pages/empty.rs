@@ -24,8 +24,6 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -48,17 +46,17 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(820.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -105,6 +103,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let outline = {
+        let muted_foreground = cx.with_theme(|theme| theme.color_required("muted-foreground"));
         let empty = shadcn::Empty::new([
             shadcn::empty::EmptyHeader::new([
                 shadcn::empty::EmptyMedia::new([icon(cx, "lucide.cloud")])
@@ -123,10 +122,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .into_element(cx)])
             .into_element(cx),
         ])
-        .refine_style(
-            ChromeRefinement::default()
-                .border_color(ColorRef::Color(theme.color_required("muted-foreground"))),
-        )
+        .refine_style(ChromeRefinement::default().border_color(ColorRef::Color(muted_foreground)))
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
         .test_id("ui-gallery-empty-outline");
@@ -134,6 +130,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let background = {
+        let muted = cx.with_theme(|theme| theme.color_required("muted"));
         let refresh_icon = icon(cx, "lucide.refresh-cw");
         let refresh_text = cx.text("Refresh");
         let refresh_button = shadcn::Button::new("Refresh")
@@ -155,9 +152,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .into_element(cx),
             shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
         ])
-        .refine_style(
-            ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("muted"))),
-        )
+        .refine_style(ChromeRefinement::default().bg(ColorRef::Color(muted)))
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
         .test_id("ui-gallery-empty-background");

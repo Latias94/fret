@@ -1127,6 +1127,11 @@ struct WindowRuntime<S> {
     /// We keep only the latest physical size and apply it once per `RedrawRequested` to avoid
     /// reconfiguring the surface and recomputing layout more often than we can present.
     pending_surface_resize: Option<winit::dpi::PhysicalSize<u32>>,
+    /// Last delivered (quantized) logical size for `Event::WindowResized`.
+    ///
+    /// This mirrors GPUI's `set_frame_size` guard (`old_size == new_size`) and helps reduce
+    /// float-noise churn in window-metrics consumers during interactive resize.
+    last_delivered_window_resized: Option<(u32, u32)>,
     is_focused: bool,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
@@ -2915,6 +2920,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     ..Default::default()
                 },
                 pending_surface_resize: None,
+                last_delivered_window_resized: None,
                 is_focused: false,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,

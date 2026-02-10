@@ -54,46 +54,28 @@ pub use fret_ui_kit::primitives::accordion::{AccordionKind, AccordionOrientation
 
 type OnValueChange = Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>;
 
-fn accordion_next_values_after_activate(
-    kind: AccordionKind,
-    collapsible: bool,
-    values_in_order: &[Arc<str>],
-    open_before: &[Arc<str>],
-    activated: &Arc<str>,
-) -> Vec<Arc<str>> {
-    match kind {
-        AccordionKind::Single => {
-            let is_same = open_before
-                .first()
-                .is_some_and(|cur| cur.as_ref() == activated.as_ref());
-            if is_same {
-                if collapsible {
-                    Vec::new()
-                } else {
-                    open_before.to_vec()
-                }
-            } else {
-                vec![activated.clone()]
-            }
-        }
-        AccordionKind::Multiple => {
-            let mut toggled = open_before.to_vec();
-            if let Some(pos) = toggled
-                .iter()
-                .position(|cur| cur.as_ref() == activated.as_ref())
-            {
-                toggled.remove(pos);
-            } else {
-                toggled.push(activated.clone());
-            }
+#[derive(Default)]
+struct AccordionValueChangeCallbackState {
+    initialized: bool,
+    last_value: Vec<Arc<str>>,
+}
 
-            values_in_order
-                .iter()
-                .filter(|v| toggled.iter().any(|open| open.as_ref() == v.as_ref()))
-                .cloned()
-                .collect()
-        }
+fn accordion_value_change_event(
+    state: &mut AccordionValueChangeCallbackState,
+    next: &[Arc<str>],
+) -> Option<Vec<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = next.to_vec();
+        return None;
     }
+
+    if state.last_value == next {
+        return None;
+    }
+
+    state.last_value = next.to_vec();
+    Some(next.to_vec())
 }
 
 /// A Radix-shaped, shadcn-skinned accordion surface (`AccordionRoot` / `AccordionItem` /
@@ -178,11 +160,6 @@ pub mod composable {
             value: Arc<str>,
             enabled: bool,
             focusable: bool,
-            kind: AccordionKind,
-            collapsible: bool,
-            values_in_order: Arc<[Arc<str>]>,
-            open_before: Arc<[Arc<str>]>,
-            on_value_change: Option<OnValueChange>,
         ) -> AnyElement {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -214,24 +191,6 @@ pub mod composable {
                         ..Default::default()
                     },
                     move |cx, is_open| {
-                        if let Some(on_value_change) = on_value_change.clone() {
-                            let values_in_order = values_in_order.clone();
-                            let open_before = open_before.clone();
-                            let value = value.clone();
-                            cx.pressable_add_on_activate(Arc::new(move |_host, _cx, _reason| {
-                                let next = accordion_next_values_after_activate(
-                                    kind,
-                                    collapsible,
-                                    values_in_order.as_ref(),
-                                    open_before.as_ref(),
-                                    &value,
-                                );
-                                if next.as_slice() != open_before.as_ref() {
-                                    on_value_change(next);
-                                }
-                            }));
-                        }
-
                         let chrome = ChromeRefinement::default()
                             .px(Space::N0)
                             .py(Space::N4)
@@ -522,6 +481,11 @@ pub mod composable {
             }
         }
 
+        #[cfg(test)]
+        pub(super) fn has_on_value_change_handler(&self) -> bool {
+            self.on_value_change.is_some()
+        }
+
         /// Creates an uncontrolled accordion with an optional initial value (Radix `defaultValue`).
         pub fn single_uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
             Self {
@@ -677,35 +641,31 @@ pub mod composable {
                 .dir(dir);
 
                 let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
-                let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
-                let open_before: Arc<[Arc<str>]> = if on_value_change.is_some() {
-                    Arc::from(
-                        values
-                            .iter()
-                            .filter(|value| root.is_item_open(cx, value.as_ref()))
-                            .cloned()
-                            .collect::<Vec<_>>()
-                            .into_boxed_slice(),
-                    )
-                } else {
-                    Arc::from([])
-                };
-                let kind = root.kind();
-                let collapsible = match &model {
-                    AccordionModel::Single { collapsible, .. } => *collapsible,
-                    AccordionModel::Multiple { .. } => false,
-                };
-
+                if let Some(on_value_change) = on_value_change.as_ref() {
+                    let next = values
+                        .iter()
+                        .filter(|value| root.is_item_open(cx, value.as_ref()))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    let changed = cx
+                        .with_state(AccordionValueChangeCallbackState::default, |state| {
+                            accordion_value_change_event(state, &next)
+                        });
+                    if let Some(next) = changed {
+                        on_value_change(next);
+                    }
+                }
                 let disabled_flags: Vec<bool> =
                     items.iter().map(|i| group_disabled || i.disabled).collect();
 
+                let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
                 let disabled_arc: Arc<[bool]> =
                     Arc::from(disabled_flags.clone().into_boxed_slice());
                 let mut list_layout = LayoutStyle::default();
                 list_layout.size.width = fret_ui::element::Length::Fill;
                 let list = root
                     .clone()
-                    .list(values_arc.clone(), disabled_arc.clone())
+                    .list(values_arc, disabled_arc.clone())
                     .layout(list_layout);
                 let tab_stop = list.tab_stop_index(cx).or_else(|| {
                     fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
@@ -763,11 +723,6 @@ pub mod composable {
                                     item.value.clone(),
                                     enabled,
                                     focusable,
-                                    kind,
-                                    collapsible,
-                                    values_arc.clone(),
-                                    open_before.clone(),
-                                    on_value_change.clone(),
                                 );
 
                                 let theme = theme.clone();
@@ -943,11 +898,6 @@ impl AccordionTrigger {
         value: Arc<str>,
         enabled: bool,
         focusable: bool,
-        kind: AccordionKind,
-        collapsible: bool,
-        values_in_order: Arc<[Arc<str>]>,
-        open_before: Arc<[Arc<str>]>,
-        on_value_change: Option<OnValueChange>,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -979,24 +929,6 @@ impl AccordionTrigger {
                     ..Default::default()
                 },
                 move |cx, is_open| {
-                    if let Some(on_value_change) = on_value_change.clone() {
-                        let values_in_order = values_in_order.clone();
-                        let open_before = open_before.clone();
-                        let value = value.clone();
-                        cx.pressable_add_on_activate(Arc::new(move |_host, _cx, _reason| {
-                            let next = accordion_next_values_after_activate(
-                                kind,
-                                collapsible,
-                                values_in_order.as_ref(),
-                                open_before.as_ref(),
-                                &value,
-                            );
-                            if next.as_slice() != open_before.as_ref() {
-                                on_value_change(next);
-                            }
-                        }));
-                    }
-
                     let chrome = ChromeRefinement::default()
                         .px(Space::N0)
                         .py(Space::N4)
@@ -1434,33 +1366,29 @@ impl Accordion {
             .dir(dir);
 
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
-            let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
-            let open_before: Arc<[Arc<str>]> = if on_value_change.is_some() {
-                Arc::from(
-                    values
-                        .iter()
-                        .filter(|value| root.is_item_open(cx, value.as_ref()))
-                        .cloned()
-                        .collect::<Vec<_>>()
-                        .into_boxed_slice(),
-                )
-            } else {
-                Arc::from([])
-            };
-            let kind = root.kind();
-            let collapsible = match &model {
-                AccordionModel::Single { collapsible, .. } => *collapsible,
-                AccordionModel::Multiple { .. } => false,
-            };
+            if let Some(on_value_change) = on_value_change.as_ref() {
+                let next = values
+                    .iter()
+                    .filter(|value| root.is_item_open(cx, value.as_ref()))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                let changed = cx.with_state(AccordionValueChangeCallbackState::default, |state| {
+                    accordion_value_change_event(state, &next)
+                });
+                if let Some(next) = changed {
+                    on_value_change(next);
+                }
+            }
             let disabled_flags: Vec<bool> =
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
+            let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
             let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.clone().into_boxed_slice());
             let mut list_layout = LayoutStyle::default();
             list_layout.size.width = fret_ui::element::Length::Fill;
             let list = root
                 .clone()
-                .list(values_arc.clone(), disabled_arc.clone())
+                .list(values_arc, disabled_arc.clone())
                 .layout(list_layout);
             let tab_stop = list.tab_stop_index(cx).or_else(|| {
                 fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
@@ -1513,11 +1441,6 @@ impl Accordion {
                                 item.value.clone(),
                                 enabled,
                                 focusable,
-                                kind,
-                                collapsible,
-                                values_arc.clone(),
-                                open_before.clone(),
-                                on_value_change.clone(),
                             );
 
                             let content = item.content;
@@ -1766,6 +1689,41 @@ mod tests {
 
                 let accordion = Accordion::single(open)
                     .collapsible(collapsible)
+                    .items([item_1, item_2])
+                    .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+    }
+
+    fn render_accordion_frame_with_on_value_change(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: fret_runtime::Model<Option<Arc<str>>>,
+        on_value_change: Option<Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>>,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                let accordion = Accordion::single(open)
+                    .on_value_change(on_value_change.clone())
                     .items([item_1, item_2])
                     .into_element(cx);
 
@@ -2557,7 +2515,7 @@ mod tests {
 
         let accordion = composable_accordion::AccordionRoot::single(open)
             .on_value_change(Some(Arc::new(|_value| {})));
-        let _ = accordion;
+        assert!(accordion.has_on_value_change_handler());
     }
 
     #[test]
@@ -2571,7 +2529,15 @@ mod tests {
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
         let changed_values: Arc<Mutex<Vec<Vec<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
-        let changed_values_for_handler = changed_values.clone();
+        let on_value_change: Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static> = Arc::new({
+            let changed_values = changed_values.clone();
+            move |value| {
+                changed_values
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push(value);
+            }
+        });
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -2602,12 +2568,7 @@ mod tests {
 
                 vec![
                     Accordion::single(open.clone())
-                        .on_value_change(Some(Arc::new(move |value| {
-                            changed_values_for_handler
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner())
-                                .push(value);
-                        })))
+                        .on_value_change(Some(on_value_change.clone()))
                         .items([item_1, item_2])
                         .into_element(cx),
                 ]
@@ -2641,6 +2602,16 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
+        );
+
+        render_accordion_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(on_value_change),
         );
 
         let selected = app.models().get_cloned(&open).flatten();

@@ -113,6 +113,48 @@ Guidance:
 - Accept children as `impl IntoIterator<Item = AnyElement>` and store them as `Vec<AnyElement>`
   internally (call-site flexibility; internal stability).
 
+### 2.2) Theme access (avoid long-lived borrows)
+
+Component code often needs theme tokens (colors/metrics). Avoid holding a `&Theme` borrow across
+other `cx` calls, otherwise you may be forced into noisy `Theme::global(&*cx.app).clone()`
+workarounds.
+
+Recommended patterns:
+
+- For pure token reads: use `ThemeSnapshot` via `cx.theme_snapshot()` (cheap `Copy`, no long-lived
+  `&Theme` borrow).
+- Many `fret-ui-kit` style helpers accept a `ThemeSnapshot` (via `ThemeTokenRead`), e.g.
+  `declarative::style::container_props(&theme, ...)`.
+- If you truly need a full `Theme` (theme metadata/config, APIs not mirrored on `ThemeSnapshot`):
+  prefer `let theme = cx.theme().clone();` so theme observation is wired automatically.
+- If you must read from `Theme::global(&*cx.app)` (e.g. a custom token namespace not covered by
+  `ThemeSnapshot`), keep the borrow scoped and do **not** call `cx.*` methods while the `&Theme`
+  borrow is live. Instead, resolve tokens into plain values first, then build elements.
+
+```rust
+let theme = cx.theme_snapshot();
+let padding = theme.metric_required("metric.padding.md");
+let fg = theme.color_required("foreground");
+```
+
+```rust
+use fret_core::{Corners, Px};
+use fret_ui::{Theme, element::ContainerProps};
+
+let (bg, radius): (_, Px) = {
+    let theme = Theme::global(&*cx.app);
+    (
+        theme.color_required("md.sys.color.surface"),
+        theme.metric_required("md.sys.shape.corner.medium"),
+    )
+};
+
+let mut props = ContainerProps::default();
+props.background = Some(bg);
+props.corner_radii = Corners::all(radius);
+cx.container(props, |_cx| Vec::new());
+```
+
 ## 3) Commands + shortcuts: always go through `CommandId` + keymap
 
 If an action can be triggered by keyboard/menu/palette, it should be a `CommandId`.

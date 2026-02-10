@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "select-scrollable.panel_chrome", "web_name": "select-scrollable", "recipe": "panel_chrome" },
+
+    { "id": "select-scrollable.light.surface_colors", "web_name": "select-scrollable", "theme": "light", "recipe": "surface_colors" },
+    { "id": "select-scrollable.dark.surface_colors", "web_name": "select-scrollable", "theme": "dark", "recipe": "surface_colors" },
+    { "id": "select-scrollable.vp1440x450.light.surface_colors", "web_name": "select-scrollable.vp1440x450", "theme": "light", "recipe": "surface_colors" },
+    { "id": "select-scrollable.vp1440x450.dark.surface_colors", "web_name": "select-scrollable.vp1440x450", "theme": "dark", "recipe": "surface_colors" },
+    { "id": "select-scrollable.vp1440x240.light.surface_colors", "web_name": "select-scrollable.vp1440x240", "theme": "light", "recipe": "surface_colors" },
+    { "id": "select-scrollable.vp1440x240.dark.surface_colors", "web_name": "select-scrollable.vp1440x240", "theme": "dark", "recipe": "surface_colors" },
+
+    { "id": "select-scrollable.light.shadow_insets", "web_name": "select-scrollable", "theme": "light", "recipe": "shadow_insets" },
+    { "id": "select-scrollable.dark.shadow_insets", "web_name": "select-scrollable", "theme": "dark", "recipe": "shadow_insets" },
+    { "id": "select-scrollable.vp1440x450.light.shadow_insets", "web_name": "select-scrollable.vp1440x450", "theme": "light", "recipe": "shadow_insets" },
+    { "id": "select-scrollable.vp1440x450.dark.shadow_insets", "web_name": "select-scrollable.vp1440x450", "theme": "dark", "recipe": "shadow_insets" },
+    { "id": "select-scrollable.vp1440x240.light.shadow_insets", "web_name": "select-scrollable.vp1440x240", "theme": "light", "recipe": "shadow_insets" },
+    { "id": "select-scrollable.vp1440x240.dark.shadow_insets", "web_name": "select-scrollable.vp1440x240", "theme": "dark", "recipe": "shadow_insets" },
+
+    { "id": "select-demo.highlight-first.light.highlighted_option_chrome", "web_name": "select-demo.highlight-first", "theme": "light", "recipe": "demo_highlighted_option_chrome" },
+    { "id": "select-demo.highlight-first.dark.highlighted_option_chrome", "web_name": "select-demo.highlight-first", "theme": "dark", "recipe": "demo_highlighted_option_chrome" },
+    { "id": "select-demo.highlight-first.vp375x240.light.highlighted_option_chrome", "web_name": "select-demo.highlight-first-vp375x240", "theme": "light", "recipe": "demo_highlighted_option_chrome" },
+    { "id": "select-demo.highlight-first.vp375x240.dark.highlighted_option_chrome", "web_name": "select-demo.highlight-first-vp375x240", "theme": "dark", "recipe": "demo_highlighted_option_chrome" },
+
+    { "id": "select-scrollable.highlight-first.light.highlighted_option_chrome", "web_name": "select-scrollable.highlight-first", "theme": "light", "recipe": "scrollable_highlighted_option_chrome" },
+    { "id": "select-scrollable.highlight-first.dark.highlighted_option_chrome", "web_name": "select-scrollable.highlight-first", "theme": "dark", "recipe": "scrollable_highlighted_option_chrome" },
+    { "id": "select-scrollable.highlight-first.vp375x240.light.highlighted_option_chrome", "web_name": "select-scrollable.highlight-first-vp375x240", "theme": "light", "recipe": "scrollable_highlighted_option_chrome" },
+    { "id": "select-scrollable.highlight-first.vp375x240.dark.highlighted_option_chrome", "web_name": "select-scrollable.highlight-first-vp375x240", "theme": "dark", "recipe": "scrollable_highlighted_option_chrome" },
+
+    { "id": "select-demo.focus-first.light.focused_option_chrome", "web_name": "select-demo.focus-first", "theme": "light", "recipe": "demo_focused_option_chrome" },
+    { "id": "select-demo.focus-first.dark.focused_option_chrome", "web_name": "select-demo.focus-first", "theme": "dark", "recipe": "demo_focused_option_chrome" },
+    { "id": "select-demo.focus-first.vp375x240.light.focused_option_chrome", "web_name": "select-demo.focus-first-vp375x240", "theme": "light", "recipe": "demo_focused_option_chrome" },
+    { "id": "select-demo.focus-first.vp375x240.dark.focused_option_chrome", "web_name": "select-demo.focus-first-vp375x240", "theme": "dark", "recipe": "demo_focused_option_chrome" },
+
+    { "id": "select-scrollable.focus-first.light.focused_option_chrome", "web_name": "select-scrollable.focus-first", "theme": "light", "recipe": "scrollable_focused_option_chrome" },
+    { "id": "select-scrollable.focus-first.dark.focused_option_chrome", "web_name": "select-scrollable.focus-first", "theme": "dark", "recipe": "scrollable_focused_option_chrome" },
+    { "id": "select-scrollable.focus-first.vp375x240.light.focused_option_chrome", "web_name": "select-scrollable.focus-first-vp375x240", "theme": "light", "recipe": "scrollable_focused_option_chrome" },
+    { "id": "select-scrollable.focus-first.vp375x240.dark.focused_option_chrome", "web_name": "select-scrollable.focus-first-vp375x240", "theme": "dark", "recipe": "scrollable_focused_option_chrome" }
+  ]
+}
+

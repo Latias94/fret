@@ -24,6 +24,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
 const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
@@ -458,6 +460,21 @@ impl Drawer {
     /// routed through this handler. To prevent default dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.inner = self.inner.on_dismiss_request(on_dismiss_request);
+        self
+    }
+
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.inner = self.inner.on_open_change(on_open_change);
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.inner = self.inner.on_open_change_complete(on_open_change_complete);
         self
     }
 
@@ -955,6 +972,20 @@ mod tests {
             let _ = Drawer::new_controllable(cx, None, false);
             let _ = Drawer::new_controllable(cx, Some(controlled.clone()), true);
         });
+    }
+
+    #[test]
+    fn drawer_open_change_handlers_forward_to_sheet() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let drawer = Drawer::new(open)
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        let inner_debug = format!("{:?}", drawer.inner);
+        assert!(inner_debug.contains("on_open_change: true"));
+        assert!(inner_debug.contains("on_open_change_complete: true"));
     }
 
     #[derive(Default)]

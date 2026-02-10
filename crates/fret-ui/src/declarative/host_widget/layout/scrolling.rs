@@ -99,17 +99,12 @@ fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 enum ScrollDeferredUnboundedProbeKind {
+    #[default]
     None,
     Invalidation,
     Resize,
-}
-
-impl Default for ScrollDeferredUnboundedProbeKind {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -66,7 +66,7 @@ Important guardrail:
 
 ## P2 (Tooling)
 
-- Keep `tools/golden_coverage.ps1` honest by reporting coverage as two dimensions (in addition to broad-gate exclusion):
+- Keep `tools/golden_coverage.py` honest by reporting coverage as two dimensions (in addition to broad-gate exclusion):
   - **Gated** (string-literal heuristic, “referenced by tests”)
   - **Targeted** (excluding broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`)
   - **Smoke-parse** (dynamic traversal, low-signal sanity)

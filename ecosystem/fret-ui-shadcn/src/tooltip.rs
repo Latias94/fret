@@ -25,7 +25,7 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::overlay_motion;
 
@@ -106,6 +106,7 @@ struct TooltipTriggerEventModels {
     suppress_hover_open: Model<bool>,
     suppress_focus_open: Model<bool>,
     close_requested: Model<bool>,
+    close_reason: Model<Option<TooltipOpenChangeReason>>,
 }
 
 fn tooltip_trigger_event_models<H: UiHost>(
@@ -127,6 +128,7 @@ fn tooltip_trigger_event_models<H: UiHost>(
         suppress_hover_open: cx.app.models_mut().insert(false),
         suppress_focus_open: cx.app.models_mut().insert(false),
         close_requested: cx.app.models_mut().insert(false),
+        close_reason: cx.app.models_mut().insert(None),
     };
 
     cx.with_state(State::default, |st| st.models = Some(models.clone()));
@@ -139,6 +141,52 @@ struct TooltipTriggerHoverEdgeState {
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnOpenChangeWithReason = Arc<dyn Fn(bool, TooltipOpenChangeReason) + Send + Sync + 'static>;
+
+/// Open-change reason metadata for tooltip lifecycle callbacks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TooltipOpenChangeReason {
+    TriggerHover,
+    TriggerFocus,
+    TriggerPress,
+    OutsidePress,
+    FocusOutside,
+    EscapeKey,
+    Scroll,
+    None,
+}
+
+fn tooltip_open_change_reason_from_dismiss_reason(
+    reason: fret_ui::action::DismissReason,
+) -> TooltipOpenChangeReason {
+    match reason {
+        fret_ui::action::DismissReason::Escape => TooltipOpenChangeReason::EscapeKey,
+        fret_ui::action::DismissReason::OutsidePress { .. } => {
+            TooltipOpenChangeReason::OutsidePress
+        }
+        fret_ui::action::DismissReason::FocusOutside => TooltipOpenChangeReason::FocusOutside,
+        fret_ui::action::DismissReason::Scroll => TooltipOpenChangeReason::Scroll,
+    }
+}
+
+fn tooltip_open_change_reason_for_transition(
+    opening: bool,
+    trigger_hovered: bool,
+    trigger_focused: bool,
+    close_reason: Option<TooltipOpenChangeReason>,
+) -> TooltipOpenChangeReason {
+    if opening {
+        if trigger_focused {
+            TooltipOpenChangeReason::TriggerFocus
+        } else if trigger_hovered {
+            TooltipOpenChangeReason::TriggerHover
+        } else {
+            TooltipOpenChangeReason::None
+        }
+    } else {
+        close_reason.unwrap_or(TooltipOpenChangeReason::None)
+    }
+}
 
 #[derive(Default)]
 struct TooltipOpenChangeCallbackState {
@@ -360,6 +408,7 @@ pub struct Tooltip {
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
     on_open_change_complete: Option<OnOpenChange>,
 }
 
@@ -395,6 +444,10 @@ impl std::fmt::Debug for Tooltip {
             .field("anchor_override", &self.anchor_override)
             .field("on_open_change", &self.on_open_change.is_some())
             .field(
+                "on_open_change_with_reason",
+                &self.on_open_change_with_reason.is_some(),
+            )
+            .field(
                 "on_open_change_complete",
                 &self.on_open_change_complete.is_some(),
             )
@@ -424,6 +477,7 @@ impl Tooltip {
             layout: LayoutRefinement::default(),
             anchor_override: None,
             on_open_change: None,
+            on_open_change_with_reason: None,
             on_open_change_complete: None,
         }
     }
@@ -560,6 +614,15 @@ impl Tooltip {
         self
     }
 
+    /// Called when the open state changes, with reason metadata.
+    pub fn on_open_change_with_reason(
+        mut self,
+        on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    ) -> Self {
+        self.on_open_change_with_reason = on_open_change_with_reason;
+        self
+    }
+
     /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
     pub fn on_open_change_complete(
         mut self,
@@ -608,6 +671,7 @@ impl Tooltip {
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
         let track_cursor_axis = self.track_cursor_axis;
         let on_open_change = self.on_open_change;
+        let on_open_change_with_reason = self.on_open_change_with_reason;
         let on_open_change_complete = self.on_open_change_complete;
 
         let base_trigger = self.trigger;
@@ -616,7 +680,11 @@ impl Tooltip {
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
+        let pointer_can_hover =
+            fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
+
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+            let hovered = hovered && pointer_can_hover;
             let focused = cx.is_focused_element(trigger_id);
             let event_models = tooltip_trigger_event_models(cx);
             let tooltip_id = cx.root_id();
@@ -638,7 +706,7 @@ impl Tooltip {
                 });
                 model
             };
-            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx
                 .watch_model(&event_models.close_requested)
@@ -708,6 +776,10 @@ impl Tooltip {
                     .app
                     .models_mut()
                     .update(&event_models.close_requested, |v| *v = false);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.close_reason, |v| *v = None);
             }
 
             let provider_cfg = tooltip_provider::current_config(cx);
@@ -787,12 +859,22 @@ impl Tooltip {
                     safe_hover_buffer: Px(5.0),
                 },
             );
+            let close_reason_for_open_change = cx
+                .watch_model(&event_models.close_reason)
+                .layout()
+                .copied()
+                .unwrap_or(None);
+            if update.open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.close_reason, |v| *v = None);
+            }
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
             if update.open != open_now {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
-                open_now = update.open;
             }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
@@ -805,12 +887,16 @@ impl Tooltip {
                 trigger_id,
                 Arc::new({
                     let close_requested = event_models.close_requested.clone();
+                    let close_reason = event_models.close_reason.clone();
                     let suppress_focus_open = event_models.suppress_focus_open.clone();
                     let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
                     let suppress_hover_open = event_models.suppress_hover_open.clone();
                     move |host, acx, down| {
                         if down.pointer_type != PointerType::Touch {
                             let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                            let _ = host.models_mut().update(&close_reason, |v| {
+                                *v = Some(TooltipOpenChangeReason::TriggerPress)
+                            });
                         }
                         let _ = host
                             .models_mut()
@@ -835,9 +921,13 @@ impl Tooltip {
                 trigger_id,
                 Arc::new({
                     let close_requested = event_models.close_requested.clone();
+                    let close_reason = event_models.close_reason.clone();
                     let suppress_focus_open = event_models.suppress_focus_open.clone();
                     move |host, acx, _reason| {
                         let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host.models_mut().update(&close_reason, |v| {
+                            *v = Some(TooltipOpenChangeReason::TriggerPress)
+                        });
                         let _ = host
                             .models_mut()
                             .update(&suppress_focus_open, |v| *v = true);
@@ -850,12 +940,16 @@ impl Tooltip {
                 trigger_id,
                 Arc::new({
                     let close_requested = event_models.close_requested.clone();
+                    let close_reason = event_models.close_reason.clone();
                     let suppress_focus_open = event_models.suppress_focus_open.clone();
                     move |host, acx, down| {
                         if down.repeat || down.key != KeyCode::Escape {
                             return false;
                         }
                         let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host.models_mut().update(&close_reason, |v| {
+                            *v = Some(TooltipOpenChangeReason::EscapeKey)
+                        });
                         let _ = host
                             .models_mut()
                             .update(&suppress_focus_open, |v| *v = true);
@@ -928,6 +1022,16 @@ impl Tooltip {
                 });
             if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
                 handler(open);
+            }
+            if let (Some(open), Some(handler)) = (open_change, on_open_change_with_reason.as_ref())
+            {
+                let reason = tooltip_open_change_reason_for_transition(
+                    open,
+                    trigger_hovered,
+                    trigger_focused,
+                    close_reason_for_open_change,
+                );
+                handler(open, reason);
             }
             if let (Some(open), Some(handler)) =
                 (open_change_complete, on_open_change_complete.as_ref())
@@ -1099,8 +1203,13 @@ impl Tooltip {
             request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
                 let close_requested = event_models.close_requested.clone();
+                let close_reason = event_models.close_reason.clone();
                 move |host, acx, _reason| {
+                    let reason = tooltip_open_change_reason_from_dismiss_reason(_reason.reason);
                     let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                    let _ = host
+                        .models_mut()
+                        .update(&close_reason, |v| *v = Some(reason));
                     host.request_redraw(acx.window);
                 }
             }));
@@ -1236,7 +1345,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -1425,10 +1534,65 @@ mod tests {
 
         let tooltip = Tooltip::new(trigger, content)
             .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_with_reason(Some(Arc::new(|_open, _reason| {})))
             .on_open_change_complete(Some(Arc::new(|_open| {})));
 
         assert!(tooltip.on_open_change.is_some());
+        assert!(tooltip.on_open_change_with_reason.is_some());
         assert!(tooltip.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn tooltip_open_change_reason_mapping_covers_dismiss_reasons() {
+        use fret_ui::action::DismissReason;
+
+        assert_eq!(
+            tooltip_open_change_reason_from_dismiss_reason(DismissReason::Escape),
+            TooltipOpenChangeReason::EscapeKey
+        );
+        assert_eq!(
+            tooltip_open_change_reason_from_dismiss_reason(DismissReason::OutsidePress {
+                pointer: None,
+            }),
+            TooltipOpenChangeReason::OutsidePress
+        );
+        assert_eq!(
+            tooltip_open_change_reason_from_dismiss_reason(DismissReason::FocusOutside),
+            TooltipOpenChangeReason::FocusOutside
+        );
+        assert_eq!(
+            tooltip_open_change_reason_from_dismiss_reason(DismissReason::Scroll),
+            TooltipOpenChangeReason::Scroll
+        );
+    }
+
+    #[test]
+    fn tooltip_open_change_reason_for_transition_uses_trigger_and_close_reason() {
+        assert_eq!(
+            tooltip_open_change_reason_for_transition(true, false, true, None),
+            TooltipOpenChangeReason::TriggerFocus
+        );
+        assert_eq!(
+            tooltip_open_change_reason_for_transition(true, true, false, None),
+            TooltipOpenChangeReason::TriggerHover
+        );
+        assert_eq!(
+            tooltip_open_change_reason_for_transition(true, false, false, None),
+            TooltipOpenChangeReason::None
+        );
+        assert_eq!(
+            tooltip_open_change_reason_for_transition(
+                false,
+                false,
+                false,
+                Some(TooltipOpenChangeReason::EscapeKey),
+            ),
+            TooltipOpenChangeReason::EscapeKey
+        );
+        assert_eq!(
+            tooltip_open_change_reason_for_transition(false, false, false, None),
+            TooltipOpenChangeReason::None
+        );
     }
 
     #[test]

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "login_03",
+      "web_name": "login-03",
+      "container_class_tokens": ["flex", "w-full", "max-w-sm", "flex-col", "gap-6"]
+    },
+    {
+      "id": "login_04",
+      "web_name": "login-04",
+      "container_class_tokens": ["w-full", "max-w-sm", "md:max-w-4xl"]
+    },
+    {
+      "id": "login_05",
+      "web_name": "login-05",
+      "container_class_tokens": ["w-full", "max-w-sm"]
+    },
+    {
+      "id": "signup_01",
+      "web_name": "signup-01",
+      "container_class_tokens": ["w-full", "max-w-sm"]
+    },
+    {
+      "id": "signup_03",
+      "web_name": "signup-03",
+      "container_class_tokens": ["flex", "w-full", "max-w-sm", "flex-col", "gap-6"]
+    },
+    {
+      "id": "signup_04",
+      "web_name": "signup-04",
+      "container_class_tokens": ["w-full", "max-w-sm", "md:max-w-4xl"]
+    },
+    {
+      "id": "signup_05",
+      "web_name": "signup-05",
+      "container_class_tokens": ["w-full", "max-w-sm"]
+    },
+    {
+      "id": "otp_01",
+      "web_name": "otp-01",
+      "container_class_tokens": ["w-full", "max-w-xs"]
+    },
+    {
+      "id": "otp_03",
+      "web_name": "otp-03",
+      "container_class_tokens": ["flex", "w-full", "max-w-xs", "flex-col", "gap-6"]
+    },
+    {
+      "id": "otp_04",
+      "web_name": "otp-04",
+      "container_class_tokens": ["w-full", "max-w-sm", "md:max-w-3xl"]
+    },
+    {
+      "id": "otp_05",
+      "web_name": "otp-05",
+      "container_class_tokens": ["w-full", "max-w-sm"]
+    }
+  ]
+}

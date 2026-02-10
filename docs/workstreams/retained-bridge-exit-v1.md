@@ -12,7 +12,7 @@ Related references:
 - `docs/runtime-contract-matrix.md` (mechanism-only runtime contract map)
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md` (Stable/Experimental/Compatibility tiers)
 - `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md` (why the bridge exists)
-- `tools/check_layering.ps1` (layering + feature allowlists)
+- `tools/check_layering.py` (layering + feature allowlists)
 
 ## 1) Why this workstream exists
 
@@ -127,4 +127,3 @@ We consider the workstream successful when all of the following are true:
 - Risk: performance regressions when moving from retained widget caches to declarative composition.
   - Mitigation: add `fretboard diag` scripts and perf gates (window telemetry, cache-hit stats, invalidation
     hotspots) for the migrated surfaces.
-

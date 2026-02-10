@@ -10,6 +10,26 @@ If you are new to the project, still start from `docs/README.md`.
 - `docs/archive/backlog/ui-kit-gap.md`
 - Review-driven TODOs (not necessarily user-facing limitations yet): `docs/todo-tracker.md`
 
+### Container-query-driven responsive variants
+
+Current behavior:
+
+- The initial set of shadcn-aligned "responsive" variants that are container-query-driven upstream
+  now use Fret's **container query** mechanism (ADR 1170).
+- Remaining viewport-width breakpoints in recipe code should be treated as **device-level**
+  behavior (e.g. "mobile vs desktop"), not as a substitute for container queries.
+
+Impact:
+
+- In docking/panel-heavy layouts, responsive behavior can drift because panel width is not the same
+  as window width.
+
+Plan:
+
+- Keep new responsive additions on the container query path defined in ADR 1170:
+  - ADR: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+  - Workstream: `docs/workstreams/container-queries-v1.md`
+
 ## Common Diagnostics
 
 ### `WARN fret_ui::elements: unkeyed element list order changed`
@@ -68,8 +88,12 @@ Meaning:
 What to do:
 
 - Use fewer build jobs:
-  - `pwsh tools/windows/build-fret-demo-bins.ps1` (recommended).
+  - `python3 tools/windows/build-fret-demo-bins.py` (recommended).
 - If needed, override via `CARGO_BUILD_JOBS` or increase the system page file.
+
+## Rendering Artifacts (Notes)
+
+- Pixelate backdrop clear-colored holes: [`docs/known-issues/effects_pixelate_holes.md`](known-issues/effects_pixelate_holes.md)
 
 ## Platform Limitations (Current)
 

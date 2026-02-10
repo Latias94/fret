@@ -198,6 +198,37 @@ fn leaf_column_ids_under_header(
     out
 }
 
+fn header_column_ids_postorder(
+    table: &Table<'_, FixtureRow>,
+    header_id: Arc<str>,
+) -> Vec<Arc<str>> {
+    let groups = table.header_groups();
+    let mut by_id: HashMap<Arc<str>, fret_ui_headless::table::HeaderSnapshot> = HashMap::new();
+    for g in groups {
+        for h in g.headers {
+            by_id.insert(h.id.clone(), h);
+        }
+    }
+
+    fn collect(
+        by_id: &HashMap<Arc<str>, fret_ui_headless::table::HeaderSnapshot>,
+        header_id: &Arc<str>,
+        out: &mut Vec<Arc<str>>,
+    ) {
+        let Some(h) = by_id.get(header_id) else {
+            return;
+        };
+        for child in &h.sub_header_ids {
+            collect(by_id, child, out);
+        }
+        out.push(h.column_id.clone());
+    }
+
+    let mut out = Vec::new();
+    collect(&by_id, &header_id, &mut out);
+    out
+}
+
 #[test]
 fn tanstack_v8_column_resizing_group_headers_parity() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -295,7 +326,6 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                         column_id
                     );
 
-                    let mut start = Vec::with_capacity(leaf_ids.len());
                     let mut start_size = 0.0;
                     for leaf_id in leaf_ids {
                         let col_def = table
@@ -303,16 +333,26 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                             .expect("leaf column def exists");
                         let size = resolved_column_size(&state.column_sizing, col_def);
                         start_size += size;
+                    }
+
+                    // TanStack: `startSize` is the resizing header's computed size (sum of visible
+                    // leaf sizes), but `columnSizingStart` records `column.getSize()` for every
+                    // header in `header.getLeafHeaders()` (post-order, includes group headers).
+                    let header_ids = header_column_ids_postorder(&table, header.id.clone());
+                    let mut start = Vec::with_capacity(header_ids.len());
+                    for id in header_ids {
+                        let col_def = table
+                            .column_any(id.as_ref())
+                            .expect("column def exists for header");
+                        let size = resolved_column_size(&state.column_sizing, col_def);
                         start.push((col_def.id.clone(), size));
                     }
-                    // TanStack includes the resizing header itself (including group headers) in
-                    // `columnSizingStart`, with `startSize` equal to the sum of its leaf headers.
-                    start.push((Arc::<str>::from(column_id.as_str()), start_size));
 
                     begin_column_resize(
                         &mut state.column_sizing_info,
                         Arc::<str>::from(column_id.as_str()),
                         *client_x,
+                        start_size,
                         start,
                     );
                     active_resize = Some(Arc::<str>::from(column_id.as_str()));

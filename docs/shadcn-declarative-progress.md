@@ -64,6 +64,11 @@ P2:
 - `ecosystem/fret-ui-kit`: reusable infra (tokens/recipes/headless helpers).
 - `crates/fret-ui`: runtime substrate (contracts/mechanisms only).
 
+Related (out-of-scope for v4 parity tracking):
+
+- Shadcn-styled “blocks/recipes” that are not part of the v4 taxonomy live under
+  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras.md`.
+
 ## Layering & Ownership
 
 This repo intentionally splits responsibilities across three layers (similar to Tailwind + headless + Radix/RSC composition, but in Rust):

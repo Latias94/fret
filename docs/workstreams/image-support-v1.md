@@ -18,7 +18,7 @@ Related ADRs (existing):
 
 Related ADRs (planned / in progress):
 
-- Image `object-fit` for `SceneOp::Image`: `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
+- Image `object-fit` for `SceneOp::Image`: `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
 
 Tracking:
 
@@ -86,14 +86,15 @@ both viewport and image paths reference.
 
 ### B) Add an explicit image metadata query seam (optional, but likely needed)
 
-To support aspect-ratio-aware layouts and ecosystem components that want intrinsic sizing without
-app side channels, introduce a portable query surface:
+To support aspect-ratio-aware layouts and ecosystem recipes without forcing intrinsic sizing into
+the mechanism layer, use a **policy-owned metadata store**:
 
-- `trait ImageService` in `fret-core` (plumbed through `UiServices`), e.g.
-  - `image_size(ImageId) -> Option<(u32, u32)>`
-  - optional: `image_alpha_mode(ImageId) -> Option<AlphaMode>`
+- `ImageMetadataStore` in `fret-ui-kit` (stored as an app global via `GlobalsHost`)
+  - app/decoder/caches record known intrinsic dimensions (`set_intrinsic_size_px`)
+  - components opt-in to reading it (e.g. aspect-ratio wrappers)
 
-This is intentionally *metadata only* (not loading/decoding).
+This keeps `fret-ui` backend-agnostic and aligns with ADR 0126’s guidance: intrinsic size must not
+implicitly drive layout.
 
 ### C) Ecosystem `img(source)` story (deferred until A is locked)
 
@@ -126,4 +127,8 @@ The “avoid big rewrite” lever is shared fit semantics:
 - Add shadcn regression gates:
   - avatar image should be center-cropped (no stretching),
   - cover/contain behavior matches web goldens where applicable.
-- Add at least one scripted diag scenario (optional): image-in-card + overlay controls + resize.
+- Add scripted diag scenarios:
+  - screenshots + bundle capture: `tools/diag-scripts/ui-gallery-image-object-fit-screenshots.json`
+  - perf steady-state baseline (Windows-local): `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
+    - baseline: `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
+    - seed policy: `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`

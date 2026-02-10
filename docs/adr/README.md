@@ -34,6 +34,55 @@ ADR or adding a new ADR) before scaling feature surface area.
     `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
 
+- **Paint/Brush primitives (gradients, procedural patterns)**
+  - Proposed: `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
+  - Decide: minimal paint vocabulary (solid/gradients), coordinate + color space rules, and how this
+    layers into controlled `MaterialId` extensibility (ADR 0125).
+
+- **Imported render targets + external texture imports (staged, capability-gated)**
+  - Proposed: `docs/adr/1173-imported-render-targets-and-external-texture-imports-v1.md`
+  - Decide: end-to-end “contract path” validation, per-frame keepalive/lifetime rules, and how
+    capability-gated zero-copy imports layer in without leaking backend handles (ADR 0124 / ADR 0121).
+
+- **Controlled materials registry (Tier B procedural paints)**
+  - Proposed: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
+  - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
+
+- **Compositing groups and blend modes (isolated saveLayer blends)**
+  - Proposed: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
+  - Decide: minimal blend vocabulary for UI-native looks and deterministic degradation under budgets.
+
+- **Sampled materials (v2; fixed binding shapes)**
+  - Proposed: `docs/adr/1181-sampled-materials-and-fixed-binding-shapes-v2.md`
+  - Decide: controlled “params + one image” expansion without opening arbitrary shader/resource graphs.
+
+- **Pointer motion snapshots (velocity + paint-time reads)**
+  - Proposed: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
+  - Decide: a non-reactive pointer snapshot seam that stays consistent under transforms and coalesced move delivery.
+
+- **Procedural determinism (explicit seeds + explicit time)**
+  - Proposed: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`
+  - Decide: no hidden time in Tier B materials; stable seeds; reduced-motion-friendly inputs.
+
+- **Creative authoring surface (ecosystem recipes)**
+  - Proposed: `docs/adr/1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`
+  - Decide: `fret-ui-kit` as the canonical recipe/catalog layer that resolves to mechanism with capability/budget fallbacks.
+
+- **Pointer coordinate spaces (window-local vs element-local, transform-aware)**
+  - Proposed: `docs/adr/1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`
+  - Decide: the canonical coordinate spaces exposed to widgets, capture semantics, and a minimal
+    mechanism helper surface to avoid ad-hoc `position - bounds.origin` math across the ecosystem.
+
+- **Mask layers (alpha masks beyond rect/rrect clipping)**
+  - Proposed: `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
+  - Decide: v1 mask stack shape, gradient-only portable sources, hit-testing semantics (mask is
+    paint-only), and deterministic degradation under budgets.
+
+- **Frame clock and reduced-motion gates (animation time base)**
+  - Proposed: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
+  - Decide: monotonic per-frame clock exposure without poisoning view-cache keys, and the canonical
+    reduced-motion response pattern for ecosystem components.
+
 - **User-facing effect recipes and tier selection (Tier A vs Tier B)**
   - Proposed: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
   - Decide: recommended user story for postprocessing, and the stable recipe authoring pattern for `fret-ui-kit`.
@@ -76,6 +125,10 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Decide: runtime-owned resize mechanics, docking integration shape, and whether to eventually persist pixel `preferred_px` hints vs fractions-only.
   - Implement: docking host rendering in `ecosystem/fret-docking`, runtime substrate in `crates/fret-ui`.
 
+- **Effect vocabulary extensions (color matrix + alpha threshold)**
+  - Proposed: `docs/adr/1175-effect-steps-color-matrix-and-alpha-threshold-v1.md`
+  - Decide: minimal postprocessing steps needed for SVG-filter-class recipes without going full material graphs.
+
 - **Text input semantics for multiline + IME composition ranges**
   - Update: `docs/adr/0071-text-input-multiline-composition-contract.md` (Accepted)
   - Update: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
@@ -103,6 +156,8 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Fluent authoring ergonomics (unified builder surface)**: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
+- **Container queries (panel-width responsiveness)**: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+- **Environment queries (viewport/device capabilities)**: `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Overflow conventions (surfaces, focus rings, portals)**: `docs/adr/0088-overflow-and-clipping-conventions.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
@@ -358,5 +413,3 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
-
-

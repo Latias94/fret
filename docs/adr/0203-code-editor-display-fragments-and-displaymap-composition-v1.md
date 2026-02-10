@@ -126,3 +126,64 @@ When fragment composition is enabled for inline preedit, the editor’s semantic
 - Regression gates (v1 policy): `tools/diag-scripts/ui-gallery-code-editor-torture-*-inline-preedit-baseline.json`,
   `apps/fretboard/src/diag/stats.rs` (fold/inlay absent under inline preedit).
 
+## Implementation gap checklist (as of 2026-02-09)
+
+This section tracks concrete gaps between the contract in this ADR and the current implementation.
+It is intentionally code-oriented so migration work is easy to scope and review.
+
+### Already aligned (v1)
+
+- View-layer fold placeholders and inlays participate in wrapped row-breaking and buffer↔display mapping:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayRowFragment`, `compute_wrapped_row_start_cols`,
+    `decorated_byte_to_col`, `decorated_col_to_byte`).
+- Fold placeholder atomicity and clamping rules are enforced at the view layer:
+  - `ecosystem/fret-code-editor-view/src/folds.rs` (`folded_*` mapping helpers and tests).
+- Inlays that land inside folded ranges are ignored (v1 contract):
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (inlay cursor advancement around folds).
+- v1 policy and staging are locked by diagnostics:
+  - v1 suppress gates (decorations absent under inline preedit):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-*-soft-wrap-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`*_absent_under_inline_preedit`).
+  - ADR 0203 staging opt-ins (decorations present under inline preedit in specific baselines):
+    - unwrapped: `tools/diag-scripts/ui-gallery-code-editor-torture-*-inline-preedit-baseline.json`
+    - wrapped: `tools/diag-scripts/ui-gallery-code-editor-torture-*-with-decorations-baseline.json`
+    - gates: `crates/fret-diag/src/stats.rs` (`*_present_under_inline_preedit_*`).
+  - opt-in surface (editor policy): `ecosystem/fret-code-editor/src/editor/mod.rs`
+    (`allow_decorations_under_inline_preedit`).
+
+### Remaining gaps (v2+; ADR 0203)
+
+- [x] Add a preedit fragment representation to `fret-code-editor-view` (data model + composition order).
+  - Implemented: `ecosystem/fret-code-editor-view/src/lib.rs` (`InlinePreedit`, `DisplayRowFragment::Preedit`).
+- [x] Extend view-layer mapping and wrapping helpers to account for preedit insertion.
+  - Implemented: `ecosystem/fret-code-editor-view/src/lib.rs`
+    (`DisplayMap::new_with_decorations_and_preedit`, preedit-aware row breaking and mapping helpers).
+  - Rule enforced: any display offset “inside” the preedit fragment maps back to the fragment’s anchor.
+- [x] Promote inline IME preedit from paint-time string splicing to a view-layer fragment source (staged).
+  - Status: implemented behind an ecosystem opt-in (`compose_inline_preedit`); default remains v1 suppression.
+  - Evidence:
+    - `ecosystem/fret-code-editor-view/src/lib.rs` (`InlinePreedit`, `DisplayMap::new_with_decorations_and_preedit`).
+    - `ecosystem/fret-code-editor/src/editor/mod.rs` (`compose_inline_preedit`, `refresh_display_map`).
+- [x] Provide a view-owned way to materialize composed display text for windowed export ranges.
+  - Used by: paint row text (shaping), semantics `TextField.value`, and debug snapshots.
+  - Constraint: windowed-only outputs (ADR 0190); avoid full-document composed strings.
+  - Evidence:
+    - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::materialize_display_row_text` + tests).
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range` uses the view-owned materialization).
+- [x] Migrate editor paint + hit-test + caret/selection mapping to consume the composed view mapping (staged).
+  - Status: when `compose_inline_preedit=true`, paint + mapping + hit-test rely on the composed `DisplayMap`.
+  - Evidence:
+    - `ecosystem/fret-code-editor/src/editor/mod.rs` (`compose_inline_preedit` opt-in, mapping helpers).
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (row text is materialized via the view layer).
+- [x] Update a11y export to consume the composed display value (and composition range) from the view layer (staged).
+  - Status: when `compose_inline_preedit=true`, `SemanticsRole::TextField` exports a windowed composed `value`
+    (ADR 0190) plus selection/composition ranges within that value (ADR 0071).
+  - Evidence: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`.
+- [x] Add a dedicated diag baseline + gates for “soft wrap + folds + inlays + inline preedit” coexistence.
+  - Baseline: `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
+  - Gates:
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`).
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed`).
+  - Keep the existing v1 suppress + staging opt-in gates until the composed path is proven stable and can become the default.
+- [ ] Follow-up: fully retire paint-time preedit injection and make the composed path the default.
+  - Motivation: converge on one mapping surface in the non-opt-in default path and avoid “dual mapping” seams.

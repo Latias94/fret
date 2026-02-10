@@ -15,15 +15,16 @@ fn interactive_resize_text_width_cache_entries() -> usize {
     static ENTRIES: OnceLock<usize> = OnceLock::new();
     *ENTRIES.get_or_init(|| {
         // Default: keep a tiny LRU of prepared text blobs keyed by wrap width during interactive
-        // resize. This reduces `Text::prepare` churn when the user drags back-and-forth across a
-        // small number of wrap-width buckets (the common "resize jitter" class).
+        // resize. This can reduce `Text::prepare` churn when the user drags back-and-forth across
+        // a small number of wrap-width buckets (the common "resize jitter" class).
         //
-        // Set to 0/1 to disable, or increase slightly (e.g. 3/4) if your UI has frequent wrap
-        // width oscillation and memory headroom.
+        // Default: keep 1 previous width (2 entries total). This keeps the memory cost bounded
+        // (and ephemeral: the cache is released once interactive resize ends) while addressing
+        // the most common "toggle across two buckets" case.
         std::env::var("FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(0)
+            .unwrap_or(2)
             .min(8)
     })
 }

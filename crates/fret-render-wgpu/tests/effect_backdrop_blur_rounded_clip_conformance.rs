@@ -1,6 +1,6 @@
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
-    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
+    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Paint, Scene, SceneOp,
 };
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
@@ -146,14 +146,14 @@ fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
     base.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
 
@@ -179,9 +179,9 @@ fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
         base.push(SceneOp::Quad {
             order: DrawOrder(1 + i),
             rect: Rect::new(Point::new(Px(x), Px(16.0)), Size::new(Px(1.0), Px(32.0))),
-            background: bg,
+            background: Paint::Solid(bg),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Default::default(),
         });
     }
@@ -190,14 +190,14 @@ fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
     let foreground = SceneOp::Quad {
         order: DrawOrder(100),
         rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     };
 

@@ -163,9 +163,9 @@ impl<H: UiHost> Widget<H> for CountingPaintWidget {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::Solid(Color::TRANSPARENT),
             border: Edges::default(),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::default(),
         });
     }
@@ -211,6 +211,7 @@ mod focus_traversal_prepaint_cache;
 mod gc_liveness;
 mod globals;
 mod hit_test;
+mod hit_test_cache_reuse_policy;
 mod interactivity_gate;
 mod measure_in;
 mod models;

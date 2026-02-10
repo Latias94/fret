@@ -252,14 +252,14 @@ fn canvas_scoped_ops_keep_scene_stacks_balanced() {
                                     Point::new(Px(1.0), Px(2.0)),
                                     Size::new(Px(10.0), Px(10.0)),
                                 ),
-                                background: Color {
+                                background: fret_core::Paint::Solid(Color {
                                     r: 1.0,
                                     g: 0.0,
                                     b: 0.0,
                                     a: 1.0,
-                                },
+                                }),
                                 border: fret_core::Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                                 corner_radii: fret_core::Corners::default(),
                             });
                         });

@@ -2683,9 +2683,11 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_600),
             rect,
-            background: self.style.context_menu_background,
+            background: fret_core::Paint::Solid(self.style.context_menu_background),
+
             border: Edges::all(Px(1.0)),
-            border_color: self.style.context_menu_border,
+            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+
             corner_radii: Corners::all(Px(corner)),
         });
 
@@ -2831,9 +2833,11 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_500),
             rect: layout.panel,
-            background: self.style.context_menu_background,
+            background: fret_core::Paint::Solid(self.style.context_menu_background),
+
             border: Edges::all(Px(1.0)),
-            border_color: self.style.context_menu_border,
+            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+
             corner_radii: Corners::all(Px(corner)),
         });
 
@@ -2878,9 +2882,11 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(21_501),
                 rect,
-                background: bg,
+                background: fret_core::Paint::Solid(bg),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px((corner - 2.0).max(4.0))),
             });
 

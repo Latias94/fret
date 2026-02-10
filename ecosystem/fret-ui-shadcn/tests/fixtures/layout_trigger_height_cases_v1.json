@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "button-default.height",
+      "web_name": "button-default",
+      "recipe": "plain_button",
+      "label": "Button"
+    },
+    {
+      "id": "drawer-demo.trigger-height",
+      "web_name": "drawer-demo",
+      "recipe": "drawer_trigger",
+      "label": "Open Drawer"
+    },
+    {
+      "id": "drawer-dialog.trigger-height",
+      "web_name": "drawer-dialog",
+      "recipe": "dialog_trigger",
+      "label": "Edit Profile"
+    },
+    {
+      "id": "dialog-close-button.trigger-height",
+      "web_name": "dialog-close-button",
+      "recipe": "dialog_trigger",
+      "label": "Share"
+    }
+  ]
+}

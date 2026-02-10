@@ -32,3 +32,20 @@ pub use raf::{cancel_animation_frame, request_animation_frame, set_timeout_ms};
 mod native;
 #[cfg(not(target_arch = "wasm32"))]
 pub use native::*;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runner_error_is_actionable_on_non_wasm_targets() {
+        let err = RunnerError;
+        assert_eq!(
+            err.to_string(),
+            "fret-runner-web is only available on wasm32"
+        );
+
+        fn assert_error(_err: &dyn std::error::Error) {}
+        assert_error(&err);
+    }
+}

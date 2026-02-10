@@ -1,3 +1,4 @@
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use super::{input, paint};
 use fret_core::Point;
@@ -55,6 +56,7 @@ fn replace_buffer_resets_state() {
                     text: Arc::from("hello"),
                     range: 0..5,
                     fold_map: None,
+                    preedit_range: None,
                 },
                 1,
             ),
@@ -70,6 +72,7 @@ fn replace_buffer_resets_state() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -226,7 +229,7 @@ fn caret_stops_hit_test_handles_non_monotonic_x() {
 }
 
 #[test]
-fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
+fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let doc = DocId::new();
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
@@ -236,6 +239,7 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
         fold_map: None,
         caret_rect_top: None,
         caret_rect_height: None,
+        has_preedit: true,
         preedit: Some(RowPreeditMapping {
             insert_at: 2,
             preedit_len: 2,
@@ -243,15 +247,15 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     };
 
     // Before the injection point maps 1:1.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 0), 0);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 2), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 0), 0);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 2), 2);
 
     // Inside the injected preedit snaps to the injection point.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 3), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 3), 2);
 
     // After the injected preedit shifts by `preedit_len`.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 4), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 5), 3);
 }
 
 #[test]
@@ -418,6 +422,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -439,6 +444,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -460,6 +466,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -502,6 +509,7 @@ fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
                         fold_map: None,
                         caret_rect_top: None,
                         caret_rect_height: None,
+                        has_preedit: false,
                         preedit: None,
                     },
                     1,
@@ -587,6 +595,7 @@ fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
                         fold_map: None,
                         caret_rect_top: None,
                         caret_rect_height: None,
+                        has_preedit: false,
                         preedit: None,
                     },
                     1,
@@ -712,6 +721,39 @@ fn ctrl_page_down_bubbles_and_keeps_preedit() {
 }
 
 #[test]
+fn ctrl_a_selects_all() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+    handle.set_caret(3);
+
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let cell_w = Cell::new(Px(10.0));
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::KeyA,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+    );
+    assert!(handled);
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.anchor, 0);
+    assert_eq!(st.selection.focus, st.buffer.len_bytes());
+}
+
+#[test]
 fn read_only_allows_navigation_but_blocks_edits() {
     let handle = CodeEditorHandle::new("hello");
     handle.set_caret(5);
@@ -817,6 +859,7 @@ fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: true,
                     preedit: Some(RowPreeditMapping {
                         insert_at: 0,
                         preedit_len: 2,
@@ -854,6 +897,7 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
                     fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: true,
                     preedit: Some(RowPreeditMapping {
                         insert_at: 0,
                         preedit_len: 2,
@@ -922,8 +966,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
         st.preedit = None;
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(composition, None);
     assert_eq!(value.as_str(), "hello 😀 world");
     assert_eq!(
@@ -962,8 +1006,8 @@ fn a11y_window_includes_preedit_and_reports_composition_range() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "heabllo");
     assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
     assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
@@ -984,8 +1028,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, _selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "ABhello");
     assert_eq!(composition, Some((0, 2)));
 
@@ -1011,6 +1055,43 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
     let clamped_end =
         map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
     assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_window_includes_decorations_when_composed() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_compose_inline_preedit(true);
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..3,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    handle.set_caret(1);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((2, 2)));
+
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
 }
 
 #[test]
@@ -1445,6 +1526,116 @@ fn rust_syntax_spans_are_materialized_for_rows() {
     assert!(
         any_highlight,
         "expected at least one highlighted span for rust"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn set_language_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        0,
+        "new handles should not reset syntax caches"
+    );
+
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let _ = paint::cached_row_syntax_spans(&mut st, 0, 256);
+        let _ = paint::cached_row_syntax_spans(&mut st, 1, 256);
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1"
+        );
+    }
+
+    let resets_before = handle.cache_stats().syntax_resets;
+
+    // The UI layer may call set_language during render; that must be a no-op when the language is
+    // unchanged to avoid per-frame cache resets and re-highlighting work.
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        resets_before,
+        "idempotent set_language must not reset syntax caches"
+    );
+
+    {
+        let st = handle.state.borrow();
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0 to survive idempotent set_language"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1 to survive idempotent set_language"
+        );
+    }
+}
+
+#[test]
+fn set_line_folds_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let placeholder = Arc::<str>::from("…");
+    let spans = vec![FoldSpan {
+        range: 1..3,
+        placeholder,
+    }];
+
+    handle.set_line_folds(0, spans.clone());
+
+    let (folds_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.folds_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_folds(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.folds_epoch, folds_epoch_before,
+        "idempotent set_line_folds must not bump folds_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_folds must not reset row text caches"
+    );
+}
+
+#[test]
+fn set_line_inlays_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let spans = vec![InlaySpan {
+        byte: 2,
+        text: Arc::<str>::from("<inlay>"),
+    }];
+
+    handle.set_line_inlays(0, spans.clone());
+
+    let (inlays_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.inlays_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_inlays(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.inlays_epoch, inlays_epoch_before,
+        "idempotent set_line_inlays must not bump inlays_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_inlays must not reset row text caches"
     );
 }
 

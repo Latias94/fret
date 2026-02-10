@@ -7,6 +7,7 @@ pub(in super::super) fn encode_image(
     state: &mut EncodeState<'_>,
     rect: Rect,
     image: fret_core::ImageId,
+    fit: fret_core::ViewportFit,
     opacity: f32,
 ) {
     state.flush_quad_batch();
@@ -18,7 +19,14 @@ pub(in super::super) fn encode_image(
     if renderer.images.get(image).is_none() {
         return;
     }
-    let (x, y, w, h) = rect_to_pixels(rect, state.scale_factor);
+    let Some(source_px_size) = renderer.images.size_px(image) else {
+        return;
+    };
+    let Some(mapped) = fret_core::scene::map_image_object_fit(rect, source_px_size, fit) else {
+        return;
+    };
+
+    let (x, y, w, h) = rect_to_pixels(mapped.draw_rect, state.scale_factor);
     if w <= 0.0 || h <= 0.0 {
         return;
     }
@@ -33,40 +41,41 @@ pub(in super::super) fn encode_image(
     );
     let premul_flag = if premul { 1.0 } else { 0.0 };
 
+    let (u0, v0, u1, v1) = (mapped.uv.u0, mapped.uv.v0, mapped.uv.u1, mapped.uv.v1);
     state.viewport_vertices.extend_from_slice(&[
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
-            uv: [0.0, 0.0],
+            uv: [u0, v0],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[1].0, quad[1].1],
-            uv: [1.0, 0.0],
+            uv: [u1, v0],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
-            uv: [1.0, 1.0],
+            uv: [u1, v1],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
-            uv: [0.0, 0.0],
+            uv: [u0, v0],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
-            uv: [1.0, 1.0],
+            uv: [u1, v1],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[3].0, quad[3].1],
-            uv: [0.0, 1.0],
+            uv: [u0, v1],
             opacity: o,
             _pad: [premul_flag, 0.0, 0.0],
         },

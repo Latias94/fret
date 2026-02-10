@@ -107,13 +107,36 @@ fn tanstack_v8_faceting_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let state: TableState = tanstack_state.to_table_state().expect("state conversion");
 
-        let table = Table::builder(&data)
+        let mut table_builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
-            .options(options)
-            .build();
+            .options(options);
+
+        if snap
+            .options
+            .get("__globalFaceting")
+            .and_then(|v| v.as_str())
+            == Some("cpu")
+        {
+            table_builder = table_builder
+                .get_global_faceted_row_model(|table| {
+                    table
+                        .faceted_row_model("cpu")
+                        .expect("cpu faceted row model")
+                        .clone()
+                })
+                .get_global_faceted_unique_values(|table| {
+                    table
+                        .faceted_unique_values("cpu")
+                        .expect("cpu faceted unique values")
+                        .clone()
+                })
+                .get_global_faceted_min_max_u64(|table| table.faceted_min_max_u64("cpu"));
+        }
+
+        let table = table_builder.build();
 
         let cpu = &snap.expect.faceting.cpu;
 
@@ -147,20 +170,24 @@ fn tanstack_v8_faceting_parity() {
 
         let global = &snap.expect.faceting.global;
         assert_eq!(
-            snapshot_row_model(table.filtered_row_model()),
+            snapshot_row_model(table.global_faceted_row_model()),
             global.row_model,
             "snapshot {} faceting.global.row_model mismatch",
             snap.id
         );
 
-        let got_global_unique: BTreeMap<String, usize> = BTreeMap::new();
+        let got_global_unique: BTreeMap<String, usize> = table
+            .global_faceted_unique_values()
+            .iter()
+            .map(|(k, v)| (k.to_string(), *v))
+            .collect();
         assert_eq!(
             got_global_unique, global.unique_values,
             "snapshot {} faceting.global.unique_values mismatch",
             snap.id
         );
 
-        let got_global_min_max: Option<(u64, u64)> = None;
+        let got_global_min_max = table.global_faceted_min_max_u64();
         assert_eq!(
             got_global_min_max, global.min_max,
             "snapshot {} faceting.global.min_max mismatch",

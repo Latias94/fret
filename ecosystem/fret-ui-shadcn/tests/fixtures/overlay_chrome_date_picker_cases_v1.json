@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "date-picker-with-presets.select-open-vp375x160.light.listbox_panel_size", "web_name": "date-picker-with-presets.select-open-vp375x160", "theme": "light", "recipe": "listbox_panel_size" },
+    { "id": "date-picker-with-presets.select-open-vp375x160.dark.listbox_panel_size", "web_name": "date-picker-with-presets.select-open-vp375x160", "theme": "dark", "recipe": "listbox_panel_size" },
+    { "id": "date-picker-with-presets.select-open-vp375x240.light.listbox_panel_size", "web_name": "date-picker-with-presets.select-open-vp375x240", "theme": "light", "recipe": "listbox_panel_size" },
+    { "id": "date-picker-with-presets.select-open-vp375x240.dark.listbox_panel_size", "web_name": "date-picker-with-presets.select-open-vp375x240", "theme": "dark", "recipe": "listbox_panel_size" }
+  ]
+}

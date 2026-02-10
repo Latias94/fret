@@ -138,8 +138,10 @@ impl Switch {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let size = switch_size_tokens(&theme);
+            let size = {
+                let theme = Theme::global(&*cx.app);
+                switch_size_tokens(theme)
+            };
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -158,7 +160,23 @@ impl Switch {
                     }
                 }));
 
-                let corner_radii = switch_tokens::state_layer_shape(&theme);
+                let checked = cx
+                    .get_model_copied(&self.selected, Invalidation::Layout)
+                    .unwrap_or(false);
+
+                let (corner_radii, layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = switch_tokens::state_layer_shape(theme);
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring =
+                        material_focus_ring_for_component(theme, "md.comp.switch", corner_radii);
+
+                    (corner_radii, layout, focus_ring)
+                };
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
@@ -167,23 +185,11 @@ impl Switch {
                         role: Some(SemanticsRole::Switch),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
-                        checked: Some(
-                            cx.get_model_copied(&self.selected, Invalidation::Layout)
-                                .unwrap_or(false),
-                        ),
+                        checked: Some(checked),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        "md.comp.switch",
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -225,29 +231,90 @@ impl Switch {
                                 None => switch_tokens::SwitchInteraction::None,
                             };
 
-                        let state_layer_target = switch_tokens::state_layer_target_opacity(
-                            &theme,
-                            selected,
-                            enabled,
-                            tokens_interaction,
-                        );
-                        let state_layer_color =
-                            switch_tokens::state_layer_color(&theme, selected, tokens_interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
-
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
                             selected: SpringAnimator,
                             pressed: SpringAnimator,
                         }
 
-                        let spring =
-                            sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastSpatial);
+                        let (
+                            state_layer_target,
+                            state_layer_color,
+                            spring,
+                            chrome,
+                            track_corner_radii,
+                            handle_corner_radii,
+                            ripple_base_opacity,
+                            config,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
+
+                            let state_layer_target = switch_tokens::state_layer_target_opacity(
+                                theme,
+                                selected,
+                                enabled,
+                                tokens_interaction,
+                            );
+                            let state_layer_color = switch_tokens::state_layer_color(
+                                theme,
+                                selected,
+                                tokens_interaction,
+                            );
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let spring =
+                                sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+
+                            let mut chrome =
+                                switch_tokens::chrome(theme, selected, enabled, tokens_interaction);
+                            let token_track_color = chrome.track_color;
+                            chrome.track_color = resolve_override_slot_with(
+                                self.style.track_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_track_color,
+                            );
+                            let token_handle_color = chrome.handle_color;
+                            chrome.handle_color = resolve_override_slot_with(
+                                self.style.handle_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_handle_color,
+                            );
+                            let token_outline_color = chrome.outline_color;
+                            chrome.outline_color = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_outline_color,
+                            );
+
+                            let track_corner_radii = switch_tokens::track_shape(theme);
+                            let handle_corner_radii = switch_tokens::handle_shape(theme);
+
+                            let ripple_base_opacity =
+                                switch_tokens::pressed_state_layer_opacity(theme, selected);
+                            let config = material_pressable_indication_config(
+                                theme,
+                                Some(Px(size.state_layer.0 * 0.5)),
+                            );
+
+                            (
+                                state_layer_target,
+                                state_layer_color,
+                                spring,
+                                chrome,
+                                track_corner_radii,
+                                handle_corner_radii,
+                                ripple_base_opacity,
+                                config,
+                            )
+                        };
                         let (thumb_t, pressed_t, thumb_active) =
                             cx.with_state_for(pressable_id, SwitchThumbRuntime::default, |rt| {
                                 let desired_selected = if selected { 1.0 } else { 0.0 };
@@ -272,31 +339,6 @@ impl Switch {
                             });
 
                         let geom = switch_geometry(size, thumb_t, pressed_t);
-                        let mut chrome =
-                            switch_tokens::chrome(&theme, selected, enabled, tokens_interaction);
-                        let token_track_color = chrome.track_color;
-                        chrome.track_color = resolve_override_slot_with(
-                            self.style.track_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_track_color,
-                        );
-                        let token_handle_color = chrome.handle_color;
-                        chrome.handle_color = resolve_override_slot_with(
-                            self.style.handle_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_handle_color,
-                        );
-                        let token_outline_color = chrome.outline_color;
-                        chrome.outline_color = resolve_override_slot_opt_with(
-                            self.style.outline_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_outline_color,
-                        );
-                        let track_corner_radii = switch_tokens::track_shape(&theme);
-                        let handle_corner_radii = switch_tokens::handle_shape(&theme);
                         let track = switch_track(
                             cx,
                             size,
@@ -306,19 +348,13 @@ impl Switch {
                             handle_corner_radii,
                         );
 
-                        let ripple_base_opacity =
-                            switch_tokens::pressed_state_layer_opacity(&theme, selected);
-                        let config = material_pressable_indication_config(
-                            &theme,
-                            Some(Px(size.state_layer.0 * 0.5)),
-                        );
                         let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
                             cx,
                             pressable_id,
                             now_frame,
                             geom.ink_bounds,
                             geom.ink_bounds,
-                            switch_tokens::state_layer_shape(&theme),
+                            corner_radii,
                             RippleClip::Bounded,
                             state_layer_color,
                             is_pressed,

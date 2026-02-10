@@ -197,8 +197,6 @@ impl Tabs {
         } = self;
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let disabled_items: Arc<[bool]> = Arc::from(
@@ -228,15 +226,20 @@ impl Tabs {
                 ..Default::default()
             };
 
-            let container_height = tabs_tokens::container_height(&theme);
-            let container_bg = resolve_override_slot_with(
-                style.container_background.as_ref(),
-                disabled
-                    .then_some(WidgetStates::DISABLED)
-                    .unwrap_or_default(),
-                |color| color.resolve(&theme),
-                || tabs_tokens::container_background(&theme),
-            );
+            let container_states = disabled
+                .then_some(WidgetStates::DISABLED)
+                .unwrap_or_default();
+            let (container_height, container_bg) = {
+                let theme = Theme::global(&*cx.app);
+                let container_height = tabs_tokens::container_height(theme);
+                let container_bg = resolve_override_slot_with(
+                    style.container_background.as_ref(),
+                    container_states,
+                    |color| color.resolve(theme),
+                    || tabs_tokens::container_background(theme),
+                );
+                (container_height, container_bg)
+            };
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -271,7 +274,6 @@ impl Tabs {
                         });
                         let indicator = primary_tab_list_indicator(
                             cx,
-                            &theme,
                             now_frame,
                             container_id,
                             tab_count,
@@ -363,7 +365,6 @@ impl Tabs {
                                     let tab_stop = tab_stop.is_some_and(|t| t == idx);
                                     material_primary_tab(
                                         cx,
-                                        &theme,
                                         container_id,
                                         model.clone(),
                                         it,
@@ -398,7 +399,6 @@ impl Tabs {
 
 fn material_primary_tab<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     container_id: GlobalElementId,
     model: Model<Arc<str>>,
     item: &TabItem,
@@ -445,9 +445,12 @@ fn material_primary_tab<H: UiHost>(
         }
 
         let corner_radii = Corners::all(Px(0.0));
-        let height = theme
-            .metric_by_key("md.comp.primary-navigation-tab.container.height")
-            .unwrap_or(Px(48.0));
+        let height = {
+            let theme = Theme::global(&*cx.app);
+            theme
+                .metric_by_key("md.comp.primary-navigation-tab.container.height")
+                .unwrap_or(Px(48.0))
+        };
 
         let pressable_props = PressableProps {
             enabled,
@@ -474,14 +477,20 @@ fn material_primary_tab<H: UiHost>(
                     l.flex.grow = 1.0;
                 }
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
-            focus_ring: Some(material_focus_ring_for_component(
-                theme,
-                "md.comp.primary-navigation-tab",
-                corner_radii,
-            )),
+            focus_ring: Some({
+                let theme = Theme::global(&*cx.app);
+                material_focus_ring_for_component(
+                    theme,
+                    "md.comp.primary-navigation-tab",
+                    corner_radii,
+                )
+            }),
             focus_ring_bounds: None,
         };
 
@@ -515,22 +524,39 @@ fn material_primary_tab<H: UiHost>(
                     tabs_tokens::TabInteraction::Default
                 };
 
-                let label_color = resolve_override_slot_with(
-                    style_override.label_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || tabs_tokens::label_color(theme, selected, interaction),
-                );
-                let state_layer_color = resolve_override_slot_with(
-                    style_override.state_layer_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || tabs_tokens::state_layer_color(theme, selected, interaction),
-                );
-                let state_layer_target =
-                    tabs_tokens::state_layer_opacity(theme, selected, interaction);
-                let ripple_base_opacity = tabs_tokens::pressed_state_layer_opacity(theme, selected);
-                let config = material_pressable_indication_config(theme, None);
+                let (
+                    label_color,
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    indication_config,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let label_color = resolve_override_slot_with(
+                        style_override.label_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::label_color(theme, selected, interaction),
+                    );
+                    let state_layer_color = resolve_override_slot_with(
+                        style_override.state_layer_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::state_layer_color(theme, selected, interaction),
+                    );
+                    let state_layer_target =
+                        tabs_tokens::state_layer_opacity(theme, selected, interaction);
+                    let ripple_base_opacity =
+                        tabs_tokens::pressed_state_layer_opacity(theme, selected);
+                    let indication_config = material_pressable_indication_config(theme, None);
+                    (
+                        label_color,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        indication_config,
+                    )
+                };
                 let ink = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -541,10 +567,10 @@ fn material_primary_tab<H: UiHost>(
                     is_pressed,
                     state_layer_target,
                     ripple_base_opacity,
-                    config,
+                    indication_config,
                     false,
                 );
-                let label_el = primary_tab_label(cx, theme, &label, label_color);
+                let label_el = primary_tab_label(cx, &label, label_color);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = if scrollable {
@@ -554,7 +580,10 @@ fn material_primary_tab<H: UiHost>(
                 };
                 row.layout.size.height = Length::Px(height);
                 row.layout.overflow = Overflow::Clip;
-                enforce_minimum_interactive_size(&mut row.layout, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut row.layout, theme);
+                }
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
@@ -579,13 +608,15 @@ fn material_primary_tab<H: UiHost>(
 
 fn primary_tab_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: &Arc<str>,
     color: Color,
 ) -> AnyElement {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.title-small")
-        .unwrap_or_else(|| TextStyle::default());
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        theme
+            .text_style_by_key("md.sys.typescale.title-small")
+            .unwrap_or_else(TextStyle::default)
+    };
 
     let mut props = TextProps::new(label.clone());
     props.style = Some(style);
@@ -597,7 +628,6 @@ fn primary_tab_label<H: UiHost>(
 
 fn primary_tab_list_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     now_frame: u64,
     container_id: GlobalElementId,
     tab_count: usize,
@@ -631,37 +661,49 @@ fn primary_tab_list_indicator<H: UiHost>(
             states |= WidgetStates::SELECTED;
         }
 
-        let (target_x, target_width, target_height, color) = if tab_count > 0 {
-            if let Some(tab_bounds) = tab_bounds {
-                let height = tabs_tokens::active_indicator_height(theme);
-                let color = resolve_override_slot_with(
-                    style_override.active_indicator_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || tabs_tokens::active_indicator_color(theme),
-                );
-                let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
-                (x, tab_bounds.size.width.0, height.0, color)
-            } else if let Some(idx) = selected_idx {
-                let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
-                let height = tabs_tokens::active_indicator_height(theme);
-                let color = resolve_override_slot_with(
-                    style_override.active_indicator_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || tabs_tokens::active_indicator_color(theme),
-                );
-                (tab_width_px * (idx as f32), tab_width_px, height.0, color)
+        let (target_x, target_width, target_height, color, corner_radii, spring) = {
+            let theme = Theme::global(&*cx.app);
+
+            let (target_x, target_width, target_height, color) = if tab_count > 0 {
+                if let Some(tab_bounds) = tab_bounds {
+                    let height = tabs_tokens::active_indicator_height(theme);
+                    let color = resolve_override_slot_with(
+                        style_override.active_indicator_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::active_indicator_color(theme),
+                    );
+                    let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
+                    (x, tab_bounds.size.width.0, height.0, color)
+                } else if let Some(idx) = selected_idx {
+                    let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
+                    let height = tabs_tokens::active_indicator_height(theme);
+                    let color = resolve_override_slot_with(
+                        style_override.active_indicator_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || tabs_tokens::active_indicator_color(theme),
+                    );
+                    (tab_width_px * (idx as f32), tab_width_px, height.0, color)
+                } else {
+                    (0.0, 0.0, 0.0, Color::TRANSPARENT)
+                }
             } else {
                 (0.0, 0.0, 0.0, Color::TRANSPARENT)
-            }
-        } else {
-            (0.0, 0.0, 0.0, Color::TRANSPARENT)
+            };
+
+            let corner_radii = tabs_tokens::active_indicator_shape(theme);
+            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+
+            (
+                target_x,
+                target_width,
+                target_height,
+                color,
+                corner_radii,
+                spring,
+            )
         };
-
-        let corner_radii = tabs_tokens::active_indicator_shape(theme);
-
-        let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
         let (x, width, height, want_frames) =
             cx.with_state_for(id, TabListIndicatorRuntime::default, |rt| {
                 if !rt.x.is_initialized() {

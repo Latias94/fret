@@ -39,11 +39,11 @@ Generated vendor constants are exposed under `generated_ids::radix::*`.
   - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack radix`
   - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack all`
 - Sync SVGs from upstream sources into `assets/icons`:
-  - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
+  - `python3 tools/sync_icons.py --pack radix --clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
 - Verify referenced vendor IDs resolve to vendored assets:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - Release-time one-shot checks:
-  - Icons only: `pwsh tools/pre_release_icons.ps1`
-  - Aggregate entrypoint: `pwsh tools/pre_release.ps1`
-  - Pack-aware check entrypoint: `pwsh tools/check_icons_generation.ps1 -Pack radix`
+  - Icons only: `python3 tools/pre_release_icons.py`
+  - Aggregate entrypoint: `python3 tools/pre_release.py`
+  - Pack-aware check entrypoint: `python3 tools/check_icons_generation.py --pack radix`

@@ -30,6 +30,59 @@ Tracking:
 
 ---
 
+## Checkpoint (2026-02-10): pause criteria + future directions
+
+This workstream has reached a point where additional “small-step” tuning is yielding diminishing returns and higher
+regression risk. The recommended posture is:
+
+- **Pause new core perf refactors** unless a gate regresses or a new high-leverage mechanism is ready to land with
+  contract clarity (ADR) and global validation.
+- Keep the perf substrate healthy (baselines/gates/log discipline) so future work can resume safely.
+
+### What is “good enough for now”
+
+We consider “good enough to pause” to mean:
+
+1) `ui-resize-probes` is stable under attempts=3 (majority pass), and
+2) `ui-code-editor-resize-probes` remains under budget with explainable worst frames, and
+3) regressions are caught early via the existing gates and recorded in the perf log.
+
+Evidence anchors (see the perf log for exact commands + artifacts):
+
+- Editor resize jitter improvements (wrap-width small-step policy widened):
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry `2026-02-09 22:54:20` (commit `53aa6534a`).
+- Text wrap-from-unwrapped allocation win:
+  - perf log entry `2026-02-09 22:12:02` (commit `7b9a98a8f`).
+- A “what not to land” example (measured regression / no clear win):
+  - perf log entry `2026-02-10 00:18:40` (sticky small-step experiment; not landed).
+
+### Rollback/disable switches (for safe iteration)
+
+These knobs are read via `OnceLock` and require a process restart to take effect:
+
+- Disable default small-step wrap-width bucketing:
+  - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX=0` (or `1`)
+- Make small-step detection extremely strict:
+  - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX=1`
+- Disable interactive resize per-width prepared-blob reuse:
+  - `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES=0` (or `1`)
+- Disable global wrap-width bucketing (kept default-off; use only for experiments):
+  - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX=0`
+
+### Future optimization directions (high leverage only)
+
+If/when we resume “fearless refactor” work, prefer these directions over additional threshold tuning:
+
+1) **Reduce width-driven `Text::prepare` frequency**, not just per-prepare cost.
+   - Candidate levers: stronger/column-based wrap-width quantization for editor-like surfaces, guarded live-resize
+     LOD/deferral with reconcile-on-idle, and aligning `measure` and `prepare` cache keys more aggressively.
+2) **Editor/Canvas paint replay boundary** (scene op caching / display-list replay) so many interactive frames become
+   “paint-only” or “replay-only”.
+3) **Layout engine data-structure refactor**: hashing-heavy per-frame tables → dense tables + generation stamps
+   (see `ui-perf-gpui-gap-v1.md` “dense tables” direction).
+4) **GPU capture only when CPU attribution is clear**: use bundles to decide whether the tail is CPU-bound
+   (layout/prepare/scene encoding) vs GPU-bound (uploads/evictions/intermediate churn), then capture with RenderDoc/Tracy.
+
 ## 0) What “smoothness” means (so we can measure it)
 
 We explicitly distinguish:

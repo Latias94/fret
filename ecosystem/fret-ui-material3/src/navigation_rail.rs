@@ -169,8 +169,6 @@ fn navigation_rail_impl<H: UiHost>(
     } = rail;
 
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
-
         let values: Arc<[Arc<str>]> =
             Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
         let disabled_items: Arc<[bool]> = Arc::from(
@@ -200,9 +198,14 @@ fn navigation_rail_impl<H: UiHost>(
             ..Default::default()
         };
 
-        let container_w = rail_tokens::container_width(&theme);
-        let container_bg = rail_tokens::container_background(&theme);
-        let container_shape = rail_tokens::container_shape(&theme);
+        let (container_w, container_bg, container_shape) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                rail_tokens::container_width(theme),
+                rail_tokens::container_background(theme),
+                rail_tokens::container_shape(theme),
+            )
+        };
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Vertical;
@@ -241,7 +244,6 @@ fn navigation_rail_impl<H: UiHost>(
 
                     let indicator = navigation_rail_active_indicator(
                         cx,
-                        &theme,
                         now_frame,
                         container_id,
                         item_count,
@@ -334,7 +336,6 @@ fn navigation_rail_impl<H: UiHost>(
                                     let tab_stop = tab_stop.is_some_and(|t| t == idx);
                                     navigation_rail_item(
                                         cx,
-                                        &theme,
                                         container_id,
                                         model.clone(),
                                         it,
@@ -356,7 +357,6 @@ fn navigation_rail_impl<H: UiHost>(
 
 fn navigation_rail_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     container_id: GlobalElementId,
     model: Model<Arc<str>>,
     item: &NavigationRailItem,
@@ -372,6 +372,51 @@ fn navigation_rail_item<H: UiHost>(
     let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+
+    let (
+        indicator_w,
+        indicator_h,
+        icon_size,
+        ripple_base_opacity,
+        config,
+        label_style_base,
+        label_weight_active,
+        label_weight_inactive,
+        active_indicator_corner_radii,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+
+        let indicator_w = rail_tokens::active_indicator_width(theme);
+        let indicator_h = rail_tokens::active_indicator_height(theme, always_show_label);
+        let icon_size = rail_tokens::icon_size(theme);
+
+        let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
+        let config = material_pressable_indication_config(theme, None);
+
+        let label_style_base = theme
+            .text_style_by_key("md.sys.typescale.label-medium")
+            .unwrap_or_else(TextStyle::default);
+        let label_weight_active = rail_tokens::label_weight(theme, true);
+        let label_weight_inactive = rail_tokens::label_weight(theme, false);
+
+        let active_indicator_corner_radii = rail_tokens::active_indicator_shape(theme);
+
+        (
+            indicator_w,
+            indicator_h,
+            icon_size,
+            ripple_base_opacity,
+            config,
+            label_style_base,
+            label_weight_active,
+            label_weight_inactive,
+            active_indicator_corner_radii,
+        )
+    };
+
+    let label_h = label_style_base
+        .line_height
+        .unwrap_or(Px(label_style_base.size.0 * 1.2));
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -398,16 +443,6 @@ fn navigation_rail_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let indicator_w = rail_tokens::active_indicator_width(theme);
-        let indicator_h = rail_tokens::active_indicator_height(theme, always_show_label);
-
-        let label_style = theme
-            .text_style_by_key("md.sys.typescale.label-medium")
-            .unwrap_or_else(TextStyle::default);
-        let label_h = label_style
-            .line_height
-            .unwrap_or(Px(label_style.size.0 * 1.2));
-
         let show_label = always_show_label || selected;
         let item_h = if show_label {
             Px(indicator_w.0 + label_h.0 + 12.0)
@@ -433,7 +468,10 @@ fn navigation_rail_item<H: UiHost>(
                 l.size.width = Length::Fill;
                 l.size.height = Length::Px(item_h);
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
             focus_ring: None,
@@ -456,33 +494,38 @@ fn navigation_rail_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = rail_tokens::label_color(theme, selected, interaction);
-                let icon_color = rail_tokens::icon_color(theme, selected, interaction);
-                let state_layer_color =
-                    rail_tokens::state_layer_color(theme, selected, interaction);
-                let state_layer_target =
-                    rail_tokens::state_layer_target_opacity(theme, enabled, interaction);
+                let (label_color, icon_color, state_layer_color, state_layer_target) = {
+                    let theme = Theme::global(&*cx.app);
+                    let label_color = rail_tokens::label_color(theme, selected, interaction);
+                    let icon_color = rail_tokens::icon_color(theme, selected, interaction);
+                    let state_layer_color =
+                        rail_tokens::state_layer_color(theme, selected, interaction);
+                    let state_layer_target =
+                        rail_tokens::state_layer_target_opacity(theme, enabled, interaction);
+                    (
+                        label_color,
+                        icon_color,
+                        state_layer_color,
+                        state_layer_target,
+                    )
+                };
 
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
-
-                let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
-                let config = material_pressable_indication_config(theme, None);
 
                 let indicator_bounds = fret_core::Rect::new(
                     fret_core::Point::new(Px((bounds.size.width.0 - indicator_w.0) * 0.5), Px(4.0)),
                     fret_core::Size::new(indicator_w, indicator_h),
                 );
 
-                let corner_radii = rail_tokens::active_indicator_shape(theme);
                 let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
                     cx,
                     pressable_id,
                     now_frame,
                     indicator_bounds,
                     indicator_bounds,
-                    corner_radii,
+                    active_indicator_corner_radii,
                     RippleClip::Bounded,
                     state_layer_color,
                     is_pressed,
@@ -498,7 +541,7 @@ fn navigation_rail_item<H: UiHost>(
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
-                    let icon_el = rail_icon(cx, theme, &icon, icon_color);
+                    let icon_el = rail_icon(cx, &icon, icon_size, icon_color);
                     let icon_el = if let Some(badge) = badge.clone() {
                         let badge = match badge {
                             BadgeValue::Dot => Badge::dot(),
@@ -509,7 +552,7 @@ fn navigation_rail_item<H: UiHost>(
                             .map(|id| Arc::<str>::from(format!("{id}-badge")));
                         let badge = badge
                             .placement(BadgePlacement::NavigationIcon)
-                            .navigation_anchor_size(rail_tokens::icon_size(theme));
+                            .navigation_anchor_size(icon_size);
                         let badge = if let Some(badge_test_id) = badge_test_id {
                             badge.test_id(badge_test_id)
                         } else {
@@ -538,8 +581,15 @@ fn navigation_rail_item<H: UiHost>(
                     )
                 });
 
-                let label_el =
-                    show_label.then(|| rail_label(cx, theme, &label, label_color, selected));
+                let label_el = show_label.then(|| {
+                    let mut style = label_style_base.clone();
+                    style.weight = if selected {
+                        label_weight_active
+                    } else {
+                        label_weight_inactive
+                    };
+                    rail_label(cx, &label, style, label_color)
+                });
 
                 let mut col = FlexProps::default();
                 col.layout.size.width = Length::Fill;
@@ -565,7 +615,6 @@ fn navigation_rail_item<H: UiHost>(
 
 fn navigation_rail_active_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     now_frame: u64,
     container_id: GlobalElementId,
     item_count: usize,
@@ -583,8 +632,13 @@ fn navigation_rail_active_indicator<H: UiHost>(
         let id = cx.root_id();
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
 
-        let indicator_color = rail_tokens::active_indicator_color(theme);
-        let corner_radii = rail_tokens::active_indicator_shape(theme);
+        let (indicator_color, corner_radii, spring) = {
+            let theme = Theme::global(&*cx.app);
+            let indicator_color = rail_tokens::active_indicator_color(theme);
+            let corner_radii = rail_tokens::active_indicator_shape(theme);
+            let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+            (indicator_color, corner_radii, spring)
+        };
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
@@ -606,7 +660,6 @@ fn navigation_rail_active_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
         let (x, y, w, h, want_frames) = cx.with_state_for(id, IndicatorRuntime::default, |rt| {
             if !rt.x.is_initialized() {
                 rt.x.reset(now_frame, target_x);
@@ -700,17 +753,10 @@ fn interaction_state(
 
 fn rail_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     text: &Arc<str>,
+    style: TextStyle,
     color: Color,
-    active: bool,
 ) -> AnyElement {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-medium")
-        .unwrap_or_else(TextStyle::default);
-
-    style.weight = rail_tokens::label_weight(theme, active);
-
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
@@ -721,11 +767,10 @@ fn rail_label<H: UiHost>(
 
 fn rail_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     icon: &IconId,
+    size: Px,
     color: Color,
 ) -> AnyElement {
-    let size = rail_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);

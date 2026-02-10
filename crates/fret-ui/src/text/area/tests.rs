@@ -222,6 +222,32 @@ fn ime_cursor_area_is_in_visual_space_after_render_transform() {
 }
 
 #[test]
+fn text_area_set_text_is_idempotent_for_same_value() {
+    let mut area = TextArea::new("hello");
+
+    area.caret = 2;
+    area.selection_anchor = 4;
+    area.ensure_caret_visible = false;
+    area.preedit = "x".to_string();
+    area.preedit_cursor = Some((0, 1));
+    area.ime_replace_range = Some((1, 2));
+    area.text_dirty = false;
+    area.preferred_x = Some(Px(12.0));
+
+    area.set_text("hello");
+
+    assert_eq!(area.text, "hello");
+    assert_eq!(area.caret, 2);
+    assert_eq!(area.selection_anchor, 4);
+    assert!(!area.ensure_caret_visible);
+    assert_eq!(area.preedit, "x");
+    assert_eq!(area.preedit_cursor, Some((0, 1)));
+    assert_eq!(area.ime_replace_range, Some((1, 2)));
+    assert!(!area.text_dirty);
+    assert_eq!(area.preferred_x, Some(Px(12.0)));
+}
+
+#[test]
 fn text_area_copy_clamps_out_of_range_selection_indices() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();

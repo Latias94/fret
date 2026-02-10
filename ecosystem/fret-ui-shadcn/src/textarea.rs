@@ -113,9 +113,9 @@ pub fn textarea<H: UiHost>(
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app);
 
-    let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
+    let resolved = resolve_input_chrome(theme, size, &chrome, InputTokenKeys::none());
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
@@ -139,7 +139,7 @@ pub fn textarea<H: UiHost>(
     chrome.caret_color = resolved.text_color;
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
     chrome.preedit_underline_color = resolved.selection_color;
-    chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
+    chrome.focus_ring = Some(decl_style::focus_ring(theme, resolved.radius));
 
     if aria_invalid {
         let border_color = theme.color_required("destructive");
@@ -158,7 +158,7 @@ pub fn textarea<H: UiHost>(
         }
     }
 
-    let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
+    let root_layout = decl_style::layout_style(theme, layout.relative().w_full());
 
     let mut props = TextAreaProps::new(model);
     props.enabled = !disabled;

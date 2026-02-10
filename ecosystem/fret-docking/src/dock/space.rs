@@ -730,16 +730,16 @@ impl DockSpace {
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(20),
             rect,
-            background: if self.hovered_float_zone {
+            background: fret_core::Paint::Solid(if self.hovered_float_zone {
                 Color {
                     a: 0.20,
                     ..hover_bg
                 }
             } else {
                 card
-            },
+            }),
             border: Edges::all(Px(1.0)),
-            border_color: border,
+            border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(6.0)),
         });
 
@@ -796,9 +796,9 @@ impl DockSpace {
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(22),
             rect: tooltip_rect,
-            background: theme.color_required("popover"),
+            background: fret_core::Paint::Solid(theme.color_required("popover")),
             border: Edges::all(border_px),
-            border_color: border,
+            border_paint: fret_core::Paint::Solid(border),
             corner_radii: fret_core::Corners::all(Px(8.0)),
         });
 
@@ -909,9 +909,9 @@ impl DockSpace {
         cx.scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect: cx.bounds,
-            background: theme.color_required("card"),
+            background: fret_core::Paint::Solid(theme.color_required("card")),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
@@ -4373,24 +4373,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(0),
                     rect: chrome.outer,
-                    background: surface,
+                    background: fret_core::Paint::Solid(surface),
                     border: Edges::all(DOCK_FLOATING_BORDER),
-                    border_color,
+                    border_paint: fret_core::Paint::Solid(border_color),
                     corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
                 });
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(1),
                     rect: chrome.title_bar,
-                    background: if self.hovered_floating_title_bar == Some(floating.floating) {
-                        Color {
-                            a: 0.22,
-                            ..hover_bg
-                        }
-                    } else {
-                        surface
-                    },
+                    background: fret_core::Paint::Solid(
+                        if self.hovered_floating_title_bar == Some(floating.floating) {
+                            Color {
+                                a: 0.22,
+                                ..hover_bg
+                            }
+                        } else {
+                            surface
+                        },
+                    ),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
 
@@ -4400,9 +4402,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(2),
                         rect: chrome.close_button,
-                        background: hover_bg,
+                        background: fret_core::Paint::Solid(hover_bg),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                 }

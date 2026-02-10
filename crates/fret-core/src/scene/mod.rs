@@ -1,5 +1,5 @@
 use crate::{
-    Px, SvgFit,
+    Px, SvgFit, ViewportFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
@@ -7,10 +7,16 @@ use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
 mod fingerprint;
+mod image_object_fit;
+mod paint;
 mod replay;
 mod validate;
 
 use fingerprint::mix_scene_op;
+pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
+pub use paint::{
+    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Paint, RadialGradient, TileMode,
+};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,7 +155,7 @@ impl SceneRecording {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 mut corner_radii,
             } => {
                 let max = rect.size.width.0.min(rect.size.height.0) * 0.5;
@@ -162,9 +168,9 @@ impl SceneRecording {
                 SceneOp::Quad {
                     order,
                     rect,
-                    background,
+                    background: background.sanitize(),
                     border,
-                    border_color,
+                    border_paint: border_paint.sanitize(),
                     corner_radii,
                 }
             }
@@ -315,9 +321,9 @@ pub enum SceneOp {
     Quad {
         order: DrawOrder,
         rect: Rect,
-        background: Color,
+        background: Paint,
         border: Edges,
-        border_color: Color,
+        border_paint: Paint,
         corner_radii: Corners,
     },
 
@@ -325,6 +331,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         image: ImageId,
+        fit: ViewportFit,
         opacity: f32,
     },
 
@@ -416,9 +423,9 @@ mod tests {
         let ops = [SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
-            background: Color::TRANSPARENT,
+            background: Paint::Solid(Color::TRANSPARENT),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         }];
 
@@ -572,9 +579,9 @@ mod tests {
                 Point::new(Px(f32::NAN), Px(0.0)),
                 Size::new(Px(10.0), Px(10.0)),
             ),
-            background: Color::TRANSPARENT,
+            background: Paint::Solid(Color::TRANSPARENT),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         assert!(matches!(

@@ -9,6 +9,38 @@ pub struct HeaderSizingSnapshot {
     pub start: BTreeMap<Arc<str>, f32>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnSizingSnapshot {
+    pub total_size: f32,
+    pub left_total_size: f32,
+    pub center_total_size: f32,
+    pub right_total_size: f32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnStartSnapshot {
+    pub all: BTreeMap<Arc<str>, f32>,
+    pub left: BTreeMap<Arc<str>, Option<f32>>,
+    pub center: BTreeMap<Arc<str>, Option<f32>>,
+    pub right: BTreeMap<Arc<str>, Option<f32>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnAfterSnapshot {
+    pub all: BTreeMap<Arc<str>, f32>,
+    pub left: BTreeMap<Arc<str>, Option<f32>>,
+    pub center: BTreeMap<Arc<str>, Option<f32>>,
+    pub right: BTreeMap<Arc<str>, Option<f32>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LeafColumnSizingSnapshot {
+    pub sizing: ColumnSizingSnapshot,
+    pub size: BTreeMap<Arc<str>, f32>,
+    pub start: ColumnStartSnapshot,
+    pub after: ColumnAfterSnapshot,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColumnCapabilitySnapshot {
     pub can_hide: bool,
@@ -37,6 +69,12 @@ pub struct LeafColumnsSnapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlatColumnsSnapshot {
+    pub all: Vec<Arc<str>>,
+    pub visible: Vec<Arc<str>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RowModelIdSnapshot {
     pub root: Vec<Arc<str>>,
     pub flat: Vec<Arc<str>>,
@@ -53,12 +91,14 @@ pub struct CoreModelSnapshot {
     pub schema_version: u32,
     pub column_tree: Vec<ColumnNodeSnapshot>,
     pub column_capabilities: BTreeMap<Arc<str>, ColumnCapabilitySnapshot>,
+    pub flat_columns: FlatColumnsSnapshot,
     pub leaf_columns: LeafColumnsSnapshot,
     pub header_groups: Vec<HeaderGroupSnapshot>,
     pub left_header_groups: Vec<HeaderGroupSnapshot>,
     pub center_header_groups: Vec<HeaderGroupSnapshot>,
     pub right_header_groups: Vec<HeaderGroupSnapshot>,
     pub header_sizing: HeaderSizingSnapshot,
+    pub leaf_column_sizing: LeafColumnSizingSnapshot,
     pub rows: CoreRowsSnapshot,
     pub cells: BTreeMap<Arc<str>, RowCellsSnapshot>,
 }
