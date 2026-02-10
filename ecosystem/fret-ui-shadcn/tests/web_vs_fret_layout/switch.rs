@@ -108,7 +108,7 @@ fn web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures() {
                     };
 
                     // Ignore low-alpha shadow quads. The switch thumb/track are fully opaque in shadcn-web.
-                    if background.a < 0.5 {
+                    if paint_max_alpha(*background) < 0.5 {
                         continue;
                     }
 

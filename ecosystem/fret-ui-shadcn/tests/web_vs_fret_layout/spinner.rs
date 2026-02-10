@@ -988,6 +988,10 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
             continue;
         }
 
+        let Some(background) = paint_solid_color(background) else {
+            continue;
+        };
+
         let diff = rgba_diff_metric(color_to_rgba(background), expected_bg);
         match best {
             Some((_best_rect, _best_bg, best_diff)) if diff >= best_diff => {}

@@ -473,7 +473,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
         .expect("even row background quad");
     assert_rgba_close(
         "typography-table even row background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         web_even_bg,
         0.02,
     );
@@ -842,7 +842,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
         .expect("even row background quad");
     assert_rgba_close(
         "typography-table even row background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         web_even_bg,
         0.02,
     );

@@ -1528,7 +1528,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
     assert_rect_xwh_close_px("calendar-01 root quad", quad.rect, web_rdp_root.rect, 3.0);
     assert_rgba_close(
         "calendar-01 root background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -1703,7 +1703,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14 selected day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -1878,7 +1878,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_background_matches_web(
     );
     assert_rgba_close(
         "calendar-14.vp375x320 selected day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -2126,7 +2126,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14 hover day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -2374,7 +2374,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14.vp375x320 hover day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );

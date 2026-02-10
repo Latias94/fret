@@ -666,10 +666,75 @@ fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
     );
 }
 
+fn paint_solid_color(paint: fret_core::Paint) -> Option<fret_core::Color> {
+    match paint {
+        fret_core::Paint::Solid(c) => Some(c),
+        _ => None,
+    }
+}
+
+fn paint_representative_color(paint: fret_core::Paint) -> fret_core::Color {
+    match paint {
+        fret_core::Paint::Solid(c) => c,
+        fret_core::Paint::LinearGradient(g) => {
+            let n = usize::from(g.stop_count).min(g.stops.len());
+            let mut best = fret_core::Color::TRANSPARENT;
+            let mut best_a = -1.0f32;
+            for s in g.stops.iter().take(n) {
+                let a = s.color.a;
+                if a > best_a {
+                    best_a = a;
+                    best = s.color;
+                }
+            }
+            best
+        }
+        fret_core::Paint::RadialGradient(g) => {
+            let n = usize::from(g.stop_count).min(g.stops.len());
+            let mut best = fret_core::Color::TRANSPARENT;
+            let mut best_a = -1.0f32;
+            for s in g.stops.iter().take(n) {
+                let a = s.color.a;
+                if a > best_a {
+                    best_a = a;
+                    best = s.color;
+                }
+            }
+            best
+        }
+    }
+}
+
+fn paint_to_rgba(paint: fret_core::Paint) -> Rgba {
+    color_to_rgba(paint_representative_color(paint))
+}
+
+fn paint_max_alpha(paint: fret_core::Paint) -> f32 {
+    match paint {
+        fret_core::Paint::Solid(c) => c.a,
+        fret_core::Paint::LinearGradient(g) => {
+            let n = usize::from(g.stop_count).min(g.stops.len());
+            g.stops
+                .iter()
+                .take(n)
+                .map(|s| s.color.a)
+                .fold(0.0f32, f32::max)
+        }
+        fret_core::Paint::RadialGradient(g) => {
+            let n = usize::from(g.stop_count).min(g.stops.len());
+            g.stops
+                .iter()
+                .take(n)
+                .map(|s| s.color.a)
+                .fold(0.0f32, f32::max)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct PaintedQuad {
     rect: Rect,
-    background: fret_core::Color,
+    background: fret_core::Paint,
 }
 
 fn find_best_background_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
@@ -710,7 +775,7 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
-        if background.a <= 0.001 {
+        if paint_max_alpha(background) <= 0.001 {
             continue;
         }
 
@@ -966,7 +1031,7 @@ fn assert_calendar_range_day_background_matches_web(
     );
     assert_rgba_close(
         &format!("{web_name} {range_cell_class} day background"),
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -1095,7 +1160,7 @@ fn find_scene_quad_background_with_rect_close(
     scene: &Scene,
     expected: WebRect,
     tol: f32,
-) -> Option<(Rect, fret_core::Color)> {
+) -> Option<(Rect, fret_core::Paint)> {
     scene.ops().iter().find_map(|op| {
         let SceneOp::Quad {
             rect, background, ..
@@ -1137,7 +1202,7 @@ fn find_scene_quad_background_with_world_rect_close(
     scene: &Scene,
     expected: WebRect,
     tol: f32,
-) -> Option<(Rect, fret_core::Color)> {
+) -> Option<(Rect, fret_core::Paint)> {
     let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
 
     for op in scene.ops() {
@@ -1189,7 +1254,7 @@ fn debug_dump_scene_quads_near_expected(
     expected_bg: Option<Rgba>,
 ) {
     let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
-    let mut quads: Vec<(f32, Rect, fret_core::Color, Transform2D)> = Vec::new();
+    let mut quads: Vec<(f32, Rect, fret_core::Paint, Transform2D)> = Vec::new();
 
     for op in scene.ops() {
         match *op {
@@ -1230,7 +1295,7 @@ fn debug_dump_scene_quads_near_expected(
     }
 
     for (idx, (d, rect, bg, transform)) in quads.iter().take(12).enumerate() {
-        let rgba = color_to_rgba(*bg);
+        let rgba = paint_to_rgba(*bg);
         eprintln!(
             "#{idx:02} rectΔ={d:.2} rect=({:.2},{:.2},{:.2},{:.2}) bg=({:.4},{:.4},{:.4},{:.4}) transform(tx={:.2},ty={:.2},a={:.3},b={:.3},c={:.3},d={:.3})",
             rect.origin.x.0,
@@ -1251,11 +1316,11 @@ fn debug_dump_scene_quads_near_expected(
     }
 
     if let Some(expected_bg) = expected_bg {
-        let mut by_color: Vec<(f32, Rect, fret_core::Color)> = quads
+        let mut by_color: Vec<(f32, Rect, fret_core::Paint)> = quads
             .iter()
             .map(|(_d, rect, bg, _)| {
                 (
-                    rgba_diff_metric(color_to_rgba(*bg), expected_bg),
+                    rgba_diff_metric(paint_to_rgba(*bg), expected_bg),
                     *rect,
                     *bg,
                 )
@@ -1264,7 +1329,7 @@ fn debug_dump_scene_quads_near_expected(
         by_color.sort_by(|a, b| a.0.total_cmp(&b.0));
         eprintln!("top 8 by bg color diff:");
         for (idx, (d, rect, bg)) in by_color.iter().take(8).enumerate() {
-            let rgba = color_to_rgba(*bg);
+            let rgba = paint_to_rgba(*bg);
             eprintln!(
                 "#{idx:02} bgΔ={d:.4} rect=({:.2},{:.2},{:.2},{:.2}) bg=({:.4},{:.4},{:.4},{:.4})",
                 rect.origin.x.0,
@@ -7198,7 +7263,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
     assert_rect_xwh_close_px("calendar-01 root quad", quad.rect, web_rdp_root.rect, 3.0);
     assert_rgba_close(
         "calendar-01 root background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -7373,7 +7438,7 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14 selected day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -7548,7 +7613,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_background_matches_web(
     );
     assert_rgba_close(
         "calendar-14.vp375x320 selected day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -7796,7 +7861,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14 hover day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );
@@ -8044,7 +8109,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14.vp375x320 hover day background",
-        color_to_rgba(quad.background),
+        paint_to_rgba(quad.background),
         expected_bg,
         0.02,
     );

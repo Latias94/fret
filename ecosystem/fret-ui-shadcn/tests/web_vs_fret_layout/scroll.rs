@@ -764,7 +764,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
         find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
     assert_rgba_close(
         "scroll-area-demo.hover thumb background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         expected_bg,
         0.02,
     );
@@ -967,7 +967,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
         find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
     assert_rgba_close(
         "scroll-area-demo.hover dark thumb background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         expected_bg,
         0.02,
     );
@@ -1886,7 +1886,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
         find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
     assert_rgba_close(
         "scroll-area-horizontal-demo.hover thumb background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         expected_bg,
         0.02,
     );
@@ -2094,7 +2094,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
         find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
     assert_rgba_close(
         "scroll-area-horizontal-demo.hover dark thumb background",
-        color_to_rgba(bg),
+        paint_to_rgba(bg),
         expected_bg,
         0.02,
     );

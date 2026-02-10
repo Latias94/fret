@@ -102,7 +102,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
             .expect("track quad");
     assert_rgba_close(
         "progress-demo track background",
-        color_to_rgba(track_bg),
+        paint_to_rgba(track_bg),
         expected_track_bg,
         0.02,
     );
@@ -118,7 +118,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
     let (_ind_rect, ind_bg) = ind.expect("indicator quad");
     assert_rgba_close(
         "progress-demo indicator background",
-        color_to_rgba(ind_bg),
+        paint_to_rgba(ind_bg),
         expected_indicator_bg,
         0.02,
     );
@@ -226,7 +226,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
             .expect("track quad");
     assert_rgba_close(
         "progress-demo track background",
-        color_to_rgba(track_bg),
+        paint_to_rgba(track_bg),
         expected_track_bg,
         0.02,
     );
@@ -242,7 +242,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
     let (_ind_rect, ind_bg) = ind.expect("indicator quad");
     assert_rgba_close(
         "progress-demo indicator background",
-        color_to_rgba(ind_bg),
+        paint_to_rgba(ind_bg),
         expected_indicator_bg,
         0.02,
     );
