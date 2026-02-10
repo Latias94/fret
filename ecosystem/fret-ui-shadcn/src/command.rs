@@ -265,7 +265,8 @@ fn command_text_input<H: UiHost>(
     expanded: Option<bool>,
     height: Px,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
+    let theme = Theme::global(&*cx.app).clone();
+    let theme = &theme;
 
     let fg = theme.color_required("foreground");
     let placeholder_fg = theme.color_required("muted-foreground");
@@ -500,7 +501,8 @@ impl CommandShortcut {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app);
+        let theme = Theme::global(&*cx.app).clone();
+        let theme = &theme;
         let fg = theme.color_required("muted-foreground");
         let style = shortcut_text_style(theme);
         let mut text = ui::text(cx, self.text)
@@ -638,7 +640,8 @@ impl CommandInput {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.watch_model(&self.model).observe();
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).clone();
+            let theme = &theme;
 
             let border = border(theme);
             let disabled = self.disabled;
@@ -1123,35 +1126,34 @@ impl CommandList {
                 ..Default::default()
             };
 
-            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) =
-                {
-                    let theme = Theme::global(&*cx.app);
-                    let row_h = MetricRef::space(Space::N8).resolve(theme);
-                    let row_gap = MetricRef::space(Space::N2).resolve(theme);
-                    let pad_x = MetricRef::space(Space::N2).resolve(theme);
-                    // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
-                    let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
-                    let radius = MetricRef::radius(Radius::Sm).resolve(theme);
-                    let ring = decl_style::focus_ring(theme, radius);
-                    let bg_hover = item_bg_hover(theme);
-                    let fg = theme.color_required("foreground");
-                    let text_style = item_text_style(theme);
-                    let item_layout = decl_style::layout_style(
-                        theme,
-                        LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
-                    );
-                    (
-                        row_gap,
-                        pad_x,
-                        pad_y,
-                        radius,
-                        ring,
-                        bg_hover,
-                        fg,
-                        text_style,
-                        item_layout,
-                    )
-                };
+            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) = {
+                let theme = Theme::global(&*cx.app);
+                let row_h = MetricRef::space(Space::N8).resolve(theme);
+                let row_gap = MetricRef::space(Space::N2).resolve(theme);
+                let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
+                let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
+                let radius = MetricRef::radius(Radius::Sm).resolve(theme);
+                let ring = decl_style::focus_ring(theme, radius);
+                let bg_hover = item_bg_hover(theme);
+                let fg = theme.color_required("foreground");
+                let text_style = item_text_style(theme);
+                let item_layout = decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
+                );
+                (
+                    row_gap,
+                    pad_x,
+                    pad_y,
+                    radius,
+                    ring,
+                    bg_hover,
+                    fg,
+                    text_style,
+                    item_layout,
+                )
+            };
 
             let scroll = self.scroll.w_full().min_w_0();
 
