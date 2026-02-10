@@ -8,6 +8,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{Edges, Px, Rect, Size};
 use fret_runtime::Model;
@@ -28,6 +29,11 @@ use crate::menu::{Menu, MenuEntry, MenuStyle};
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::menu as menu_tokens;
+
+fn default_dropdown_menu_a11y_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("Menu")).clone()
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
@@ -234,10 +240,26 @@ impl DropdownMenu {
                 let a11y_label = self
                     .a11y_label
                     .clone()
-                    .unwrap_or_else(|| Arc::<str>::from("Menu"));
-                let test_id = self.test_id.clone().unwrap_or_else(|| {
-                    Arc::<str>::from(format!("material3-menu-{}", trigger_id.0))
+                    .unwrap_or_else(default_dropdown_menu_a11y_label);
+
+                #[derive(Default)]
+                struct DerivedDefaultTestId {
+                    trigger: u64,
+                    test_id: Option<Arc<str>>,
+                }
+
+                let default_test_id = cx.with_state(DerivedDefaultTestId::default, |st| {
+                    if st.test_id.is_none() || st.trigger != trigger_id.0 {
+                        st.trigger = trigger_id.0;
+                        st.test_id = Some(Arc::<str>::from(format!(
+                            "material3-menu-{}",
+                            trigger_id.0
+                        )));
+                    }
+                    st.test_id.as_ref().expect("test_id").clone()
                 });
+
+                let test_id = self.test_id.clone().unwrap_or(default_test_id);
                 let menu_style = self.menu_style.clone();
 
                 let overlay_root = popper_content::popper_wrapper_panel_at(
