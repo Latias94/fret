@@ -268,6 +268,19 @@ impl fret_core::SvgService for StyleAwareServices {
     }
 }
 
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn run_fret_root_with_ui_and_services(
     bounds: Rect,
     services: &mut dyn fret_core::UiServices,
@@ -813,6 +826,10 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
+        let background = match background {
+            fret_core::Paint::Solid(c) => c,
+            _ => fret_core::Color::TRANSPARENT,
+        };
         if background.a <= 0.001 {
             continue;
         }
