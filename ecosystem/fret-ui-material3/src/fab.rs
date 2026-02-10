@@ -19,6 +19,7 @@ use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -571,7 +572,7 @@ fn material_fab_content<H: UiHost>(
     let child = if let Some(icon) = icon {
         material_icon(cx, icon, icon_size, icon_color)
     } else {
-        let mut props = TextProps::new(Arc::<str>::from(""));
+        let mut props = TextProps::new(empty_arc_str());
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Clip;
         cx.text_props(props)

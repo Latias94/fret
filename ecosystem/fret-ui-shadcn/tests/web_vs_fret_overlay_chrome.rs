@@ -858,19 +858,6 @@ fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> 
 #[derive(Default)]
 struct FakeServices;
 
-impl fret_core::MaterialService for FakeServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
-
 type StyleAwareServices = FakeServices;
 
 impl fret_core::TextService for FakeServices {
@@ -952,6 +939,19 @@ impl fret_core::SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }

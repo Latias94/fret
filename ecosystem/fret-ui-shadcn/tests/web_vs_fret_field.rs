@@ -136,19 +136,6 @@ struct StyleAwareServices {
     prepared: Vec<RecordedTextPrepare>,
 }
 
-impl fret_core::MaterialService for StyleAwareServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
-
 #[derive(Debug, Clone)]
 struct RecordedTextPrepare {
     text: String,
@@ -234,6 +221,19 @@ impl fret_core::SvgService for StyleAwareServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }

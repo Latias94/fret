@@ -186,19 +186,6 @@ struct StyleAwareServices {
     prepared: Vec<RecordedTextPrepare>,
 }
 
-impl fret_core::MaterialService for StyleAwareServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
-
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,
@@ -277,6 +264,19 @@ impl fret_core::SvgService for StyleAwareServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -826,8 +826,9 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
-        let fret_core::Paint::Solid(background) = background else {
-            continue;
+        let background = match background {
+            fret_core::Paint::Solid(c) => c,
+            _ => fret_core::Color::TRANSPARENT,
         };
         if background.a <= 0.001 {
             continue;

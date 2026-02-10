@@ -311,8 +311,23 @@ impl ModalBottomSheet {
                 });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}-scrim")));
-                let sheet_test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}-sheet")));
+                #[derive(Default)]
+                struct DerivedTestIds {
+                    base: Option<Arc<str>>,
+                    scrim: Option<Arc<str>>,
+                    sheet: Option<Arc<str>>,
+                }
+
+                let (scrim_test_id, sheet_test_id) = cx.with_state(DerivedTestIds::default, |st| {
+                    if st.base.as_deref() != test_id.as_deref() {
+                        st.base = test_id.clone();
+                        st.scrim =
+                            st.base.as_ref().map(|id| Arc::from(format!("{id}-scrim")));
+                        st.sheet =
+                            st.base.as_ref().map(|id| Arc::from(format!("{id}-sheet")));
+                    }
+                    (st.scrim.clone(), st.sheet.clone())
+                });
 
                 let overlay_root = cx.named("modal_bottom_sheet_root", |cx| {
                     let mut layout = LayoutStyle::default();

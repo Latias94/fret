@@ -285,19 +285,6 @@ fn assert_button_variant_matches_web(golden_name: &str, variant: fret_ui_shadcn:
 
 struct FakeServices;
 
-impl fret_core::MaterialService for FakeServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
-
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -342,6 +329,19 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn find_button_quad_style(
     scene: &Scene,
     button_bounds: Rect,
@@ -375,11 +375,13 @@ fn find_button_quad_style(
                 corner_radii,
                 ..
             } if rect == button_bounds => {
-                let fret_core::Paint::Solid(background) = background else {
-                    continue;
+                let background = match background {
+                    fret_core::Paint::Solid(c) => c,
+                    _ => fret_core::Color::TRANSPARENT,
                 };
-                let fret_core::Paint::Solid(border_color) = border_paint else {
-                    continue;
+                let border_color = match border_paint {
+                    fret_core::Paint::Solid(c) => c,
+                    _ => fret_core::Color::TRANSPARENT,
                 };
                 return (
                     rect,

@@ -855,11 +855,31 @@ impl TextField {
                                         icon_el
                                     };
 
+                                    #[derive(Default)]
+                                    struct DerivedTestIds {
+                                        base: Option<Arc<str>>,
+                                        explicit: Option<Arc<str>>,
+                                        icon: Option<Arc<str>>,
+                                    }
+
                                     let icon_test_id =
-                                        trailing_icon_test_id.clone().or_else(|| {
-                                            test_id.as_ref().map(|id| {
-                                                Arc::<str>::from(format!("{id}-trailing-icon"))
-                                            })
+                                        cx.with_state(DerivedTestIds::default, |st| {
+                                            if st.base.as_deref() != test_id.as_deref()
+                                                || st.explicit.as_deref()
+                                                    != trailing_icon_test_id.as_deref()
+                                            {
+                                                st.base = test_id.clone();
+                                                st.explicit = trailing_icon_test_id.clone();
+                                                st.icon = st.explicit.clone().or_else(|| {
+                                                    st.base.as_ref().map(|id| {
+                                                        Arc::<str>::from(format!(
+                                                            "{}-trailing-icon",
+                                                            id.as_ref()
+                                                        ))
+                                                    })
+                                                });
+                                            }
+                                            st.icon.clone()
                                         });
 
                                     let icon_a11y_label = trailing_icon_a11y_label.clone();

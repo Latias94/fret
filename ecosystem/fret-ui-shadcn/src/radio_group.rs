@@ -691,19 +691,6 @@ mod tests {
 
     struct FakeServices;
 
-    impl fret_core::MaterialService for FakeServices {
-        fn register_material(
-            &mut self,
-            _desc: fret_core::MaterialDescriptor,
-        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-            Err(fret_core::MaterialRegistrationError::Unsupported)
-        }
-
-        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-            true
-        }
-    }
-
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
@@ -741,6 +728,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -820,9 +820,6 @@ mod tests {
                 dot_rect = Some(*rect);
             }
 
-            let fret_core::Paint::Solid(border_color) = *border_paint else {
-                continue;
-            };
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
                 && *background == fret_core::Paint::TRANSPARENT
@@ -830,7 +827,7 @@ mod tests {
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
-                && border_color.a > 0.0;
+                && matches!(*border_paint, fret_core::Paint::Solid(c) if c.a > 0.0);
             if is_icon {
                 icon_rects.push(*rect);
             }
@@ -930,9 +927,6 @@ mod tests {
                 continue;
             };
 
-            let fret_core::Paint::Solid(border_color) = *border_paint else {
-                continue;
-            };
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
                 && *background == fret_core::Paint::TRANSPARENT
@@ -940,9 +934,11 @@ mod tests {
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
-                && border_color.a > 0.0;
+                && matches!(*border_paint, fret_core::Paint::Solid(c) if c.a > 0.0);
             if is_icon {
-                icon_border_colors.push(border_color);
+                if let fret_core::Paint::Solid(border_color) = *border_paint {
+                    icon_border_colors.push(border_color);
+                }
             }
         }
 

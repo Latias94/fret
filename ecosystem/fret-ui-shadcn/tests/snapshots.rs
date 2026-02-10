@@ -200,15 +200,6 @@ fn snap_color(c: fret_core::Color) -> SnapColor {
     }
 }
 
-fn snap_paint(p: fret_core::Paint) -> SnapColor {
-    match p {
-        fret_core::Paint::Solid(c) => snap_color(c),
-        // Snapshot tests in this crate currently only assert Solid paints. If we start snapshotting
-        // gradient/material paints, switch to a richer serialized representation.
-        _ => snap_color(fret_core::Color::TRANSPARENT),
-    }
-}
-
 fn snap_transform(t: Transform2D) -> [f32; 6] {
     [
         round3(t.a),
@@ -251,13 +242,23 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             border_paint,
             corner_radii,
             ..
-        } => SnapSceneOp::Quad {
-            rect: snap_rect(rect),
-            background: snap_paint(background),
-            border: snap_edges(border),
-            border_color: snap_paint(border_paint),
-            corner_radii: snap_corners(corner_radii),
-        },
+        } => {
+            let background = match background {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            let border_color = match border_paint {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            SnapSceneOp::Quad {
+                rect: snap_rect(rect),
+                background: snap_color(background),
+                border: snap_edges(border),
+                border_color: snap_color(border_color),
+                corner_radii: snap_corners(corner_radii),
+            }
+        }
         SceneOp::Image {
             rect, fit, opacity, ..
         } => SnapSceneOp::Image {
@@ -368,19 +369,6 @@ fn assert_snapshot(name: &str, snapshot: Snapshot) {
 
 struct FakeServices;
 
-impl fret_core::MaterialService for FakeServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Err(fret_core::MaterialRegistrationError::Unsupported)
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
-}
-
 impl TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -418,6 +406,19 @@ impl SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }

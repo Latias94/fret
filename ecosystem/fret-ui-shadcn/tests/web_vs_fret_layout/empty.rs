@@ -1,5 +1,20 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutEmptyRecipe {
+    Demo,
+    Background,
+    Outline,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutEmptyCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutEmptyRecipe,
+}
+
 #[test]
 fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
@@ -41,7 +56,7 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                 .expect("web empty header");
 
                 let mut services = StyleAwareServices::default();
-                let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+                let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
                     use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
                     let icon = decl_icon::icon_with(
@@ -151,7 +166,7 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                 .expect("web empty root");
 
                 let mut services = StyleAwareServices::default();
-                let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+                let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
                     let icon = decl_icon::icon_with(
                         cx,
                         fret_icons::ids::ui::CHEVRON_DOWN,
@@ -220,7 +235,7 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                 .expect("web empty root");
 
                 let mut services = StyleAwareServices::default();
-                let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+                let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
                     let icon = decl_icon::icon_with(
                         cx,
                         fret_icons::ids::ui::CHEVRON_DOWN,

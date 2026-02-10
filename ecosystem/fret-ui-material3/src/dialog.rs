@@ -584,6 +584,22 @@ impl Dialog {
                         },
                         move |cx| {
                             let scrim = cx.named("scrim", |cx| {
+                                #[derive(Default)]
+                                struct DerivedTestId {
+                                    base: Option<Arc<str>>,
+                                    scrim: Option<Arc<str>>,
+                                }
+
+                                let scrim_test_id = cx.with_state(DerivedTestId::default, |st| {
+                                    if st.base.as_deref() != self.test_id.as_deref() {
+                                        st.base = self.test_id.clone();
+                                        st.scrim = st.base.as_ref().map(|id| {
+                                            Arc::from(format!("{}-scrim", id.as_ref()))
+                                        });
+                                    }
+                                    st.scrim.clone()
+                                });
+
                                 let mut l = LayoutStyle::default();
                                 l.position = PositionStyle::Absolute;
                                 l.size.width = Length::Fill;
@@ -600,10 +616,7 @@ impl Dialog {
                                         enabled: open_now,
                                         focusable: false,
                                         a11y: PressableA11y {
-                                            test_id: self
-                                                .test_id
-                                                .clone()
-                                                .map(|id| Arc::from(format!("{id}-scrim"))),
+                                            test_id: scrim_test_id,
                                             ..Default::default()
                                         },
                                         layout: l,

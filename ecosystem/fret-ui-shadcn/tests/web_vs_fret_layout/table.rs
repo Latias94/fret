@@ -1,5 +1,26 @@
 use super::*;
 
+fn text_sm_nowrap<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let size = theme
+        .metric_by_key("component.text.sm_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_required("font.size"));
+    let line_height = theme
+        .metric_by_key("component.text.sm_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+    ui::text(cx, text)
+        .text_size_px(size)
+        .line_height_px(line_height)
+        .nowrap()
+        .into_element(cx)
+}
+
 #[test]
 fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
     let web = read_web_golden("table-demo");
@@ -60,13 +81,13 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
                     fret_ui_shadcn::TableRow::new(
                         4,
                         vec![
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "INV001"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "INV001"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Paid"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Paid"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Credit Card"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Credit Card"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$250.00"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "$250.00"))
                                 .into_element(cx),
                         ],
                     )
@@ -88,11 +109,10 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             fret_ui_shadcn::TableRow::new(
                 4,
                 vec![
-                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, invoice))
-                        .into_element(cx),
-                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, status)).into_element(cx),
-                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, method)).into_element(cx),
-                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, amount)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, invoice)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, status)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, method)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, amount)).into_element(cx),
                 ],
             )
             .into_element(cx)
@@ -110,10 +130,10 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
                     fret_ui_shadcn::TableRow::new(
                         4,
                         vec![
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Total"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "Total"))
                                 .col_span(3)
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$2,500.00"))
+                            fret_ui_shadcn::TableCell::new(text_sm_nowrap(cx, "$2,500.00"))
                                 .into_element(cx),
                         ],
                     )

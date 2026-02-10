@@ -1,6 +1,6 @@
 # ADR 1172: Paint Primitives (Brushes + Gradients) (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

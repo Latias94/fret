@@ -175,10 +175,22 @@ impl ModalNavigationDrawer {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_test_id = self
-                    .test_id
-                    .clone()
-                    .map(|id| Arc::from(format!("{id}-scrim")));
+                #[derive(Default)]
+                struct DerivedTestId {
+                    base: Option<Arc<str>>,
+                    scrim: Option<Arc<str>>,
+                }
+
+                let scrim_test_id = cx.with_state(DerivedTestId::default, |st| {
+                    if st.base.as_deref() != self.test_id.as_deref() {
+                        st.base = self.test_id.clone();
+                        st.scrim = st
+                            .base
+                            .as_ref()
+                            .map(|id| Arc::from(format!("{}-scrim", id.as_ref())));
+                    }
+                    st.scrim.clone()
+                });
 
                 let root = cx.named("modal_navigation_drawer_root", |cx| {
                     let mut layout = LayoutStyle::default();
