@@ -55,7 +55,7 @@ Status legend:
 | `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
-| `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
+| `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
 | `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
 | `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
@@ -197,6 +197,10 @@ Existing gates (UI Gallery `ai_plan_demo`):
 Existing gates (UI Gallery `ai_model_selector_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
+
+Existing gates (UI Gallery `ai_chain_of_thought_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`
 
 Existing gates (UI Gallery `ai_transcript_torture`):
 

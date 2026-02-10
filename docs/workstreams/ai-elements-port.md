@@ -673,7 +673,7 @@ Legend:
 | `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestions.rs` | Done | Suggestions row + pill surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`). |
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Prototype | Auto-open while streaming (unless `default_open=false`), auto-close once (1s after stream end), duration accounting, markdown content. |
-| `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
+| `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | Prototype | Optional; ported as a “step list disclosure” surface (apps control data). UI Gallery demo + diag gate: `ai_chain_of_thought_demo`, `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Done | Collapsible plan container + shimmer for streaming title/description; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`. |
 | `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
 | `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
