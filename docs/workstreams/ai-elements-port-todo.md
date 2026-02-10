@@ -46,7 +46,7 @@ Status legend:
 | `conversation` | Prototype | `fret-ui-ai` | Parts-based transcript exists (`AiConversationTranscript`) + empty state + download button + scroll affordance; `AiChat` provides a default composition shell. |
 | `message` | Prototype | `fret-ui-ai` | `MessageParts` + `MessageResponse` exist (markdown + tool calls + sources/citations); richer action slots pending. |
 | `prompt-input` | Prototype | `fret-ui-ai` | MVP exists (send/stop/disabled/loading + `test_id`). |
-| `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); keep iterating on payload views and styling parity. |
+| `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); UI Gallery demo + diag gate: `ai_tool_demo`, `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`. |
 | `sources` | Prototype | `fret-ui-ai` | Collapsible parity (`Used N sources`) is implemented; keep iterating on styling and payload richness (excerpt/link affordances). |
 | `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
 | `reasoning` | Prototype | `fret-ui-ai` | `Reasoning` + `ReasoningTrigger` + `ReasoningContent` exist with streaming-driven auto-open + timed auto-close; UI Gallery demo + diag gate added. |
@@ -446,7 +446,9 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### Tool calls / Sources / Citations
 
-- [ ] AIEL-MVP2-tools-100 Tool call block: request/response sections, collapse, error state.
+- [x] AIEL-MVP2-tools-100 Tool call block: request/response sections, collapse, error state.
+  - UI Gallery page: `ai_tool_demo`
+  - Diag gate: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 - [ ] AIEL-MVP2-tools-101 Sources list: title/url, open-url intent hook, truncation rules.
 - [ ] AIEL-MVP2-tools-102 Inline citation: stable anchor behavior (jump/highlight) within a transcript.
 
@@ -486,5 +488,7 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP1-gates-014 Gate message branch wrap-around via diag.
   - Script: `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
   - Verified PASS: 2026-02-09 (local).
+- [x] AIEL-MVP2-gates-030 Gate tool disclosure demo via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 - [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
   (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).

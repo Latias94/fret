@@ -65,6 +65,8 @@ Notes:
 - `MessageBranch` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
   - Verified PASS: 2026-02-10 (local).
+- `Tool` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 - `ModelSelector` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
 - `ChainOfThought` v0 is ported with a UI Gallery demo + diag gate:

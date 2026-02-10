@@ -299,6 +299,14 @@ Fret mapping:
   - root: `${msg_prefix}toolcall-{part_index}`
   - trigger: `${msg_prefix}toolcall-trigger-{part_index}`
 
+Implementation notes (current):
+
+- Status badge labels match upstream (`Awaiting Approval`, `Responded`, `Running`, `Pending`, `Completed`, `Denied`, `Error`).
+- Tool name derivation strips the `tool-` prefix when the app does not provide an explicit title (matches `tool.tsx` derived name behavior).
+- UI Gallery demo + diag gate exist:
+  - Page: `ai_tool_demo`
+  - Script: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
+
 ### `inline-citation.tsx` (HoverCard + pager)
 
 Upstream behavior:
@@ -659,7 +667,7 @@ Legend:
 | `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Role chrome exists; parts-based composition is available via `MessageParts` + `MessageToolbar` (action policies remain app-owned). Message branching surfaces are ported (`ecosystem/fret-ui-ai/src/elements/message_branch.rs`) + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`). |
 | (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming append + finalize supported; richer per-block actions (copy/download) are TODO. |
 | `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + attachments row + add-attachments intent + external file drop fallback + provider mode (lift models) + stable selectors. |
-| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call_block.rs` | Partial | Tool call block exists (collapsible + state chrome); richer payload views are pending. |
+| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool.rs` (+ `tool_call_block.rs`) | Prototype | Tool disclosure building blocks + tool call wrapper exist; UI Gallery demo + diag gate: `ai_tool_demo`, `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`. |
 | `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; v0 highlight contract supports “select citation → highlight source row”. |
 | `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; v0 select/highlight contract is implemented via a shared model. |
 | `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Prototype | UI surfaces exist (grid/inline/list) + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`); hover uses `HoverRegion` to keep remove affordance interactive while pointer is over the nested button. File pick/open effects remain app-owned. |
