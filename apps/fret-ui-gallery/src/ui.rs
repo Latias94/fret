@@ -724,6 +724,7 @@ fn page_preview(
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
         PAGE_AI_COMMIT_LARGE_DEMO => preview_ai_commit_large_demo(cx, theme),
         PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_LARGE_DEMO => preview_ai_stack_trace_large_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
@@ -19854,6 +19855,98 @@ fn preview_ai_stack_trace_demo(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("StackTrace (AI Elements)"), stack_trace],
+    )]
+}
+
+fn preview_ai_stack_trace_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::{Arc, Mutex};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Clone, Default)]
+    struct OpenedRef(Arc<Mutex<Option<Arc<str>>>>);
+
+    impl OpenedRef {
+        fn lock(&self) -> std::sync::MutexGuard<'_, Option<Arc<str>>> {
+            self.0.lock().unwrap_or_else(|e| e.into_inner())
+        }
+    }
+
+    let opened = cx.with_state(OpenedRef::default, |st| st.clone());
+
+    let on_open: ui_ai::OnStackTraceFilePathClick = Arc::new({
+        let opened = opened.clone();
+        move |host, action_cx, file_path, line, col| {
+            let mut s = file_path.to_string();
+            if let Some(line) = line {
+                s.push(':');
+                s.push_str(&line.to_string());
+            }
+            if let Some(col) = col {
+                s.push(':');
+                s.push_str(&col.to_string());
+            }
+            *opened.lock() = Some(Arc::<str>::from(s));
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let mut trace = String::new();
+    trace.push_str("TypeError: Cannot read properties of undefined (reading 'foo')\n");
+    for i in 0..300u32 {
+        if i % 23 == 0 {
+            trace.push_str(&format!(
+                " at Module._compile (node:internal/modules/cjs/loader:{i}:14)\n"
+            ));
+            continue;
+        }
+        trace.push_str(&format!(
+            " at fn{i} (src/module_{i:04}.ts:{}:{})\n",
+            (i % 80) + 1,
+            (i % 40) + 1
+        ));
+    }
+
+    let stack_trace = ui_ai::StackTrace::new(Arc::<str>::from(trace))
+        .max_height(fret_core::Px(240.0))
+        .on_file_path_click(on_open)
+        .frame_test_id_prefix("ui-ai-stack-trace-large-frame")
+        .test_id_root("ui-ai-stack-trace-large-root")
+        .test_id_header_trigger("ui-ai-stack-trace-large-header")
+        .test_id_copy_button("ui-ai-stack-trace-large-copy")
+        .test_id_copy_copied_marker("ui-ai-stack-trace-large-copied-marker")
+        .test_id_content("ui-ai-stack-trace-large-content")
+        .test_id_frames("ui-ai-stack-trace-large-frames")
+        .test_id_frames_viewport("ui-ai-stack-trace-large-frames-viewport")
+        .into_element(cx);
+
+    let opened_marker = opened.lock().clone().map(|path| {
+        cx.text(format!("Opened: {path}")).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id("ui-ai-stack-trace-large-opened-marker"),
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            let mut children: Vec<AnyElement> =
+                vec![cx.text("StackTrace Large (AI Elements)"), stack_trace];
+            if let Some(marker) = opened_marker.clone() {
+                children.push(marker);
+            }
+            children
+        },
     )]
 }
 

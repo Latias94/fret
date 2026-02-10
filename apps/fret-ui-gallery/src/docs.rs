@@ -927,6 +927,24 @@ use fret_ui_ai::{StackTrace, StackTraceFrames, StackTraceCopyButton, parse_stack
 ```
 "#;
 
+pub(crate) const DOC_AI_STACK_TRACE_LARGE_DEMO: &str = r#"
+## AI stack trace large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `StackTrace` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- long frame lists remain scrollable and stable,
+- per-frame `test_id` selectors are stable for automation,
+- file-path click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_STACK_TRACE_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{StackTrace, OnStackTraceFilePathClick};
+```
+"#;
+
 pub(crate) const DOC_AI_TEST_RESULTS_DEMO: &str = r#"
 ## AI test results (demo)
 

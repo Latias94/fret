@@ -127,6 +127,7 @@ pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
 pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
 pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
+pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_demo";
 pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
@@ -274,6 +275,8 @@ pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_co
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str = "ui_gallery.nav.select.ai_commit_large_demo";
 pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
+pub(crate) const CMD_NAV_AI_STACK_TRACE_LARGE_DEMO: &str =
+    "ui_gallery.nav.select.ai_stack_trace_large_demo";
 pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
     "ui_gallery.nav.select.ai_schema_display_demo";
 pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str = "ui_gallery.nav.select.ai_test_results_demo";
@@ -1009,6 +1012,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "stack", "trace", "error", "copy", "demo"],
                 docs::DOC_AI_STACK_TRACE_DEMO,
                 docs::USAGE_AI_STACK_TRACE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_STACK_TRACE_LARGE_DEMO,
+                "AI Stack Trace Large (Demo)",
+                "StackTrace Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_STACK_TRACE_LARGE_DEMO,
+                &["ai", "stack", "trace", "large", "scroll", "demo"],
+                docs::DOC_AI_STACK_TRACE_LARGE_DEMO,
+                docs::USAGE_AI_STACK_TRACE_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_TEST_RESULTS_DEMO,
