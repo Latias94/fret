@@ -186,6 +186,39 @@ pub fn day_picker_day_modifiers(
     }
 }
 
+/// A composed day-cell state for DayPicker-like views.
+///
+/// This combines:
+/// - `modifiers.disabled` / `modifiers.hidden`
+/// - outside-day policy (`show_outside_days`, `disable_outside_days`)
+/// - caller-provided bounds checks (`in_bounds`)
+///
+/// Notes:
+/// - Hidden days are always treated as disabled.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DayPickerCellState {
+    pub hidden: bool,
+    pub disabled: bool,
+}
+
+pub fn day_picker_cell_state(
+    day: CalendarDay,
+    show_outside_days: bool,
+    disable_outside_days: bool,
+    in_bounds: bool,
+    modifiers: &DayPickerModifiers,
+) -> DayPickerCellState {
+    let base = day_picker_day_modifiers(day, show_outside_days, modifiers);
+    let hidden = base.hidden || !in_bounds;
+
+    let mut disabled = base.disabled || (!day.in_month && disable_outside_days) || !in_bounds;
+    if hidden {
+        disabled = true;
+    }
+
+    DayPickerCellState { hidden, disabled }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DayPickerGridLayout {
     Compact,
@@ -753,6 +786,54 @@ mod tests {
             DateRangeSelection {
                 from: Some(d10),
                 to: None
+            }
+        );
+    }
+
+    #[test]
+    fn day_picker_cell_state_composes_hidden_disabled_outside_and_bounds() {
+        let date = Date::from_calendar_date(2026, Month::January, 2).unwrap();
+
+        let in_month = CalendarDay {
+            date,
+            in_month: true,
+        };
+        let outside = CalendarDay {
+            date,
+            in_month: false,
+        };
+
+        let mut modifiers = DayPickerModifiers::default();
+        modifiers.hidden.push(DayMatcher::Date(date));
+
+        // Hidden always disables.
+        let st = day_picker_cell_state(in_month, true, false, true, &modifiers);
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: true,
+                disabled: true
+            }
+        );
+
+        // Outside days can be shown but disabled.
+        let st = day_picker_cell_state(outside, true, true, true, &DayPickerModifiers::default());
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: false,
+                disabled: true
+            }
+        );
+
+        // Out-of-bounds days are hidden (and disabled).
+        let st =
+            day_picker_cell_state(in_month, true, false, false, &DayPickerModifiers::default());
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: true,
+                disabled: true
             }
         );
     }

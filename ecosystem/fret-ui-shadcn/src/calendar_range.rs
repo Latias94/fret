@@ -25,7 +25,7 @@ use crate::calendar::{
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, DateRangeSelection, DayMatcher, DayPickerModifiers, day_picker_day_modifiers,
+    CalendarMonth, DateRangeSelection, DayMatcher, DayPickerModifiers, day_picker_cell_state,
     month_grid, month_grid_compact, week_number,
 };
 
@@ -282,15 +282,15 @@ impl CalendarRange {
         let mut hidden = Vec::with_capacity(grid.len());
         let mut disabled = Vec::with_capacity(grid.len());
         for day in grid.iter() {
-            let base = day_picker_day_modifiers(*day, show_outside_days, modifiers.as_ref());
-            let is_hidden = base.hidden || !in_bounds(day.date);
-            let mut is_disabled =
-                base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
-            if is_hidden {
-                is_disabled = true;
-            }
-            hidden.push(is_hidden);
-            disabled.push(is_disabled);
+            let st = day_picker_cell_state(
+                *day,
+                show_outside_days,
+                disable_outside_days,
+                in_bounds(day.date),
+                modifiers.as_ref(),
+            );
+            hidden.push(st.hidden);
+            disabled.push(st.disabled);
         }
         let disabled: Arc<[bool]> = disabled.into();
         let hidden: Arc<[bool]> = hidden.into();
@@ -1063,15 +1063,15 @@ fn calendar_range_month_view<H: UiHost>(
     let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
     for day in grid.iter() {
-        let base = day_picker_day_modifiers(*day, show_outside_days, modifiers.as_ref());
-        let is_hidden = base.hidden || !in_bounds(day.date);
-        let mut is_disabled =
-            base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
-        if is_hidden {
-            is_disabled = true;
-        }
-        hidden.push(is_hidden);
-        disabled.push(is_disabled);
+        let st = day_picker_cell_state(
+            *day,
+            show_outside_days,
+            disable_outside_days,
+            in_bounds(day.date),
+            modifiers.as_ref(),
+        );
+        hidden.push(st.hidden);
+        disabled.push(st.disabled);
     }
     let disabled: Arc<[bool]> = disabled.into();
     let hidden: Arc<[bool]> = hidden.into();
@@ -1600,6 +1600,8 @@ fn calendar_range_day_cell<H: UiHost>(
             out.set(Some(id));
         }
 
+        // (tests live at module scope)
+
         let selected_model = selected_model.clone();
         let close_on_select = close_on_select.clone();
         let modifiers = modifiers.clone();
@@ -1720,4 +1722,35 @@ fn calendar_range_day_cell<H: UiHost>(
 
         (pressable, chrome_props, children)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use time::Month;
+
+    #[test]
+    fn range_exclude_disabled_uses_modifiers_disabled_matchers() {
+        let d1 = Date::from_calendar_date(2026, Month::January, 1).unwrap();
+        let d2 = Date::from_calendar_date(2026, Month::January, 2).unwrap();
+        let d10 = Date::from_calendar_date(2026, Month::January, 10).unwrap();
+
+        let mut modifiers = DayPickerModifiers::default();
+        modifiers.disabled.push(DayMatcher::Date(d2));
+
+        let predicate = |d: Date| modifiers.disabled.iter().any(|m| m.is_match(d));
+        let disabled_predicate = Some(&predicate as &dyn Fn(Date) -> bool);
+
+        let mut sel = DateRangeSelection::default();
+        sel.apply_click_with(d1, 0, 0, false, false, None);
+        sel.apply_click_with(d10, 0, 0, false, true, disabled_predicate);
+
+        assert_eq!(
+            sel,
+            DateRangeSelection {
+                from: Some(d10),
+                to: None,
+            }
+        );
+    }
 }
