@@ -38,6 +38,8 @@ Current script-level evidence surface (implemented):
 
 - `script.result.json`:
   - `evidence.focus_trace` (focused element/node + expected target for focus waits)
+    - includes `text_input_snapshot` (selection/composition/cursor area; no raw text)
+  - `evidence.shortcut_routing_trace` (keydown shortcut routing decisions; explains “reserved for IME” vs “command dispatched”)
   - `evidence.web_ime_trace` (wasm textarea bridge snapshot summary; debug-only; no raw preedit/commit text by default)
   - `evidence.ime_event_trace` (IME event kinds + length/cursor summaries; no raw text)
 
@@ -57,7 +59,7 @@ Start with “portable, low-flake” gates:
   - after navigation keys, caret rect remains within window bounds.
 - `composition_not_stolen_by_shortcuts`:
   - while composing, press keys that normally trigger global shortcuts,
-  - assert the script did not trigger the shortcut path (requires trace + reason codes).
+  - assert the trace shows `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
 
 IME-specific behavior may remain runner-dependent; treat missing IME evidence as capability-gated
 (`diag.text_ime_trace`) rather than as an implicit timeout.

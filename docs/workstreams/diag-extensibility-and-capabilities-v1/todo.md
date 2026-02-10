@@ -52,7 +52,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
   - [ ] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability (hit path, occluder hints),
   - [x] focus + IME evidence snapshots in `script.result.json` (`evidence.focus_trace`, `evidence.web_ime_trace`),
   - [x] IME event summaries in `script.result.json` (`evidence.ime_event_trace`),
-  - [ ] focus change evidence with reasons,
+  - [x] shortcut routing evidence in `script.result.json` (`evidence.shortcut_routing_trace`),
+  - [x] text input snapshot evidence in `script.result.json` (via `evidence.focus_trace[].text_input_snapshot`),
+  - [ ] focus change evidence with reasons beyond barrier inference,
   - [ ] predicate evaluation deltas (what changed, what did not).
 - [ ] Add `diag lint` mode for captured bundles:
   - [ ] semantics lint (duplicate `test_id`, missing labels, inconsistent flags),
@@ -82,9 +84,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 
 - [ ] Define the minimum redaction-friendly evidence surface for focused text inputs:
-  - [ ] selection range (UTF-16),
-  - [ ] caret rect,
-  - [ ] IME composition state summary.
+  - [x] selection range (UTF-16),
+  - [x] caret/candidate rect (best-effort `ime_cursor_area`),
+  - [x] IME composition state summary (`is_composing` + `marked_utf16`).
 - [ ] Add at least one stable script gate for:
   - [ ] word boundary (double click),
   - [ ] line boundary (triple click),

@@ -43,6 +43,8 @@ Optional (future-proofing, gate first):
 - `diag.pointer_kind_touch`: touch pointer injection supported.
 - `diag.gesture_pinch`: pinch/zoom gesture steps supported.
 - `diag.text_ime_trace`: IME/composition evidence available in bundles/triage (not a step).
+- `diag.text_input_snapshot`: focused text input snapshot evidence available (selection/composition/cursor area).
+- `diag.shortcut_routing_trace`: keydown shortcut routing evidence available (IME reserved vs command dispatch).
 
 ## Where capabilities live
 
@@ -128,4 +130,3 @@ Tooling can infer required capabilities from the presence of step variants:
 - coordinate-based steps (if added) ⇒ `diag.pointer_injection`
 
 Note: inference is “best effort”; `meta.required_capabilities` remains the explicit escape hatch.
-

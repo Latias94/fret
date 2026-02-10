@@ -94,11 +94,28 @@ Focus trace entry fields:
 - `step_index`
 - `note` (phase marker, e.g. `type_text_into.wait_focus`)
 - `reason_code` (best-effort inference, e.g. `focus.blocked_by_focus_barrier`)
+- `text_input_snapshot` (best-effort, redactable, from `WindowTextInputSnapshot`):
+  - `focus_is_text_input` / `is_composing`
+  - `text_len_utf16`
+  - `selection_utf16` / `marked_utf16`
+  - `ime_cursor_area` (best-effort candidate/caret placement rectangle)
 - `expected_node_id` / `expected_test_id` (when waiting for a specific focus target)
 - `modal_barrier_root` / `focus_barrier_root` + pointer capture/occlusion hints (from the UI input arbitration snapshot)
 - `focused_element` / `focused_element_path` (element-runtime view)
 - `focused_node_id` / `focused_test_id` / `focused_role` (best-effort semantics view)
 - `matches_expected` (best-effort)
+
+Shortcut routing trace entry fields (native + web, runner-driven, no raw text):
+
+- `step_index`
+- `frame_id`
+- `phase` (`pre_dispatch`, `post_dispatch`)
+- `deferred` (whether shortcut matching was deferred until after widget dispatch, ADR 0012)
+- `focus_is_text_input` / `ime_composing`
+- `key` / `modifiers` / `repeat`
+- `outcome` (`reserved_for_ime`, `consumed_by_widget`, `command_dispatched`, `command_disabled`, ...)
+- `command` / `command_enabled` (when applicable)
+- `pending_sequence_len` (multi-keystroke shortcuts)
 
 Web IME trace entry fields (wasm only, ADR 0195; debug-only, redactable):
 

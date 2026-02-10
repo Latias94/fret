@@ -82,11 +82,12 @@ Definition of done:
   - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
+    - [x] include `text_input_snapshot` (selection/composition/cursor area; from `WindowTextInputSnapshot`),
   - [x] emit `evidence.web_ime_trace` (wasm textarea bridge summary; debug-only),
   - [x] include best-effort focus mismatch reasons (barrier/occlusion/capture hints via input arbitration snapshot),
+  - [x] emit `evidence.shortcut_routing_trace` (keydown shortcut routing decisions; explains “reserved for IME” vs “command dispatched”),
   - [x] emit `evidence.ime_event_trace` (native + web IME event kinds + length/cursor summaries; no raw text),
-  - [ ] focus change trace with reasons (why focus moved / why it did not) beyond barrier inference,
-  - [ ] composition state summary for non-web runners (capability-gated, stable across backends).
+  - [ ] focus change trace with reasons (why focus moved / why it did not) beyond barrier inference.
 - [ ] M4d: Bundle lint closure:
   - [ ] add `diag lint` and emit `check.lint.json`.
 
