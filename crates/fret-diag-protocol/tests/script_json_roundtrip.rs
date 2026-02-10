@@ -163,3 +163,19 @@ fn script_v2_roundtrip_click_modifiers() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_click_count() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "x" },
+      "click_count": 2
+    }
+  ]
+}"#,
+    );
+}

@@ -82,11 +82,14 @@ The tooling stack MUST support a “capabilities” concept to avoid “hang unt
 
 Minimum capability vocabulary (v1):
 
-- `script_v2`: supports Script schema v2 steps.
-- `screenshot_png`: supports on-demand PNG screenshots requested by scripted steps.
-- `multi_window`: supports explicit window targeting and cross-window assertions.
-- `pointer_kind_touch`: supports touch pointer injection (future runner-dependent).
-- `gesture_pinch`: supports pinch/zoom gestures (future runner-dependent).
+- `diag.script_v2`: supports Script schema v2 steps.
+- `diag.screenshot_png`: supports on-demand PNG screenshots requested by scripted steps.
+- `diag.multi_window`: supports explicit window targeting and cross-window assertions.
+- `diag.pointer_kind_touch`: supports touch pointer injection (future runner-dependent).
+- `diag.gesture_pinch`: supports pinch/zoom gestures (future runner-dependent).
+
+Tooling SHOULD accept the un-namespaced aliases (`script_v2`, `screenshot_png`, etc) as backwards-compatible inputs,
+but runners SHOULD advertise the namespaced `diag.*` forms.
 
 Behavior:
 
@@ -167,4 +170,3 @@ These are compatible with the ADR as long as:
 - JSON remains the portable artifact,
 - the protocol remains versioned,
 - optional capabilities are surfaced and enforced deterministically.
-

@@ -21,6 +21,14 @@ Active workstreams:
 - `docs/workstreams/environment-queries-v1-extensions-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/todo.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/milestones.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`

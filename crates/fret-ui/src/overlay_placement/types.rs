@@ -114,3 +114,49 @@ pub struct AnchoredPanelLayout {
     pub align: Align,
     pub arrow: Option<ArrowLayout>,
 }
+
+/// Debug-only trace capturing key decisions made by the anchored panel placement solver.
+///
+/// This is intended for diagnostics evidence (e.g. `fretboard diag`) so scripted repros can report
+/// why a popover/menu was flipped/clamped/shifted without relying on screenshots.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnchoredPanelLayoutTrace {
+    /// Solver inputs before applying collision options.
+    pub outer_input: Rect,
+    /// Collision boundary after applying `options.collision` (boundary + padding).
+    pub outer_collision: Rect,
+    pub anchor: Rect,
+    /// Desired (intrinsic) content size.
+    pub desired: Size,
+    /// Requested side gap (before `options.offset.main_axis` is applied).
+    pub side_offset: Px,
+    pub preferred_side: Side,
+    pub align: Align,
+    pub options: AnchoredPanelOptions,
+    /// Effective main-axis gap used by the solver (`side_offset + options.offset.main_axis`).
+    pub gap: Px,
+
+    /// Candidate rect for the preferred side (pre-shift, pre-arrow).
+    pub preferred_rect: Rect,
+    /// Candidate rect for the flipped side (pre-shift, pre-arrow).
+    pub flipped_rect: Rect,
+    /// Whether the preferred side fit without requiring main-axis clamping.
+    pub preferred_fits_without_main_clamp: bool,
+    /// Whether the flipped side fit without requiring main-axis clamping.
+    pub flipped_fits_without_main_clamp: bool,
+
+    pub preferred_available_main_px: f32,
+    pub flipped_available_main_px: f32,
+
+    /// The side chosen by the solver before shift/clamp/arrow adjustments.
+    pub chosen_side: Side,
+    /// The chosen candidate rect before shift/clamp/arrow adjustments.
+    pub chosen_rect: Rect,
+    /// The rect after applying shift/clamp (sticky/shift policy), before arrow adjustments.
+    pub rect_after_shift: Rect,
+    /// Signed delta applied by shift/clamp (after_shift.origin - chosen.origin).
+    pub shift_delta: fret_core::Point,
+
+    /// Final layout output (after shift + arrow).
+    pub layout: AnchoredPanelLayout,
+}

@@ -36,12 +36,56 @@ pub(super) struct KeydownShortcutParams<'a> {
     pub(super) input_ctx: &'a InputContext,
     pub(super) barrier_root: Option<NodeId>,
     pub(super) focus_is_text_input: bool,
+    #[cfg(feature = "diagnostics")]
+    pub(super) phase: fret_runtime::ShortcutRoutingPhase,
+    #[cfg(feature = "diagnostics")]
+    pub(super) deferred: bool,
     pub(super) key: KeyCode,
     pub(super) modifiers: fret_core::Modifiers,
     pub(super) repeat: bool,
 }
 
 impl<H: UiHost> UiTree<H> {
+    #[cfg(feature = "diagnostics")]
+    fn record_shortcut_routing_decision(
+        &self,
+        app: &mut H,
+        params: &KeydownShortcutParams<'_>,
+        outcome: fret_runtime::ShortcutRoutingOutcome,
+        pending_sequence_len: u32,
+        command: Option<fret_runtime::CommandId>,
+        command_enabled: Option<bool>,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        let frame_id = app.frame_id();
+        let ime_composing = self.ime_composing;
+        app.with_global_mut_untracked(
+            fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
+            |store, _app| {
+                store.record(
+                    window,
+                    fret_runtime::ShortcutRoutingDecision {
+                        seq: 0,
+                        frame_id,
+                        phase: params.phase,
+                        key: params.key,
+                        modifiers: params.modifiers,
+                        repeat: params.repeat,
+                        deferred: params.deferred,
+                        focus_is_text_input: params.focus_is_text_input,
+                        ime_composing,
+                        pending_sequence_len,
+                        outcome,
+                        command,
+                        command_enabled,
+                    },
+                );
+            },
+        );
+    }
+
     fn command_is_enabled(
         app: &H,
         window: Option<fret_core::AppWindowId>,
@@ -180,6 +224,18 @@ impl<H: UiHost> UiTree<H> {
                         .is_some_and(|m| m.repeatable)
                 {
                     if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                        #[cfg(feature = "diagnostics")]
+                        self.record_shortcut_routing_decision(
+                            app,
+                            &params,
+                            fret_runtime::ShortcutRoutingOutcome::CommandDispatched,
+                            self.pending_shortcut
+                                .keystrokes
+                                .len()
+                                .min(u32::MAX as usize) as u32,
+                            Some(command.clone()),
+                            Some(true),
+                        );
                         self.suppress_text_input_until_key_up = Some(params.key);
                         app.push_effect(Effect::Command {
                             window: self.window,
@@ -188,13 +244,49 @@ impl<H: UiHost> UiTree<H> {
                         return true;
                     }
 
+                    #[cfg(feature = "diagnostics")]
+                    self.record_shortcut_routing_decision(
+                        app,
+                        &params,
+                        fret_runtime::ShortcutRoutingOutcome::CommandDisabled,
+                        self.pending_shortcut
+                            .keystrokes
+                            .len()
+                            .min(u32::MAX as usize) as u32,
+                        Some(command),
+                        Some(false),
+                    );
                     return false;
                 }
             }
+            #[cfg(feature = "diagnostics")]
+            self.record_shortcut_routing_decision(
+                app,
+                &params,
+                fret_runtime::ShortcutRoutingOutcome::NoMatch,
+                self.pending_shortcut
+                    .keystrokes
+                    .len()
+                    .min(u32::MAX as usize) as u32,
+                None,
+                None,
+            );
             return false;
         }
 
         let Some(service) = app.global::<KeymapService>() else {
+            #[cfg(feature = "diagnostics")]
+            self.record_shortcut_routing_decision(
+                app,
+                &params,
+                fret_runtime::ShortcutRoutingOutcome::NoKeymap,
+                self.pending_shortcut
+                    .keystrokes
+                    .len()
+                    .min(u32::MAX as usize) as u32,
+                None,
+                None,
+            );
             return false;
         };
 
@@ -214,6 +306,15 @@ impl<H: UiHost> UiTree<H> {
             let matched = service.keymap.match_sequence(params.input_ctx, &sequence);
 
             if matched.has_continuation {
+                #[cfg(feature = "diagnostics")]
+                self.record_shortcut_routing_decision(
+                    app,
+                    &params,
+                    fret_runtime::ShortcutRoutingOutcome::SequenceContinuation,
+                    sequence.len().min(u32::MAX as usize) as u32,
+                    self.pending_shortcut.fallback.clone(),
+                    None,
+                );
                 self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
                 self.pending_shortcut.focus = self.focus;
                 self.pending_shortcut.barrier_root = params.barrier_root;
@@ -229,6 +330,15 @@ impl<H: UiHost> UiTree<H> {
 
             if let Some(Some(command)) = matched.exact {
                 if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                    #[cfg(feature = "diagnostics")]
+                    self.record_shortcut_routing_decision(
+                        app,
+                        &params,
+                        fret_runtime::ShortcutRoutingOutcome::CommandDispatched,
+                        sequence.len().min(u32::MAX as usize) as u32,
+                        Some(command.clone()),
+                        Some(true),
+                    );
                     self.clear_pending_shortcut(app);
                     self.suppress_text_input_until_key_up = Some(params.key);
                     app.push_effect(Effect::Command {
@@ -239,6 +349,15 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 // Treat disabled commands as "not matched" so the keystrokes are replayed.
+                #[cfg(feature = "diagnostics")]
+                self.record_shortcut_routing_decision(
+                    app,
+                    &params,
+                    fret_runtime::ShortcutRoutingOutcome::CommandDisabled,
+                    sequence.len().min(u32::MAX as usize) as u32,
+                    Some(command),
+                    Some(false),
+                );
                 let pending = std::mem::take(&mut self.pending_shortcut);
                 if let Some(token) = pending.timer {
                     app.push_effect(Effect::CancelTimer { token });
@@ -253,6 +372,15 @@ impl<H: UiHost> UiTree<H> {
                 return true;
             }
 
+            #[cfg(feature = "diagnostics")]
+            self.record_shortcut_routing_decision(
+                app,
+                &params,
+                fret_runtime::ShortcutRoutingOutcome::SequenceReplay,
+                sequence.len().min(u32::MAX as usize) as u32,
+                None,
+                None,
+            );
             let pending = std::mem::take(&mut self.pending_shortcut);
             if let Some(token) = pending.timer {
                 app.push_effect(Effect::CancelTimer { token });
@@ -266,10 +394,20 @@ impl<H: UiHost> UiTree<H> {
             .keymap
             .match_sequence(params.input_ctx, std::slice::from_ref(&chord));
         if matched.has_continuation {
+            let exact_command = matched.exact.and_then(|c| c);
+            #[cfg(feature = "diagnostics")]
+            self.record_shortcut_routing_decision(
+                app,
+                &params,
+                fret_runtime::ShortcutRoutingOutcome::SequenceContinuation,
+                1,
+                exact_command.clone(),
+                None,
+            );
             self.pending_shortcut.keystrokes = vec![CapturedKeystroke { chord, text: None }];
             self.pending_shortcut.focus = self.focus;
             self.pending_shortcut.barrier_root = params.barrier_root;
-            self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+            self.pending_shortcut.fallback = exact_command;
             self.pending_shortcut.capture_next_text_input_key =
                 (params.focus_is_text_input && !params.modifiers.ctrl && !params.modifiers.meta)
                     .then_some(params.key);
@@ -281,6 +419,18 @@ impl<H: UiHost> UiTree<H> {
 
         if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
             if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                #[cfg(feature = "diagnostics")]
+                self.record_shortcut_routing_decision(
+                    app,
+                    &params,
+                    fret_runtime::ShortcutRoutingOutcome::CommandDispatched,
+                    self.pending_shortcut
+                        .keystrokes
+                        .len()
+                        .min(u32::MAX as usize) as u32,
+                    Some(command.clone()),
+                    Some(true),
+                );
                 self.suppress_text_input_until_key_up = Some(params.key);
                 app.push_effect(Effect::Command {
                     window: self.window,
@@ -291,9 +441,33 @@ impl<H: UiHost> UiTree<H> {
 
             // Treat disabled commands as "not matched" so the event can fall through to the
             // normal dispatch path (e.g. text inputs).
+            #[cfg(feature = "diagnostics")]
+            self.record_shortcut_routing_decision(
+                app,
+                &params,
+                fret_runtime::ShortcutRoutingOutcome::CommandDisabled,
+                self.pending_shortcut
+                    .keystrokes
+                    .len()
+                    .min(u32::MAX as usize) as u32,
+                Some(command),
+                Some(false),
+            );
             return false;
         }
 
+        #[cfg(feature = "diagnostics")]
+        self.record_shortcut_routing_decision(
+            app,
+            &params,
+            fret_runtime::ShortcutRoutingOutcome::NoMatch,
+            self.pending_shortcut
+                .keystrokes
+                .len()
+                .min(u32::MAX as usize) as u32,
+            None,
+            None,
+        );
         false
     }
 

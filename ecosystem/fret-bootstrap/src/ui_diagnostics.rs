@@ -1,10 +1,21 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Rect, Scene, SemanticsRole,
+    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
+use fret_diag_protocol::{
+    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiEdgesV1,
+    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
+    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
+    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
+    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
+    UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
+    UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -228,6 +239,7 @@ pub struct UiDiagnosticsService {
     exit_armed: bool,
     exit_last_mtime: Option<std::time::SystemTime>,
     ready_written: bool,
+    capabilities_written: bool,
     inspect_enabled: bool,
     inspect_consume_clicks: bool,
     pending_script: Option<PendingScript>,
@@ -680,6 +692,7 @@ impl UiDiagnosticsService {
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
+        ui: Option<&UiTree<App>>,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -701,11 +714,20 @@ impl UiDiagnosticsService {
                     steps: script.steps,
                     run_id,
                     next_step: 0,
+                    last_injected_step: None,
                     wait_frames_remaining: 0,
                     wait_until: None,
                     screenshot_wait: None,
                     v2_step_state: None,
                     last_reported_step: Some(0),
+                    selector_resolution_trace: Vec::new(),
+                    hit_test_trace: Vec::new(),
+                    focus_trace: Vec::new(),
+                    shortcut_routing_trace: Vec::new(),
+                    last_shortcut_routing_seq: 0,
+                    overlay_placement_trace: Vec::new(),
+                    web_ime_trace: Vec::new(),
+                    ime_event_trace: Vec::new(),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -715,7 +737,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(0),
+                reason_code: None,
                 reason: None,
+                evidence: None,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -739,7 +763,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Running,
                 step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason_code: None,
                 reason: None,
+                evidence: None,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -763,6 +789,24 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         };
 
+        // Keep evidence scoped to the active step so failures remain focused.
+        let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
+        active
+            .selector_resolution_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .hit_test_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .focus_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .web_ime_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .ime_event_trace
+            .retain(|e| e.step_index == step_index_u32);
+
         let mut output = UiScriptFrameOutput::default();
         let mut force_dump_label: Option<String> = None;
         let mut stop_script = false;
@@ -775,6 +819,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
+                | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
@@ -982,6 +1027,34 @@ impl UiDiagnosticsService {
                 repeat,
             } => {
                 if let Some(key) = parse_key_code(&key) {
+                    let note = format!("press_key key={key:?} mods={modifiers:?} repeat={repeat}");
+                    record_focus_trace(
+                        &mut active.focus_trace,
+                        app,
+                        window,
+                        element_runtime,
+                        semantics_snapshot,
+                        ui,
+                        step_index as u32,
+                        None,
+                        None,
+                        note.as_str(),
+                    );
+                    record_web_ime_trace(
+                        &mut active.web_ime_trace,
+                        app,
+                        step_index as u32,
+                        note.as_str(),
+                    );
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        semantics_snapshot,
+                        window,
+                        step_index as u32,
+                        note.as_str(),
+                    );
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                     output
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
@@ -1000,10 +1073,63 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::PressShortcut { shortcut, repeat } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some((key, modifiers)) = parse_shortcut(&shortcut) {
+                    let note =
+                        format!("press_shortcut key={key:?} mods={modifiers:?} repeat={repeat}");
+                    record_focus_trace(
+                        &mut active.focus_trace,
+                        app,
+                        window,
+                        element_runtime,
+                        semantics_snapshot,
+                        ui,
+                        step_index as u32,
+                        None,
+                        None,
+                        note.as_str(),
+                    );
+                    record_web_ime_trace(
+                        &mut active.web_ime_trace,
+                        app,
+                        step_index as u32,
+                        note.as_str(),
+                    );
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        semantics_snapshot,
+                        window,
+                        step_index as u32,
+                        note.as_str(),
+                    );
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                    output
+                        .events
+                        .extend(press_key_events(key, modifiers, repeat));
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-press_shortcut"));
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-press_shortcut-parse-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some(format!("invalid_shortcut: {shortcut}"));
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::TypeText { text } => {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
                 active.screenshot_wait = None;
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -1027,6 +1153,14 @@ impl UiDiagnosticsService {
                         },
                     };
 
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        Some(snapshot),
+                        window,
+                        step_index as u32,
+                        "wait_until",
+                    );
                     if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
                     {
                         active.wait_until = None;
@@ -1061,6 +1195,14 @@ impl UiDiagnosticsService {
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 if let Some(snapshot) = semantics_snapshot {
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        Some(snapshot),
+                        window,
+                        step_index as u32,
+                        "assert",
+                    );
                     if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
                     {
                         active.next_step = active.next_step.saturating_add(1);
@@ -1099,7 +1241,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1107,8 +1251,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1121,7 +1272,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("click_no_semantics_match".to_string()),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1131,6 +1284,26 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some("click"),
+                    );
+                }
+                record_overlay_placement_trace(
+                    &mut active.overlay_placement_trace,
+                    element_runtime,
+                    Some(snapshot),
+                    window,
+                    step_index as u32,
+                    "click",
+                );
                 let modifiers = core_modifiers_from_ui(modifiers);
                 output.events.extend(click_events_with_modifiers(
                     pos,
@@ -1166,9 +1339,15 @@ impl UiDiagnosticsService {
                 // can jump across frames (e.g. estimate -> measured), causing clicks to land at
                 // stale coordinates when using a single-frame snapshot.
                 if let Some(snapshot) = semantics_snapshot {
-                    if let Some(node) =
-                        select_semantics_node(snapshot, window, element_runtime, &target)
-                    {
+                    if let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) {
                         let stable_required = stable_frames.max(1);
                         let max_move_px = max_move_px.max(0.0);
 
@@ -1187,7 +1366,20 @@ impl UiDiagnosticsService {
                             },
                         };
 
+                        let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         if state.remaining_frames == 0 {
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    center,
+                                    Some(node),
+                                    Some("click_stable.timeout"),
+                                );
+                            }
                             force_dump_label =
                                 Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                             stop_script = true;
@@ -1195,8 +1387,6 @@ impl UiDiagnosticsService {
                             active.v2_step_state = None;
                             output.request_redraw = true;
                         } else {
-                            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-
                             let moved = match state.last_center {
                                 Some(last) => {
                                     let dx = (center.x.0 - last.x.0).abs();
@@ -1214,6 +1404,18 @@ impl UiDiagnosticsService {
                             state.last_center = Some(center);
 
                             if state.stable_count >= stable_required {
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        center,
+                                        Some(node),
+                                        Some("click_stable.click"),
+                                    );
+                                }
                                 output.events.extend(click_events_with_modifiers(
                                     center,
                                     button,
@@ -1651,7 +1853,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1659,8 +1863,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label =
                         format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
@@ -1674,7 +1885,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("move_pointer_no_semantics_match".to_string()),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1684,6 +1897,18 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some("move_pointer"),
+                    );
+                }
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
@@ -1724,7 +1949,9 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("semantics.missing".to_string()),
                                 reason: Some("no_semantics_snapshot".to_string()),
+                                evidence: None,
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1732,9 +1959,15 @@ impl UiDiagnosticsService {
                             });
                             return output;
                         };
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-drag_pointer-no-semantics-match"
@@ -1749,7 +1982,9 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("drag_pointer_no_semantics_match".to_string()),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1759,6 +1994,18 @@ impl UiDiagnosticsService {
                         };
 
                         let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        if let Some(ui) = ui {
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                Some(snapshot),
+                                &target,
+                                step_index as u32,
+                                start,
+                                Some(node),
+                                Some("drag_pointer.start"),
+                            );
+                        }
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1776,6 +2023,18 @@ impl UiDiagnosticsService {
 
                 let done = push_drag_playback_frame(&mut state, &mut output.events);
                 if done {
+                    if let Some(ui) = ui {
+                        record_hit_test_trace_for_selector(
+                            &mut active.hit_test_trace,
+                            ui,
+                            semantics_snapshot,
+                            &target,
+                            step_index as u32,
+                            state.end,
+                            None,
+                            Some("drag_pointer.end"),
+                        );
+                    }
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
                     if self.cfg.script_auto_dump {
@@ -1810,7 +2069,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1826,9 +2087,15 @@ impl UiDiagnosticsService {
                         state
                     }
                     _ => {
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
@@ -1843,7 +2110,9 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1853,6 +2122,18 @@ impl UiDiagnosticsService {
                         };
 
                         let start = center_of_rect(node.bounds);
+                        if let Some(ui) = ui {
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                Some(snapshot),
+                                &target,
+                                step_index as u32,
+                                start,
+                                Some(node),
+                                Some("move_pointer_sweep.start"),
+                            );
+                        }
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1874,6 +2155,18 @@ impl UiDiagnosticsService {
                     active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
                     output.request_redraw = true;
                 } else if state.next_step > state.steps {
+                    if let Some(ui) = ui {
+                        record_hit_test_trace_for_selector(
+                            &mut active.hit_test_trace,
+                            ui,
+                            semantics_snapshot,
+                            &target,
+                            step_index as u32,
+                            state.end,
+                            None,
+                            Some("move_pointer_sweep.end"),
+                        );
+                    }
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
@@ -1912,7 +2205,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("semantics.missing".to_string()),
                         reason: Some("no_semantics_snapshot".to_string()),
+                        evidence: None,
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1920,8 +2215,15 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node_with_trace(
+                    snapshot,
+                    window,
+                    element_runtime,
+                    &target,
+                    step_index as u32,
+                    self.cfg.redact_text,
+                    &mut active.selector_resolution_trace,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1934,7 +2236,9 @@ impl UiDiagnosticsService {
                         window: Some(window.data().as_ffi()),
                         stage: UiScriptStageV1::Failed,
                         step_index: Some(step_index as u32),
+                        reason_code: Some("selector.not_found".to_string()),
                         reason: Some("wheel_no_semantics_match".to_string()),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1944,6 +2248,19 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    let note = format!("wheel dx={delta_x} dy={delta_y}");
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some(note.as_str()),
+                    );
+                }
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
@@ -2024,8 +2341,10 @@ impl UiDiagnosticsService {
                 target,
                 delta_x,
                 delta_y,
+                require_fully_within_container,
                 require_fully_within_window,
                 padding_px,
+                padding_insets_px,
                 timeout_frames,
             } => {
                 active.wait_until = None;
@@ -2056,13 +2375,47 @@ impl UiDiagnosticsService {
                             target: target.clone(),
                         }
                     };
-                    if eval_predicate(
+                    let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
                         element_runtime,
                         &target_predicate,
-                    ) {
+                    );
+                    let container_ok = if require_fully_within_container {
+                        let container_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &container,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
+                        let target_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
+                        if let (Some(container_node), Some(target_node)) =
+                            (container_node, target_node)
+                        {
+                            let insets = padding_insets_px
+                                .unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+                            let inner = rect_inset(container_node.bounds, insets);
+                            rect_fully_contains(inner, target_node.bounds)
+                        } else {
+                            false
+                        }
+                    } else {
+                        true
+                    };
+
+                    if visible_ok && container_ok {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -2079,13 +2432,34 @@ impl UiDiagnosticsService {
                         active.v2_step_state = None;
                         output.request_redraw = true;
                     } else {
-                        let container_node =
-                            select_semantics_node(snapshot, window, element_runtime, &container);
+                        let container_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &container,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
                         if let Some(container_node) = container_node {
                             let pos = center_of_rect_clamped_to_rect(
                                 container_node.bounds,
                                 window_bounds,
                             );
+                            if let Some(ui) = ui {
+                                let note =
+                                    format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    semantics_snapshot,
+                                    &container,
+                                    step_index as u32,
+                                    pos,
+                                    Some(container_node),
+                                    Some(note.as_str()),
+                                );
+                            }
                             output.events.push(wheel_event(pos, delta_x, delta_y));
                         }
 
@@ -2123,13 +2497,23 @@ impl UiDiagnosticsService {
                             step_index,
                             remaining_frames: timeout_frames,
                             phase: 0,
+                            expected_node_id: None,
+                            expected_test_id: None,
                         },
                     };
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &target)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &target,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::TypeTextInto(state));
@@ -2149,11 +2533,52 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &target)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &target,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
+                                state.expected_node_id = Some(node.id.data().as_ffi());
+                                state.expected_test_id = node.test_id.clone();
+
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("type_text_into.click"),
+                                    );
+                                }
+                                record_focus_trace(
+                                    &mut active.focus_trace,
+                                    app,
+                                    window,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    ui,
+                                    step_index as u32,
+                                    state.expected_node_id,
+                                    state.expected_test_id.as_deref(),
+                                    "type_text_into.click_injected",
+                                );
+                                record_web_ime_trace(
+                                    &mut active.web_ime_trace,
+                                    app,
+                                    step_index as u32,
+                                    "type_text_into.click_injected",
+                                );
+                                active.last_injected_step =
+                                    Some(step_index.min(u32::MAX as usize) as u32);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2172,13 +2597,77 @@ impl UiDiagnosticsService {
                             }
                         }
                         _ => {
-                            output.events.push(Event::TextInput(text));
-                            active.v2_step_state = None;
-                            active.next_step = active.next_step.saturating_add(1);
-                            output.request_redraw = true;
-                            if self.cfg.script_auto_dump {
-                                force_dump_label =
-                                    Some(format!("script-step-{step_index:04}-type_text_into"));
+                            record_focus_trace(
+                                &mut active.focus_trace,
+                                app,
+                                window,
+                                element_runtime,
+                                Some(snapshot),
+                                ui,
+                                step_index as u32,
+                                state.expected_node_id,
+                                state.expected_test_id.as_deref(),
+                                "type_text_into.wait_focus",
+                            );
+                            record_web_ime_trace(
+                                &mut active.web_ime_trace,
+                                app,
+                                step_index as u32,
+                                "type_text_into.wait_focus",
+                            );
+
+                            let focused_node_id = element_runtime
+                                .and_then(|rt| rt.diagnostics_snapshot(window))
+                                .and_then(|s| s.focused_element_node)
+                                .map(key_to_u64);
+                            let focus_matches = match (state.expected_node_id, focused_node_id) {
+                                (Some(expected), Some(focused)) => expected == focused,
+                                // If we cannot observe focus, prefer making progress rather than timing out.
+                                _ => true,
+                            };
+
+                            if focus_matches {
+                                record_focus_trace(
+                                    &mut active.focus_trace,
+                                    app,
+                                    window,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    ui,
+                                    step_index as u32,
+                                    state.expected_node_id,
+                                    state.expected_test_id.as_deref(),
+                                    "type_text_into.text_input",
+                                );
+                                record_web_ime_trace(
+                                    &mut active.web_ime_trace,
+                                    app,
+                                    step_index as u32,
+                                    "type_text_into.text_input",
+                                );
+
+                                active.last_injected_step =
+                                    Some(step_index.min(u32::MAX as usize) as u32);
+                                output.events.push(Event::TextInput(text));
+                                active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-type_text_into"));
+                                }
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-type_text_into-focus-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("type_text_into_focus_timeout".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::TypeTextInto(state));
+                                output.request_redraw = true;
                             }
                         }
                     }
@@ -2216,8 +2705,16 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &menu)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &menu,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
@@ -2237,11 +2734,29 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &menu)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &menu,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &menu,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("menu_select.menu_click"),
+                                    );
+                                }
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2259,8 +2774,16 @@ impl UiDiagnosticsService {
                             }
                         }
                         2 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &item)
-                                .is_some()
+                            if select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &item,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            )
+                            .is_some()
                             {
                                 state.phase = 3;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
@@ -2280,10 +2803,28 @@ impl UiDiagnosticsService {
                             }
                         }
                         _ => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &item)
-                            {
+                            if let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &item,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) {
                                 let pos = center_of_rect(node.bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &item,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("menu_select.item_click"),
+                                    );
+                                }
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2308,6 +2849,139 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-menu_select-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::MenuSelectPath {
+                path,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if path.len() < 2 {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select_path-invalid"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("menu_select_path_invalid".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                    // Let the common failure handler persist the result.
+                } else if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::MenuSelectPath(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2MenuSelectPathState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            phase: 0,
+                            next_index: 0,
+                        },
+                    };
+
+                    if state.next_index >= path.len() {
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-menu_select_path"));
+                        }
+                    } else {
+                        match state.phase {
+                            0 => {
+                                if select_semantics_node_with_trace(
+                                    snapshot,
+                                    window,
+                                    element_runtime,
+                                    &path[state.next_index],
+                                    step_index as u32,
+                                    self.cfg.redact_text,
+                                    &mut active.selector_resolution_trace,
+                                )
+                                .is_some()
+                                {
+                                    state.phase = 1;
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                } else if state.remaining_frames == 0 {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-menu_select_path-timeout"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason = Some("menu_select_path_timeout".to_string());
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                } else {
+                                    state.remaining_frames =
+                                        state.remaining_frames.saturating_sub(1);
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                }
+                            }
+                            _ => {
+                                let selector = &path[state.next_index];
+                                if let Some(node) = select_semantics_node_with_trace(
+                                    snapshot,
+                                    window,
+                                    element_runtime,
+                                    selector,
+                                    step_index as u32,
+                                    self.cfg.redact_text,
+                                    &mut active.selector_resolution_trace,
+                                ) {
+                                    let pos =
+                                        center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                    if let Some(ui) = ui {
+                                        let note = format!(
+                                            "menu_select_path.click index={}",
+                                            state.next_index
+                                        );
+                                        record_hit_test_trace_for_selector(
+                                            &mut active.hit_test_trace,
+                                            ui,
+                                            Some(snapshot),
+                                            selector,
+                                            step_index as u32,
+                                            pos,
+                                            Some(node),
+                                            Some(note.as_str()),
+                                        );
+                                    }
+                                    output.events.extend(click_events(
+                                        pos,
+                                        UiMouseButtonV1::Left,
+                                        1,
+                                    ));
+                                    state.next_index = state.next_index.saturating_add(1);
+                                    state.phase = 0;
+                                    active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                                    output.request_redraw = true;
+                                } else {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-menu_select_path-no-match"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason =
+                                        Some("menu_select_path_no_semantics_match".to_string());
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select_path-no-semantics"
                     ));
                     stop_script = true;
                     failure_reason = Some("no_semantics_snapshot".to_string());
@@ -2341,13 +3015,50 @@ impl UiDiagnosticsService {
                     let mut playback = if let Some(playback) = state.playback.take() {
                         playback
                     } else {
-                        let from_node =
-                            select_semantics_node(snapshot, window, element_runtime, &from);
-                        let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
+                        let from_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &from,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
+                        let to_node = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &to,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
                             let start =
                                 center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
                             let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &from,
+                                    step_index as u32,
+                                    start,
+                                    Some(from_node),
+                                    Some("drag_to.start"),
+                                );
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &to,
+                                    step_index as u32,
+                                    end,
+                                    Some(to_node),
+                                    Some("drag_to.end"),
+                                );
+                            }
                             V2DragPointerState {
                                 step_index,
                                 steps: steps.max(1),
@@ -2369,7 +3080,10 @@ impl UiDiagnosticsService {
                                 window: Some(window.data().as_ffi()),
                                 stage: UiScriptStageV1::Failed,
                                 step_index: Some(step_index as u32),
+                                reason_code: reason_code_for_script_failure("drag_to_timeout")
+                                    .map(|s| s.to_string()),
                                 reason: Some("drag_to_timeout".to_string()),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -2433,7 +3147,15 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    let node = select_semantics_node(snapshot, window, element_runtime, &target);
+                    let node = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    );
                     if let Some(node) = node {
                         if node.flags.disabled {
                             force_dump_label = Some(format!(
@@ -2462,6 +3184,28 @@ impl UiDiagnosticsService {
                                 let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                 let start = Point::new(fret_core::Px(start_x), start.y);
                                 let end = Point::new(fret_core::Px(x), start.y);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        start,
+                                        Some(node),
+                                        Some("set_slider_value.drag_start"),
+                                    );
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        end,
+                                        Some(node),
+                                        Some("set_slider_value.drag_end"),
+                                    );
+                                }
                                 output.events.extend(drag_events(
                                     start,
                                     end,
@@ -2505,6 +3249,28 @@ impl UiDiagnosticsService {
                                         let end_x = clamp_x(start_x + dx);
                                         let start = Point::new(fret_core::Px(start_x), start.y);
                                         let end = Point::new(fret_core::Px(end_x), start.y);
+                                        if let Some(ui) = ui {
+                                            record_hit_test_trace_for_selector(
+                                                &mut active.hit_test_trace,
+                                                ui,
+                                                Some(snapshot),
+                                                &target,
+                                                step_index as u32,
+                                                start,
+                                                Some(node),
+                                                Some("set_slider_value.adjust_drag_start"),
+                                            );
+                                            record_hit_test_trace_for_selector(
+                                                &mut active.hit_test_trace,
+                                                ui,
+                                                Some(snapshot),
+                                                &target,
+                                                step_index as u32,
+                                                end,
+                                                Some(node),
+                                                Some("set_slider_value.adjust_drag_end"),
+                                            );
+                                        }
                                         output.events.extend(drag_events(
                                             start,
                                             end,
@@ -2570,6 +3336,11 @@ impl UiDiagnosticsService {
                 self.request_force_dump(label);
             }
 
+            let reason_code = failure_reason
+                .as_deref()
+                .and_then(reason_code_for_script_failure)
+                .map(|s| s.to_string());
+            let evidence = script_evidence_for_active(&active);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
@@ -2577,7 +3348,9 @@ impl UiDiagnosticsService {
                 window: Some(window.data().as_ffi()),
                 stage: UiScriptStageV1::Failed,
                 step_index: Some(step_index as u32),
+                reason_code,
                 reason: failure_reason,
+                evidence,
                 last_bundle_dir: self
                     .last_dump_dir
                     .as_ref()
@@ -2596,7 +3369,9 @@ impl UiDiagnosticsService {
                     window: Some(window.data().as_ffi()),
                     stage: UiScriptStageV1::Passed,
                     step_index: Some(active.next_step.saturating_sub(1) as u32),
+                    reason_code: None,
                     reason: None,
+                    evidence: None,
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -2636,6 +3411,8 @@ impl UiDiagnosticsService {
             let _ = std::fs::create_dir_all(parent);
         }
 
+        self.ensure_capabilities_file();
+
         let ts = unix_ms_now();
         if let Ok(mut f) = std::fs::OpenOptions::new()
             .create(true)
@@ -2649,6 +3426,44 @@ impl UiDiagnosticsService {
         }
 
         self.ready_written = true;
+    }
+
+    fn ensure_capabilities_file(&mut self) {
+        if self.capabilities_written {
+            return;
+        }
+        if !self.cfg.enabled {
+            return;
+        }
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            self.capabilities_written = true;
+            return;
+        }
+
+        let mut caps = vec!["diag.script_v2".to_string()];
+        if self.cfg.screenshots_enabled {
+            caps.push("diag.screenshot_png".to_string());
+        }
+        caps.push("diag.text_ime_trace".to_string());
+        caps.push("diag.text_input_snapshot".to_string());
+        caps.push("diag.shortcut_routing_trace".to_string());
+        caps.push("diag.overlay_placement_trace".to_string());
+
+        let path = self.cfg.out_dir.join("capabilities.json");
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        let payload = FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: caps,
+        };
+        if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
+            text.push('\n');
+            let _ = std::fs::write(&path, text);
+        }
+
+        self.capabilities_written = true;
     }
 
     pub fn clear_window(&mut self, window: AppWindowId) {
@@ -2981,6 +3796,15 @@ impl UiDiagnosticsService {
         let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
+
+        if let Some(active) = self.active_scripts.get_mut(&window)
+            && let Event::Ime(ime) = event
+        {
+            let step_index = active
+                .last_injected_step
+                .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
+            record_ime_event_trace(&mut active.ime_event_trace, step_index, "record_event", ime);
+        }
     }
 
     pub fn record_viewport_input(&mut self, event: fret_core::ViewportInputEvent) {
@@ -3125,6 +3949,8 @@ impl UiDiagnosticsService {
             element_diag,
             semantics,
             self.cfg.max_gating_trace_entries,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
         );
         debug.viewport_input = viewport_input;
 
@@ -3154,6 +3980,8 @@ impl UiDiagnosticsService {
 
         ring.push_snapshot(&self.cfg, snapshot);
 
+        self.record_shortcut_routing_trace_for_window(app, window);
+
         if let Some(pending) = self.pending_pick.clone()
             && pending.window == window
         {
@@ -3163,6 +3991,69 @@ impl UiDiagnosticsService {
                 raw_semantics,
                 ui,
                 element_runtime,
+            );
+        }
+    }
+
+    fn record_shortcut_routing_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+        let Some(active) = self.active_scripts.get_mut(&window) else {
+            return;
+        };
+        let Some(store) = app.global::<fret_runtime::WindowShortcutRoutingDiagnosticsStore>()
+        else {
+            return;
+        };
+
+        let step_index = active
+            .last_injected_step
+            .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
+
+        let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
+        let decisions = store.snapshot_since(window, active.last_shortcut_routing_seq, max_entries);
+        if decisions.is_empty() {
+            return;
+        }
+
+        for decision in decisions {
+            active.last_shortcut_routing_seq = active
+                .last_shortcut_routing_seq
+                .max(decision.seq.saturating_add(1));
+
+            let phase = match decision.phase {
+                fret_runtime::ShortcutRoutingPhase::PreDispatch => "pre_dispatch",
+                fret_runtime::ShortcutRoutingPhase::PostDispatch => "post_dispatch",
+            };
+            let outcome = match decision.outcome {
+                fret_runtime::ShortcutRoutingOutcome::ReservedForIme => "reserved_for_ime",
+                fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget => "consumed_by_widget",
+                fret_runtime::ShortcutRoutingOutcome::CommandDispatched => "command_dispatched",
+                fret_runtime::ShortcutRoutingOutcome::CommandDisabled => "command_disabled",
+                fret_runtime::ShortcutRoutingOutcome::SequenceContinuation => {
+                    "sequence_continuation"
+                }
+                fret_runtime::ShortcutRoutingOutcome::SequenceReplay => "sequence_replay",
+                fret_runtime::ShortcutRoutingOutcome::NoMatch => "no_match",
+                fret_runtime::ShortcutRoutingOutcome::NoKeymap => "no_keymap",
+            };
+
+            push_shortcut_routing_trace(
+                &mut active.shortcut_routing_trace,
+                UiShortcutRoutingTraceEntryV1 {
+                    step_index,
+                    note: None,
+                    frame_id: decision.frame_id.0,
+                    phase: phase.to_string(),
+                    deferred: decision.deferred,
+                    focus_is_text_input: decision.focus_is_text_input,
+                    ime_composing: decision.ime_composing,
+                    key: format!("{:?}", decision.key),
+                    modifiers: UiKeyModifiersV1::from_modifiers(decision.modifiers),
+                    repeat: decision.repeat,
+                    outcome: outcome.to_string(),
+                    command: decision.command.as_ref().map(|c| c.as_str().to_string()),
+                    command_enabled: decision.command_enabled,
+                    pending_sequence_len: Some(decision.pending_sequence_len),
+                },
             );
         }
     }
@@ -3231,6 +4122,7 @@ impl UiDiagnosticsService {
         self.ws_bridge.drain_inbox(
             self.cfg.devtools_ws_url.as_deref(),
             self.cfg.devtools_token.as_deref(),
+            self.cfg.screenshots_enabled,
             &mut msgs,
         );
 
@@ -3250,6 +4142,7 @@ impl UiDiagnosticsService {
         self.ws_bridge.send(
             self.cfg.devtools_ws_url.as_deref(),
             self.cfg.devtools_token.as_deref(),
+            self.cfg.screenshots_enabled,
             DiagTransportMessageV1 {
                 schema_version: 1,
                 r#type: ty.into(),
@@ -3303,7 +4196,9 @@ impl UiDiagnosticsService {
                     window: None,
                     stage: UiScriptStageV1::Queued,
                     step_index: None,
+                    reason_code: None,
                     reason: None,
+                    evidence: None,
                     last_bundle_dir: self
                         .last_dump_dir
                         .as_ref()
@@ -3383,7 +4278,9 @@ impl UiDiagnosticsService {
             window: None,
             stage: UiScriptStageV1::Queued,
             step_index: None,
+            reason_code: None,
             reason: None,
+            evidence: None,
             last_bundle_dir: self
                 .last_dump_dir
                 .as_ref()
@@ -3687,10 +4584,12 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::MenuSelectPath { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
         | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
@@ -4221,545 +5120,550 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
         .collect()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV1 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV1>,
-}
+#[cfg(any())]
+mod legacy_forked_script_protocol {
+    use super::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV1 {
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV2 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV2>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV2 {
-    // v1-compatible steps
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        modifiers: Option<UiKeyModifiersV1>,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    /// Move the pointer along a straight line over multiple frames (one move event per frame).
-    ///
-    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
-    /// `drag_pointer` emits multiple pointer move events in a single frame.
-    MovePointerSweep {
-        target: UiSelectorV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_move_frames_per_step")]
-        frames_per_step: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-
-    // v2 intent-level steps
-    /// Click a target only after its bounds have remained stable for `stable_frames`.
-    ///
-    /// This is useful for virtualized lists where a target's measured bounds can jump
-    /// across frames (e.g. estimate -> measured), causing clicks to land at stale
-    /// positions when using a single-frame snapshot.
-    ClickStable {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_click_count")]
-        click_count: u8,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        modifiers: Option<UiKeyModifiersV1>,
-        #[serde(default = "default_click_stable_frames")]
-        stable_frames: u32,
-        #[serde(default = "default_click_stable_max_move_px")]
-        max_move_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    EnsureVisible {
-        target: UiSelectorV1,
-        #[serde(default)]
-        within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    ScrollIntoView {
-        container: UiSelectorV1,
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default = "default_scroll_delta_y")]
-        delta_y: f32,
-        #[serde(default)]
-        require_fully_within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    TypeTextInto {
-        target: UiSelectorV1,
-        text: String,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    MenuSelect {
-        menu: UiSelectorV1,
-        item: UiSelectorV1,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    DragTo {
-        from: UiSelectorV1,
-        to: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    SetSliderValue {
-        target: UiSelectorV1,
-        value: f32,
-        #[serde(default = "default_slider_min")]
-        min: f32,
-        #[serde(default = "default_slider_max")]
-        max: f32,
-        #[serde(default = "default_slider_epsilon")]
-        epsilon: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-        #[serde(default = "default_drag_steps")]
-        drag_steps: u32,
-    },
-    /// Request a resize of the active window's inner size (logical px).
-    ///
-    /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
-    /// runners may ignore it on platforms where programmatic resizing is not supported.
-    SetWindowInnerSize {
-        width_px: f32,
-        height_px: f32,
-    },
-}
-
-impl From<UiActionStepV1> for UiActionStepV2 {
-    fn from(value: UiActionStepV1) -> Self {
-        match value {
-            UiActionStepV1::Click {
-                target,
-                button,
-                click_count,
-            } => Self::Click {
-                target,
-                button,
-                click_count,
-                modifiers: None,
-            },
-            UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
-            UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
-            UiActionStepV1::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            } => Self::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            },
-            UiActionStepV1::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            } => Self::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            },
-            UiActionStepV1::PressKey {
-                key,
-                modifiers,
-                repeat,
-            } => Self::PressKey {
-                key,
-                modifiers,
-                repeat,
-            },
-            UiActionStepV1::TypeText { text } => Self::TypeText { text },
-            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
-            UiActionStepV1::WaitUntil {
-                predicate,
-                timeout_frames,
-            } => Self::WaitUntil {
-                predicate,
-                timeout_frames,
-            },
-            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
-            UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
-            UiActionStepV1::CaptureScreenshot {
-                label,
-                timeout_frames,
-            } => Self::CaptureScreenshot {
-                label,
-                timeout_frames,
-            },
-        }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiActionScriptV1 {
+        pub schema_version: u32,
+        pub steps: Vec<UiActionStepV1>,
     }
-}
 
-fn default_drag_steps() -> u32 {
-    8
-}
-
-fn default_click_count() -> u8 {
-    1
-}
-
-fn default_click_stable_frames() -> u32 {
-    2
-}
-
-fn default_click_stable_max_move_px() -> f32 {
-    1.0
-}
-
-fn default_move_frames_per_step() -> u32 {
-    1
-}
-
-fn default_capture_screenshot_timeout_frames() -> u32 {
-    300
-}
-
-fn default_action_timeout_frames() -> u32 {
-    180
-}
-
-fn default_scroll_delta_y() -> f32 {
-    -120.0
-}
-
-fn default_slider_min() -> f32 {
-    0.0
-}
-
-fn default_slider_max() -> f32 {
-    100.0
-}
-
-fn default_slider_epsilon() -> f32 {
-    0.5
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiMouseButtonV1 {
-    Left,
-    Right,
-    Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "type", rename_all = "snake_case")]
+    pub enum UiActionStepV1 {
+        Click {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+        },
+        ResetDiagnostics,
+        MovePointer {
+            target: UiSelectorV1,
+        },
+        DragPointer {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+        },
+        Wheel {
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default)]
+            delta_y: f32,
+        },
+        PressKey {
+            key: String,
+            #[serde(default)]
+            modifiers: UiKeyModifiersV1,
+            #[serde(default)]
+            repeat: bool,
+        },
+        TypeText {
+            text: String,
+        },
+        WaitFrames {
+            n: u32,
+        },
+        WaitUntil {
+            predicate: UiPredicateV1,
+            timeout_frames: u32,
+        },
+        Assert {
+            predicate: UiPredicateV1,
+        },
+        CaptureBundle {
+            label: Option<String>,
+        },
+        CaptureScreenshot {
+            label: Option<String>,
+            #[serde(default = "default_capture_screenshot_timeout_frames")]
+            timeout_frames: u32,
+        },
     }
-}
 
-impl UiMouseButtonV1 {
-    fn from_button(button: fret_core::MouseButton) -> Self {
-        match button {
-            fret_core::MouseButton::Left => Self::Left,
-            fret_core::MouseButton::Right => Self::Right,
-            fret_core::MouseButton::Middle => Self::Middle,
-            fret_core::MouseButton::Back
-            | fret_core::MouseButton::Forward
-            | fret_core::MouseButton::Other(_) => Self::Left,
-        }
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiActionScriptV2 {
+        pub schema_version: u32,
+        pub steps: Vec<UiActionStepV2>,
     }
-}
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct UiKeyModifiersV1 {
-    #[serde(default)]
-    pub shift: bool,
-    #[serde(default)]
-    pub ctrl: bool,
-    #[serde(default)]
-    pub alt: bool,
-    #[serde(default)]
-    pub meta: bool,
-}
-
-impl UiKeyModifiersV1 {
-    fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
-        Self {
-            shift: modifiers.shift,
-            ctrl: modifiers.ctrl,
-            alt: modifiers.alt,
-            meta: modifiers.meta,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiPredicateV1 {
-    Exists {
-        target: UiSelectorV1,
-    },
-    NotExists {
-        target: UiSelectorV1,
-    },
-    FocusIs {
-        target: UiSelectorV1,
-    },
-    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
-    ///
-    /// This is intentionally coarse-grained: scripts should be able to assert that close
-    /// transitions keep the pointer barrier active while releasing focus containment (or vice
-    /// versa) without needing stable node ids.
-    BarrierRoots {
-        #[serde(default)]
-        barrier_root: UiOptionalRootStateV1,
-        #[serde(default)]
-        focus_barrier_root: UiOptionalRootStateV1,
-        /// When set, additionally enforces whether the two roots are equal.
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "type", rename_all = "snake_case")]
+    pub enum UiActionStepV2 {
+        // v1-compatible steps
+        Click {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            modifiers: Option<UiKeyModifiersV1>,
+        },
+        ResetDiagnostics,
+        MovePointer {
+            target: UiSelectorV1,
+        },
+        DragPointer {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+        },
+        /// Move the pointer along a straight line over multiple frames (one move event per frame).
         ///
-        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
-        /// - `false`: requires `barrier_root != focus_barrier_root`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        require_equal: Option<bool>,
-    },
-    /// True when the target exists and its semantics bounds intersect the active window bounds.
-    ///
-    /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
-    /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
-    /// update.
-    VisibleInWindow {
-        target: UiSelectorV1,
-    },
-    /// True when the target exists and its semantics bounds are fully contained within the active
-    /// window bounds (optionally padded inward by `padding_px`).
-    BoundsWithinWindow {
-        target: UiSelectorV1,
-        #[serde(default)]
-        padding_px: f32,
-        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+        /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
+        /// `drag_pointer` emits multiple pointer move events in a single frame.
+        MovePointerSweep {
+            target: UiSelectorV1,
+            delta_x: f32,
+            delta_y: f32,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+            #[serde(default = "default_move_frames_per_step")]
+            frames_per_step: u32,
+        },
+        Wheel {
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default)]
+            delta_y: f32,
+        },
+        PressKey {
+            key: String,
+            #[serde(default)]
+            modifiers: UiKeyModifiersV1,
+            #[serde(default)]
+            repeat: bool,
+        },
+        TypeText {
+            text: String,
+        },
+        WaitFrames {
+            n: u32,
+        },
+        WaitUntil {
+            predicate: UiPredicateV1,
+            timeout_frames: u32,
+        },
+        Assert {
+            predicate: UiPredicateV1,
+        },
+        CaptureBundle {
+            label: Option<String>,
+        },
+        CaptureScreenshot {
+            label: Option<String>,
+            #[serde(default = "default_capture_screenshot_timeout_frames")]
+            timeout_frames: u32,
+        },
+
+        // v2 intent-level steps
+        /// Click a target only after its bounds have remained stable for `stable_frames`.
         ///
-        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
-        /// strict edge containment checks by `eps_px`.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when the target exists and its semantics bounds are at least the specified size.
-    ///
-    /// This is useful for demos where the content can legitimately be taller than the window
-    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
-    BoundsMinSize {
-        target: UiSelectorV1,
-        #[serde(default)]
-        min_w_px: f32,
-        #[serde(default)]
-        min_h_px: f32,
-        /// A small tolerance to account for rounding / fractional layout units.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds do not overlap.
-    ///
-    /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
-    BoundsNonOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap.
-    ///
-    /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
-    /// subpixel rounding at fractional DPI).
-    BoundsOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the X axis.
-    ///
-    /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
-    /// and track), but we still want to assert horizontal alignment.
-    BoundsOverlappingX {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the Y axis.
-    BoundsOverlappingY {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-}
+        /// This is useful for virtualized lists where a target's measured bounds can jump
+        /// across frames (e.g. estimate -> measured), causing clicks to land at stale
+        /// positions when using a single-frame snapshot.
+        ClickStable {
+            target: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_click_count")]
+            click_count: u8,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            modifiers: Option<UiKeyModifiersV1>,
+            #[serde(default = "default_click_stable_frames")]
+            stable_frames: u32,
+            #[serde(default = "default_click_stable_max_move_px")]
+            max_move_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        EnsureVisible {
+            target: UiSelectorV1,
+            #[serde(default)]
+            within_window: bool,
+            #[serde(default)]
+            padding_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        ScrollIntoView {
+            container: UiSelectorV1,
+            target: UiSelectorV1,
+            #[serde(default)]
+            delta_x: f32,
+            #[serde(default = "default_scroll_delta_y")]
+            delta_y: f32,
+            #[serde(default)]
+            require_fully_within_window: bool,
+            #[serde(default)]
+            padding_px: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        TypeTextInto {
+            target: UiSelectorV1,
+            text: String,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        MenuSelect {
+            menu: UiSelectorV1,
+            item: UiSelectorV1,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        DragTo {
+            from: UiSelectorV1,
+            to: UiSelectorV1,
+            #[serde(default)]
+            button: UiMouseButtonV1,
+            #[serde(default = "default_drag_steps")]
+            steps: u32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+        },
+        SetSliderValue {
+            target: UiSelectorV1,
+            value: f32,
+            #[serde(default = "default_slider_min")]
+            min: f32,
+            #[serde(default = "default_slider_max")]
+            max: f32,
+            #[serde(default = "default_slider_epsilon")]
+            epsilon: f32,
+            #[serde(default = "default_action_timeout_frames")]
+            timeout_frames: u32,
+            #[serde(default = "default_drag_steps")]
+            drag_steps: u32,
+        },
+        /// Request a resize of the active window's inner size (logical px).
+        ///
+        /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
+        /// runners may ignore it on platforms where programmatic resizing is not supported.
+        SetWindowInnerSize {
+            width_px: f32,
+            height_px: f32,
+        },
+    }
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiOptionalRootStateV1 {
-    /// Do not assert anything about the root (accept both `Some` and `None`).
-    #[default]
-    Any,
-    None,
-    Some,
-}
+    impl From<UiActionStepV1> for UiActionStepV2 {
+        fn from(value: UiActionStepV1) -> Self {
+            match value {
+                UiActionStepV1::Click {
+                    target,
+                    button,
+                    click_count,
+                } => Self::Click {
+                    target,
+                    button,
+                    click_count,
+                    modifiers: None,
+                },
+                UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
+                UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
+                UiActionStepV1::DragPointer {
+                    target,
+                    button,
+                    delta_x,
+                    delta_y,
+                    steps,
+                } => Self::DragPointer {
+                    target,
+                    button,
+                    delta_x,
+                    delta_y,
+                    steps,
+                },
+                UiActionStepV1::Wheel {
+                    target,
+                    delta_x,
+                    delta_y,
+                } => Self::Wheel {
+                    target,
+                    delta_x,
+                    delta_y,
+                },
+                UiActionStepV1::PressKey {
+                    key,
+                    modifiers,
+                    repeat,
+                } => Self::PressKey {
+                    key,
+                    modifiers,
+                    repeat,
+                },
+                UiActionStepV1::TypeText { text } => Self::TypeText { text },
+                UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
+                UiActionStepV1::WaitUntil {
+                    predicate,
+                    timeout_frames,
+                } => Self::WaitUntil {
+                    predicate,
+                    timeout_frames,
+                },
+                UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
+                UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
+                UiActionStepV1::CaptureScreenshot {
+                    label,
+                    timeout_frames,
+                } => Self::CaptureScreenshot {
+                    label,
+                    timeout_frames,
+                },
+            }
+        }
+    }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiSelectorV1 {
-    RoleAndName {
-        role: String,
-        name: String,
-    },
-    RoleAndPath {
-        role: String,
-        name: String,
-        /// Ancestors ordered from outermost -> innermost.
-        ancestors: Vec<UiRoleAndNameV1>,
-    },
-    TestId {
-        id: String,
-    },
-    GlobalElementId {
-        element: u64,
-    },
-    NodeId {
-        node: u64,
-    },
-}
+    fn default_drag_steps() -> u32 {
+        8
+    }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiRoleAndNameV1 {
-    pub role: String,
-    pub name: String,
+    fn default_click_count() -> u8 {
+        1
+    }
+
+    fn default_click_stable_frames() -> u32 {
+        2
+    }
+
+    fn default_click_stable_max_move_px() -> f32 {
+        1.0
+    }
+
+    fn default_move_frames_per_step() -> u32 {
+        1
+    }
+
+    fn default_capture_screenshot_timeout_frames() -> u32 {
+        300
+    }
+
+    fn default_action_timeout_frames() -> u32 {
+        180
+    }
+
+    fn default_scroll_delta_y() -> f32 {
+        -120.0
+    }
+
+    fn default_slider_min() -> f32 {
+        0.0
+    }
+
+    fn default_slider_max() -> f32 {
+        100.0
+    }
+
+    fn default_slider_epsilon() -> f32 {
+        0.5
+    }
+
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiMouseButtonV1 {
+        Left,
+        Right,
+        Middle,
+    }
+
+    impl Default for UiMouseButtonV1 {
+        fn default() -> Self {
+            Self::Left
+        }
+    }
+
+    impl UiMouseButtonV1 {
+        fn from_button(button: fret_core::MouseButton) -> Self {
+            match button {
+                fret_core::MouseButton::Left => Self::Left,
+                fret_core::MouseButton::Right => Self::Right,
+                fret_core::MouseButton::Middle => Self::Middle,
+                fret_core::MouseButton::Back
+                | fret_core::MouseButton::Forward
+                | fret_core::MouseButton::Other(_) => Self::Left,
+            }
+        }
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    pub struct UiKeyModifiersV1 {
+        #[serde(default)]
+        pub shift: bool,
+        #[serde(default)]
+        pub ctrl: bool,
+        #[serde(default)]
+        pub alt: bool,
+        #[serde(default)]
+        pub meta: bool,
+    }
+
+    impl UiKeyModifiersV1 {
+        fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
+            Self {
+                shift: modifiers.shift,
+                ctrl: modifiers.ctrl,
+                alt: modifiers.alt,
+                meta: modifiers.meta,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum UiPredicateV1 {
+        Exists {
+            target: UiSelectorV1,
+        },
+        NotExists {
+            target: UiSelectorV1,
+        },
+        FocusIs {
+            target: UiSelectorV1,
+        },
+        /// Matches the current modal/pointer barrier root and focus barrier root (if any).
+        ///
+        /// This is intentionally coarse-grained: scripts should be able to assert that close
+        /// transitions keep the pointer barrier active while releasing focus containment (or vice
+        /// versa) without needing stable node ids.
+        BarrierRoots {
+            #[serde(default)]
+            barrier_root: UiOptionalRootStateV1,
+            #[serde(default)]
+            focus_barrier_root: UiOptionalRootStateV1,
+            /// When set, additionally enforces whether the two roots are equal.
+            ///
+            /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
+            /// - `false`: requires `barrier_root != focus_barrier_root`.
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            require_equal: Option<bool>,
+        },
+        /// True when the target exists and its semantics bounds intersect the active window bounds.
+        ///
+        /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
+        /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
+        /// update.
+        VisibleInWindow {
+            target: UiSelectorV1,
+        },
+        /// True when the target exists and its semantics bounds are fully contained within the active
+        /// window bounds (optionally padded inward by `padding_px`).
+        BoundsWithinWindow {
+            target: UiSelectorV1,
+            #[serde(default)]
+            padding_px: f32,
+            /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+            ///
+            /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
+            /// strict edge containment checks by `eps_px`.
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when the target exists and its semantics bounds are at least the specified size.
+        ///
+        /// This is useful for demos where the content can legitimately be taller than the window
+        /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
+        BoundsMinSize {
+            target: UiSelectorV1,
+            #[serde(default)]
+            min_w_px: f32,
+            #[serde(default)]
+            min_h_px: f32,
+            /// A small tolerance to account for rounding / fractional layout units.
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds do not overlap.
+        ///
+        /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
+        BoundsNonOverlapping {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap.
+        ///
+        /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
+        /// subpixel rounding at fractional DPI).
+        BoundsOverlapping {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap on the X axis.
+        ///
+        /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
+        /// and track), but we still want to assert horizontal alignment.
+        BoundsOverlappingX {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+        /// True when both targets exist and their semantics bounds overlap on the Y axis.
+        BoundsOverlappingY {
+            a: UiSelectorV1,
+            b: UiSelectorV1,
+            #[serde(default)]
+            eps_px: f32,
+        },
+    }
+
+    #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiOptionalRootStateV1 {
+        /// Do not assert anything about the root (accept both `Some` and `None`).
+        #[default]
+        Any,
+        None,
+        Some,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum UiSelectorV1 {
+        RoleAndName {
+            role: String,
+            name: String,
+        },
+        RoleAndPath {
+            role: String,
+            name: String,
+            /// Ancestors ordered from outermost -> innermost.
+            ancestors: Vec<UiRoleAndNameV1>,
+        },
+        TestId {
+            id: String,
+        },
+        GlobalElementId {
+            element: u64,
+        },
+        NodeId {
+            node: u64,
+        },
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct UiRoleAndNameV1 {
+        pub role: String,
+        pub name: String,
+    }
 }
 
 #[derive(Debug, Default)]
@@ -4767,27 +5671,6 @@ pub struct UiScriptFrameOutput {
     pub events: Vec<Event>,
     pub effects: Vec<Effect>,
     pub request_redraw: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiScriptResultV1 {
-    pub schema_version: u32,
-    pub run_id: u64,
-    pub updated_unix_ms: u64,
-    pub window: Option<u64>,
-    pub stage: UiScriptStageV1,
-    pub step_index: Option<u32>,
-    pub reason: Option<String>,
-    pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiScriptStageV1 {
-    Queued,
-    Running,
-    Passed,
-    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4801,18 +5684,6 @@ pub struct UiPickResultV1 {
     pub selection: Option<UiPickSelectionV1>,
     pub reason: Option<String>,
     pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiInspectConfigV1 {
-    pub schema_version: u32,
-    pub enabled: bool,
-    #[serde(default = "serde_default_true")]
-    pub consume_clicks: bool,
-}
-
-fn serde_default_true() -> bool {
-    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4857,11 +5728,20 @@ struct ActiveScript {
     steps: Vec<UiActionStepV2>,
     run_id: u64,
     next_step: usize,
+    last_injected_step: Option<u32>,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
+    selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
+    hit_test_trace: Vec<UiHitTestTraceEntryV1>,
+    focus_trace: Vec<UiFocusTraceEntryV1>,
+    shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
+    last_shortcut_routing_seq: u64,
+    overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
+    web_ime_trace: Vec<UiWebImeTraceEntryV1>,
+    ime_event_trace: Vec<UiImeEventTraceEntryV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -4915,6 +5795,7 @@ enum V2StepState {
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
+    MenuSelectPath(V2MenuSelectPathState),
     DragPointer(V2DragPointerState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
@@ -4946,6 +5827,8 @@ struct V2TypeTextIntoState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -4953,6 +5836,14 @@ struct V2MenuSelectState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2MenuSelectPathState {
+    step_index: usize,
+    remaining_frames: u32,
+    phase: u32,
+    next_index: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -5213,7 +6104,20 @@ pub struct UiWebImeBridgeDebugSnapshotV1 {
 }
 
 impl UiWebImeBridgeDebugSnapshotV1 {
-    fn from_snapshot(snapshot: &fret_core::input::WebImeBridgeDebugSnapshot) -> Self {
+    fn from_snapshot(
+        snapshot: &fret_core::input::WebImeBridgeDebugSnapshot,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        let mut recent_events = if redact_text {
+            Vec::new()
+        } else {
+            snapshot.recent_events.clone()
+        };
+        for ev in &mut recent_events {
+            truncate_string_bytes(ev, max_debug_string_bytes);
+        }
+
         Self {
             enabled: snapshot.enabled,
             composing: snapshot.composing,
@@ -5231,15 +6135,23 @@ impl UiWebImeBridgeDebugSnapshotV1 {
             textarea_scroll_width_px: snapshot.textarea_scroll_width_px,
             textarea_scroll_height_px: snapshot.textarea_scroll_height_px,
             last_input_type: snapshot.last_input_type.clone(),
-            last_beforeinput_data: snapshot.last_beforeinput_data.clone(),
-            last_input_data: snapshot.last_input_data.clone(),
+            last_beforeinput_data: (!redact_text)
+                .then(|| snapshot.last_beforeinput_data.clone())
+                .flatten(),
+            last_input_data: (!redact_text)
+                .then(|| snapshot.last_input_data.clone())
+                .flatten(),
             last_key_code: snapshot.last_key_code,
             last_cursor_area: snapshot.last_cursor_area.map(RectV1::from),
             last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
-            last_preedit_text: snapshot.last_preedit_text.clone(),
+            last_preedit_text: (!redact_text)
+                .then(|| snapshot.last_preedit_text.clone())
+                .flatten(),
             last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
-            last_commit_text: snapshot.last_commit_text.clone(),
-            recent_events: snapshot.recent_events.clone(),
+            last_commit_text: (!redact_text)
+                .then(|| snapshot.last_commit_text.clone())
+                .flatten(),
+            recent_events,
             beforeinput_seen: snapshot.beforeinput_seen,
             input_seen: snapshot.input_seen,
             suppressed_input_seen: snapshot.suppressed_input_seen,
@@ -5262,6 +6174,8 @@ impl UiTreeDebugSnapshotV1 {
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
         max_gating_trace_entries: usize,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
             .debug_view_cache_contained_relayout_roots()
@@ -5378,7 +6292,13 @@ impl UiTreeDebugSnapshotV1 {
             web_ime_bridge: app
                 .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
                 .filter(|snapshot| **snapshot != fret_core::input::WebImeBridgeDebugSnapshot::default())
-                .map(UiWebImeBridgeDebugSnapshotV1::from_snapshot),
+                .map(|snapshot| {
+                    UiWebImeBridgeDebugSnapshotV1::from_snapshot(
+                        snapshot,
+                        redact_text,
+                        max_debug_string_bytes,
+                    )
+                }),
             docking_interaction: app
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
@@ -8711,25 +9631,6 @@ pub struct ElementLayoutQueryRegionV1 {
     pub current_bounds: Option<RectV1>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-pub struct UiEdgesV1 {
-    pub top: f32,
-    pub right: f32,
-    pub bottom: f32,
-    pub left: f32,
-}
-
-impl From<fret_core::Edges> for UiEdgesV1 {
-    fn from(value: fret_core::Edges) -> Self {
-        Self {
-            top: value.top.0,
-            right: value.right.0,
-            bottom: value.bottom.0,
-            left: value.left.0,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementEnvironmentSnapshotV1 {
     pub viewport_bounds: RectV1,
@@ -8760,6 +9661,12 @@ impl ElementEnvironmentSnapshotV1 {
     fn from_diagnostics_snapshot(
         snapshot: &fret_ui::elements::EnvironmentQueryDiagnosticsSnapshot,
     ) -> Self {
+        let edges_to_protocol = |value: fret_core::Edges| UiEdgesV1 {
+            top_px: value.top.0,
+            right_px: value.right.0,
+            bottom_px: value.bottom.0,
+            left_px: value.left.0,
+        };
         Self {
             viewport_bounds: RectV1::from(snapshot.viewport_bounds),
             scale_factor: snapshot.scale_factor,
@@ -8779,8 +9686,8 @@ impl ElementEnvironmentSnapshotV1 {
             primary_pointer_type: Some(
                 viewport_pointer_type_label(snapshot.primary_pointer_type).to_string(),
             ),
-            safe_area_insets: snapshot.safe_area_insets.map(UiEdgesV1::from),
-            occlusion_insets: snapshot.occlusion_insets.map(UiEdgesV1::from),
+            safe_area_insets: snapshot.safe_area_insets.map(edges_to_protocol),
+            occlusion_insets: snapshot.occlusion_insets.map(edges_to_protocol),
         }
     }
 }
@@ -9488,6 +10395,984 @@ fn select_semantics_node<'a>(
     }
 }
 
+const MAX_SELECTOR_TRACE_ENTRIES: usize = 64;
+const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
+const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
+const MAX_FOCUS_TRACE_ENTRIES: usize = 64;
+const MAX_SHORTCUT_ROUTING_TRACE_ENTRIES: usize = 128;
+const MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES: usize = 128;
+const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
+const MAX_IME_EVENT_TRACE_ENTRIES: usize = 64;
+
+fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
+    match (a, b) {
+        (
+            UiSelectorV1::RoleAndName {
+                role: a_role,
+                name: a_name,
+            },
+            UiSelectorV1::RoleAndName {
+                role: b_role,
+                name: b_name,
+            },
+        ) => a_role == b_role && a_name == b_name,
+        (
+            UiSelectorV1::RoleAndPath {
+                role: a_role,
+                name: a_name,
+                ancestors: a_ancestors,
+            },
+            UiSelectorV1::RoleAndPath {
+                role: b_role,
+                name: b_name,
+                ancestors: b_ancestors,
+            },
+        ) => {
+            a_role == b_role
+                && a_name == b_name
+                && a_ancestors.len() == b_ancestors.len()
+                && a_ancestors
+                    .iter()
+                    .zip(b_ancestors.iter())
+                    .all(|(a, b)| a.role == b.role && a.name == b.name)
+        }
+        (UiSelectorV1::TestId { id: a_id }, UiSelectorV1::TestId { id: b_id }) => a_id == b_id,
+        (
+            UiSelectorV1::GlobalElementId { element: a_el },
+            UiSelectorV1::GlobalElementId { element: b_el },
+        ) => a_el == b_el,
+        (UiSelectorV1::NodeId { node: a_node }, UiSelectorV1::NodeId { node: b_node }) => {
+            a_node == b_node
+        }
+        _ => false,
+    }
+}
+
+fn hit_test_trace_entry_eq(a: &UiHitTestTraceEntryV1, b: &UiHitTestTraceEntryV1) -> bool {
+    a.step_index == b.step_index
+        && selector_trace_eq(&a.selector, &b.selector)
+        && a.note == b.note
+        && a.position.x_px == b.position.x_px
+        && a.position.y_px == b.position.y_px
+}
+
+fn push_selector_resolution_trace(
+    trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+    entry: UiSelectorResolutionTraceEntryV1,
+) {
+    if let Some(existing) = trace.iter_mut().rev().find(|e| {
+        e.step_index == entry.step_index && selector_trace_eq(&e.selector, &entry.selector)
+    }) {
+        *existing = entry;
+        return;
+    }
+
+    trace.push(entry);
+    if trace.len() > MAX_SELECTOR_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_SELECTOR_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn push_hit_test_trace(trace: &mut Vec<UiHitTestTraceEntryV1>, entry: UiHitTestTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| hit_test_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_HIT_TEST_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_HIT_TEST_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
+    if active.selector_resolution_trace.is_empty()
+        && active.hit_test_trace.is_empty()
+        && active.focus_trace.is_empty()
+        && active.shortcut_routing_trace.is_empty()
+        && active.overlay_placement_trace.is_empty()
+        && active.web_ime_trace.is_empty()
+        && active.ime_event_trace.is_empty()
+    {
+        return None;
+    }
+    Some(UiScriptEvidenceV1 {
+        selector_resolution_trace: active.selector_resolution_trace.clone(),
+        hit_test_trace: active.hit_test_trace.clone(),
+        focus_trace: active.focus_trace.clone(),
+        shortcut_routing_trace: active.shortcut_routing_trace.clone(),
+        overlay_placement_trace: active.overlay_placement_trace.clone(),
+        web_ime_trace: active.web_ime_trace.clone(),
+        ime_event_trace: active.ime_event_trace.clone(),
+    })
+}
+
+fn focus_trace_entry_eq(a: &UiFocusTraceEntryV1, b: &UiFocusTraceEntryV1) -> bool {
+    a.step_index == b.step_index
+        && a.note == b.note
+        && a.expected_node_id == b.expected_node_id
+        && a.expected_test_id == b.expected_test_id
+}
+
+fn push_focus_trace(trace: &mut Vec<UiFocusTraceEntryV1>, entry: UiFocusTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| focus_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_FOCUS_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_FOCUS_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn push_shortcut_routing_trace(
+    trace: &mut Vec<UiShortcutRoutingTraceEntryV1>,
+    entry: UiShortcutRoutingTraceEntryV1,
+) {
+    trace.push(entry);
+    if trace.len() > MAX_SHORTCUT_ROUTING_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_SHORTCUT_ROUTING_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn overlay_placement_trace_entry_eq(
+    a: &UiOverlayPlacementTraceEntryV1,
+    b: &UiOverlayPlacementTraceEntryV1,
+) -> bool {
+    match (a, b) {
+        (
+            UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                step_index: a_step,
+                overlay_root_name: a_name,
+                anchor_element: a_anchor,
+                content_element: a_content,
+                ..
+            },
+            UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                step_index: b_step,
+                overlay_root_name: b_name,
+                anchor_element: b_anchor,
+                content_element: b_content,
+                ..
+            },
+        ) => a_step == b_step && a_name == b_name && a_anchor == b_anchor && a_content == b_content,
+        (
+            UiOverlayPlacementTraceEntryV1::PlacedRect {
+                step_index: a_step,
+                overlay_root_name: a_name,
+                anchor_element: a_anchor,
+                content_element: a_content,
+                ..
+            },
+            UiOverlayPlacementTraceEntryV1::PlacedRect {
+                step_index: b_step,
+                overlay_root_name: b_name,
+                anchor_element: b_anchor,
+                content_element: b_content,
+                ..
+            },
+        ) => a_step == b_step && a_name == b_name && a_anchor == b_anchor && a_content == b_content,
+        _ => false,
+    }
+}
+
+fn push_overlay_placement_trace(
+    trace: &mut Vec<UiOverlayPlacementTraceEntryV1>,
+    entry: UiOverlayPlacementTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| overlay_placement_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn web_ime_trace_entry_eq(a: &UiWebImeTraceEntryV1, b: &UiWebImeTraceEntryV1) -> bool {
+    a.step_index == b.step_index && a.note == b.note
+}
+
+fn push_web_ime_trace(trace: &mut Vec<UiWebImeTraceEntryV1>, entry: UiWebImeTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| web_ime_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_WEB_IME_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_WEB_IME_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn push_ime_event_trace(trace: &mut Vec<UiImeEventTraceEntryV1>, entry: UiImeEventTraceEntryV1) {
+    trace.push(entry);
+    if trace.len() > MAX_IME_EVENT_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_IME_EVENT_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn ui_rect_from_rect(rect: Rect) -> UiRectV1 {
+    UiRectV1 {
+        x_px: rect.origin.x.0,
+        y_px: rect.origin.y.0,
+        w_px: rect.size.width.0,
+        h_px: rect.size.height.0,
+    }
+}
+
+fn ui_size_from_size(size: fret_core::Size) -> UiSizeV1 {
+    UiSizeV1 {
+        w_px: size.width.0,
+        h_px: size.height.0,
+    }
+}
+
+fn ui_edges_from_edges(edges: fret_core::Edges) -> UiEdgesV1 {
+    UiEdgesV1 {
+        top_px: edges.top.0,
+        right_px: edges.right.0,
+        bottom_px: edges.bottom.0,
+        left_px: edges.left.0,
+    }
+}
+
+fn ui_layout_direction_from_dir(
+    dir: fret_ui::overlay_placement::LayoutDirection,
+) -> UiLayoutDirectionV1 {
+    match dir {
+        fret_ui::overlay_placement::LayoutDirection::Ltr => UiLayoutDirectionV1::Ltr,
+        fret_ui::overlay_placement::LayoutDirection::Rtl => UiLayoutDirectionV1::Rtl,
+    }
+}
+
+fn ui_overlay_side_from_side(side: fret_ui::overlay_placement::Side) -> UiOverlaySideV1 {
+    match side {
+        fret_ui::overlay_placement::Side::Top => UiOverlaySideV1::Top,
+        fret_ui::overlay_placement::Side::Bottom => UiOverlaySideV1::Bottom,
+        fret_ui::overlay_placement::Side::Left => UiOverlaySideV1::Left,
+        fret_ui::overlay_placement::Side::Right => UiOverlaySideV1::Right,
+    }
+}
+
+fn ui_overlay_align_from_align(align: fret_ui::overlay_placement::Align) -> UiOverlayAlignV1 {
+    match align {
+        fret_ui::overlay_placement::Align::Start => UiOverlayAlignV1::Start,
+        fret_ui::overlay_placement::Align::Center => UiOverlayAlignV1::Center,
+        fret_ui::overlay_placement::Align::End => UiOverlayAlignV1::End,
+    }
+}
+
+fn ui_overlay_sticky_from_sticky(
+    sticky: fret_ui::overlay_placement::StickyMode,
+) -> UiOverlayStickyModeV1 {
+    match sticky {
+        fret_ui::overlay_placement::StickyMode::Partial => UiOverlayStickyModeV1::Partial,
+        fret_ui::overlay_placement::StickyMode::Always => UiOverlayStickyModeV1::Always,
+    }
+}
+
+fn test_id_for_element(
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window: AppWindowId,
+    element: fret_ui::elements::GlobalElementId,
+) -> Option<String> {
+    let (Some(rt), Some(snapshot)) = (element_runtime, semantics_snapshot) else {
+        return None;
+    };
+    let node_id = rt.node_for_element(window, element)?;
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.id.data().as_ffi() == node_id.data().as_ffi())?;
+    node.test_id.clone()
+}
+
+fn record_overlay_placement_trace(
+    trace: &mut Vec<UiOverlayPlacementTraceEntryV1>,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window: AppWindowId,
+    step_index: u32,
+    note: &str,
+) {
+    let snapshot = element_runtime.and_then(|rt| rt.diagnostics_snapshot(window));
+    let Some(snapshot) = snapshot else {
+        return;
+    };
+
+    for rec in snapshot.overlay_placement.iter() {
+        match rec {
+            fret_ui::elements::OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => {
+                let anchor_test_id = r.anchor_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let content_test_id = r.content_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let t = r.trace;
+                let options = t.options;
+
+                let arrow = t.layout.arrow.map(|a| UiOverlayArrowLayoutV1 {
+                    side: ui_overlay_side_from_side(a.side),
+                    offset_px: a.offset.0,
+                    alignment_offset_px: a.alignment_offset.0,
+                    center_offset_px: a.center_offset.0,
+                });
+
+                push_overlay_placement_trace(
+                    trace,
+                    UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                        step_index,
+                        note: Some(note.to_string()),
+                        frame_id: r.frame_id.0,
+                        overlay_root_name: r.overlay_root_name.as_deref().map(|s| s.to_string()),
+                        anchor_element: r.anchor_element.map(|id| id.0),
+                        anchor_test_id,
+                        content_element: r.content_element.map(|id| id.0),
+                        content_test_id,
+                        outer_input: ui_rect_from_rect(t.outer_input),
+                        outer_collision: ui_rect_from_rect(t.outer_collision),
+                        anchor: ui_rect_from_rect(t.anchor),
+                        desired: ui_size_from_size(t.desired),
+                        side_offset_px: t.side_offset.0,
+                        preferred_side: ui_overlay_side_from_side(t.preferred_side),
+                        align: ui_overlay_align_from_align(t.align),
+                        direction: ui_layout_direction_from_dir(options.direction),
+                        sticky: ui_overlay_sticky_from_sticky(options.sticky),
+                        offset: UiOverlayOffsetV1 {
+                            main_axis_px: options.offset.main_axis.0,
+                            cross_axis_px: options.offset.cross_axis.0,
+                            alignment_axis_px: options.offset.alignment_axis.map(|v| v.0),
+                        },
+                        shift: UiOverlayShiftV1 {
+                            main_axis: options.shift.main_axis,
+                            cross_axis: options.shift.cross_axis,
+                        },
+                        collision_padding: ui_edges_from_edges(options.collision.padding),
+                        collision_boundary: options.collision.boundary.map(ui_rect_from_rect),
+                        gap_px: t.gap.0,
+                        preferred_rect: ui_rect_from_rect(t.preferred_rect),
+                        flipped_rect: ui_rect_from_rect(t.flipped_rect),
+                        preferred_fits_without_main_clamp: t.preferred_fits_without_main_clamp,
+                        flipped_fits_without_main_clamp: t.flipped_fits_without_main_clamp,
+                        preferred_available_main_px: t.preferred_available_main_px,
+                        flipped_available_main_px: t.flipped_available_main_px,
+                        chosen_side: ui_overlay_side_from_side(t.chosen_side),
+                        chosen_rect: ui_rect_from_rect(t.chosen_rect),
+                        rect_after_shift: ui_rect_from_rect(t.rect_after_shift),
+                        shift_delta: UiPointV1 {
+                            x_px: t.shift_delta.x.0,
+                            y_px: t.shift_delta.y.0,
+                        },
+                        final_rect: ui_rect_from_rect(t.layout.rect),
+                        arrow,
+                    },
+                );
+            }
+            fret_ui::elements::OverlayPlacementDiagnosticsRecord::PlacedRect(r) => {
+                let anchor_test_id = r.anchor_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let content_test_id = r.content_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                push_overlay_placement_trace(
+                    trace,
+                    UiOverlayPlacementTraceEntryV1::PlacedRect {
+                        step_index,
+                        note: Some(note.to_string()),
+                        frame_id: r.frame_id.0,
+                        overlay_root_name: r.overlay_root_name.as_deref().map(|s| s.to_string()),
+                        anchor_element: r.anchor_element.map(|id| id.0),
+                        anchor_test_id,
+                        content_element: r.content_element.map(|id| id.0),
+                        content_test_id,
+                        outer: ui_rect_from_rect(r.outer),
+                        anchor: ui_rect_from_rect(r.anchor),
+                        placed: ui_rect_from_rect(r.placed),
+                        side: r.side.map(ui_overlay_side_from_side),
+                    },
+                );
+            }
+        }
+    }
+}
+
+fn record_focus_trace(
+    trace: &mut Vec<UiFocusTraceEntryV1>,
+    app: &App,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    ui: Option<&UiTree<App>>,
+    step_index: u32,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<&str>,
+    note: &str,
+) {
+    let snapshot = element_runtime.and_then(|rt| rt.diagnostics_snapshot(window));
+    let focused_element = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element)
+        .map(|id| id.0);
+    let focused_element_path = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element)
+        .and_then(|id| element_runtime.and_then(|rt| rt.debug_path_for_element(window, id)));
+    let focused_node_id = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element_node)
+        .map(key_to_u64);
+
+    let (focused_test_id, focused_role) =
+        if let (Some(snapshot), Some(focused_node_id)) = (semantics_snapshot, focused_node_id) {
+            let node = snapshot
+                .nodes
+                .iter()
+                .find(|n| n.id.data().as_ffi() == focused_node_id);
+            let test_id = node.and_then(|n| n.test_id.clone());
+            let role = node.map(|n| semantics_role_label(n.role).to_string());
+            (test_id, role)
+        } else {
+            (None, None)
+        };
+
+    let matches_expected = match (expected_node_id, expected_test_id) {
+        (Some(expected_node_id), _) => focused_node_id.map(|id| id == expected_node_id),
+        (None, Some(expected_test_id)) => {
+            focused_test_id.as_deref().map(|id| id == expected_test_id)
+        }
+        _ => None,
+    };
+
+    let (
+        modal_barrier_root,
+        focus_barrier_root,
+        pointer_occlusion,
+        pointer_occlusion_layer_id,
+        pointer_capture_active,
+        pointer_capture_layer_id,
+        pointer_capture_multiple_layers,
+    ) = if let Some(ui) = ui {
+        let arbitration = ui.input_arbitration_snapshot();
+        (
+            arbitration.modal_barrier_root.map(key_to_u64),
+            arbitration.focus_barrier_root.map(key_to_u64),
+            Some(pointer_occlusion_label(arbitration.pointer_occlusion)),
+            arbitration
+                .pointer_occlusion_layer
+                .map(|l| l.data().as_ffi()),
+            Some(arbitration.pointer_capture_active),
+            arbitration.pointer_capture_layer.map(|l| l.data().as_ffi()),
+            Some(arbitration.pointer_capture_multiple_layers),
+        )
+    } else {
+        (None, None, None, None, None, None, None)
+    };
+
+    let reason_code = {
+        if matches_expected == Some(true) {
+            Some("focus.matches_expected".to_string())
+        } else if let (Some(expected), Some(barrier), Some(snapshot)) =
+            (expected_node_id, focus_barrier_root, semantics_snapshot)
+        {
+            let index = SemanticsIndex::new(snapshot);
+            if !index.is_descendant_of_or_self(expected, barrier) {
+                Some("focus.blocked_by_focus_barrier".to_string())
+            } else {
+                Some("focus.mismatch".to_string())
+            }
+        } else if let (Some(expected), Some(barrier), Some(snapshot)) =
+            (expected_node_id, modal_barrier_root, semantics_snapshot)
+        {
+            let index = SemanticsIndex::new(snapshot);
+            if !index.is_descendant_of_or_self(expected, barrier) {
+                Some("focus.blocked_by_modal_barrier".to_string())
+            } else {
+                Some("focus.mismatch".to_string())
+            }
+        } else {
+            Some("focus.mismatch".to_string())
+        }
+    };
+
+    push_focus_trace(
+        trace,
+        UiFocusTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            reason_code,
+            text_input_snapshot: app
+                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                .and_then(|svc| svc.snapshot(window).cloned())
+                .map(|snapshot| UiTextInputSnapshotV1 {
+                    focus_is_text_input: snapshot.focus_is_text_input,
+                    is_composing: snapshot.is_composing,
+                    text_len_utf16: snapshot.text_len_utf16,
+                    selection_utf16: snapshot.selection_utf16,
+                    marked_utf16: snapshot.marked_utf16,
+                    ime_cursor_area: snapshot.ime_cursor_area.map(|r| UiRectV1 {
+                        x_px: r.origin.x.0,
+                        y_px: r.origin.y.0,
+                        w_px: r.size.width.0,
+                        h_px: r.size.height.0,
+                    }),
+                }),
+            expected_node_id,
+            expected_test_id: expected_test_id.map(|s| s.to_string()),
+            modal_barrier_root,
+            focus_barrier_root,
+            pointer_occlusion,
+            pointer_occlusion_layer_id,
+            pointer_capture_active,
+            pointer_capture_layer_id,
+            pointer_capture_multiple_layers,
+            focused_element,
+            focused_element_path,
+            focused_node_id,
+            focused_test_id,
+            focused_role,
+            matches_expected,
+        },
+    );
+}
+
+fn record_web_ime_trace(
+    trace: &mut Vec<UiWebImeTraceEntryV1>,
+    app: &App,
+    step_index: u32,
+    note: &str,
+) {
+    let snapshot = app
+        .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+        .filter(|snapshot| **snapshot != fret_core::input::WebImeBridgeDebugSnapshot::default());
+    let Some(snapshot) = snapshot else {
+        return;
+    };
+
+    let last_preedit_len = snapshot
+        .last_preedit_text
+        .as_deref()
+        .map(|s| s.len().min(u32::MAX as usize) as u32);
+    let last_commit_len = snapshot
+        .last_commit_text
+        .as_deref()
+        .map(|s| s.len().min(u32::MAX as usize) as u32);
+
+    push_web_ime_trace(
+        trace,
+        UiWebImeTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            enabled: snapshot.enabled,
+            composing: snapshot.composing,
+            suppress_next_input: snapshot.suppress_next_input,
+            textarea_has_focus: snapshot.textarea_has_focus,
+            active_element_tag: snapshot.active_element_tag.clone(),
+            position_mode: snapshot.position_mode.clone(),
+            mount_kind: snapshot.mount_kind.clone(),
+            device_pixel_ratio: snapshot.device_pixel_ratio,
+            textarea_selection_start_utf16: snapshot.textarea_selection_start_utf16,
+            textarea_selection_end_utf16: snapshot.textarea_selection_end_utf16,
+            last_cursor_area: snapshot.last_cursor_area.map(|r| UiRectV1 {
+                x_px: r.origin.x.0,
+                y_px: r.origin.y.0,
+                w_px: r.size.width.0,
+                h_px: r.size.height.0,
+            }),
+            last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
+            last_input_type: snapshot.last_input_type.clone(),
+            last_preedit_len,
+            last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
+            last_commit_len,
+            beforeinput_seen: snapshot.beforeinput_seen,
+            input_seen: snapshot.input_seen,
+            suppressed_input_seen: snapshot.suppressed_input_seen,
+            composition_start_seen: snapshot.composition_start_seen,
+            composition_update_seen: snapshot.composition_update_seen,
+            composition_end_seen: snapshot.composition_end_seen,
+            cursor_area_set_seen: snapshot.cursor_area_set_seen,
+        },
+    );
+}
+
+fn record_ime_event_trace(
+    trace: &mut Vec<UiImeEventTraceEntryV1>,
+    step_index: u32,
+    note: &str,
+    event: &fret_core::input::ImeEvent,
+) {
+    let mut preedit_len: Option<u32> = None;
+    let mut preedit_cursor: Option<(u32, u32)> = None;
+    let mut commit_len: Option<u32> = None;
+    let mut delete_surrounding: Option<(u32, u32)> = None;
+
+    let kind: &'static str = match event {
+        fret_core::input::ImeEvent::Enabled => "enabled",
+        fret_core::input::ImeEvent::Disabled => "disabled",
+        fret_core::input::ImeEvent::Commit(text) => {
+            commit_len = Some(text.len().min(u32::MAX as usize) as u32);
+            "commit"
+        }
+        fret_core::input::ImeEvent::Preedit { text, cursor } => {
+            preedit_len = Some(text.len().min(u32::MAX as usize) as u32);
+            preedit_cursor = cursor.map(|(a, b)| {
+                (
+                    a.min(u32::MAX as usize) as u32,
+                    b.min(u32::MAX as usize) as u32,
+                )
+            });
+            "preedit"
+        }
+        fret_core::input::ImeEvent::DeleteSurrounding {
+            before_bytes,
+            after_bytes,
+        } => {
+            delete_surrounding = Some((
+                (*before_bytes).min(u32::MAX as usize) as u32,
+                (*after_bytes).min(u32::MAX as usize) as u32,
+            ));
+            "delete_surrounding"
+        }
+    };
+
+    push_ime_event_trace(
+        trace,
+        UiImeEventTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            kind: kind.to_string(),
+            preedit_len,
+            preedit_cursor,
+            commit_len,
+            delete_surrounding,
+        },
+    );
+}
+
+fn hit_test_scope_roots_evidence(
+    position: Point,
+    ui: &UiTree<App>,
+) -> (
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+    Vec<UiHitTestScopeRootEvidenceV1>,
+) {
+    let snap = UiHitTestSnapshotV1::from_tree(position, ui);
+    let scope_roots = snap
+        .scope_roots
+        .into_iter()
+        .map(|r| UiHitTestScopeRootEvidenceV1 {
+            kind: r.kind,
+            root: r.root,
+            layer_id: r.layer_id,
+            pointer_occlusion: r.pointer_occlusion,
+            blocks_underlay_input: r.blocks_underlay_input,
+            hit_testable: r.hit_testable,
+        })
+        .collect();
+    (
+        snap.hit,
+        snap.barrier_root,
+        snap.focus_barrier_root,
+        scope_roots,
+    )
+}
+
+fn record_hit_test_trace_for_selector(
+    trace: &mut Vec<UiHitTestTraceEntryV1>,
+    ui: &UiTree<App>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    selector: &UiSelectorV1,
+    step_index: u32,
+    position: Point,
+    intended: Option<&fret_core::SemanticsNode>,
+    note: Option<&str>,
+) {
+    let (hit_node_id, barrier_root, focus_barrier_root, scope_roots) =
+        hit_test_scope_roots_evidence(position, ui);
+
+    let hit_semantics =
+        semantics_snapshot.and_then(|snapshot| pick_semantics_node_at(snapshot, ui, position));
+    let hit_semantics_node_id = hit_semantics.map(|n| n.id.data().as_ffi());
+    let hit_semantics_test_id = hit_semantics.and_then(|n| n.test_id.clone());
+
+    let intended_node_id = intended.map(|n| n.id.data().as_ffi());
+    let intended_test_id = intended.and_then(|n| n.test_id.clone());
+    let intended_bounds = intended.map(|n| UiRectV1 {
+        x_px: n.bounds.origin.x.0,
+        y_px: n.bounds.origin.y.0,
+        w_px: n.bounds.size.width.0,
+        h_px: n.bounds.size.height.0,
+    });
+
+    let includes_intended = intended.map(|target| {
+        if let Some(hit_id) = hit_semantics_node_id {
+            if hit_id == target.id.data().as_ffi() {
+                return true;
+            }
+        }
+        if let (Some(want), Some(got)) =
+            (target.test_id.as_deref(), hit_semantics_test_id.as_deref())
+        {
+            return want == got;
+        }
+        false
+    });
+
+    push_hit_test_trace(
+        trace,
+        UiHitTestTraceEntryV1 {
+            step_index,
+            selector: selector.clone(),
+            position: UiPointV1 {
+                x_px: position.x.0,
+                y_px: position.y.0,
+            },
+            intended_node_id,
+            intended_test_id,
+            intended_bounds,
+            hit_node_id,
+            hit_semantics_node_id,
+            hit_semantics_test_id,
+            includes_intended,
+            barrier_root,
+            focus_barrier_root,
+            scope_roots,
+            note: note.map(|s| s.to_string()),
+        },
+    );
+}
+
+fn select_semantics_node_with_trace<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    selector: &UiSelectorV1,
+    step_index: u32,
+    redact_text: bool,
+    trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    let index = SemanticsIndex::new(snapshot);
+    let mut matches: Vec<&'a fret_core::SemanticsNode> = Vec::new();
+    let mut note: Option<String> = None;
+
+    match selector {
+        UiSelectorV1::NodeId { node } => {
+            if let Some(n) = index
+                .by_id
+                .get(node)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+            {
+                matches.push(n);
+            }
+        }
+        UiSelectorV1::RoleAndName { role, name } => {
+            let Some(role) = parse_semantics_role(role) else {
+                note = Some("invalid_role".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id) && n.role == role && n.label.as_deref() == Some(name)
+            }));
+        }
+        UiSelectorV1::RoleAndPath {
+            role,
+            name,
+            ancestors,
+        } => {
+            let Some(role) = parse_semantics_role(role) else {
+                note = Some("invalid_role".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+
+            let mut parsed_ancestors: Vec<(SemanticsRole, &str)> =
+                Vec::with_capacity(ancestors.len());
+            for a in ancestors {
+                let Some(r) = parse_semantics_role(&a.role) else {
+                    note = Some("invalid_ancestor_role".to_string());
+                    push_selector_resolution_trace(
+                        trace,
+                        UiSelectorResolutionTraceEntryV1 {
+                            step_index,
+                            selector: selector.clone(),
+                            match_count: 0,
+                            chosen_node_id: None,
+                            candidates: Vec::new(),
+                            note,
+                        },
+                    );
+                    return None;
+                };
+                parsed_ancestors.push((r, a.name.as_str()));
+            }
+
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id)
+                    && n.role == role
+                    && n.label.as_deref() == Some(name)
+                    && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
+            }));
+        }
+        UiSelectorV1::TestId { id } => {
+            matches.extend(snapshot.nodes.iter().filter(|n| {
+                let node_id = n.id.data().as_ffi();
+                index.is_selectable(node_id) && n.test_id.as_deref() == Some(id)
+            }));
+            if matches.is_empty() {
+                // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
+                note = Some("fallback_hidden_nodes".to_string());
+                matches.extend(
+                    snapshot
+                        .nodes
+                        .iter()
+                        .filter(|n| n.test_id.as_deref() == Some(id)),
+                );
+            }
+        }
+        UiSelectorV1::GlobalElementId { element } => {
+            let Some(node) = element_runtime.and_then(|runtime| {
+                runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
+            }) else {
+                note = Some("element_runtime_missing".to_string());
+                push_selector_resolution_trace(
+                    trace,
+                    UiSelectorResolutionTraceEntryV1 {
+                        step_index,
+                        selector: selector.clone(),
+                        match_count: 0,
+                        chosen_node_id: None,
+                        candidates: Vec::new(),
+                        note,
+                    },
+                );
+                return None;
+            };
+            let node_id = node.data().as_ffi();
+            if let Some(n) = index
+                .by_id
+                .get(&node_id)
+                .copied()
+                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+            {
+                matches.push(n);
+            }
+        }
+    }
+
+    let match_count = matches.len().min(u32::MAX as usize) as u32;
+    let chosen = pick_best_match(matches.iter().copied(), &index);
+    let chosen_node_id = chosen.map(|n| n.id.data().as_ffi());
+
+    let mut ranked: Vec<((u32, u32, u64), &'a fret_core::SemanticsNode)> = matches
+        .iter()
+        .copied()
+        .map(|n| {
+            let id = n.id.data().as_ffi();
+            ((index.root_z_for(id), index.depth_for(id), id), n)
+        })
+        .collect();
+    ranked.sort_by(|(a, _), (b, _)| b.cmp(a));
+
+    let candidates: Vec<UiSelectorResolutionCandidateV1> = ranked
+        .into_iter()
+        .take(MAX_SELECTOR_TRACE_CANDIDATES)
+        .map(|(_rank, n)| UiSelectorResolutionCandidateV1 {
+            node_id: n.id.data().as_ffi(),
+            role: semantics_role_label(n.role).to_string(),
+            name: if redact_text { None } else { n.label.clone() },
+            test_id: n.test_id.clone(),
+        })
+        .collect();
+
+    push_selector_resolution_trace(
+        trace,
+        UiSelectorResolutionTraceEntryV1 {
+            step_index,
+            selector: selector.clone(),
+            match_count,
+            chosen_node_id,
+            candidates,
+            note,
+        },
+    );
+
+    chosen
+}
+
+fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
+    let reason = reason.trim();
+    if reason.is_empty() {
+        return None;
+    }
+
+    match reason {
+        "no_semantics_snapshot" => Some("semantics.missing"),
+        "assert_failed" => Some("assert.failed"),
+        _ if reason.contains("focus") => Some("focus.mismatch"),
+        _ if reason.ends_with("_timeout") => Some("timeout"),
+        _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
+            Some("selector.not_found")
+        }
+        _ => None,
+    }
+}
+
 struct SemanticsIndex<'a> {
     by_id: HashMap<u64, &'a fret_core::SemanticsNode>,
     visible_ids: HashSet<u64>,
@@ -9672,6 +11557,30 @@ fn eval_predicate(
                 return false;
             };
             node.id == focus
+        }
+        UiPredicateV1::RoleIs { target, role } => {
+            let Some(want) = parse_semantics_role(role) else {
+                return false;
+            };
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.role == want
+        }
+        UiPredicateV1::CheckedIs { target, checked } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked == Some(*checked)
+        }
+        UiPredicateV1::CheckedIsNone { target } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked.is_none()
         }
         UiPredicateV1::BarrierRoots {
             barrier_root,
@@ -10386,6 +12295,76 @@ fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
         ..Modifiers::default()
     }
 }
+
+fn parse_shortcut(shortcut: &str) -> Option<(KeyCode, UiKeyModifiersV1)> {
+    let mut parts = shortcut
+        .split('+')
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>();
+
+    if parts.is_empty() {
+        return None;
+    }
+
+    let key = parts.pop()?;
+
+    let mut modifiers = UiKeyModifiersV1::default();
+    for part in parts {
+        match part.to_ascii_lowercase().as_str() {
+            "shift" => modifiers.shift = true,
+            "ctrl" | "control" => modifiers.ctrl = true,
+            "alt" => modifiers.alt = true,
+            "meta" | "cmd" | "command" | "super" => modifiers.meta = true,
+            "primary" => {
+                if cfg!(target_os = "macos") {
+                    modifiers.meta = true;
+                } else {
+                    modifiers.ctrl = true;
+                }
+            }
+            _ => return None,
+        }
+    }
+
+    Some((parse_key_code(key)?, modifiers))
+}
+
+fn rect_inset(rect: Rect, insets: UiPaddingInsetsV1) -> Rect {
+    let left = Px(insets.left_px.max(0.0));
+    let top = Px(insets.top_px.max(0.0));
+    let right = Px(insets.right_px.max(0.0));
+    let bottom = Px(insets.bottom_px.max(0.0));
+
+    let origin = Point {
+        x: rect.origin.x + left,
+        y: rect.origin.y + top,
+    };
+    let w = (rect.size.width.0 - left.0 - right.0).max(0.0);
+    let h = (rect.size.height.0 - top.0 - bottom.0).max(0.0);
+    Rect {
+        origin,
+        size: fret_core::Size {
+            width: Px(w),
+            height: Px(h),
+        },
+    }
+}
+
+fn rect_fully_contains(outer: Rect, inner: Rect) -> bool {
+    let ox0 = outer.origin.x.0;
+    let oy0 = outer.origin.y.0;
+    let ox1 = ox0 + outer.size.width.0;
+    let oy1 = oy0 + outer.size.height.0;
+
+    let ix0 = inner.origin.x.0;
+    let iy0 = inner.origin.y.0;
+    let ix1 = ix0 + inner.size.width.0;
+    let iy1 = iy0 + inner.size.height.0;
+
+    ix0 >= ox0 && iy0 >= oy0 && ix1 <= ox1 && iy1 <= oy1
+}
+
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
@@ -10580,6 +12559,7 @@ mod tests {
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot, Size,
     };
+    use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
 
     #[test]
@@ -10635,10 +12615,10 @@ mod tests {
         assert_eq!(exported.contrast_preference.as_deref(), Some("more"));
         assert_eq!(exported.forced_colors_mode.as_deref(), Some("active"));
         assert_eq!(exported.primary_pointer_type.as_deref(), Some("touch"));
-        assert_eq!(exported.safe_area_insets.map(|e| e.top), Some(1.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.right), Some(2.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.bottom), Some(3.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.left), Some(4.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.top_px), Some(1.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.right_px), Some(2.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.bottom_px), Some(3.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.left_px), Some(4.0));
     }
 
     fn node_id(id: u64) -> NodeId {
@@ -11646,8 +13626,15 @@ mod tests {
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
-        let _ =
-            svc.drive_script_for_window(&app, window, window_bounds, 1.0, Some(&snapshot), None);
+        let _ = svc.drive_script_for_window(
+            &app,
+            window,
+            window_bounds,
+            1.0,
+            None,
+            Some(&snapshot),
+            None,
+        );
 
         let bytes =
             std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");

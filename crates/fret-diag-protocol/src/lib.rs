@@ -53,9 +53,23 @@ pub struct DevtoolsSessionRemovedV1 {
     pub session_id: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiScriptMetaV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_capabilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_hints: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<UiScriptMetaV1>,
     pub steps: Vec<UiActionStepV1>,
 }
 
@@ -66,6 +80,11 @@ pub enum UiActionStepV1 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
     },
     ResetDiagnostics,
     MovePointer {
@@ -120,7 +139,16 @@ pub enum UiActionStepV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV2 {
     pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<UiScriptMetaV1>,
     pub steps: Vec<UiActionStepV2>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemCapabilitiesV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -151,6 +179,11 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
@@ -227,6 +260,11 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(
+            default = "default_click_count",
+            skip_serializing_if = "is_default_click_count"
+        )]
+        click_count: u8,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
         #[serde(default = "default_click_stable_frames")]
@@ -313,9 +351,14 @@ pub enum UiActionStepV2 {
 impl From<UiActionStepV1> for UiActionStepV2 {
     fn from(value: UiActionStepV1) -> Self {
         match value {
-            UiActionStepV1::Click { target, button } => Self::Click {
+            UiActionStepV1::Click {
                 target,
                 button,
+                click_count,
+            } => Self::Click {
+                target,
+                button,
+                click_count,
                 modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
@@ -379,6 +422,14 @@ fn default_drag_steps() -> u32 {
 
 fn default_move_frames_per_step() -> u32 {
     1
+}
+
+fn default_click_count() -> u8 {
+    1
+}
+
+fn is_default_click_count(v: &u8) -> bool {
+    *v == 1
 }
 
 fn default_click_stable_frames() -> u32 {
@@ -656,8 +707,419 @@ pub struct UiScriptResultV1 {
     pub window: Option<u64>,
     pub stage: UiScriptStageV1,
     pub step_index: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
     pub reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<UiScriptEvidenceV1>,
     pub last_bundle_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiScriptEvidenceV1 {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus_trace: Vec<UiFocusTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSelectorResolutionTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    #[serde(default)]
+    pub match_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidates: Vec<UiSelectorResolutionCandidateV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSelectorResolutionCandidateV1 {
+    pub node_id: u64,
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub test_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiPointV1 {
+    pub x_px: f32,
+    pub y_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRectV1 {
+    pub x_px: f32,
+    pub y_px: f32,
+    pub w_px: f32,
+    pub h_px: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub position: UiPointV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_semantics_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_semantics_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub includes_intended: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestScopeRootEvidenceV1 {
+    pub kind: String,
+    pub root: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocks_underlay_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_testable: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiFocusTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_input_snapshot: Option<UiTextInputSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modal_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_active: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_multiple_layers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matches_expected: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiTextInputSnapshotV1 {
+    #[serde(default)]
+    pub focus_is_text_input: bool,
+    #[serde(default)]
+    pub is_composing: bool,
+    #[serde(default)]
+    pub text_len_utf16: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marked_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_cursor_area: Option<UiRectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiShortcutRoutingTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default)]
+    pub frame_id: u64,
+    pub phase: String,
+    #[serde(default)]
+    pub deferred: bool,
+    #[serde(default)]
+    pub focus_is_text_input: bool,
+    #[serde(default)]
+    pub ime_composing: bool,
+    pub key: String,
+    pub modifiers: UiKeyModifiersV1,
+    pub repeat: bool,
+    pub outcome: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending_sequence_len: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiLayoutDirectionV1 {
+    Ltr,
+    Rtl,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySideV1 {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayAlignV1 {
+    Start,
+    Center,
+    End,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayStickyModeV1 {
+    Partial,
+    Always,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiEdgesV1 {
+    pub top_px: f32,
+    pub right_px: f32,
+    pub bottom_px: f32,
+    pub left_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiSizeV1 {
+    pub w_px: f32,
+    pub h_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayOffsetV1 {
+    pub main_axis_px: f32,
+    pub cross_axis_px: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alignment_axis_px: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayShiftV1 {
+    pub main_axis: bool,
+    pub cross_axis: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayArrowLayoutV1 {
+    pub side: UiOverlaySideV1,
+    pub offset_px: f32,
+    pub alignment_offset_px: f32,
+    pub center_offset_px: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiOverlayPlacementTraceEntryV1 {
+    AnchoredPanel {
+        step_index: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+        #[serde(default)]
+        frame_id: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        overlay_root_name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_test_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_test_id: Option<String>,
+
+        outer_input: UiRectV1,
+        outer_collision: UiRectV1,
+        anchor: UiRectV1,
+        desired: UiSizeV1,
+        side_offset_px: f32,
+        preferred_side: UiOverlaySideV1,
+        align: UiOverlayAlignV1,
+        direction: UiLayoutDirectionV1,
+        sticky: UiOverlayStickyModeV1,
+        offset: UiOverlayOffsetV1,
+        shift: UiOverlayShiftV1,
+        collision_padding: UiEdgesV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        collision_boundary: Option<UiRectV1>,
+        gap_px: f32,
+
+        preferred_rect: UiRectV1,
+        flipped_rect: UiRectV1,
+        #[serde(default)]
+        preferred_fits_without_main_clamp: bool,
+        #[serde(default)]
+        flipped_fits_without_main_clamp: bool,
+        #[serde(default)]
+        preferred_available_main_px: f32,
+        #[serde(default)]
+        flipped_available_main_px: f32,
+        chosen_side: UiOverlaySideV1,
+        chosen_rect: UiRectV1,
+        rect_after_shift: UiRectV1,
+        shift_delta: UiPointV1,
+        final_rect: UiRectV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        arrow: Option<UiOverlayArrowLayoutV1>,
+    },
+    PlacedRect {
+        step_index: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+        #[serde(default)]
+        frame_id: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        overlay_root_name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_test_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_test_id: Option<String>,
+        outer: UiRectV1,
+        anchor: UiRectV1,
+        placed: UiRectV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<UiOverlaySideV1>,
+    },
+}
+
+/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).
+///
+/// This is intended for diagnostics evidence and is not a normative contract surface.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWebImeTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub composing: bool,
+    #[serde(default)]
+    pub suppress_next_input: bool,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_has_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_element_tag: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mount_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_pixel_ratio: Option<f64>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_start_utf16: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_end_utf16: Option<u32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_area: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_input_type: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_commit_len: Option<u32>,
+
+    #[serde(default)]
+    pub beforeinput_seen: u64,
+    #[serde(default)]
+    pub input_seen: u64,
+    #[serde(default)]
+    pub suppressed_input_seen: u64,
+    #[serde(default)]
+    pub composition_start_seen: u64,
+    #[serde(default)]
+    pub composition_update_seen: u64,
+    #[serde(default)]
+    pub composition_end_seen: u64,
+    #[serde(default)]
+    pub cursor_area_set_seen: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiImeEventTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preedit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preedit_cursor: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delete_surrounding: Option<(u32, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

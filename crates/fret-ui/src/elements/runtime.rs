@@ -16,6 +16,8 @@ use slotmap::Key as _;
 use std::sync::Arc as StdArc;
 
 use crate::element::AnyElement;
+#[cfg(feature = "diagnostics")]
+use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
@@ -71,6 +73,39 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub retained_keep_alive_roots_head: Vec<NodeId>,
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+    pub overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub enum OverlayPlacementDiagnosticsRecord {
+    /// Anchored panel placement solved via `overlay_placement` (e.g. popper-like overlays).
+    AnchoredPanel(OverlayAnchoredPanelPlacementDiagnosticsRecord),
+    /// A higher-level overlay placed via an external policy (e.g. Radix Select item-aligned mode).
+    PlacedRect(OverlayPlacedRectDiagnosticsRecord),
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct OverlayAnchoredPanelPlacementDiagnosticsRecord {
+    pub frame_id: FrameId,
+    pub overlay_root_name: Option<StdArc<str>>,
+    pub anchor_element: Option<GlobalElementId>,
+    pub content_element: Option<GlobalElementId>,
+    pub trace: AnchoredPanelLayoutTrace,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct OverlayPlacedRectDiagnosticsRecord {
+    pub frame_id: FrameId,
+    pub overlay_root_name: Option<StdArc<str>>,
+    pub anchor_element: Option<GlobalElementId>,
+    pub content_element: Option<GlobalElementId>,
+    pub outer: Rect,
+    pub anchor: Rect,
+    pub placed: Rect,
+    pub side: Option<Side>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -349,6 +384,8 @@ pub struct WindowElementState {
     debug_identity: DebugIdentityRegistry,
     #[cfg(feature = "diagnostics")]
     debug_node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+    #[cfg(feature = "diagnostics")]
+    overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -567,6 +604,20 @@ impl WindowElementState {
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
             self.debug_node_entry_root_overwrites
                 .retain(|r| r.frame_id.0 >= cutoff);
+
+            // Keep a small rolling window of placement records so scripted diagnostics can snapshot
+            // placement decisions even when scripts are processed earlier in the frame.
+            const KEEP_FRAMES: u64 = 120;
+            let cutoff = frame_id.0.saturating_sub(KEEP_FRAMES);
+            self.overlay_placement.retain(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => r.frame_id.0 >= cutoff,
+                OverlayPlacementDiagnosticsRecord::PlacedRect(r) => r.frame_id.0 >= cutoff,
+            });
+            const MAX_RECORDS: usize = 512;
+            if self.overlay_placement.len() > MAX_RECORDS {
+                let extra = self.overlay_placement.len() - MAX_RECORDS;
+                self.overlay_placement.drain(0..extra);
+            }
         }
     }
 
@@ -1791,7 +1842,93 @@ impl WindowElementState {
             retained_keep_alive_roots_head,
             retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
+            overlay_placement: self.overlay_placement.clone(),
         }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_overlay_placement_anchored_panel(
+        &mut self,
+        frame_id: FrameId,
+        overlay_root_name: Option<StdArc<str>>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        trace: AnchoredPanelLayoutTrace,
+    ) {
+        let name = overlay_root_name.clone();
+        let next = OverlayPlacementDiagnosticsRecord::AnchoredPanel(
+            OverlayAnchoredPanelPlacementDiagnosticsRecord {
+                frame_id,
+                overlay_root_name,
+                anchor_element,
+                content_element,
+                trace,
+            },
+        );
+
+        if let Some(existing) = self
+            .overlay_placement
+            .iter_mut()
+            .rev()
+            .find(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => {
+                    r.overlay_root_name == name
+                        && r.anchor_element == anchor_element
+                        && r.content_element == content_element
+                }
+                _ => false,
+            })
+        {
+            *existing = next;
+            return;
+        }
+
+        self.overlay_placement.push(next);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_overlay_placement_placed_rect(
+        &mut self,
+        frame_id: FrameId,
+        overlay_root_name: Option<StdArc<str>>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        outer: Rect,
+        anchor: Rect,
+        placed: Rect,
+        side: Option<Side>,
+    ) {
+        let name = overlay_root_name.clone();
+        let next =
+            OverlayPlacementDiagnosticsRecord::PlacedRect(OverlayPlacedRectDiagnosticsRecord {
+                frame_id,
+                overlay_root_name,
+                anchor_element,
+                content_element,
+                outer,
+                anchor,
+                placed,
+                side,
+            });
+
+        if let Some(existing) = self
+            .overlay_placement
+            .iter_mut()
+            .rev()
+            .find(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::PlacedRect(r) => {
+                    r.overlay_root_name == name
+                        && r.anchor_element == anchor_element
+                        && r.content_element == content_element
+                }
+                _ => false,
+            })
+        {
+            *existing = next;
+            return;
+        }
+
+        self.overlay_placement.push(next);
     }
 
     #[cfg(feature = "diagnostics")]

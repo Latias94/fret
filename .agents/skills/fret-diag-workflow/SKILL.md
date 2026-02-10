@@ -37,6 +37,7 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Common steps: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`.
    - If the target moves/animates during navigation, prefer `click_stable` (schema v2) to avoid “stale click” flake.
      - Example: click only after the target’s center stays within `eps_px` for `stable_frames`.
+   - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
 3. Ensure diagnostics are enabled in the running app.
    - Minimum: `FRET_DIAG=1`
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
@@ -98,6 +99,98 @@ cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
 - When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
   rather than retrying `click` with arbitrary sleeps.
+- If a script fails, start from `script.result.json` (reason code + evidence) before opening screenshots.
+
+## Capabilities & fail-fast gating
+
+Goal: missing support should **fail fast with a structured reason**, not degrade into timeouts.
+
+Practical rules:
+
+- Always treat capabilities as namespaced strings (`diag.*`, `devtools.*`).
+- Tooling should fail fast when `required_capabilities - available_capabilities` is non-empty.
+- When gating fails, look for `check.capabilities.json` in the run output dir.
+
+Where capabilities come from:
+
+- filesystem transport: runner writes `capabilities.json` under `FRET_DIAG_DIR`
+- devtools-ws transport: the app advertises capabilities as part of hello/session descriptors
+
+## Evidence-first debugging (what to read)
+
+Start from these portable artifacts:
+
+- `script.result.json`: outcome + stable `reason_code` + step index + bounded evidence
+- `bundle.json`: full frame snapshots (semantics/layout/stats/debug surfaces)
+- `triage.json`: compact machine-readable summary derived from a bundle
+
+Common `script.result.json` evidence fields (bounded ring buffers):
+
+- `evidence.selector_resolution_trace`: why a selector matched (or didn’t), with top-N candidates
+- `evidence.hit_test_trace`: injected pointer position vs hit chain, including barrier/capture/occlusion hints
+- `evidence.focus_trace`: focused element/node identity + barrier/capture hints; includes `text_input_snapshot`
+- `evidence.shortcut_routing_trace`: explains whether keydown went to IME/widget path or dispatched a command
+- `evidence.overlay_placement_trace`: overlay placement decisions (flip/shift/collision inputs + final rect), when available
+- `evidence.ime_event_trace`: IME event kinds + length/cursor summaries (no raw text)
+- `evidence.web_ime_trace`: wasm textarea bridge debug summary (ADR 0195; debug-only)
+
+Reason-code first triage:
+
+- `selector.not_found` ⇒ inspect `selector_resolution_trace` (wrong `test_id`, duplicated ids, hidden nodes)
+- `routing.*` / “click didn’t land” ⇒ inspect `hit_test_trace` (barrier/capture/occlusion)
+- `focus.*` / “type_text_into stalls” ⇒ inspect `focus_trace` + `text_input_snapshot`
+- “overlay jumped/flipped/clipped” ⇒ inspect `overlay_placement_trace` (outer/collision/anchor + chosen side + shift delta)
+- `timeout` ⇒ prefer adding an intermediate `capture_bundle` and shrinking the script
+
+## Component conformance playbook (example: shadcn `Select`)
+
+The goal is not to snapshot *every* internal state; it’s to define stable, explainable **invariants** and
+make failures self-diagnosing via evidence.
+
+Recommended invariants to gate:
+
+- **Open/close lifecycle**:
+  - trigger click opens content overlay,
+  - outside press / Escape dismisses,
+  - close restores focus predictably (when applicable).
+- **Routing correctness** (why did the click/key not work?):
+  - pointer injection lands on intended target (or produces a hit-test trace explaining barriers/capture),
+  - keydown shortcuts do not steal reserved IME/navigation keys while composing.
+- **Selection outcome**:
+  - selecting an item updates the trigger value,
+  - disabled items do not apply selection.
+- **Placement sanity** (geometry, not pixels):
+  - content bounds stay within the window/viewport,
+  - the chosen side/align is explainable under collisions.
+- **Virtualization stability** (if list is large):
+  - scroll-to-item makes the item exist in semantics,
+  - identity is stable (`test_id`/value selectors).
+
+Recommended testing layers:
+
+- Placement/collision matrices ⇒ data-driven fixtures (many cases, thin harness).
+- State machine/policy ⇒ Rust tests against the component/policy layer (deterministic time/frames).
+- End-to-end routing/focus/IME ⇒ `fretboard diag` scripts with evidence assertions.
+
+Practical authoring tips for scripts:
+
+- Put stable `test_id` on trigger/content/items at the shadcn recipe layer.
+- Use `click_stable` for jittery overlays/virtualized targets.
+- Prefer semantics selectors (`test_id`, role+name) over coordinates.
+- Add one `capture_bundle` near the “interesting” step so failures are explainable without rerunning.
+
+Concrete shadcn `Select` scripts (UI Gallery suite):
+
+- Run: `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+- Scripts:
+  - `tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json` (pointer commit)
+  - `tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json` (ArrowDown + Enter commit)
+  - `tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json` (typeahead + Enter commit)
+  - `tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json` (disabled option does not commit)
+  - `tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json` (outside-press dismiss + click-through policy)
+  - `tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json` (Escape dismiss + focus restore)
+  - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (wheel scroll stability)
+  - `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json` (wheel-up from bottom stability)
 
 ## Evidence anchors
 
