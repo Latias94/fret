@@ -163,12 +163,16 @@ Exit criteria:
     and link it from the v3 note.
   - Evidence: `docs/workstreams/imui-imgui-parity-audit-v1.md` (section `1.1`, explicit non-goals list).
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (link to parity audit in mapping notes).
-- [ ] IMUIECO3-resp-024 Decide whether to implement ImGui-style "active item blocks hover" semantics.
+- [~] IMUIECO3-resp-024 Decide whether to implement ImGui-style "active item blocks hover" semantics.
   - Reference: `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`.
   - Rationale: this can affect editor hand-feel when dragging (window move/resize, docking drags, slider drags)
     and then hovering unrelated items.
   - If adopted: implement a minimal "active item blocks hover unless opted out" policy at the facade level and add
     at least one nextest + one diag repro gate.
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`).
+  - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::is_hovered` active-item suppression).
+  - Evidence (nextest): `ecosystem/fret-imui/src/lib.rs` (`hovered_allow_when_blocked_by_active_item_allows_hover_while_other_item_is_active`).
+  - Remaining: add a diag script gate (CI-friendly) that exercises the behavior in a running demo.
 
 ---
 

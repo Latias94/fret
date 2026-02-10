@@ -139,7 +139,7 @@ ImGui-class editor hand-feel when OS windows overlap during a dock drag.
   - Status details:
     - `AllowWhenBlockedByPopup` is implemented (best-effort) via raw hover signals that bypass popup blocking.
     - Hover delays (`DelayShort/DelayNormal`) and stationary gating are implemented (best-effort) via element-owned timers.
-  - Remaining gaps: most of `ImGuiHoveredFlags_` (window/root/child hierarchy flags, overlap rules, active-item suppression, etc.)
+  - Remaining gaps: most of `ImGuiHoveredFlags_` (window/root/child hierarchy flags, overlap rules, etc.)
     are not implemented. Shared hover delay is implemented (best-effort) but still diverges from ImGui details.
 
 #### 1.2.1 `IsItemHovered()` flag parity notes
@@ -151,6 +151,7 @@ Implemented (best-effort, `ResponseExt::is_hovered(ImUiHoveredFlags)`):
 - `ImGuiHoveredFlags_AllowWhenDisabled`
 - `ImGuiHoveredFlags_NoNavOverride`
 - `ImGuiHoveredFlags_AllowWhenBlockedByPopup`
+- `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem` (best-effort; suppresses hover while another item is active unless overridden)
 - `ImGuiHoveredFlags_Stationary`
 - `ImGuiHoveredFlags_DelayShort`
 - `ImGuiHoveredFlags_DelayNormal`
@@ -158,7 +159,6 @@ Implemented (best-effort, `ResponseExt::is_hovered(ImUiHoveredFlags)`):
 
 Not implemented / diverging (explicitly):
 
-- `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`: ImGui can suppress hovered when another item is active (dragging) unless this flag is set. The current `imui` facade does not implement an equivalent "active item blocks other hover" policy.
 - `ImGuiHoveredFlags_AllowWhenOverlappedByItem`: ImGui has special overlap semantics for items using AllowOverlap mode. The current `imui` facade has no AllowOverlap submission mode.
 - `ImGuiHoveredFlags_AllowWhenOverlappedByWindow`: would require querying hover through unrelated overlay windows/layers, which is generally unsafe for editor-grade overlay stacks.
 - `ImGuiHoveredFlags_RectOnly`: not mirrored. Prefer using explicit hit-test primitives (`pointer_region`, `hit_test_passthrough`) if you need custom rect-only hover checks.
