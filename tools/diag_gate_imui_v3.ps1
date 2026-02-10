@@ -45,17 +45,42 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     $scripts = @(
-        "tools/diag-scripts/imui-float-window-drag-resize-context-menu.json",
-        "tools/diag-scripts/imui-float-window-select-popup-coexistence.json",
-        "tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json"
+        @{
+            Path = "tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json"
+            ExtraArgs = @(
+                "--check-stale-paint", "imui-float-demo.a.activate",
+                "--check-stale-paint-eps", "0.5",
+                "--env", "FRET_DIAG_SCREENSHOTS=1",
+                "--env", "FRET_DIAG_REDACT_TEXT=0"
+            )
+        },
+        @{
+            Path = "tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json"
+            ExtraArgs = @()
+        },
+        @{
+            Path = "tools/diag-scripts/imui-float-window-drag-resize-context-menu.json"
+            ExtraArgs = @()
+        },
+        @{
+            Path = "tools/diag-scripts/imui-float-window-select-popup-coexistence.json"
+            ExtraArgs = @()
+        },
+        @{
+            Path = "tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json"
+            ExtraArgs = @()
+        }
     )
 
     foreach ($script in $scripts) {
+        $scriptPath = $script.Path
+        $extraArgs = $script.ExtraArgs
         & cargo run -j 1 -p fretboard -- `
-            diag run $script `
+            diag run $scriptPath `
             --dir $OutDir `
             --timeout-ms $TimeoutMs `
             --poll-ms $PollMs `
+            @extraArgs `
             --pack `
             --env "FRET_DIAG_SEMANTICS=1" `
             --launch -- $demoExe

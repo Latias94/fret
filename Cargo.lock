@@ -1332,6 +1332,7 @@ name = "fret-interaction"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
 ]
 
 [[package]]
@@ -1783,6 +1784,7 @@ dependencies = [
  "fret-core",
  "fret-dnd",
  "fret-icons",
+ "fret-interaction",
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",

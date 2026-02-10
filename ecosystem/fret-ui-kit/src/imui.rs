@@ -20,6 +20,11 @@ use fret_core::{
     AppWindowId, Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole,
     Size,
 };
+use fret_interaction::dpi;
+use fret_interaction::drag::DragThreshold as InteractionDragThreshold;
+use fret_interaction::runtime_drag::{
+    DragMoveOutcome, update_immediate_move, update_thresholded_move,
+};
 use fret_runtime::{DragPhase, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
@@ -1287,13 +1292,12 @@ fn install_hover_query_hooks_for_pressable<H: UiHost>(
     }
 }
 
-fn drag_threshold_sq_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
+fn drag_threshold_for<H: UiHost>(cx: &ElementContext<'_, H>) -> InteractionDragThreshold {
     let theme = fret_ui::Theme::global(&*cx.app);
     let px = theme
         .metric_by_key(crate::theme_tokens::metric::COMPONENT_IMUI_DRAG_THRESHOLD_PX)
         .unwrap_or(Px(DEFAULT_DRAG_THRESHOLD_PX));
-    let v = px.0.max(0.0);
-    v * v
+    InteractionDragThreshold::new(px)
 }
 
 fn item_spacing_x_metric_ref() -> crate::MetricRef {
@@ -1310,25 +1314,12 @@ fn item_spacing_y_metric_ref() -> crate::MetricRef {
     }
 }
 
-pub(super) fn snap_px_to_device_pixels(scale_factor: f32, px: Px) -> Px {
-    if !scale_factor.is_finite() || scale_factor <= 0.0 {
-        return px;
-    }
-    Px((px.0 * scale_factor).round() / scale_factor)
-}
-
 pub(super) fn snap_point_to_device_pixels(scale_factor: f32, p: Point) -> Point {
-    Point::new(
-        snap_px_to_device_pixels(scale_factor, p.x),
-        snap_px_to_device_pixels(scale_factor, p.y),
-    )
+    dpi::snap_point_to_device_pixels(scale_factor, p)
 }
 
 pub(super) fn snap_size_to_device_pixels(scale_factor: f32, s: Size) -> Size {
-    Size::new(
-        snap_px_to_device_pixels(scale_factor, s.width),
-        snap_px_to_device_pixels(scale_factor, s.height),
-    )
+    dpi::snap_size_to_device_pixels(scale_factor, s)
 }
 
 fn point_sub(a: Point, b: Point) -> Point {
@@ -2335,7 +2326,7 @@ where
             false
         }));
 
-        let drag_threshold_sq = drag_threshold_sq_for(cx);
+        let drag_threshold = drag_threshold_for(cx);
         cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
             if !enable_drag {
                 return false;
@@ -2347,22 +2338,18 @@ where
                 return false;
             }
 
-            drag.current_window = acx.window;
-            drag.position = mv.position;
-
-            if !mv.buttons.left {
-                drag.phase = DragPhase::Canceled;
+            let outcome = update_thresholded_move(
+                drag,
+                acx.window,
+                mv.position,
+                mv.buttons.left,
+                drag_threshold,
+            );
+            if outcome == DragMoveOutcome::Canceled {
                 host.cancel_drag(mv.pointer_id);
                 host.release_pointer_capture();
                 host.notify(acx);
                 return false;
-            }
-
-            let d = point_sub(drag.position, drag.start_position);
-            let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-            if !drag.dragging && dist_sq >= drag_threshold_sq {
-                drag.dragging = true;
-                drag.phase = DragPhase::Dragging;
             }
 
             host.notify(acx);
@@ -3659,7 +3646,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     PressablePointerDownResult::Continue
                 }));
 
-                let drag_threshold_sq = drag_threshold_sq_for(cx);
+                let drag_threshold = drag_threshold_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                     let mut cancel_long_press = false;
 
@@ -3689,9 +3676,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return false;
                     }
 
-                    let d = point_sub(drag.position, drag.start_position);
-                    let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                    if !drag.dragging && dist_sq >= drag_threshold_sq {
+                    if !drag.dragging
+                        && drag_threshold.distance_sq_exceeded(drag.start_position, drag.position)
+                    {
                         cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
@@ -3905,7 +3892,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     PressablePointerDownResult::Continue
                 }));
 
-                let drag_threshold_sq = drag_threshold_sq_for(cx);
+                let drag_threshold = drag_threshold_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                     let mut cancel_long_press = false;
 
@@ -3935,9 +3922,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return false;
                     }
 
-                    let d = point_sub(drag.position, drag.start_position);
-                    let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                    if !drag.dragging && dist_sq >= drag_threshold_sq {
+                    if !drag.dragging
+                        && drag_threshold.distance_sq_exceeded(drag.start_position, drag.position)
+                    {
                         cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
@@ -5484,7 +5471,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                         },
                                     ));
 
-                                    let drag_threshold_sq = drag_threshold_sq_for(cx);
+                                    let drag_threshold = drag_threshold_for(cx);
                                     cx.pointer_region_on_pointer_move(Arc::new(
                                         move |host, acx, mv| {
                                             let Some(drag) = host.drag_mut(mv.pointer_id) else {
@@ -5496,22 +5483,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                                 return false;
                                             }
 
-                                            drag.current_window = acx.window;
-                                            drag.position = mv.position;
-
-                                            if !mv.buttons.left {
-                                                drag.phase = DragPhase::Canceled;
+                                            let outcome = update_thresholded_move(
+                                                drag,
+                                                acx.window,
+                                                mv.position,
+                                                mv.buttons.left,
+                                                drag_threshold,
+                                            );
+                                            if outcome == DragMoveOutcome::Canceled {
                                                 host.cancel_drag(mv.pointer_id);
                                                 host.release_pointer_capture();
                                                 host.notify(acx);
                                                 return false;
-                                            }
-
-                                            let d = point_sub(drag.position, drag.start_position);
-                                            let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                                            if !drag.dragging && dist_sq >= drag_threshold_sq {
-                                                drag.dragging = true;
-                                                drag.phase = DragPhase::Dragging;
                                             }
 
                                             host.notify(acx);
@@ -5755,13 +5738,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                             return false;
                                         }
 
-                                        drag.current_window = acx.window;
-                                        drag.position = mv.position;
-                                        drag.dragging = true;
-                                        drag.phase = DragPhase::Dragging;
-
-                                        if !mv.buttons.left {
-                                            drag.phase = DragPhase::Canceled;
+                                        let outcome = update_immediate_move(
+                                            drag,
+                                            acx.window,
+                                            mv.position,
+                                            mv.buttons.left,
+                                        );
+                                        if outcome == DragMoveOutcome::Canceled {
                                             host.cancel_drag(mv.pointer_id);
                                             host.release_pointer_capture();
                                             host.notify(acx);

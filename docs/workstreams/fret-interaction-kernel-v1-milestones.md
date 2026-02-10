@@ -5,8 +5,11 @@
 Deliverables:
 
 - `ecosystem/fret-interaction` crate exists and builds in the workspace.
-- Public types are documented with explicit coordinate conventions.
-- Unit tests exist for math primitives.
+- Public types are documented with explicit coordinate conventions and ownership boundaries.
+- A single math source of truth is locked:
+  - viewport / pan-zoom mapping is canonical in `ecosystem/fret-canvas` (no duplicate mapping math in
+    `fret-interaction`).
+- Unit tests exist for kernel primitives (state machines + threshold/DPI helpers).
 
 Exit criteria:
 
@@ -31,7 +34,8 @@ Exit criteria:
 
 Deliverables:
 
-- `fret-node` uses shared viewport transform helpers without changing external behavior.
+- `fret-node` continues to use the canonical `fret-canvas` viewport transform helpers without
+  changing external behavior.
 - Existing viewport conformance tests remain meaningful and pass.
 
 Exit criteria:
@@ -50,4 +54,3 @@ Deliverables:
 Exit criteria:
 
 - A diag repro exists in `tools/diag-scripts/` that guards the parity behavior under a deterministic script.
-

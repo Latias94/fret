@@ -11,7 +11,8 @@ documentation.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 
 [features]
 default = []
-
+runtime = ["dep:fret-runtime"]

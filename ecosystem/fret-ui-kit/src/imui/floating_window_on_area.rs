@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_authoring::UiWriter as _;
 use fret_core::{Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size};
-use fret_runtime::DragPhase;
+use fret_interaction::runtime_drag::{DragMoveOutcome, update_immediate_move};
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
@@ -713,13 +713,13 @@ where
                                 return false;
                             }
 
-                            drag.current_window = acx.window;
-                            drag.position = mv.position;
-                            drag.dragging = true;
-                            drag.phase = DragPhase::Dragging;
-
-                            if !mv.buttons.left {
-                                drag.phase = DragPhase::Canceled;
+                            let outcome = update_immediate_move(
+                                drag,
+                                acx.window,
+                                mv.position,
+                                mv.buttons.left,
+                            );
+                            if outcome == DragMoveOutcome::Canceled {
                                 host.cancel_drag(mv.pointer_id);
                                 host.release_pointer_capture();
                                 host.notify(acx);

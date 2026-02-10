@@ -10,5 +10,8 @@
 //! - Avoid domain semantics (no node/edge graph types; no app-specific command wiring).
 //! - Support multiple coordinate spaces via explicit transform helpers (screen-space vs canvas-space).
 
+pub mod dpi;
 pub mod drag;
-pub mod viewport;
+
+#[cfg(feature = "runtime")]
+pub mod runtime_drag;
