@@ -439,8 +439,13 @@ impl WinitInputState {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn poll_web_cursor_updates(&mut self, window_scale_factor: f64, out: &mut Vec<Event>) {
-        let Some((x, y)) = crate::web_cursor::get() else {
+    pub fn poll_web_cursor_updates(
+        &mut self,
+        window_scale_factor: f64,
+        cursor_offset_px: Option<(f32, f32)>,
+        out: &mut Vec<Event>,
+    ) {
+        let Some((x, y)) = cursor_offset_px else {
             self.cursor_pos_physical = None;
             return;
         };
