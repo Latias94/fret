@@ -110,6 +110,11 @@ The default sequencing is:
 4. M3 — Incremental mutation semantics (append/update) + cache invalidation boundaries.
 5. M4 — Conformance harnesses (headless + interactive) that keep refactors safe.
 
+Current posture highlight:
+
+- M3 append-only behavior under `WorkBudget` is now regression-gated (multi-series, unfinished-step continuity).
+- M3 update semantics are explicit (no silent column mutation) via `DataTable` update APIs and an engine-level invalidation gate.
+
 ## 5) Reference posture (what we borrow, not what we copy)
 
 Local snapshots under `repo-ref/` are non-normative, but they help avoid reinventing semantics:

@@ -42,6 +42,28 @@ This ADR is the v1 policy companion to:
 
 ### Append rows
 
+#### Output continuity under `WorkBudget` (v1 invariant)
+
+For append-only row growth, the engine must preserve previously emitted outputs while it incrementally
+extends/rebuilds under budget.
+
+Invariants:
+
+- The engine must **not clear** `output.marks` solely due to append-only dataset growth.
+- While an append-only rebuild is **unfinished**, `output.marks.nodes` must remain non-empty and must
+  continue to represent the last completed geometry for each series that previously produced marks.
+  (Incremental refinement is allowed; clearing/removing the entire geometry is not.)
+- Per-series mark identity must remain stable across append-only rebuilds (mark ids remain associated
+  with the same `SeriesId`).
+- Once the rebuild completes, the marks output must reflect the newly appended raw indices where
+  applicable (e.g. LOD / sampling output includes the appended raw index when it is within the
+  series’ participation contract).
+
+Evidence target (implementation seam):
+
+- Append-only rebuild path keeps the previous `MarkTree` visible and calls `begin_append_rebuild`
+  instead of clearing marks: `ecosystem/delinea/src/engine/mod.rs`.
+
 Allowed to resume (v1 target):
 
 - Nodes that scan a monotonic prefix and can safely extend to `new_row_count` without revisiting earlier
@@ -101,5 +123,4 @@ For any cached node, keys must include (as applicable):
 - Incremental caches (existing): `ecosystem/delinea/src/transform_graph/data_view.rs`,
   `ecosystem/delinea/src/engine/stages/{nearest_x_index,ordinal_index}.rs`
 - Derived dataset lineage mapping (current): `ecosystem/delinea/src/transform_graph/dataset_transform.rs`
-- Regression gates: `ecosystem/delinea/src/engine/tests.rs`, headless goldens under `goldens/echarts-headless/v1/`
-
+- Regression gates: `ecosystem/delinea/src/engine/tests.rs` (append-only continuity + update invalidation), headless goldens under `goldens/echarts-headless/v1/`

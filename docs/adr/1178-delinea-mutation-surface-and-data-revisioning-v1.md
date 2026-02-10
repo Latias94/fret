@@ -58,16 +58,29 @@ Contract:
 
 ### 2) Updates (Explicit + constrained) (Optional)
 
-v1 may support updates, but only if they are explicit and constrained by contract.
-Until implemented, v1 treats any update-like change as requiring full invalidation of affected caches
-(see ADR 1179).
+v1 supports **in-place value updates** only via explicit mutation APIs on `DataTable`.
 
-If/when implemented, update constraints must be documented as:
+Supported operations (v1 subset):
 
-- allowed column types / shapes,
-- allowed row ranges,
-- whether the mutation preserves row count,
-- and which outputs must be considered invalid.
+- Update a single row of an f64-only table:
+  - `DataTable::update_row_f64(row_index, row)`
+- Update a contiguous row range of an f64-only table (column-major payload):
+  - `DataTable::update_columns_f64(row_start, columns)`
+
+Constraints (contract):
+
+- Updates do **not** change `row_count` or the column count (no insert/delete/reindex).
+- Target rows must be within `0..row_count` and the payload width must match the table width.
+- The table `revision` bumps exactly once on a successful update.
+- Callers must not mutate columns directly without a revision bump; updates are only supported via the
+  explicit mutation API surface.
+
+Invalidation semantics (v1 baseline):
+
+- Any update revision change (revision changed without row-count growth) is treated as a full
+  invalidation for caches that read updated values (ADR 1179).
+- Marks output may be cleared and rebuilt under `WorkBudget` (no append-only continuity guarantee for
+  updates in v1).
 
 ### 3) Deletions / reindexing (Not supported in v1)
 
@@ -96,6 +109,7 @@ as the canonical invalidation signal for any cached computation that depends on 
 ## Implementation notes (evidence targets)
 
 - Data append APIs: `ecosystem/delinea/src/data/mod.rs`
+- Data update APIs (explicit v1 subset): `ecosystem/delinea/src/data/mod.rs` (`update_row_f64`, `update_columns_f64`)
 - Cache carriers / stepping: `ecosystem/delinea/src/transform_graph/*`, `ecosystem/delinea/src/engine/stages/*`
 - Participation contract: `ecosystem/delinea/src/engine/stages/filter_processor.rs`
-
+- Engine-level update invalidation gate: `ecosystem/delinea/src/engine/tests.rs` (`update_mutation_clears_marks_and_forces_rebuild`)

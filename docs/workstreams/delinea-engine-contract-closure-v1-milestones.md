@@ -93,7 +93,14 @@ Contracts (v1 subset):
 - ADR 1178: mutation surface + data revisioning rules.
 - ADR 1179: cache invalidation + resume policy matrix.
 
-Status: In progress (contracts drafted; implementation + gates pending).
+Status: Done (2026-02-09).
+
+Progress notes:
+
+- Append-only under `WorkBudget` is regression-gated and preserves previously emitted marks while unfinished:
+  `ecosystem/delinea/src/engine/tests.rs` (`append_only_marks_rebuild_preserves_geometry_while_unfinished_multi_series`) (2026-02-09).
+- Update semantics are explicit via `DataTable` update APIs and are regression-gated (forces deterministic invalidation):
+  `ecosystem/delinea/src/engine/tests.rs` (`update_mutation_clears_marks_and_forces_rebuild`) (2026-02-09).
 
 ## M4 — Conformance harnesses (keep refactors safe)
 

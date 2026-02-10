@@ -77,13 +77,17 @@ Design gates:
 
 Implementation steps:
 
-- [ ] DEL-ENG3-impl-010 Add an explicit “update” mutation API (if in scope) with constrained semantics and deterministic invalidation.
-- [ ] DEL-ENG3-impl-011 Ensure marks stages and indices views do not regress append-only behavior under budget.
+- [x] DEL-ENG3-impl-010 Add an explicit “update” mutation API (if in scope) with constrained semantics and deterministic invalidation.
+  - Evidence: `ecosystem/delinea/src/data/mod.rs` (`DataTable::{update_row_f64,update_columns_f64}`) and `ecosystem/delinea/src/engine/tests.rs` (`update_mutation_clears_marks_and_forces_rebuild`).
+- [x] DEL-ENG3-impl-011 Ensure marks stages and indices views do not regress append-only behavior under budget.
+  - Evidence: `ecosystem/delinea/src/engine/mod.rs` (append-only rebuild keeps previous `output.marks`), `ecosystem/delinea/src/engine/stages/marks.rs` (append-only detection survives a marks-stage reset), and `ecosystem/delinea/src/engine/tests.rs` (`append_only_marks_rebuild_preserves_geometry_while_unfinished_multi_series`).
 
 Regression gates:
 
-- [ ] DEL-ENG3-tests-020 Add an invariant test that proves append-only scans resume (already partially covered; expand to multi-series).
-- [ ] DEL-ENG3-tests-021 Add one update-semantics test that validates the chosen contract (no silent partial updates).
+- [x] DEL-ENG3-tests-020 Add an invariant test that proves append-only scans resume (already partially covered; expand to multi-series).
+  - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`append_only_marks_rebuild_preserves_geometry_while_unfinished_multi_series`).
+- [x] DEL-ENG3-tests-021 Add one update-semantics test that validates the chosen contract (no silent partial updates).
+  - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`update_mutation_clears_marks_and_forces_rebuild`).
 
 ## M4 — Conformance harnesses (keep refactors safe)
 
