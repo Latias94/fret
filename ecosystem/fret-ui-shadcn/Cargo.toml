@@ -24,7 +24,7 @@ fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true 
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
-fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["icons"] }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["icons", "dnd"] }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }

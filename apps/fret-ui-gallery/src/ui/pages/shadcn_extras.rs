@@ -1,6 +1,11 @@
 use super::super::*;
 
 pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct KanbanModels {
+        items: Option<Model<Vec<shadcn::extras::KanbanItem>>>,
+    }
+
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -16,7 +21,7 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
             cx,
             stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_start()
+                .items_stretch()
                 .layout(LayoutRefinement::default().w_full()),
             move |cx| vec![shadcn::typography::h4(cx, title), body],
         )
@@ -76,6 +81,33 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .test_id("ui-gallery-shadcn-extras-marquee");
+
+    let kanban = cx.named("shadcn-extras-kanban-demo", |cx| {
+        let items = cx.with_state(KanbanModels::default, |st| st.items.clone());
+        let items = items.unwrap_or_else(|| {
+            let model = cx.app.models_mut().insert(vec![
+                shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+                shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+                shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+                shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+                shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+            ]);
+            cx.with_state(KanbanModels::default, |st| {
+                st.items = Some(model.clone());
+            });
+            model
+        });
+
+        let columns = vec![
+            shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            shadcn::extras::KanbanColumn::new("done", "Done"),
+        ];
+
+        shadcn::extras::Kanban::new(columns, items)
+            .test_id("ui-gallery-shadcn-extras-kanban")
+            .into_element(cx)
+    });
 
     let ticker_row = stack::hstack(
         cx,
@@ -137,6 +169,7 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
         section_card(cx, "Banner (dismissible)", banner),
         section_card(cx, "Tags", tags),
         section_card(cx, "Marquee (pause on hover)", marquee),
+        section_card(cx, "Kanban (drag & drop)", kanban),
         section_card(cx, "Ticker", ticker_row),
         section_card(cx, "Relative time", relative_time),
         section_card(cx, "Rating", rating),
