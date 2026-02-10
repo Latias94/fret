@@ -1092,6 +1092,27 @@ fn apply_toast_message_options(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+    use std::task::{RawWaker, RawWakerVTable};
+
+    use fret_executor::{FutureSpawner, FutureSpawnerHandle};
+    use fret_runtime::{
+        DispatchPriority, Dispatcher, DispatcherHandle, ExecCapabilities, Runnable,
+    };
+    use fret_ui::action::UiActionHostAdapter;
+
+    fn noop_waker() -> Waker {
+        unsafe fn clone(_: *const ()) -> RawWaker {
+            RawWaker::new(std::ptr::null(), &VTABLE)
+        }
+        unsafe fn wake(_: *const ()) {}
+        unsafe fn wake_by_ref(_: *const ()) {}
+        unsafe fn drop(_: *const ()) {}
+
+        static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
+
+        unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) }
+    }
 
     #[test]
     fn toast_message_options_apply_description_action_cancel_and_duration() {
@@ -1122,5 +1143,121 @@ mod tests {
     fn toast_loading_message_defaults_to_pinned() {
         let req = base_message_request(Arc::from("Loading..."), ToastVariant::Loading);
         assert_eq!(req.duration, None);
+    }
+
+    #[test]
+    fn toast_promise_handle_unwrap_reports_missing_spawner() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let sonner = Sonner::global(&mut app);
+
+        let mut host = UiActionHostAdapter { app: &mut app };
+        let handle = sonner.toast_promise_async_handle_with(
+            &mut host,
+            window,
+            None,
+            || async { Ok::<u8, u8>(123) },
+            ToastPromiseAsyncOptions::new(),
+        );
+
+        let mut fut = Box::pin(handle.unwrap());
+        let waker = noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let poll = fut.as_mut().poll(&mut cx);
+        assert!(
+            matches!(
+                poll,
+                Poll::Ready(Err(
+                    ToastPromiseUnwrapError::MissingFutureSpawnerHandleGlobal
+                ))
+            ),
+            "expected MissingFutureSpawnerHandleGlobal, got {poll:?}"
+        );
+    }
+
+    #[test]
+    fn toast_promise_handle_unwrap_reports_missing_dispatcher() {
+        struct NoopSpawner;
+        impl FutureSpawner for NoopSpawner {
+            fn spawn_send(&self, _fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {}
+        }
+
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let spawner: FutureSpawnerHandle = Arc::new(NoopSpawner);
+        app.set_global::<FutureSpawnerHandle>(spawner);
+
+        let sonner = Sonner::global(&mut app);
+        let mut host = UiActionHostAdapter { app: &mut app };
+        let handle = sonner.toast_promise_async_handle_with(
+            &mut host,
+            window,
+            None,
+            || async { Ok::<u8, u8>(123) },
+            ToastPromiseAsyncOptions::new(),
+        );
+
+        let mut fut = Box::pin(handle.unwrap());
+        let waker = noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let poll = fut.as_mut().poll(&mut cx);
+        assert!(
+            matches!(
+                poll,
+                Poll::Ready(Err(ToastPromiseUnwrapError::MissingDispatcherHandleGlobal))
+            ),
+            "expected MissingDispatcherHandleGlobal, got {poll:?}"
+        );
+    }
+
+    #[test]
+    fn toast_promise_handle_unwrap_resolves_ok_when_spawner_and_dispatcher_present() {
+        struct InlineSpawner;
+        impl FutureSpawner for InlineSpawner {
+            fn spawn_send(&self, mut fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+                let waker = noop_waker();
+                let mut cx = Context::from_waker(&waker);
+                let poll = fut.as_mut().poll(&mut cx);
+                assert!(matches!(poll, Poll::Ready(())));
+            }
+        }
+
+        #[derive(Default)]
+        struct NoopDispatcher;
+        impl Dispatcher for NoopDispatcher {
+            fn dispatch_on_main_thread(&self, _task: Runnable) {}
+            fn dispatch_background(&self, _task: Runnable, _priority: DispatchPriority) {}
+            fn dispatch_after(&self, _delay: Duration, _task: Runnable) {}
+            fn wake(&self, _window: Option<AppWindowId>) {}
+            fn exec_capabilities(&self) -> ExecCapabilities {
+                ExecCapabilities::default()
+            }
+        }
+
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let spawner: FutureSpawnerHandle = Arc::new(InlineSpawner);
+        let dispatcher: DispatcherHandle = Arc::new(NoopDispatcher::default());
+        app.set_global::<FutureSpawnerHandle>(spawner);
+        app.set_global::<DispatcherHandle>(dispatcher);
+
+        let sonner = Sonner::global(&mut app);
+        let mut host = UiActionHostAdapter { app: &mut app };
+        let handle = sonner.toast_promise_async_handle_with(
+            &mut host,
+            window,
+            None,
+            || async { Ok::<u8, u8>(7) },
+            ToastPromiseAsyncOptions::new(),
+        );
+
+        let mut fut = Box::pin(handle.unwrap());
+        let waker = noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let poll = Future::poll(fut.as_mut(), &mut cx);
+        assert!(
+            matches!(poll, Poll::Ready(Ok(7))),
+            "expected Ok(7), got {poll:?}"
+        );
     }
 }
