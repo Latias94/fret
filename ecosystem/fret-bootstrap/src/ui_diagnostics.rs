@@ -3429,6 +3429,7 @@ impl UiDiagnosticsService {
         self.ws_bridge.drain_inbox(
             self.cfg.devtools_ws_url.as_deref(),
             self.cfg.devtools_token.as_deref(),
+            self.cfg.screenshots_enabled,
             &mut msgs,
         );
 
@@ -3448,6 +3449,7 @@ impl UiDiagnosticsService {
         self.ws_bridge.send(
             self.cfg.devtools_ws_url.as_deref(),
             self.cfg.devtools_token.as_deref(),
+            self.cfg.screenshots_enabled,
             DiagTransportMessageV1 {
                 schema_version: 1,
                 r#type: ty.into(),

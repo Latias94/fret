@@ -15,6 +15,7 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         ws_url: Option<&str>,
         token: Option<&str>,
+        screenshots_enabled: bool,
     ) -> Option<&DevtoolsWsClient> {
         if self.client.is_some() {
             return self.client.as_ref();
@@ -31,12 +32,24 @@ impl UiDiagnosticsWsBridge {
         } else {
             ClientKindV1::NativeApp
         };
-        cfg.capabilities = vec![
+        let mut caps = vec![
+            // Backwards-compatible (legacy, un-namespaced) control plane capabilities.
             "inspect".to_string(),
             "pick".to_string(),
             "scripts".to_string(),
             "bundles".to_string(),
+            // Namespaced control plane capabilities (recommended).
+            "devtools.inspect".to_string(),
+            "devtools.pick".to_string(),
+            "devtools.scripts".to_string(),
+            "devtools.bundles".to_string(),
+            // Runner/diagnostics capabilities (used for fail-fast gating).
+            "diag.script_v2".to_string(),
         ];
+        if screenshots_enabled {
+            caps.push("diag.screenshot_png".to_string());
+        }
+        cfg.capabilities = caps;
 
         #[cfg(target_arch = "wasm32")]
         let client = DevtoolsWsClient::connect_wasm(cfg).ok()?;
@@ -52,6 +65,7 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         _ws_url: Option<&str>,
         _token: Option<&str>,
+        _screenshots_enabled: bool,
     ) -> Option<()> {
         None
     }
@@ -61,9 +75,10 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         ws_url: Option<&str>,
         token: Option<&str>,
+        screenshots_enabled: bool,
         out: &mut Vec<DiagTransportMessageV1>,
     ) {
-        let Some(client) = self.ensure_connected(ws_url, token) else {
+        let Some(client) = self.ensure_connected(ws_url, token, screenshots_enabled) else {
             return;
         };
 
@@ -77,6 +92,7 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         _ws_url: Option<&str>,
         _token: Option<&str>,
+        _screenshots_enabled: bool,
         _out: &mut Vec<DiagTransportMessageV1>,
     ) {
     }
@@ -86,9 +102,10 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         ws_url: Option<&str>,
         token: Option<&str>,
+        screenshots_enabled: bool,
         msg: DiagTransportMessageV1,
     ) {
-        let Some(client) = self.ensure_connected(ws_url, token) else {
+        let Some(client) = self.ensure_connected(ws_url, token, screenshots_enabled) else {
             return;
         };
         client.send(msg);
@@ -99,6 +116,7 @@ impl UiDiagnosticsWsBridge {
         &mut self,
         _ws_url: Option<&str>,
         _token: Option<&str>,
+        _screenshots_enabled: bool,
         _msg: DiagTransportMessageV1,
     ) {
     }

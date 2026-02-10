@@ -59,9 +59,10 @@ Definition of done:
 - [x] Define `meta.required_capabilities` and “unknown meta ignored” rule.
 - [ ] Implement capability discovery:
   - [x] filesystem-trigger transport (`capabilities.json`),
-  - [ ] devtools WS transport (session-advertised capabilities).
+  - [x] devtools WS transport (session-advertised capabilities).
 - [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
   - [x] `diag run` (filesystem transport),
+  - [x] `diag run` (devtools WS transport),
   - [x] `diag suite` (filesystem transport),
   - [x] `diag repro` (filesystem transport).
 - [x] Emit `check.capabilities.json` evidence file on gating failure.

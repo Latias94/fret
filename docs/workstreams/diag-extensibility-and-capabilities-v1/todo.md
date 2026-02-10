@@ -34,7 +34,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 - [ ] Filesystem discovery:
   - [x] runner writes deterministic `capabilities.json` under `FRET_DIAG_DIR`.
 - [ ] DevTools WS discovery:
-  - [ ] runner/session descriptors advertise `diag.*` capabilities.
+  - [x] runner/session descriptors advertise `diag.*` capabilities.
 - [ ] Tooling gating:
   - [x] fail fast when required capabilities are missing,
   - [x] emit evidence file `check.capabilities.json` (machine-readable),
