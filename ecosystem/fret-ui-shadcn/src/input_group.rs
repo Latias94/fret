@@ -289,6 +289,7 @@ impl InputGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let is_block_layout = !self.block_start.is_empty() || !self.block_end.is_empty();
 
@@ -860,6 +861,7 @@ impl InputGroupText {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let color = theme.color_required("muted-foreground");
@@ -971,6 +973,7 @@ impl InputGroupButton {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let (

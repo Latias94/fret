@@ -349,6 +349,7 @@ impl DataTable {
     /// Notes (v0):
     /// - supports fixed-height and measured (variable-height) rows
     /// - intended for perf/correctness harnesses; API stability is not guaranteed
+    #[track_caller]
     pub fn into_element_retained<H: UiHost + 'static, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -455,6 +456,7 @@ impl DataTable {
         })
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost, TData>(
         self,
         cx: &mut ElementContext<'_, H>,

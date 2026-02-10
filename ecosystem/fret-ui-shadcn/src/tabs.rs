@@ -509,6 +509,7 @@ impl TabsRoot {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = self.list.clone();
         let contents = self.contents.clone();
@@ -784,6 +785,7 @@ impl Tabs {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;

@@ -50,6 +50,7 @@ impl AspectRatio {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let base_layout = LayoutRefinement::default().w_full();
         let mut props = {

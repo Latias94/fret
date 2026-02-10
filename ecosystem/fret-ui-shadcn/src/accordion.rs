@@ -602,6 +602,7 @@ pub mod composable {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx.scope(|cx| {
                 let theme = Theme::global(&*cx.app).clone();
@@ -1329,6 +1330,7 @@ impl Accordion {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -2571,37 +2573,15 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        let root = fret_ui::declarative::render_root(
+        render_accordion_frame_with_on_value_change(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "test",
-            |cx| {
-                let item_1 = AccordionItem::new(
-                    Arc::from("item-1"),
-                    AccordionTrigger::new(vec![cx.text("Item 1")])
-                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
-                    AccordionContent::new(vec![cx.text("Content 1")]),
-                );
-                let item_2 = AccordionItem::new(
-                    Arc::from("item-2"),
-                    AccordionTrigger::new(vec![cx.text("Item 2")])
-                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
-                    AccordionContent::new(vec![cx.text("Content 2")]),
-                );
-
-                vec![
-                    Accordion::single(open.clone())
-                        .on_value_change(Some(on_value_change.clone()))
-                        .items([item_1, item_2])
-                        .into_element(cx),
-                ]
-            },
+            open.clone(),
+            Some(on_value_change.clone()),
         );
-
-        ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         ui.dispatch_event(

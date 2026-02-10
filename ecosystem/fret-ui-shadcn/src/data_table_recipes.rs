@@ -299,6 +299,7 @@ impl<TData> DataTableToolbar<TData> {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
     where
         TData: 'static,
@@ -885,6 +886,7 @@ impl DataTablePagination {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let state_value = cx
             .watch_model(&self.state)

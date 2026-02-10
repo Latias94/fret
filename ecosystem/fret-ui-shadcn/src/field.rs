@@ -257,6 +257,7 @@ impl FieldSet {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let has_radio_or_checkbox_group = self.children.iter().any(is_radio_group_element)
             || self.children.iter().any(is_checkbox_group_element);
@@ -430,6 +431,7 @@ impl FieldLegend {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, size, line_height, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -532,6 +534,7 @@ impl FieldGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -590,6 +593,7 @@ impl FieldContent {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -620,6 +624,7 @@ impl FieldTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -666,6 +671,7 @@ impl FieldLabel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -709,6 +715,7 @@ impl FieldDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -746,6 +753,7 @@ impl FieldError {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -796,6 +804,7 @@ impl FieldSeparator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (outer_layout, layout, line_layout, label_props, border) = {
             let theme = Theme::global(&*cx.app);
@@ -935,6 +944,7 @@ impl Field {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
             let theme = Theme::global(&*cx.app);

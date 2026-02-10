@@ -98,6 +98,7 @@ impl RelativeTime {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout;
         let el = match self.kind {
@@ -152,6 +153,7 @@ impl RelativeTimeZone {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let label = self.label.clone();
         let date = self.date.clone();
@@ -384,6 +386,7 @@ impl RelativeTimeZoneLabel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let bg = theme.color_required("secondary");
@@ -443,6 +446,7 @@ impl RelativeTimeZoneDate {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let el = ui::text(cx, self.text).text_xs().into_element(cx);
         attach_test_id(
@@ -479,6 +483,7 @@ impl RelativeTimeZoneDisplay {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = if self.muted {

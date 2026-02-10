@@ -341,6 +341,7 @@ impl ToggleGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model = self.model;
         let items = self.items;

@@ -32,6 +32,7 @@ impl ShortcutHint {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         shortcut_hint_with_patch(cx, self.keys, self.label, self.layout)
     }

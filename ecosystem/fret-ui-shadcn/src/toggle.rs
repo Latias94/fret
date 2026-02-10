@@ -270,6 +270,7 @@ impl Toggle {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model =
             fret_ui_kit::primitives::toggle::toggle_use_model(cx, self.model.clone(), || {

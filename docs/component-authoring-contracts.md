@@ -93,6 +93,13 @@ Public constructors/setters that accept children should use:
 - `ElementContext::{with_state, with_state_for}` store **element-local, cross-frame** state in the
   runtime store keyed by `(GlobalElementId, TypeId)`.
 
+Practical note (ecosystem ergonomics):
+
+- If an ecosystem-level helper or component entrypoint calls `cx.scope(...)` / `cx.keyed(...)` /
+  `cx.named(...)` internally, prefer marking that helper/entrypoint `#[track_caller]` so element
+  identity is anchored at the **application callsite** rather than the helper’s source line. This
+  reduces “state sticks to the wrong sibling after insertion” bugs in toolbars and forms.
+
 Practical guidance:
 
 - Use `keyed` whenever the child set can reorder or be filtered.

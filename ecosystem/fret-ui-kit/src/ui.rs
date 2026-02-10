@@ -115,6 +115,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -142,6 +143,7 @@ impl<H: UiHost, B> FlexBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -293,6 +295,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
@@ -305,6 +308,7 @@ impl<H: UiHost, B> ContainerBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
@@ -428,6 +432,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
             let theme = Theme::global(&*cx.app);
@@ -576,6 +581,7 @@ impl<H: UiHost, B> ScrollAreaBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
             let theme = Theme::global(&*cx.app);
@@ -786,6 +792,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);

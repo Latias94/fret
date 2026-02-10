@@ -408,6 +408,7 @@ impl ContextMenuShortcut {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("muted-foreground");
@@ -2440,6 +2441,7 @@ impl ContextMenu {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,

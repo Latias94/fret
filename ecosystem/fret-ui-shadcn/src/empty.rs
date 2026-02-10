@@ -32,6 +32,7 @@ impl Empty {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -126,6 +127,7 @@ impl EmptyHeader {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
@@ -193,6 +195,7 @@ impl EmptyMedia {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -247,6 +250,7 @@ impl EmptyTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("foreground");
@@ -278,6 +282,7 @@ impl EmptyDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("muted-foreground");
@@ -320,6 +325,7 @@ impl EmptyContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N4).resolve(&theme);

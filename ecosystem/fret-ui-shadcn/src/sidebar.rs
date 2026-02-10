@@ -786,6 +786,7 @@ impl Sidebar {
         self
     }
 
+    #[track_caller]
     pub fn into_element_with_children<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -932,6 +933,7 @@ impl Sidebar {
         shadcn_layout::container_flow(cx, props, children)
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let sidebar_ctx = use_sidebar(cx);
         let is_mobile = sidebar_ctx.as_ref().is_some_and(|ctx| ctx.is_mobile);
@@ -1135,6 +1137,7 @@ impl SidebarTrigger {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let sidebar_ctx = use_sidebar(cx);
         let user_on_activate = self.on_activate.clone();
@@ -1250,6 +1253,7 @@ impl SidebarRail {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let sidebar_ctx = use_sidebar(cx);
         let surface_ctx = use_sidebar_surface(cx);
@@ -1374,6 +1378,7 @@ impl SidebarInset {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let sidebar_ctx = use_sidebar(cx);
         let surface_ctx = use_sidebar_surface(cx);
@@ -1469,6 +1474,7 @@ impl SidebarInput {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let background = Theme::global(&*cx.app).color_required("background");
 
@@ -1524,6 +1530,7 @@ impl SidebarSeparator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (thickness, mut layout, background) = {
             let theme = Theme::global(&*cx.app);
@@ -1584,6 +1591,7 @@ impl SidebarHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -1609,6 +1617,7 @@ impl SidebarFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -1643,6 +1652,7 @@ impl SidebarContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -1688,6 +1698,7 @@ impl SidebarGroup {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let chrome = ChromeRefinement::default().p(Space::N2);
         let props = {
@@ -1729,6 +1740,7 @@ impl SidebarGroupLabel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -1868,6 +1880,7 @@ impl SidebarGroupAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -2015,6 +2028,7 @@ impl SidebarGroupContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -2040,6 +2054,7 @@ impl SidebarMenu {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = FlexProps {
             direction: fret_core::Axis::Vertical,
@@ -2159,6 +2174,7 @@ impl SidebarMenuItem {
         self
     }
 
+    #[track_caller]
     pub fn into_element_with_children<H: UiHost, F>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -2211,6 +2227,7 @@ impl SidebarMenuItem {
         })
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open;
         let props = {
@@ -2367,6 +2384,7 @@ impl SidebarMenuAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -2545,6 +2563,7 @@ impl SidebarMenuBadge {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -2661,6 +2680,7 @@ impl SidebarMenuSkeleton {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -2754,6 +2774,7 @@ impl SidebarMenuSub {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -2827,6 +2848,7 @@ impl SidebarMenuSubItem {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -2984,6 +3006,7 @@ impl SidebarMenuSubButton {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -3496,6 +3519,7 @@ impl SidebarMenuButton {
         }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
@@ -5315,36 +5339,40 @@ mod tests {
             CoreSize::new(Px(1024.0), Px(640.0)),
         );
 
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "shadcn-sidebar-menu-action-show-on-hover",
-            |cx| {
-                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
-                    min: Px(0.0),
-                    ..Default::default()
-                }))
-                .test_id("sidebar-menu-item")
-                .into_element_with_children(cx, |cx| {
-                    let button = SidebarMenuButton::new("Projects")
-                        .test_id("sidebar-menu-button")
-                        .into_element(cx);
-                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
-                        .show_on_hover(true)
-                        .test_id("sidebar-menu-action")
-                        .into_element(cx);
-                    vec![button, action]
-                });
-                let menu = SidebarMenu::new([item]).into_element(cx);
-                vec![menu]
-            },
-        );
-        ui.set_root(root);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-sidebar-menu-action-show-on-hover",
+                |cx| {
+                    let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }))
+                    .test_id("sidebar-menu-item")
+                    .into_element_with_children(cx, |cx| {
+                        let button = SidebarMenuButton::new("Projects")
+                            .test_id("sidebar-menu-button")
+                            .into_element(cx);
+                        let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
+                            .show_on_hover(true)
+                            .test_id("sidebar-menu-action")
+                            .into_element(cx);
+                        vec![button, action]
+                    });
+                    let menu = SidebarMenu::new([item]).into_element(cx);
+                    vec![menu]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
 
         let first = ui
             .semantics_snapshot()
@@ -5381,37 +5409,7 @@ mod tests {
             }),
         );
 
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "shadcn-sidebar-menu-action-show-on-hover",
-            |cx| {
-                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
-                    min: Px(0.0),
-                    ..Default::default()
-                }))
-                .test_id("sidebar-menu-item")
-                .into_element_with_children(cx, |cx| {
-                    let button = SidebarMenuButton::new("Projects")
-                        .test_id("sidebar-menu-button")
-                        .into_element(cx);
-                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
-                        .show_on_hover(true)
-                        .test_id("sidebar-menu-action")
-                        .into_element(cx);
-                    vec![button, action]
-                });
-                let menu = SidebarMenu::new([item]).into_element(cx);
-                vec![menu]
-            },
-        );
-        ui.set_root(root);
-
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render_frame(&mut ui, &mut app, &mut services);
         let second = ui
             .semantics_snapshot()
             .cloned()
@@ -5497,44 +5495,61 @@ mod tests {
 
         let button_element_id: Arc<std::sync::Mutex<Option<fret_ui::GlobalElementId>>> =
             Arc::new(std::sync::Mutex::new(None));
-        let button_element_id_for_render = button_element_id.clone();
-        let root = fret_ui::declarative::render_root(
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut FakeServices,
+                            capture_button_id: Option<
+            Arc<std::sync::Mutex<Option<fret_ui::GlobalElementId>>>,
+        >| {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-sidebar-menu-action-show-on-hover-focus-within",
+                |cx| {
+                    let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }))
+                    .test_id("sidebar-menu-item")
+                    .into_element_with_children(cx, {
+                        let capture_button_id = capture_button_id.clone();
+                        move |cx| {
+                            let button = SidebarMenuButton::new("Projects")
+                                .test_id("sidebar-menu-button")
+                                .into_element(cx);
+                            if let Some(capture_button_id) = capture_button_id.as_ref()
+                                && use_sidebar_menu_item_context(cx).is_some()
+                            {
+                                let mut guard =
+                                    capture_button_id.lock().unwrap_or_else(|e| e.into_inner());
+                                *guard = Some(button.id);
+                            }
+
+                            let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
+                                .show_on_hover(true)
+                                .test_id("sidebar-menu-action")
+                                .into_element(cx);
+                            vec![button, action]
+                        }
+                    });
+                    let menu = SidebarMenu::new([item]).into_element(cx);
+                    vec![menu]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(
             &mut ui,
             &mut app,
             &mut services,
-            window,
-            bounds,
-            "shadcn-sidebar-menu-action-show-on-hover-focus-within",
-            |cx| {
-                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
-                    min: Px(0.0),
-                    ..Default::default()
-                }))
-                .test_id("sidebar-menu-item")
-                .into_element_with_children(cx, move |cx| {
-                    let button = SidebarMenuButton::new("Projects")
-                        .test_id("sidebar-menu-button")
-                        .into_element(cx);
-                    if use_sidebar_menu_item_context(cx).is_some() {
-                        let mut guard = button_element_id_for_render
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        *guard = Some(button.id);
-                    }
-
-                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
-                        .show_on_hover(true)
-                        .test_id("sidebar-menu-action")
-                        .into_element(cx);
-                    vec![button, action]
-                });
-                let menu = SidebarMenu::new([item]).into_element(cx);
-                vec![menu]
-            },
+            Some(button_element_id.clone()),
         );
-        ui.set_root(root);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let first = ui
             .semantics_snapshot()
@@ -5566,36 +5581,7 @@ mod tests {
             },
         );
 
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            "shadcn-sidebar-menu-action-show-on-hover-focus-within",
-            |cx| {
-                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
-                    min: Px(0.0),
-                    ..Default::default()
-                }))
-                .test_id("sidebar-menu-item")
-                .into_element_with_children(cx, |cx| {
-                    let button = SidebarMenuButton::new("Projects")
-                        .test_id("sidebar-menu-button")
-                        .into_element(cx);
-                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
-                        .show_on_hover(true)
-                        .test_id("sidebar-menu-action")
-                        .into_element(cx);
-                    vec![button, action]
-                });
-                let menu = SidebarMenu::new([item]).into_element(cx);
-                vec![menu]
-            },
-        );
-        ui.set_root(root);
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render_frame(&mut ui, &mut app, &mut services, None);
 
         let second = ui
             .semantics_snapshot()

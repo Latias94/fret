@@ -122,6 +122,7 @@ pub fn text_nowrap<H: UiHost>(
 /// Themes can override this via:
 /// - `component.text.sm_px`
 /// - `component.text.sm_line_height`
+#[track_caller]
 pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let style = {
         let theme = Theme::global(&*cx.app);
@@ -142,6 +143,7 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
 /// Themes can override this via:
 /// - `component.text.xs_px`
 /// - `component.text.xs_line_height`
+#[track_caller]
 pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let style = {
         let theme = Theme::global(&*cx.app);

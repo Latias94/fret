@@ -35,6 +35,7 @@ impl Tag {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let el = Badge::new(self.label)
             .variant(self.variant)
@@ -105,6 +106,7 @@ impl Tags {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = decl_style::space(&theme, self.gap);

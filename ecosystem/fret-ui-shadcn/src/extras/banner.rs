@@ -159,6 +159,7 @@ impl Banner {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -237,6 +238,7 @@ impl BannerIcon {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let base = theme.color_required("background");
@@ -281,6 +283,7 @@ impl BannerTitle {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let el = ui::text(cx, self.text)
             .text_sm()
@@ -339,6 +342,7 @@ impl BannerAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("primary-foreground");
@@ -408,6 +412,7 @@ impl BannerClose {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("primary-foreground");

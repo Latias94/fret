@@ -788,6 +788,7 @@ impl NavigationMenu {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;

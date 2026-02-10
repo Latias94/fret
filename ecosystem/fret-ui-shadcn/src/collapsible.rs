@@ -119,6 +119,7 @@ impl Collapsible {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -128,6 +129,7 @@ impl Collapsible {
         self.into_element_with_open_model(cx, |cx, _open, is_open| trigger(cx, is_open), content)
     }
 
+    #[track_caller]
     pub fn into_element_with_open_model<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -280,6 +282,7 @@ impl CollapsibleTrigger {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -340,6 +343,7 @@ impl CollapsibleContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = fret_ui::Theme::global(&*cx.app).clone();
         let wrapper = decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());

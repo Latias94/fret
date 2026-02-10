@@ -500,6 +500,7 @@ impl CommandShortcut {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let theme = &theme;
@@ -560,6 +561,7 @@ impl Command {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -637,6 +639,7 @@ impl CommandInput {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.watch_model(&self.model).observe();
@@ -948,6 +951,7 @@ impl CommandEmpty {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, text_style) = {
             let theme = Theme::global(&*cx.app);
@@ -1091,6 +1095,7 @@ impl CommandList {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let disabled = self.disabled;
@@ -1621,6 +1626,7 @@ impl CommandPalette {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Clone)]
         struct PaletteEntry {
@@ -2534,6 +2540,7 @@ impl CommandDialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -2896,19 +2903,19 @@ mod tests {
         let bounds = bounds();
         let mut services = FakeServices::default();
 
-        let _ = {
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
             app.set_frame_id(next_frame);
             crate::shadcn_themes::apply_shadcn_new_york_v4(
-                &mut app,
+                app,
                 crate::shadcn_themes::ShadcnBaseColor::Neutral,
                 crate::shadcn_themes::ShadcnColorScheme::Light,
             );
-            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+            fret_ui_kit::OverlayController::begin_frame(app, window);
             let root = fret_ui::declarative::render_root(
-                &mut ui,
-                &mut app,
-                &mut services,
+                ui,
+                app,
+                services,
                 window,
                 bounds,
                 "cmdk-dialog-reason",
@@ -2930,17 +2937,12 @@ mod tests {
                 },
             );
             ui.set_root(root);
-            fret_ui_kit::OverlayController::render(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-            );
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
             ui.request_semantics_snapshot();
-            ui.layout_all(&mut app, &mut services, bounds, 1.0);
-            root
+            ui.layout_all(app, services, bounds, 1.0);
         };
+
+        render_frame(&mut ui, &mut app, &mut services);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let alpha = snap
@@ -2951,51 +2953,7 @@ mod tests {
             .expect("Alpha option bounds");
         click(&mut ui, &mut app, &mut services, rect_center(alpha));
 
-        let _ = {
-            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
-            app.set_frame_id(next_frame);
-            crate::shadcn_themes::apply_shadcn_new_york_v4(
-                &mut app,
-                crate::shadcn_themes::ShadcnBaseColor::Neutral,
-                crate::shadcn_themes::ShadcnColorScheme::Light,
-            );
-            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
-            let root = fret_ui::declarative::render_root(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                "cmdk-dialog-reason",
-                |cx| {
-                    vec![
-                        CommandDialog::new(open.clone(), query.clone(), items.clone())
-                            .close_on_select(true)
-                            .on_open_change_with_reason(Some(Arc::new({
-                                let reasons = reasons.clone();
-                                move |is_open, reason| {
-                                    reasons
-                                        .lock()
-                                        .expect("reasons lock")
-                                        .push((is_open, reason));
-                                }
-                            })))
-                            .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
-                    ]
-                },
-            );
-            ui.set_root(root);
-            fret_ui_kit::OverlayController::render(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-            );
-            ui.request_semantics_snapshot();
-            ui.layout_all(&mut app, &mut services, bounds, 1.0);
-            root
-        };
+        render_frame(&mut ui, &mut app, &mut services);
 
         let captured = reasons.lock().expect("reasons lock").clone();
         assert!(

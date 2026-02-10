@@ -551,6 +551,7 @@ impl Popover {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -560,6 +561,7 @@ impl Popover {
         self.into_element_with_anchor(cx, trigger, move |cx, _anchor| content(cx))
     }
 
+    #[track_caller]
     pub fn into_element_with_anchor<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -1139,6 +1141,7 @@ impl PopoverTrigger {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let child = self.child;
         let auto_toggle = self.auto_toggle;
@@ -1167,6 +1170,7 @@ impl PopoverAnchor {
         self.child.id
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -1214,6 +1218,7 @@ impl PopoverContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let chrome = popover_content_chrome().merge(self.chrome);
@@ -1243,6 +1248,7 @@ impl PopoverHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -1265,6 +1271,7 @@ impl PopoverTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("popover.foreground");
@@ -1299,6 +1306,7 @@ impl PopoverDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme

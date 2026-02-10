@@ -127,6 +127,7 @@ impl Card {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
@@ -192,6 +193,7 @@ impl CardHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let px = match size {
@@ -271,6 +273,7 @@ impl CardAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
             let theme = Theme::global(&*cx.app);
@@ -355,6 +358,7 @@ impl CardContent {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let px = match size {
@@ -393,6 +397,7 @@ impl CardFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = card_size_in_scope(cx);
         let px = match size {
@@ -430,6 +435,7 @@ impl CardTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -467,6 +473,7 @@ impl CardDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);

@@ -89,6 +89,7 @@ impl Table {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -118,6 +119,7 @@ impl TableHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let props = decl_style::container_props(
@@ -147,6 +149,7 @@ impl TableBody {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let props = decl_style::container_props(
@@ -176,6 +179,7 @@ impl TableFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -270,6 +274,7 @@ impl TableRow {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cols = self.cols;
         let selected = self.selected;
@@ -426,6 +431,7 @@ impl TableHead {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let px = Space::N2;
@@ -518,6 +524,7 @@ impl TableCell {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let px = Space::N2;
@@ -564,6 +571,7 @@ impl TableCaption {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 

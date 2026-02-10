@@ -14,11 +14,13 @@ impl Label {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         label(cx, self.text)
     }
 }
 
+#[track_caller]
 pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
     let (fg, px, line_height) = {

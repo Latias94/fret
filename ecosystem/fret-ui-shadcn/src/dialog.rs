@@ -201,6 +201,7 @@ impl Dialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -472,6 +473,7 @@ impl DialogContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -557,6 +559,7 @@ impl DialogClose {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -662,6 +665,7 @@ impl DialogHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -685,6 +689,7 @@ impl DialogFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -715,6 +720,7 @@ impl DialogTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -754,6 +760,7 @@ impl DialogDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme

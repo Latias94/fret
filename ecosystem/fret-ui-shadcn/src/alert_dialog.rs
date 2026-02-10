@@ -164,6 +164,7 @@ impl AlertDialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -384,6 +385,7 @@ impl AlertDialogTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -417,6 +419,7 @@ impl AlertDialogContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -478,6 +481,7 @@ impl AlertDialogHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -509,6 +513,7 @@ impl AlertDialogFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         use fret_ui::element::LayoutQueryRegionProps;
         use fret_ui_kit::declarative::stack;
@@ -581,6 +586,7 @@ impl AlertDialogTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -620,6 +626,7 @@ impl AlertDialogDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -699,6 +706,7 @@ impl AlertDialogAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut button = Button::new(self.label)
             .variant(self.variant)
@@ -753,6 +761,7 @@ impl AlertDialogCancel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open_id = self.open.id();
         let mut button = Button::new(self.label)

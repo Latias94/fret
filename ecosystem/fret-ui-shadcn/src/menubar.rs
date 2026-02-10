@@ -299,6 +299,7 @@ impl MenubarShortcut {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("muted-foreground");
@@ -858,6 +859,7 @@ impl Menubar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -1158,6 +1160,7 @@ impl MenubarMenuEntries {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
         let key = self.menu.label.clone();

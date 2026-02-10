@@ -470,6 +470,7 @@ impl Button {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -961,25 +962,47 @@ mod tests {
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
 
+        fn render_outline_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            id_out: Rc<Cell<Option<GlobalElementId>>>,
+            rendered_out: Rc<RefCell<Option<AnyElement>>>,
+        ) {
+            // Keep the render closure's callsite stable across frames so element identity is
+            // stable under `#[track_caller]`-anchored IDs.
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "outline-button-focus-border",
+                move |cx| {
+                    let el = Button::new("Outline")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx);
+                    id_out.set(Some(el.id));
+                    rendered_out.borrow_mut().replace(el.clone());
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+        }
+
         // First frame: render once to obtain the element id and map to a node.
         app.set_frame_id(FrameId(1));
-        let id_out_for_render = id_out.clone();
-        let root = fret_ui::declarative::render_root(
+        render_outline_frame(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "outline-button-focus-border",
-            move |cx| {
-                let el = Button::new("Outline")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx);
-                id_out_for_render.set(Some(el.id));
-                vec![el]
-            },
+            id_out.clone(),
+            rendered_out.clone(),
         );
-        ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let id = id_out.get().expect("button element id");
@@ -998,23 +1021,15 @@ mod tests {
 
         // Second frame: re-render with focus applied and capture the element tree.
         app.set_frame_id(FrameId(2));
-        let rendered_out_for_render = rendered_out.clone();
-        let root = fret_ui::declarative::render_root(
+        render_outline_frame(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
-            "outline-button-focus-border",
-            move |cx| {
-                let el = Button::new("Outline")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx);
-                rendered_out_for_render.borrow_mut().replace(el.clone());
-                vec![el]
-            },
+            id_out.clone(),
+            rendered_out.clone(),
         );
-        ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let el = rendered_out

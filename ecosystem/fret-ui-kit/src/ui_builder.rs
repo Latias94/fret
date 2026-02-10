@@ -45,6 +45,7 @@ pub trait UiSupportsLayout {}
 /// This trait exists so `UiBuilder::into_element(cx)` can be implemented without relying on
 /// inherent methods.
 pub trait UiIntoElement: Sized {
+    #[track_caller]
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
@@ -931,6 +932,7 @@ impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
 }
 
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -941,6 +943,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -950,6 +953,7 @@ impl<H: UiHost, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -959,6 +963,7 @@ impl<H: UiHost, B> UiBuilder<crate::ui::ContainerBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -969,6 +974,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -979,6 +985,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -989,6 +996,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
@@ -998,6 +1006,7 @@ impl<H: UiHost, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }

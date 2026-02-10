@@ -122,6 +122,7 @@ impl ItemGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = {
             let theme = Theme::global(&*cx.app);
@@ -167,6 +168,7 @@ impl ItemSeparator {
         Self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (border, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -225,6 +227,7 @@ impl ItemMedia {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let variant = self.variant;
         let user_layout = self.layout;
@@ -336,6 +339,7 @@ impl ItemContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -381,6 +385,7 @@ impl ItemActions {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -426,6 +431,7 @@ impl ItemHeader {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -471,6 +477,7 @@ impl ItemFooter {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
@@ -504,6 +511,7 @@ impl ItemTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -541,6 +549,7 @@ impl ItemDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -663,6 +672,7 @@ impl Item {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let variant = self.variant;
         let size = self.size;

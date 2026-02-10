@@ -155,6 +155,7 @@ impl DrawerContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let side = drawer_side_in_scope(cx);
@@ -314,6 +315,7 @@ impl DrawerHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let side = drawer_side_in_scope(cx);
         let items = match side {
@@ -350,6 +352,7 @@ impl DrawerFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -515,6 +518,7 @@ impl Drawer {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -888,6 +892,7 @@ impl DrawerTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -928,6 +933,7 @@ impl DrawerClose {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.inner.into_element(cx)
     }

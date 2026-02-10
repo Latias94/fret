@@ -602,6 +602,7 @@ impl Tooltip {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -1215,6 +1216,7 @@ impl TooltipTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -1237,6 +1239,7 @@ impl TooltipAnchor {
         self.child.id
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -1294,6 +1297,7 @@ impl TooltipContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 

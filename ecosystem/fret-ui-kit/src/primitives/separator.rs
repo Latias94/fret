@@ -50,6 +50,7 @@ impl Separator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (border, thickness, mut layout) = {
             let theme = Theme::global(&*cx.app);
@@ -106,6 +107,7 @@ impl Separator {
     }
 }
 
+#[track_caller]
 pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     Separator::new().into_element(cx)
 }

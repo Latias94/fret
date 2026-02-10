@@ -83,6 +83,7 @@ impl Breadcrumb {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         breadcrumb_with_patch(cx, self.items, self.separator, self.chrome, self.layout)
     }
@@ -433,6 +434,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -470,6 +472,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -545,6 +548,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -620,6 +624,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             let (style, fg, muted) = {
                 let theme = Theme::global(&*cx.app);
@@ -739,6 +744,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             let (style, fg, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -822,6 +828,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             let (muted, props) = {
                 let theme = Theme::global(&*cx.app);
@@ -885,6 +892,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             let (muted, size, wrapper_props) = {
                 let theme = Theme::global(&*cx.app);

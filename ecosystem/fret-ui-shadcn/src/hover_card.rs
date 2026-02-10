@@ -349,6 +349,7 @@ impl HoverCard {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -929,6 +930,7 @@ impl HoverCardTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -951,6 +953,7 @@ impl HoverCardAnchor {
         self.child.id
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -984,6 +987,7 @@ impl HoverCardContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 

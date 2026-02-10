@@ -86,6 +86,7 @@ impl DataTableViewOptions {
         }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open;
         let items = self.items;
@@ -132,6 +133,7 @@ impl DataTableGlobalFilterInput {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         Input::new(self.model)
             .placeholder(self.placeholder)
