@@ -740,8 +740,6 @@ impl Kanban {
                                             return false;
                                         }
 
-                                        host.capture_pointer();
-
                                         let _ = dnd::handle_pointer_down_in_scope(
                                             host.models_mut(),
                                             &dnd_on_down,
@@ -773,13 +771,14 @@ impl Kanban {
                                         });
 
                                         host.request_redraw(action_cx.window);
-                                        true
+                                        false
                                     });
 
                                 let on_move: OnPointerMove =
                                     Arc::new(move |host, action_cx, mv: PointerMoveCx| {
                                         let mut tracked = false;
                                         let mut canceled = false;
+                                        let mut became_dragging = false;
                                         let _ = host.models_mut().update(&state_on_move, |st| {
                                             if !st.pointers.contains_key(&mv.pointer_id) {
                                                 return;
@@ -887,6 +886,7 @@ impl Kanban {
                                                         return;
                                                     };
                                                     if !state.dragging {
+                                                        became_dragging = true;
                                                         state.origin_rect = origin_rect;
                                                     }
                                                     state.dragging = true;
@@ -896,6 +896,9 @@ impl Kanban {
                                                     state.pointer = mv.position;
                                                 });
 
+                                            if became_dragging {
+                                                host.capture_pointer();
+                                            }
                                             host.request_redraw(action_cx.window);
                                             return true;
                                         }
@@ -910,6 +913,7 @@ impl Kanban {
 
                                         let mut reorder: Option<(DndItemId, DndItemId)> = None;
                                         let mut had_pointer = false;
+                                        let mut was_dragging = false;
 
                                         let _ = host.models_mut().update(&state_on_up, |st| {
                                             let Some(state) = st.pointers.remove(&up.pointer_id)
@@ -918,6 +922,7 @@ impl Kanban {
                                             };
                                             had_pointer = true;
                                             if state.dragging {
+                                                was_dragging = true;
                                                 st.last_drag = Some(KanbanLastDrag {
                                                     active: state.active,
                                                     translation: state.translation,
@@ -950,7 +955,9 @@ impl Kanban {
                                             collision_strategy,
                                             None,
                                         );
-                                        host.release_pointer_capture();
+                                        if was_dragging {
+                                            host.release_pointer_capture();
+                                        }
 
                                         if let Some((active, over)) = reorder {
                                             let over_rect = dnd::droppable_rect_in_scope(
@@ -974,8 +981,10 @@ impl Kanban {
                                                 });
                                         }
 
-                                        host.request_redraw(action_cx.window);
-                                        true
+                                        if was_dragging {
+                                            host.request_redraw(action_cx.window);
+                                        }
+                                        was_dragging
                                     });
 
                                 let el = cx.pointer_region(pr, |cx| {
