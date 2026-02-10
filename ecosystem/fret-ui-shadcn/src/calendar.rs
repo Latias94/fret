@@ -23,8 +23,8 @@ use crate::select::{Select, SelectItem, SelectPosition};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, SelectionUpdate, day_picker_select_single, month_grid, month_grid_compact,
-    week_number,
+    CalendarMonth, DayMatcher, DayPickerModifiers, SelectionUpdate, day_picker_day_modifiers,
+    day_picker_select_single, month_grid, month_grid_compact, week_number,
 };
 use time::Month;
 
@@ -219,7 +219,7 @@ pub struct Calendar {
     show_week_number: bool,
     cell_size: Option<Px>,
     today: Option<Date>,
-    disabled: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: DayPickerModifiers,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     chrome: ChromeRefinement,
@@ -241,7 +241,8 @@ impl std::fmt::Debug for Calendar {
             .field("fixed_weeks", &self.fixed_weeks)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
-            .field("disabled", &self.disabled.is_some())
+            .field("disabled_matchers", &self.modifiers.disabled.len())
+            .field("hidden_matchers", &self.modifiers.hidden.len())
             .field("close_on_select", &self.close_on_select.is_some())
             .field("initial_focus_out", &self.initial_focus_out.is_some())
             .finish()
@@ -266,7 +267,7 @@ impl Calendar {
             show_week_number: false,
             cell_size: None,
             today: None,
-            disabled: None,
+            modifiers: DayPickerModifiers::default(),
             close_on_select: None,
             initial_focus_out: None,
             chrome: ChromeRefinement::default(),
@@ -349,8 +350,27 @@ impl Calendar {
         self
     }
 
+    pub fn disabled(mut self, matcher: DayMatcher) -> Self {
+        self.modifiers.disabled.push(matcher);
+        self
+    }
+
+    pub fn hidden(mut self, matcher: DayMatcher) -> Self {
+        self.modifiers.hidden.push(matcher);
+        self
+    }
+
+    pub fn modifiers(mut self, modifiers: DayPickerModifiers) -> Self {
+        self.modifiers = modifiers;
+        self
+    }
+
     pub fn disabled_by(mut self, f: impl Fn(Date) -> bool + Send + Sync + 'static) -> Self {
-        self.disabled = Some(Arc::new(f));
+        // Preserve the previous `disabled_by` semantics: treat it as "set the disabled predicate".
+        self.modifiers.disabled.clear();
+        self.modifiers
+            .disabled
+            .push(DayMatcher::Predicate(Arc::new(f)));
         self
     }
 
@@ -392,7 +412,7 @@ impl Calendar {
         let show_outside_days = self.show_outside_days;
         let disable_outside_days = self.disable_outside_days;
         let show_week_number = self.show_week_number;
-        let disabled_predicate = self.disabled.clone();
+        let modifiers: Arc<DayPickerModifiers> = Arc::new(self.modifiers);
         let close_on_select = self.close_on_select.clone();
         let initial_focus_out = self.initial_focus_out.clone();
         let required = self.required;
@@ -413,32 +433,28 @@ impl Calendar {
             .unwrap_or_else(|| OffsetDateTime::now_utc().date());
         let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
 
+        let mut hidden = Vec::with_capacity(grid.len());
         let mut disabled = Vec::with_capacity(grid.len());
         for day in grid.iter() {
-            let mut is_disabled = false;
-            if !in_bounds(day.date) {
+            let base = day_picker_day_modifiers(*day, show_outside_days, &modifiers);
+            let is_hidden = base.hidden || !in_bounds(day.date);
+            let mut is_disabled =
+                base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
+            if is_hidden {
                 is_disabled = true;
             }
-            if !day.in_month && (!show_outside_days || disable_outside_days) {
-                is_disabled = true;
-            }
-            if let Some(pred) = disabled_predicate.as_ref() {
-                if pred(day.date) {
-                    is_disabled = true;
-                }
-            }
+            hidden.push(is_hidden);
             disabled.push(is_disabled);
         }
         let disabled: Arc<[bool]> = disabled.into();
+        let hidden: Arc<[bool]> = hidden.into();
 
         let focus_date = {
             let selected_idx = selected.and_then(|d| grid.iter().position(|it| it.date == d));
             let today_idx = grid.iter().position(|it| it.date == today);
 
-            let visible = |idx: usize| {
-                grid.get(idx)
-                    .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
-            };
+            let visible =
+                |idx: usize| !hidden.get(idx).copied().unwrap_or(true) && grid.get(idx).is_some();
             let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
             selected_idx
@@ -638,7 +654,7 @@ impl Calendar {
                             month_width,
                             day_grid_width,
                             week_row_gap,
-                            disabled_predicate.clone(),
+                            modifiers.clone(),
                             close_on_select.clone(),
                             initial_focus_out.clone(),
                             grid_text_style.clone(),
@@ -660,7 +676,6 @@ impl Calendar {
                             let month_model_days = month_model.clone();
                             let selected_model = selected_model.clone();
                             let close_on_select = close_on_select.clone();
-                            let disabled_predicate = disabled_predicate.clone();
                             let caption_month_value_prev = caption_month_value.clone();
                             let caption_year_value_prev = caption_year_value.clone();
 
@@ -1149,8 +1164,7 @@ impl Calendar {
                                         let is_last_week = week_idx + 1 >= week_count;
                                         let row_bottom_gap =
                                             if is_last_week { Px(0.0) } else { week_row_gap };
-                                        let is_hidden = (!day.in_month && !show_outside_days)
-                                            || !in_bounds(day.date);
+                                        let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                                         if is_hidden {
                                             return calendar_hidden_day_cell(
                                                 cx,
@@ -1180,7 +1194,6 @@ impl Calendar {
                                             &selected_model,
                                             required,
                                             close_on_select.clone(),
-                                            disabled_predicate.clone(),
                                             initial_focus_out.clone(),
                                         )
                                     })
@@ -1302,7 +1315,7 @@ fn calendar_multi_month_view<H: UiHost>(
     month_width: Px,
     day_grid_width: Px,
     week_row_gap: Px,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: Arc<DayPickerModifiers>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
@@ -1416,7 +1429,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         month_model.clone(),
                         selected_model.clone(),
                         required,
-                        disabled_predicate.clone(),
+                        modifiers.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -1455,7 +1468,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         month_model.clone(),
                         selected_model.clone(),
                         required,
-                        disabled_predicate.clone(),
+                        modifiers.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -1499,7 +1512,7 @@ fn calendar_month_view<H: UiHost>(
     month_model: Model<CalendarMonth>,
     selected_model: Model<Option<Date>>,
     required: bool,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
+    modifiers: Arc<DayPickerModifiers>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
@@ -1511,32 +1524,28 @@ fn calendar_month_view<H: UiHost>(
     };
     let in_bounds = |d: Date| month_bounds.map_or(true, |b| date_in_month_bounds(d, b));
 
+    let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
     for day in grid.iter() {
-        let mut is_disabled = false;
-        if !in_bounds(day.date) {
+        let base = day_picker_day_modifiers(*day, show_outside_days, &modifiers);
+        let is_hidden = base.hidden || !in_bounds(day.date);
+        let mut is_disabled =
+            base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
+        if is_hidden {
             is_disabled = true;
         }
-        if !day.in_month && (!show_outside_days || disable_outside_days) {
-            is_disabled = true;
-        }
-        if let Some(pred) = disabled_predicate.as_ref() {
-            if pred(day.date) {
-                is_disabled = true;
-            }
-        }
+        hidden.push(is_hidden);
         disabled.push(is_disabled);
     }
     let disabled: Arc<[bool]> = disabled.into();
+    let hidden: Arc<[bool]> = hidden.into();
 
     let focus_date = {
         let selected_idx = selected.and_then(|d| grid.iter().position(|it| it.date == d));
         let today_idx = grid.iter().position(|it| it.date == today);
 
-        let visible = |idx: usize| {
-            grid.get(idx)
-                .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
-        };
+        let visible =
+            |idx: usize| !hidden.get(idx).copied().unwrap_or(true) && grid.get(idx).is_some();
         let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
         selected_idx
@@ -1738,7 +1747,7 @@ fn calendar_month_view<H: UiHost>(
                 let week_idx = idx / 7;
                 let is_last_week = week_idx + 1 >= week_count;
                 let row_bottom_gap = if is_last_week { Px(0.0) } else { week_row_gap };
-                let is_hidden = (!day.in_month && !show_outside_days) || !in_bounds(day.date);
+                let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                 if is_hidden {
                     return calendar_hidden_day_cell(
                         cx,
@@ -1767,7 +1776,6 @@ fn calendar_month_view<H: UiHost>(
                     &selected_model,
                     required,
                     close_on_select.clone(),
-                    disabled_predicate.clone(),
                     initial_focus_out.clone(),
                 )
             })
@@ -2085,7 +2093,6 @@ fn calendar_day_cell<H: UiHost>(
     selected_model: &Model<Option<Date>>,
     required: bool,
     close_on_select: Option<Model<bool>>,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
@@ -2137,15 +2144,9 @@ fn calendar_day_cell<H: UiHost>(
 
         let selected_model = selected_model.clone();
         let close_on_select = close_on_select.clone();
-        let disabled_predicate = disabled_predicate.clone();
 
         cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
             if disabled {
-                return;
-            }
-            if let Some(pred) = disabled_predicate.as_ref()
-                && pred(date)
-            {
                 return;
             }
 
