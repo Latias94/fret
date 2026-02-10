@@ -1063,6 +1063,27 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_MODEL_SELECTOR_DEMO: &str = r#"
+## AI model selector (demo)
+
+This page is a small demo for the AI Elements-aligned `ModelSelector` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- dialog open/close behavior driven by an app-owned model,
+- cmdk-style filtering and keyboard navigation via `CommandPalette`,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_MODEL_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    ModelSelector, ModelSelectorContent, ModelSelectorLogo, ModelSelectorLogoGroup, ModelSelectorName,
+};
+use fret_ui_shadcn::{CommandPalette, CommandItem};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

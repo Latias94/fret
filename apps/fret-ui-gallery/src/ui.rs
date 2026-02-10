@@ -731,6 +731,7 @@ fn page_preview(
         PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
+        PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20625,6 +20626,191 @@ fn preview_ai_plan_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Plan (AI Elements)"), plan],
+    )]
+}
+
+fn preview_ai_model_selector_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui::Invalidation;
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct DemoState {
+        open: Option<Model<bool>>,
+        query: Option<Model<String>>,
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let needs_init = cx.with_state(DemoState::default, |st| {
+        st.open.is_none() || st.query.is_none() || st.selected.is_none()
+    });
+    if needs_init {
+        let open = cx.app.models_mut().insert(false);
+        let query = cx.app.models_mut().insert(String::new());
+        let selected = cx.app.models_mut().insert(None);
+        cx.with_state(DemoState::default, move |st| {
+            st.open = Some(open.clone());
+            st.query = Some(query.clone());
+            st.selected = Some(selected.clone());
+        });
+    }
+
+    let (open, query, selected) = cx.with_state(DemoState::default, |st| {
+        (
+            st.open.clone().expect("open model"),
+            st.query.clone().expect("query model"),
+            st.selected.clone().expect("selected model"),
+        )
+    });
+
+    let selected_now = cx
+        .get_model_cloned(&selected, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_marker = cx
+        .text(format!(
+            "selected={}",
+            selected_now.as_deref().unwrap_or("<none>")
+        ))
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id(if selected_now.is_some() {
+                    "ui-ai-model-selector-selected-some"
+                } else {
+                    "ui-ai-model-selector-selected-none"
+                }),
+        );
+
+    let selector = ui_ai::ModelSelector::new()
+        .open_model(open.clone())
+        .into_element(
+            cx,
+            move |cx, open| {
+                let open_for_activate = open.clone();
+                let on_activate: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                    });
+
+                shadcn::Button::new("Select a model")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-ai-model-selector-trigger")
+                    .on_activate(on_activate)
+                    .into_element(cx)
+            },
+            move |cx, open| {
+                let make_on_select = |value: Arc<str>| -> fret_ui::action::OnActivate {
+                    let open_for_select = open.clone();
+                    let query_for_select = query.clone();
+                    let selected_for_select = selected.clone();
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&selected_for_select, |v| *v = Some(value.clone()));
+                        let _ = host.models_mut().update(&open_for_select, |v| *v = false);
+                        let _ = host.models_mut().update(&query_for_select, |v| v.clear());
+                        host.request_redraw(action_cx.window);
+                    })
+                };
+
+                let row_children = |cx: &mut ElementContext<'_, App>,
+                                    provider: &'static str,
+                                    name: &'static str| {
+                    let logos =
+                        ui_ai::ModelSelectorLogoGroup::new([ui_ai::ModelSelectorLogo::new(
+                            provider,
+                        )
+                        .into_element(cx)])
+                        .into_element(cx);
+
+                    let label = ui_ai::ModelSelectorName::new(name).into_element(cx);
+
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N2)
+                            .items_center(),
+                        move |_cx| vec![logos, label],
+                    )
+                };
+
+                let entries: Vec<shadcn::CommandEntry> = vec![
+                    shadcn::CommandEntry::Group(
+                        shadcn::CommandGroup::new([
+                            shadcn::CommandItem::new("gpt-4o")
+                                .value("openai:gpt-4o")
+                                .keywords(["openai", "gpt", "4o"])
+                                .on_select_action(make_on_select(Arc::from("openai:gpt-4o")))
+                                .children([row_children(cx, "openai", "gpt-4o")]),
+                            shadcn::CommandItem::new("gpt-4.1")
+                                .value("openai:gpt-4.1")
+                                .keywords(["openai", "gpt", "4.1"])
+                                .on_select_action(make_on_select(Arc::from("openai:gpt-4.1")))
+                                .children([row_children(cx, "openai", "gpt-4.1")]),
+                        ])
+                        .heading("OpenAI"),
+                    ),
+                    shadcn::CommandEntry::Group(
+                        shadcn::CommandGroup::new([shadcn::CommandItem::new("claude-3.5-sonnet")
+                            .value("anthropic:claude-3.5-sonnet")
+                            .keywords(["anthropic", "claude", "sonnet"])
+                            .on_select_action(make_on_select(Arc::from(
+                                "anthropic:claude-3.5-sonnet",
+                            )))
+                            .children([row_children(cx, "anthropic", "claude-3.5-sonnet")])])
+                        .heading("Anthropic"),
+                    ),
+                    shadcn::CommandEntry::Group(
+                        shadcn::CommandGroup::new([shadcn::CommandItem::new("gemini-2.0-flash")
+                            .value("google:gemini-2.0-flash")
+                            .keywords(["google", "gemini", "flash"])
+                            .on_select_action(make_on_select(Arc::from("google:gemini-2.0-flash")))
+                            .children([row_children(cx, "google", "gemini-2.0-flash")])])
+                        .heading("Google"),
+                    ),
+                ];
+
+                let palette = shadcn::CommandPalette::new(query.clone(), Vec::new())
+                    .command_dialog_defaults()
+                    .placeholder("Search models...")
+                    .a11y_label("Search models")
+                    .entries(entries)
+                    .test_id_input("ui-ai-model-selector-input")
+                    .test_id_item_prefix("ui-ai-model-selector-item-")
+                    .into_element(cx);
+
+                ui_ai::ModelSelectorContent::new([palette])
+                    .title("Model Selector")
+                    .test_id_root("ui-ai-model-selector-content")
+                    .refine_command_style(
+                        ChromeRefinement::default()
+                            .border_width(Px(0.0))
+                            .bg(ColorRef::Color(fret_core::Color::TRANSPARENT)),
+                    )
+                    .into_element(cx)
+            },
+        );
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Model Selector (AI Elements)"),
+                selector,
+                selected_marker,
+            ]
+        },
     )]
 }
 
