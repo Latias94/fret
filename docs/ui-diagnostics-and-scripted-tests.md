@@ -632,6 +632,7 @@ you can gate on forwarded viewport input events exported in `bundle.json`:
 - `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
 - `--check-dock-drag-cross-window-max N` fails if more than `N` snapshots have `debug.docking_interaction.dock_drag.cross_window_hover=true` (helps catch “hover leaked to another OS window” regressions during docking tear-off).
 - `--check-dock-drag-source-windows-min N` counts distinct `debug.docking_interaction.dock_drag.source_window` values (helps ensure a scenario actually exercised multiple windows).
+- `--check-dock-drag-current-windows-min N` counts distinct `debug.docking_interaction.dock_drag.current_window` values (stronger signal that a dock drag actually hovered across OS windows).
 - `--check-dock-drop-resolve-min N` counts snapshots where `debug.docking_interaction.dock_drop_resolve` is present (helps ensure a scenario actually exercised drop-target resolution).
 - `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 

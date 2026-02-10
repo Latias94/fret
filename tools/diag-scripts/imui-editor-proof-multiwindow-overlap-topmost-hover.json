@@ -21,11 +21,12 @@
       "timeout_frames": 240
     },
     {
-      "type": "drag_pointer",
+      "type": "drag_pointer_path",
       "target": { "kind": "test_id", "id": "imui-editor-proof.tab-drag-anchor" },
-      "delta_x": 0.0,
-      "delta_y": 240.0,
-      "steps": 28
+      "segments": [
+        { "delta_x": 240.0, "delta_y": 0.0, "steps": 24 },
+        { "delta_x": 0.0, "delta_y": 240.0, "steps": 24 }
+      ]
     },
     { "type": "wait_frames", "n": 10 },
     {

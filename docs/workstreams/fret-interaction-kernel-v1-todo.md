@@ -57,4 +57,6 @@ This is a working checklist for the `fret-interaction` kernel workstream.
     `tools/diag_gate_interaction_kernel_v1.ps1` or a dedicated docking gate).
   - Evidence: `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`
   - Evidence: `tools/diag_gate_interaction_kernel_v1.ps1` (runs the script with `--check-dock-drag-min`).
-  - Follow-up: add a deterministic cross-window hover gate (e.g. require some `dock_drag.cross_window_hover=true` frames) once the repro reliably crosses windows.
+  - Follow-up: once the repro reliably hovers across OS windows, strengthen the gate:
+    - prefer `--check-dock-drag-current-windows-min 2` (distinct `dock_drag.current_window` values)
+      as the primary “cross-window hover happened” signal.

@@ -12,7 +12,10 @@ param(
     [string] $OutDir = "target/fret-diag-interaction-kernel-v1",
     [int] $TimeoutMs = 180000,
     [int] $PollMs = 50,
-    [switch] $Release
+    [switch] $Release,
+    # Optional: strengthen the M3 repro by requiring that a dock drag hovered across OS windows.
+    # This can be flaky until the multi-window overlap choreography is fully deterministic.
+    [switch] $StrongDockHover
 )
 
 Set-StrictMode -Version Latest
@@ -104,12 +107,18 @@ try {
         throw "imui editor proof demo exe not found: $editorExe"
     }
 
+    $m3Extra = @()
+    if ($StrongDockHover) {
+        $m3Extra += @("--check-dock-drag-current-windows-min", "2")
+    }
+
     & cargo run -j 1 -p fretboard -- `
         diag run tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json `
         --dir (Join-Path $runOutDir "imui-editor-proof-multiwindow-overlap-topmost-hover") `
         --timeout-ms $TimeoutMs `
         --poll-ms $PollMs `
         --check-dock-drag-min 1 `
+        @m3Extra `
         --pack `
         --env "FRET_DIAG_SEMANTICS=1" `
         --launch -- $editorExe

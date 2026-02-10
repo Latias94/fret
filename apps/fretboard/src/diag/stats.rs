@@ -7198,6 +7198,78 @@ pub(super) fn check_bundle_for_dock_drag_source_windows_min_json(
     ))
 }
 
+pub(super) fn check_bundle_for_dock_drag_current_windows_min(
+    bundle_path: &Path,
+    min_current_windows: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_dock_drag_current_windows_min_json(
+        &bundle,
+        bundle_path,
+        min_current_windows,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_dock_drag_current_windows_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_current_windows: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut current_windows: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(dock_drag) = s
+                .get("debug")
+                .and_then(|v| v.get("docking_interaction"))
+                .and_then(|v| v.get("dock_drag"))
+            else {
+                continue;
+            };
+            let Some(current_window) = dock_drag.get("current_window").and_then(|v| v.as_u64())
+            else {
+                continue;
+            };
+
+            current_windows.insert(current_window);
+            if current_windows.len() as u64 >= min_current_windows {
+                return Ok(());
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_current_windows} distinct dock_drag.current_window values, got {} \
+(warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) bundle: {}",
+        current_windows.len(),
+        bundle_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_dock_drop_resolve_min(
     bundle_path: &Path,
     min_active_frames: u64,

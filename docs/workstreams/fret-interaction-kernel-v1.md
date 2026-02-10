@@ -145,3 +145,4 @@ For a concrete checklist and gates, see:
 Preferred one-shot gate script for this workstream:
 
 - `pwsh tools/diag_gate_interaction_kernel_v1.ps1`
+  - Optional (stronger M3 check): `-StrongDockHover` (enforces `--check-dock-drag-current-windows-min 2`).

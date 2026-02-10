@@ -52,7 +52,13 @@ Deliverables:
 - Identify and unify the minimum required primitives:
   - drag capture choreography (transparent moving window),
   - hit-test/hover arbitration hooks.
+- A deterministic scripted repro exists for multi-window hover arbitration while dragging.
+  - Evidence: `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`
 
 Exit criteria:
 
 - A diag repro exists in `tools/diag-scripts/` that guards the parity behavior under a deterministic script.
+- Baseline gate passes (proves the scenario exercised docking drag):
+  - `--check-dock-drag-min 1`
+- Strengthened gate is tracked as the follow-up once the repro reliably crosses windows:
+  - `--check-dock-drag-current-windows-min 2`
