@@ -1,6 +1,6 @@
 # ADR 1180: Link Semantics and `href` Activation (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -101,10 +101,18 @@ Recommended v1 consolidation points:
 - Router UI helpers can become a11y-correct by default, and shadcn `.href(...)` can be aligned
   without bespoke key handling.
 
+## Implementation (evidence)
+
+- Router links stamp `SemanticsRole::Link`, expose `href` as semantics `value`, and use Enter-only key activation:
+  `ecosystem/fret-router-ui/src/lib.rs` (`router_link_with_props`).
+- Markdown link activation via `on_link_activate` stamps link semantics and uses Enter-only key activation:
+  `ecosystem/fret-markdown/src/lib.rs` (`render_inline_text_token` link path and image placeholder link path).
+- shadcn sidebar `.href(...)` surfaces link semantics (role + href value) and is regression-tested:
+  `ecosystem/fret-ui-shadcn/src/sidebar.rs` (href semantics tests).
+
 ## References
 
 - `crates/fret-core/src/semantics.rs` (`SemanticsRole::Link`, `SemanticsNode.value`)
 - ADR 1166: `docs/adr/1166-semantics-decoration-states-and-relations-v2.md`
 - Router UI workstream: `docs/workstreams/router-ui-v1.md`
 - GPUI reference link element (in-repo snapshot): `repo-ref/gpui-component/crates/ui/src/link.rs`
-
