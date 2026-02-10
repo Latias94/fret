@@ -827,6 +827,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 layout: LayoutStyle::default(),
                 enabled,
                 focusable: true,
+                key_activation: Default::default(),
                 focus_ring: Some(ring),
                 focus_ring_bounds: None,
                 a11y: PressableA11y {
@@ -1367,6 +1368,7 @@ fn render_menu_item<H: UiHost>(
             layout,
             enabled: !disabled,
             focusable: !disabled,
+            key_activation: Default::default(),
             focus_ring: None,
             focus_ring_bounds: None,
             a11y: PressableA11y {

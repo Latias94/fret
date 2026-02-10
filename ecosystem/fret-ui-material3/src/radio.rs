@@ -723,6 +723,7 @@ impl Radio {
                 let pressable_props = PressableProps {
                     enabled,
                     focusable,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::RadioButton),
                         label: self.a11y_label.clone(),

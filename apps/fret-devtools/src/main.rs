@@ -2147,7 +2147,11 @@ fn on_command(
                 push_log(app, &st.log_lines, "open viewer refused (empty url)");
                 return;
             }
-            app.push_effect(Effect::OpenUrl { url });
+            app.push_effect(Effect::OpenUrl {
+                url,
+                target: None,
+                rel: None,
+            });
         }
         CMD_COPY_PACK_PATH => {
             let Some(path) = app

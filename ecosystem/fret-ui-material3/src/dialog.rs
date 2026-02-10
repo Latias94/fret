@@ -175,6 +175,7 @@ impl DialogAction {
             let mut props = PressableProps {
                 enabled,
                 focusable: enabled,
+                key_activation: Default::default(),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
                     label: a11y_label.clone().or_else(|| Some(label.clone())),

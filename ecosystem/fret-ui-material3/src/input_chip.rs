@@ -253,6 +253,7 @@ impl InputChip {
                 let pressable_props = PressableProps {
                     enabled,
                     focusable,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),
@@ -655,6 +656,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             let pressable_props = PressableProps {
                 enabled,
                 focusable: false,
+                key_activation: Default::default(),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
                     label: Some(a11y_label),

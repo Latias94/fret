@@ -445,6 +445,7 @@ fn material_menu_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
+            key_activation: Default::default(),
             a11y,
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();

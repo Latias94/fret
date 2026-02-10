@@ -776,6 +776,7 @@ fn select_trigger_element<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y,
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
@@ -1773,6 +1774,7 @@ fn select_list_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
+            key_activation: Default::default(),
             a11y,
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
