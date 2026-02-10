@@ -68,7 +68,8 @@ pub use semantics::AnyElementSemanticsExt;
 pub use theme_access::ElementContextThemeExt;
 pub use viewport_queries::tailwind as viewport_tailwind;
 pub use viewport_queries::{
-    ViewportQueryHysteresis, viewport_breakpoints, viewport_width_at_least,
+    ViewportQueryHysteresis, viewport_breakpoints, viewport_height_at_least,
+    viewport_height_breakpoints, viewport_width_at_least,
 };
 
 #[cfg(test)]
