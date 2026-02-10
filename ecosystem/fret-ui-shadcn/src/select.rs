@@ -1794,9 +1794,11 @@ fn select_impl<H: UiHost>(
                                 .unwrap_or((false, false));
                             if debug_item_aligned {
                                 eprintln!("select item-aligned theme min_width={}", min_width.0);
+                                let window_bounds =
+                                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                                 eprintln!(
                                     "select item-aligned window bounds={:?} trigger={:?}",
-                                    cx.bounds, anchor
+                                    window_bounds, anchor
                                 );
                                 let dbg = |label: &str, id: GlobalElementId| {
                                     let b = overlay::anchor_bounds_for_element(cx, id);
@@ -1814,7 +1816,7 @@ fn select_impl<H: UiHost>(
                             }
                             Some(radix_select::SelectItemAlignedElementInputs {
                                 direction,
-                                window: cx.bounds,
+                                window: cx.environment_viewport_bounds(fret_ui::Invalidation::Layout),
                                 trigger: anchor,
                                 content_min_width: min_width,
                                 content_border_top: border_width,
