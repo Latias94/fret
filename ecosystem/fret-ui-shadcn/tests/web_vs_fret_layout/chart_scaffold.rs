@@ -4,12 +4,6 @@ use super::chart::{
 use super::*;
 
 #[derive(Debug, Clone, Deserialize)]
-struct FixtureSuite<T> {
-    schema_version: u32,
-    cases: Vec<T>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 struct LayoutChartScaffoldCase {
     id: String,
     web_name: String,

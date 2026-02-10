@@ -1,12 +1,6 @@
 use super::*;
 
 #[derive(Debug, Clone, Deserialize)]
-struct FixtureSuite<T> {
-    schema_version: u32,
-    cases: Vec<T>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 struct LayoutNativeSelectCase {
     id: String,
     web_name: String,
