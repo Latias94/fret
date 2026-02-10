@@ -113,3 +113,6 @@ Active workstreams:
 - `docs/workstreams/router-ui-v1-todo.md`
 - `docs/workstreams/image-support-v1.md`
 - `docs/workstreams/image-support-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1.md`
+- `docs/workstreams/creative-recipes-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1-milestones.md`

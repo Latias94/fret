@@ -224,6 +224,19 @@ When a recipe degrades, ecosystems should be able to report it without wiring be
 This does not need to be perfect in v1, but the seam must exist before widespread ecosystem
 adoption, otherwise “silent fallback” becomes impossible to debug.
 
+### E) Determinism guidelines (recommended)
+
+Creative recipes should avoid hidden non-determinism that makes diagnostics and perf baselines
+flaky:
+
+- Avoid calling `rand::random()` (or equivalent) directly inside view building / paint without an
+  explicit seed.
+- Prefer explicit seeds in params for procedural looks (ADR 1183).
+- When randomness is desired for “sparkles”-class ambient effects, provide a recipe parameter or
+  token key that can pin a seed in diagnostics runs.
+- Treat wall-clock time as forbidden input for visuals; use the frame clock snapshot (ADR 1179)
+  and request frames explicitly (ADR 0034).
+
 ## Consequences
 
 - Component authors can build creative UIs by composing small recipes instead of assembling raw
