@@ -13,9 +13,8 @@ param(
     [int] $TimeoutMs = 180000,
     [int] $PollMs = 50,
     [switch] $Release,
-    # Deprecated: the M3 repro now enforces the strong hover gate by default.
+    # The M3 repro enforces the strong hover gate by default.
     # Use `-WeakDockHover` to skip it while iterating locally.
-    [switch] $StrongDockHover,
     [switch] $WeakDockHover
 )
 

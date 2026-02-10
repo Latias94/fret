@@ -1437,27 +1437,53 @@ impl UiDiagnosticsService {
 
                 let done = push_drag_pointer_path_playback_frame(&mut state, &mut output.events);
 
-                if let Some(sel) = state.last_internal_drag_target.as_ref()
-                    && let Some(route) = self.resolve_internal_drag_route_for_selector(sel)
-                    && route.window != window
-                    && let Some(event) = output.events.pop()
-                {
-                    match event {
-                        Event::InternalDrag(mut e) => {
-                            e.position = route.position;
-                            if let Some(drag) = app.drag_mut(e.pointer_id)
-                                && drag.cross_window_hover
-                            {
-                                drag.current_window = route.window;
-                                drag.position = route.position;
-                            }
-                            self.enqueue_script_injected_event(
-                                app,
-                                route.window,
-                                Event::InternalDrag(e),
-                            );
+                if let Some(sel) = state.last_internal_drag_target.as_ref() {
+                    let Some(route) = self.resolve_internal_drag_route_for_selector(sel) else {
+                        output.request_redraw = true;
+                        let label = format!(
+                            "script-step-{step_index:04}-drag_pointer_path-internal-drag-target-unresolved"
+                        );
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
                         }
-                        other => output.events.push(other),
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some(
+                                "drag_pointer_path_internal_drag_target_unresolved".to_string(),
+                            ),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+
+                    if route.window != window
+                        && let Some(event) = output.events.pop()
+                    {
+                        match event {
+                            Event::InternalDrag(mut e) => {
+                                e.position = route.position;
+                                if let Some(drag) = app.drag_mut(e.pointer_id)
+                                    && drag.cross_window_hover
+                                {
+                                    drag.current_window = route.window;
+                                    drag.position = route.position;
+                                }
+                                self.enqueue_script_injected_event(
+                                    app,
+                                    route.window,
+                                    Event::InternalDrag(e),
+                                );
+                            }
+                            other => output.events.push(other),
+                        }
                     }
                 }
                 if done {
