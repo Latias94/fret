@@ -111,10 +111,13 @@ Acceptance criteria:
 - `FileTree` preserves keyed identity (no state jumping) and has a clear large-tree strategy
   (prefer `fret-ui-kit` virtualization/retained helpers).
 
-Status: In progress (FileTree v0 + CodeBlock/Snippet v0 shipped; parity pending).
+Status: In progress (FileTree is virtualized + gated; CodeBlock/Snippet parity pending).
 Notes:
 
-- `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gates (`ui-gallery-ai-file-tree-demo-toggle.json`, `ui-gallery-ai-file-tree-demo-actions.json`).
+- `FileTree` is ported with UI Kit flatten + `VirtualList` (virtualized under height constraints) and gated:
+  - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
+  - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
+  - `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json`
 - `CodeBlock` / `Snippet` v0 are ported with a UI Gallery demo + diag gate (`ui-gallery-ai-code-block-demo-copy.json`).
 - `Artifact` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-artifact-demo-close-toggle.json`).
 - `Shimmer` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-shimmer-demo-pixels-changed.json`).

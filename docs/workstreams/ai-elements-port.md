@@ -200,6 +200,7 @@ P1 (AI Elements “extras” surfaces):
 - **FileTree audit + extension seams**:
   - re-check `FileTree / Folder / File / Icon / Name` decomposition against upstream `file-tree.tsx` and local reference apps.
   - document extension points (custom row actions, selection model, large-tree strategy).
+  - large-tree strategy is implemented and gated (`tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json`); remaining work focuses on visual/interaction parity refinements.
 
 P2 (platform capability parity, if required by upstream behavior):
 

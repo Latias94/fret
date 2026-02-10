@@ -172,6 +172,7 @@ Existing gates (UI Gallery `ai_file_tree_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
 - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
+- `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json`
 
 Existing gates (UI Gallery `ai_schema_display_demo`):
 
@@ -182,7 +183,9 @@ Existing gates (UI Gallery `ai_schema_display_demo`):
 Prioritize thin adapters over new engines:
 
 - [~] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
-- [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
+- [x] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
+  - Notes: `fret-ui-ai::FileTree` now flattens items via UI Kit `TreeItem` + `flatten_tree`, and renders via `VirtualList` when the host provides a height constraint.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json` (expand → scroll to row → click select).
 - [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
