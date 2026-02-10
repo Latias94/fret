@@ -22,6 +22,33 @@ use crate::elements::attachments::{
 };
 use crate::model::item_key_from_external_id;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromptInputErrorCode {
+    Accept,
+    MaxFiles,
+    MaxFileSize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PromptInputError {
+    pub code: PromptInputErrorCode,
+    pub message: Arc<str>,
+}
+
+impl PromptInputError {
+    pub fn new(code: PromptInputErrorCode, message: impl Into<Arc<str>>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+pub type OnPromptInputError = Arc<
+    dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, PromptInputError)
+        + 'static,
+>;
+
 #[derive(Debug, Clone)]
 pub struct PromptInputController {
     pub text: Model<String>,
@@ -47,6 +74,11 @@ pub struct PromptInputConfig {
     pub on_send: Option<OnActivate>,
     pub on_stop: Option<OnActivate>,
     pub on_add_attachments: Option<OnActivate>,
+    pub accept: Option<Arc<str>>,
+    pub multiple: bool,
+    pub max_files: Option<usize>,
+    pub max_file_size_bytes: Option<u64>,
+    pub on_error: Option<OnPromptInputError>,
     pub test_id_root: Option<Arc<str>>,
     pub test_id_textarea: Option<Arc<str>>,
     pub test_id_send: Option<Arc<str>>,
@@ -273,6 +305,221 @@ fn prompt_input_control_key_handler(
     })
 }
 
+fn prompt_input_file_extension_lower(name: &str) -> Option<String> {
+    let (_, ext) = name.rsplit_once('.')?;
+    let ext = ext.trim();
+    if ext.is_empty() {
+        return None;
+    }
+    Some(ext.to_ascii_lowercase())
+}
+
+fn prompt_input_accept_matches(accept: &str, file_name: &str, media_type: Option<&str>) -> bool {
+    let accept = accept.trim();
+    if accept.is_empty() {
+        return true;
+    }
+
+    let ext_lower = prompt_input_file_extension_lower(file_name);
+    let media_type = media_type.map(str::trim).filter(|s| !s.is_empty());
+
+    // Minimal best-effort matcher:
+    // - exact MIME (`image/png`)
+    // - wildcard MIME (`image/*`) via `media_type` prefix, or common extension sets when MIME is absent
+    // - extension patterns (`.png`)
+    let patterns = accept
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty());
+
+    for pattern in patterns {
+        if pattern.starts_with('.') {
+            if let Some(ext_lower) = ext_lower.as_deref() {
+                if pattern[1..].eq_ignore_ascii_case(ext_lower) {
+                    return true;
+                }
+            }
+            continue;
+        }
+
+        if let Some(media_type) = media_type {
+            if pattern.ends_with("/*") {
+                let prefix = &pattern[..pattern.len().saturating_sub(1)];
+                if media_type.starts_with(prefix) {
+                    return true;
+                }
+            } else if pattern.contains('/') && media_type.eq_ignore_ascii_case(pattern) {
+                return true;
+            }
+            continue;
+        }
+
+        if pattern.eq_ignore_ascii_case("image/*") {
+            if let Some(ext_lower) = ext_lower.as_deref() {
+                if matches!(
+                    ext_lower,
+                    "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "svg"
+                ) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn prompt_input_emit_error(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    on_error: Option<&OnPromptInputError>,
+    code: PromptInputErrorCode,
+    message: &'static str,
+) {
+    if let Some(on_error) = on_error {
+        on_error(host, action_cx, PromptInputError::new(code, message));
+    }
+}
+
+fn prompt_input_handle_drop_files(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    attachments_model: &Model<Vec<AttachmentData>>,
+    drop_files: &fret_core::ExternalDragFiles,
+    accept: Option<&str>,
+    max_files: Option<usize>,
+    max_file_size_bytes: Option<u64>,
+    on_error: Option<&OnPromptInputError>,
+) -> bool {
+    if drop_files.files.is_empty() {
+        host.push_effect(Effect::ExternalDropRelease {
+            token: drop_files.token,
+        });
+        return true;
+    }
+
+    let accepted: Vec<(usize, &fret_core::ExternalDragFile)> = drop_files
+        .files
+        .iter()
+        .enumerate()
+        .filter(|(_ix, f)| {
+            accept
+                .map(|accept| prompt_input_accept_matches(accept, &f.name, f.media_type.as_deref()))
+                .unwrap_or(true)
+        })
+        .collect();
+
+    if !drop_files.files.is_empty() && accepted.is_empty() {
+        prompt_input_emit_error(
+            host,
+            action_cx,
+            on_error,
+            PromptInputErrorCode::Accept,
+            "No files match the accepted types.",
+        );
+        host.push_effect(Effect::ExternalDropRelease {
+            token: drop_files.token,
+        });
+        host.notify(action_cx);
+        return true;
+    }
+
+    let accepted_len = accepted.len();
+    let sized: Vec<(usize, &fret_core::ExternalDragFile)> = accepted
+        .into_iter()
+        .filter(|(_ix, f)| match max_file_size_bytes {
+            Some(max) => f.size_bytes.map(|s| s <= max).unwrap_or(true),
+            None => true,
+        })
+        .collect();
+
+    if accepted_len > 0 && max_file_size_bytes.is_some() && sized.is_empty() {
+        // If `max_file_size_bytes` was set and we filtered everything out, mirror upstream.
+        prompt_input_emit_error(
+            host,
+            action_cx,
+            on_error,
+            PromptInputErrorCode::MaxFileSize,
+            "All files exceed the maximum size.",
+        );
+        host.push_effect(Effect::ExternalDropRelease {
+            token: drop_files.token,
+        });
+        host.notify(action_cx);
+        return true;
+    }
+
+    let existing_len = host
+        .models_mut()
+        .read(attachments_model, |v| v.len())
+        .ok()
+        .unwrap_or(0);
+    let capacity = max_files
+        .map(|m| m.saturating_sub(existing_len))
+        .unwrap_or(usize::MAX);
+
+    if capacity == 0 && !sized.is_empty() {
+        prompt_input_emit_error(
+            host,
+            action_cx,
+            on_error,
+            PromptInputErrorCode::MaxFiles,
+            "Too many files. Some were not added.",
+        );
+        host.push_effect(Effect::ExternalDropRelease {
+            token: drop_files.token,
+        });
+        host.notify(action_cx);
+        return true;
+    }
+
+    let token_id = drop_files.token.0;
+    let dropped: Vec<AttachmentData> = sized
+        .iter()
+        .take(capacity)
+        .map(|(ix, f)| {
+            let ix = *ix;
+            let id = Arc::<str>::from(format!("drop-{token_id}-{ix}"));
+            let mut file = AttachmentFileData::new(id).filename(Arc::<str>::from(f.name.clone()));
+            if let Some(media_type) = f.media_type.as_deref() {
+                file = file.media_type(Arc::<str>::from(media_type.to_owned()));
+            }
+            if let Some(size_bytes) = f.size_bytes {
+                file = file.size_bytes(size_bytes);
+            }
+            AttachmentData::File(file)
+        })
+        .collect();
+
+    let _ = host.models_mut().update(attachments_model, |v| {
+        for item in &dropped {
+            let id = item.id();
+            if v.iter()
+                .any(|existing| existing.id().as_ref() == id.as_ref())
+            {
+                continue;
+            }
+            v.push(item.clone());
+        }
+    });
+
+    if max_files.is_some() && sized.len() > capacity {
+        prompt_input_emit_error(
+            host,
+            action_cx,
+            on_error,
+            PromptInputErrorCode::MaxFiles,
+            "Too many files. Some were not added.",
+        );
+    }
+
+    host.push_effect(Effect::ExternalDropRelease {
+        token: drop_files.token,
+    });
+    host.notify(action_cx);
+    true
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct PromptInputSlots {
     pub block_start: Vec<AnyElement>,
@@ -341,6 +588,11 @@ pub struct PromptInputRoot {
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
     on_add_attachments: Option<OnActivate>,
+    accept: Option<Arc<str>>,
+    multiple: bool,
+    max_files: Option<usize>,
+    max_file_size_bytes: Option<u64>,
+    on_error: Option<OnPromptInputError>,
     attachments: Option<Model<Vec<AttachmentData>>>,
     referenced_sources: Option<Model<Vec<AttachmentSourceDocumentData>>>,
     test_id_root: Option<Arc<str>>,
@@ -366,6 +618,11 @@ impl PromptInputRoot {
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            accept: None,
+            multiple: false,
+            max_files: None,
+            max_file_size_bytes: None,
+            on_error: None,
             attachments: None,
             referenced_sources: None,
             test_id_root: None,
@@ -391,6 +648,11 @@ impl PromptInputRoot {
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            accept: None,
+            multiple: false,
+            max_files: None,
+            max_file_size_bytes: None,
+            on_error: None,
             attachments: None,
             referenced_sources: None,
             test_id_root: None,
@@ -446,6 +708,31 @@ impl PromptInputRoot {
 
     pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
         self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
+    pub fn accept(mut self, accept: impl Into<Arc<str>>) -> Self {
+        self.accept = Some(accept.into());
+        self
+    }
+
+    pub fn multiple(mut self, multiple: bool) -> Self {
+        self.multiple = multiple;
+        self
+    }
+
+    pub fn max_files(mut self, max_files: usize) -> Self {
+        self.max_files = Some(max_files);
+        self
+    }
+
+    pub fn max_file_size_bytes(mut self, max_file_size_bytes: u64) -> Self {
+        self.max_file_size_bytes = Some(max_file_size_bytes);
+        self
+    }
+
+    pub fn on_error(mut self, on_error: OnPromptInputError) -> Self {
+        self.on_error = Some(on_error);
         self
     }
 
@@ -543,6 +830,11 @@ impl PromptInputRoot {
                 on_send: self.on_send.clone(),
                 on_stop: self.on_stop.clone(),
                 on_add_attachments: self.on_add_attachments.clone(),
+                accept: self.accept.clone(),
+                multiple: self.multiple,
+                max_files: self.max_files,
+                max_file_size_bytes: self.max_file_size_bytes,
+                on_error: self.on_error.clone(),
                 test_id_root: self.test_id_root.clone(),
                 test_id_textarea: self.test_id_textarea.clone(),
                 test_id_send: self.test_id_send.clone(),
@@ -658,6 +950,10 @@ impl PromptInputRoot {
                 .map(|attachments| -> OnExternalDrag {
                     let disabled = self.disabled;
                     let loading = self.loading;
+                    let accept = self.accept.clone();
+                    let max_files = self.max_files;
+                    let max_file_size_bytes = self.max_file_size_bytes;
+                    let on_error = self.on_error.clone();
                     Arc::new(
                         move |host: &mut dyn fret_ui::action::UiActionHost,
                               action_cx: fret_ui::action::ActionCx,
@@ -669,41 +965,16 @@ impl PromptInputRoot {
                             let ExternalDragKind::DropFiles(files) = &e.kind else {
                                 return false;
                             };
-                            if files.files.is_empty() {
-                                host.push_effect(Effect::ExternalDropRelease {
-                                    token: files.token,
-                                });
-                                return true;
-                            }
-
-                            let token_id = files.token.0;
-                            let dropped: Vec<AttachmentData> = files
-                                .files
-                                .iter()
-                                .enumerate()
-                                .map(|(i, f)| {
-                                    let id = Arc::<str>::from(format!("drop-{token_id}-{i}"));
-                                    AttachmentData::File(
-                                        AttachmentFileData::new(id).filename(f.name.clone()),
-                                    )
-                                })
-                                .collect();
-
-                            let _ = host.models_mut().update(&attachments, |v| {
-                                for item in &dropped {
-                                    let id = item.id();
-                                    if v.iter()
-                                        .any(|existing| existing.id().as_ref() == id.as_ref())
-                                    {
-                                        continue;
-                                    }
-                                    v.push(item.clone());
-                                }
-                            });
-
-                            host.push_effect(Effect::ExternalDropRelease { token: files.token });
-                            host.notify(action_cx);
-                            true
+                            prompt_input_handle_drop_files(
+                                host,
+                                action_cx,
+                                &attachments,
+                                files,
+                                accept.as_deref(),
+                                max_files,
+                                max_file_size_bytes,
+                                on_error.as_ref(),
+                            )
                         },
                     )
                 });
@@ -739,6 +1010,11 @@ pub struct PromptInput {
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
     on_add_attachments: Option<OnActivate>,
+    accept: Option<Arc<str>>,
+    multiple: bool,
+    max_files: Option<usize>,
+    max_file_size_bytes: Option<u64>,
+    on_error: Option<OnPromptInputError>,
     attachments: Option<Model<Vec<AttachmentData>>>,
     test_id_root: Option<Arc<str>>,
     test_id_textarea: Option<Arc<str>>,
@@ -799,6 +1075,11 @@ impl PromptInput {
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            accept: None,
+            multiple: false,
+            max_files: None,
+            max_file_size_bytes: None,
+            on_error: None,
             attachments: None,
             test_id_root: None,
             test_id_textarea: None,
@@ -822,6 +1103,11 @@ impl PromptInput {
             on_send: None,
             on_stop: None,
             on_add_attachments: None,
+            accept: None,
+            multiple: false,
+            max_files: None,
+            max_file_size_bytes: None,
+            on_error: None,
             attachments: None,
             test_id_root: None,
             test_id_textarea: None,
@@ -879,6 +1165,31 @@ impl PromptInput {
     /// emits an intent.
     pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
         self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
+    pub fn accept(mut self, accept: impl Into<Arc<str>>) -> Self {
+        self.accept = Some(accept.into());
+        self
+    }
+
+    pub fn multiple(mut self, multiple: bool) -> Self {
+        self.multiple = multiple;
+        self
+    }
+
+    pub fn max_files(mut self, max_files: usize) -> Self {
+        self.max_files = Some(max_files);
+        self
+    }
+
+    pub fn max_file_size_bytes(mut self, max_file_size_bytes: u64) -> Self {
+        self.max_file_size_bytes = Some(max_file_size_bytes);
+        self
+    }
+
+    pub fn on_error(mut self, on_error: OnPromptInputError) -> Self {
+        self.on_error = Some(on_error);
         self
     }
 
@@ -1293,6 +1604,10 @@ impl PromptInput {
                 .map(|attachments| -> OnExternalDrag {
                     let disabled = self.disabled;
                     let loading = self.loading;
+                    let accept = self.accept.clone();
+                    let max_files = self.max_files;
+                    let max_file_size_bytes = self.max_file_size_bytes;
+                    let on_error = self.on_error.clone();
                     Arc::new(
                         move |host: &mut dyn fret_ui::action::UiActionHost,
                               action_cx: fret_ui::action::ActionCx,
@@ -1304,41 +1619,16 @@ impl PromptInput {
                             let ExternalDragKind::DropFiles(files) = &e.kind else {
                                 return false;
                             };
-                            if files.files.is_empty() {
-                                host.push_effect(Effect::ExternalDropRelease {
-                                    token: files.token,
-                                });
-                                return true;
-                            }
-
-                            let token_id = files.token.0;
-                            let dropped: Vec<AttachmentData> = files
-                                .files
-                                .iter()
-                                .enumerate()
-                                .map(|(i, f)| {
-                                    let id = Arc::<str>::from(format!("drop-{token_id}-{i}"));
-                                    AttachmentData::File(
-                                        AttachmentFileData::new(id).filename(f.name.clone()),
-                                    )
-                                })
-                                .collect();
-
-                            let _ = host.models_mut().update(&attachments, |v| {
-                                for item in &dropped {
-                                    let id = item.id();
-                                    if v.iter()
-                                        .any(|existing| existing.id().as_ref() == id.as_ref())
-                                    {
-                                        continue;
-                                    }
-                                    v.push(item.clone());
-                                }
-                            });
-
-                            host.push_effect(Effect::ExternalDropRelease { token: files.token });
-                            host.notify(action_cx);
-                            true
+                            prompt_input_handle_drop_files(
+                                host,
+                                action_cx,
+                                &attachments,
+                                files,
+                                accept.as_deref(),
+                                max_files,
+                                max_file_size_bytes,
+                                on_error.as_ref(),
+                            )
                         },
                     )
                 });
@@ -2169,12 +2459,15 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
-        PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect,
-        Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+        AppWindowId, Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles,
+        ExternalDragKind, ExternalDropToken, Modifiers, MouseButton, PathCommand, PathConstraints,
+        PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType,
+        Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextService,
     };
     use fret_ui::UiTree;
     use fret_ui::declarative::render_root;
+    use std::sync::Mutex;
 
     #[derive(Default)]
     struct FakeServices;
@@ -2297,5 +2590,176 @@ mod tests {
             .read(&controlled_text, Clone::clone)
             .unwrap();
         assert_eq!(value, "a");
+    }
+
+    #[test]
+    fn prompt_input_drop_respects_max_files_and_emits_error() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let attachments = app.models_mut().insert(Vec::<AttachmentData>::new());
+        let errors: Arc<Mutex<Vec<PromptInputErrorCode>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_error: OnPromptInputError = {
+            let errors = errors.clone();
+            Arc::new(move |_host, _action_cx, err| {
+                errors.lock().unwrap().push(err.code);
+            })
+        };
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "prompt-input-drop-max-files-test",
+            |cx| {
+                vec![
+                    PromptInputRoot::new_uncontrolled()
+                        .attachments(attachments.clone())
+                        .max_files(1)
+                        .on_error(on_error.clone())
+                        .test_id_root("pi-root")
+                        .test_id_textarea("pi-textarea")
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::ExternalDrag(ExternalDragEvent {
+                position: Point::new(Px(10.0), Px(10.0)),
+                kind: ExternalDragKind::DropFiles(ExternalDragFiles {
+                    token: ExternalDropToken(123),
+                    files: vec![
+                        ExternalDragFile {
+                            name: "a.txt".to_string(),
+                            size_bytes: Some(1),
+                            media_type: Some("text/plain".to_string()),
+                        },
+                        ExternalDragFile {
+                            name: "b.txt".to_string(),
+                            size_bytes: Some(1),
+                            media_type: Some("text/plain".to_string()),
+                        },
+                    ],
+                }),
+            }),
+        );
+
+        let len = app
+            .models_mut()
+            .read(&attachments, |v| v.len())
+            .unwrap_or(0);
+        assert_eq!(len, 1);
+
+        let codes = errors.lock().unwrap().clone();
+        assert!(codes.contains(&PromptInputErrorCode::MaxFiles));
+    }
+
+    #[test]
+    fn prompt_input_drop_accept_and_size_errors_do_not_add_attachments() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let attachments = app.models_mut().insert(Vec::<AttachmentData>::new());
+        let errors: Arc<Mutex<Vec<PromptInputErrorCode>>> = Arc::new(Mutex::new(Vec::new()));
+        let on_error: OnPromptInputError = {
+            let errors = errors.clone();
+            Arc::new(move |_host, _action_cx, err| {
+                errors.lock().unwrap().push(err.code);
+            })
+        };
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "prompt-input-drop-accept-size-test",
+            |cx| {
+                vec![
+                    PromptInputRoot::new_uncontrolled()
+                        .attachments(attachments.clone())
+                        .accept(Arc::<str>::from("image/*"))
+                        .max_file_size_bytes(1)
+                        .on_error(on_error.clone())
+                        .test_id_root("pi-root")
+                        .test_id_textarea("pi-textarea")
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Accept error: media type is known and does not match `image/*`.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::ExternalDrag(ExternalDragEvent {
+                position: Point::new(Px(10.0), Px(10.0)),
+                kind: ExternalDragKind::DropFiles(ExternalDragFiles {
+                    token: ExternalDropToken(200),
+                    files: vec![ExternalDragFile {
+                        name: "note.txt".to_string(),
+                        size_bytes: Some(1),
+                        media_type: Some("text/plain".to_string()),
+                    }],
+                }),
+            }),
+        );
+
+        // Size error: accepted, but exceeds max file size.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::ExternalDrag(ExternalDragEvent {
+                position: Point::new(Px(10.0), Px(10.0)),
+                kind: ExternalDragKind::DropFiles(ExternalDragFiles {
+                    token: ExternalDropToken(201),
+                    files: vec![ExternalDragFile {
+                        name: "image.png".to_string(),
+                        size_bytes: Some(10),
+                        media_type: Some("image/png".to_string()),
+                    }],
+                }),
+            }),
+        );
+
+        let len = app
+            .models_mut()
+            .read(&attachments, |v| v.len())
+            .unwrap_or(0);
+        assert_eq!(len, 0);
+
+        let codes = errors.lock().unwrap().clone();
+        assert!(codes.contains(&PromptInputErrorCode::Accept));
+        assert!(codes.contains(&PromptInputErrorCode::MaxFileSize));
     }
 }

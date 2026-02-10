@@ -102,6 +102,7 @@ pub struct AttachmentFileData {
     pub id: Arc<str>,
     pub filename: Option<Arc<str>>,
     pub media_type: Option<Arc<str>>,
+    pub size_bytes: Option<u64>,
     pub preview_image: Option<ImageId>,
     pub url: Option<Arc<str>>,
 }
@@ -112,6 +113,7 @@ impl AttachmentFileData {
             id: id.into(),
             filename: None,
             media_type: None,
+            size_bytes: None,
             preview_image: None,
             url: None,
         }
@@ -124,6 +126,11 @@ impl AttachmentFileData {
 
     pub fn media_type(mut self, media_type: impl Into<Arc<str>>) -> Self {
         self.media_type = Some(media_type.into());
+        self
+    }
+
+    pub fn size_bytes(mut self, size_bytes: u64) -> Self {
+        self.size_bytes = Some(size_bytes);
         self
     }
 
