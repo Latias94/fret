@@ -41,7 +41,7 @@ Acceptance criteria:
 - A minimal set of representative tests can still run (at least one nextest gate in `fret-node` or `fret-chart`).
 
 Status: Done (2026-02-10).
-Evidence: `5cad446f`, `fcc14780`, merge `e9c13385`.
+Evidence: `5cad446f`, `fcc14780`, merges `e9c13385` + `8f174420`.
 
 ## M1 — Single-engine multi-grid viewport/layout contract
 
@@ -132,9 +132,9 @@ Acceptance criteria:
 - Headless goldens cover: multi-axis, multi-grid, transforms lineage, filter-mode edge cases.
 - Interactive demo(s) exist with a stable “what to validate” checklist.
 
-Status: In progress (2026-02-10).
+Status: Done (2026-02-10).
 
 Known remaining closure items:
 
-- document a “fast” nextest subset for local + CI,
+- document a “fast” nextest subset for local + CI (done via `tools/gates_delinea_fast.ps1`).
 - ensure the linking `fretboard diag` script remains runnable after refactors and `main` syncs.
