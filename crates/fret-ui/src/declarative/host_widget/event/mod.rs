@@ -3,6 +3,7 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 
 mod dismissible;
+mod external_drag_region;
 mod hooks;
 mod internal_drag_region;
 mod pointer_region;
@@ -149,6 +150,9 @@ impl ElementHostWidget {
             }
             ElementInstance::InternalDragRegion(props) => {
                 internal_drag_region::handle_internal_drag_region(self, cx, window, props, event);
+            }
+            ElementInstance::ExternalDragRegion(props) => {
+                external_drag_region::handle_external_drag_region(self, cx, window, props, event);
             }
             ElementInstance::RovingFlex(props) => {
                 roving_flex::handle_roving_flex(self, cx, window, props, event);

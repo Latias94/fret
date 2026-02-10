@@ -1310,6 +1310,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
         ElementKind::TextInputRegion(p) => ElementInstance::TextInputRegion(p),
         ElementKind::InternalDragRegion(p) => ElementInstance::InternalDragRegion(p),
+        ElementKind::ExternalDragRegion(p) => ElementInstance::ExternalDragRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Flex(FlexProps {

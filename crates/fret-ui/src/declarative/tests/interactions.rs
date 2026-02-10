@@ -635,6 +635,77 @@ fn declarative_internal_drag_region_can_handle_internal_drag_events() {
 }
 
 #[test]
+fn declarative_external_drag_region_can_handle_external_drag_events() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let token = fret_core::ExternalDropToken(0x465245545F455852); // "FRET_EXR"
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "external-drag-region-basic",
+        |cx| {
+            let counter = counter.clone();
+            let mut props = crate::element::ExternalDragRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.external_drag_region(props, |cx| {
+                cx.external_drag_region_on_external_drag(Arc::new(
+                    move |host: &mut dyn crate::action::UiActionHost,
+                          _acx: crate::action::ActionCx,
+                          drag: &fret_core::ExternalDragEvent| {
+                        let fret_core::ExternalDragKind::DropFiles(files) = &drag.kind else {
+                            return false;
+                        };
+                        if files.token != token {
+                            return false;
+                        }
+                        let _ = host
+                            .models_mut()
+                            .update(&counter, |v: &mut u32| *v = v.saturating_add(1));
+                        true
+                    },
+                ));
+                vec![cx.text("drop target")]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::ExternalDrag(fret_core::ExternalDragEvent {
+            position: Point::new(Px(10.0), Px(10.0)),
+            kind: fret_core::ExternalDragKind::DropFiles(fret_core::ExternalDragFiles {
+                token,
+                files: vec![fret_core::ExternalDragFile {
+                    name: "hello.txt".to_string(),
+                }],
+            }),
+        }),
+    );
+
+    let value = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
+    assert_eq!(value, 1);
+}
+
+#[test]
 fn selectable_text_drag_autoscrolls_scroll_container() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

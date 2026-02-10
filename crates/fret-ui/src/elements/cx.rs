@@ -1463,6 +1463,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn external_drag_region<I>(
+        &mut self,
+        props: crate::element::ExternalDragRegionProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.external_drag_region_clear_on_external_drag();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::ExternalDragRegion(props), children)
+        })
+    }
+
+    pub fn external_drag_region_on_external_drag(
+        &mut self,
+        handler: crate::action::OnExternalDrag,
+    ) {
+        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+            hooks.on_external_drag = Some(handler);
+        });
+    }
+
+    pub fn external_drag_region_clear_on_external_drag(&mut self) {
+        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+            hooks.on_external_drag = None;
+        });
+    }
+
     /// Register a component-owned pointer down handler for the current pointer region element.
     ///
     /// This is a mechanism-only hook point: components decide what a pointer down does (open a

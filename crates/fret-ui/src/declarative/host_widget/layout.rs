@@ -49,6 +49,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::TextInputRegion(p) => p.enabled,
             ElementInstance::InternalDragRegion(p) => p.enabled,
+            ElementInstance::ExternalDragRegion(p) => p.enabled,
             ElementInstance::HoverRegion(_) => false,
             ElementInstance::Semantics(_) => false,
             ElementInstance::SemanticFlex(_) => false,
@@ -72,6 +73,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::TextInputRegion(_) => true,
             ElementInstance::InternalDragRegion(_) => true,
+            ElementInstance::ExternalDragRegion(_) => true,
             ElementInstance::Semantics(_) => true,
             ElementInstance::SemanticFlex(_) => true,
             ElementInstance::FocusScope(_) => true,
@@ -137,6 +139,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::TextInputRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ExternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -1002,6 +1005,16 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::InternalDragRegion(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ExternalDragRegion(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

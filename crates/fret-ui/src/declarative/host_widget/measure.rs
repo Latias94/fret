@@ -224,6 +224,9 @@ impl ElementHostWidget {
             ElementInstance::InternalDragRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::ExternalDragRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::HoverRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

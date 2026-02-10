@@ -91,6 +91,11 @@ pub enum ElementKind {
     /// This is a mechanism-only building block: it does not own policy for any particular drag
     /// kind, and is intended to be used by higher-level layers (workspace, docking, etc.).
     InternalDragRegion(InternalDragRegionProps),
+    /// An external OS drag-and-drop event listener region primitive.
+    ///
+    /// This receives `Event::ExternalDrag` (Enter/Over/Drop/Leave) events and is intended to be
+    /// used by higher-level layers to implement portable file-drop workflows (ADR 0053).
+    ExternalDragRegion(ExternalDragRegionProps),
     RovingFlex(RovingFlexProps),
     Stack(StackProps),
     Column(ColumnProps),
@@ -174,7 +179,25 @@ pub struct InternalDragRegionProps {
     pub enabled: bool,
 }
 
+/// An external drag event listener region primitive.
+///
+/// This is a mechanism-only building block for external file drop workflows.
+#[derive(Debug, Clone, Copy)]
+pub struct ExternalDragRegionProps {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+}
+
 impl Default for InternalDragRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            enabled: true,
+        }
+    }
+}
+
+impl Default for ExternalDragRegionProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
