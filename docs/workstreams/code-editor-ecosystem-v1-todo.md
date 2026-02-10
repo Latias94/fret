@@ -306,21 +306,26 @@ Evidence anchors:
     - Applies to: caret mapping, hit-testing mapping, selection normalization, and a11y range conversion.
     - Evidence:
       - `ecosystem/fret-code-editor-view/src/lib.rs` (clamp-to-anchor mapping for preedit fragments).
-  - [~] Provide a view-owned way to materialize the composed display text for a windowed export range.
+  - [x] Provide a view-owned way to materialize the composed display text for a windowed export range.
     - Used by: paint row text, a11y `TextField.value`, and debug snapshots.
     - Must remain bounded: produce windowed slices only (ADR 0190), not full-document strings.
+    - Evidence:
+      - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::materialize_display_row_text` + tests).
   - [~] Update the editor surface to consume the composed DisplayMap for:
     - paint row text (no preedit injection in `fret-code-editor`),
     - caret/selection/hit-test mapping (single source of truth),
     - a11y export (`value` + `text_selection` + `text_composition`, ADR 0071).
-    - Status: the composed preedit path is implemented as an opt-in and drives paint + mapping; a11y export is still v1.
+    - Status: the composed preedit path is implemented as an opt-in and drives paint + mapping + a11y export when enabled; default remains v1.
   - [~] Add dedicated UI Gallery baselines + gates for “soft wrap + (folds|inlays) + preedit (composed)”.
     - Scripts (new):
       - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json`.
       - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json`.
     - Gates (new):
       - `crates/fret-diag/src/stats.rs` (`*_with_decorations_composed` checks).
-    - Remaining: add a combined “soft wrap + folds + inlays + preedit” baseline/gate once composition order is fully unified.
+      - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`):
+        toggling folds/inlays while inline preedit is active must not change buffer revision, text length, or selection anchor/caret (stability under composed mapping).
+    - [x] Add a combined “soft wrap + folds + inlays + preedit (composed)” baseline (runs both composed gates on the same bundle):
+      - `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
   - [x] Keep the current v1 behavior + staging opt-ins gated until the composed preedit path is proven stable.
     - v1 suppress gates: `*-soft-wrap-inline-preedit-baseline.json` (folds/inlays absent).
     - staging opt-ins: `*-with-decorations-baseline.json` (folds/inlays present) (ADR 0203 staging).

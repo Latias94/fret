@@ -165,9 +165,12 @@ It is intentionally code-oriented so migration work is easy to scope and review.
     `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`RowPreeditMapping`, `materialize_preedit_rich_text`).
   - New composed path: `ecosystem/fret-code-editor/src/editor/mod.rs` (`compose_inline_preedit`) and
     `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (preedit composed into cached row text).
-- [ ] Provide a view-owned way to materialize composed display text for windowed export ranges.
+- [x] Provide a view-owned way to materialize composed display text for windowed export ranges.
   - Used by: paint row text (shaping), semantics `TextField.value`, and debug snapshots.
   - Constraint: windowed-only outputs (ADR 0190); avoid full-document composed strings.
+  - Evidence:
+    - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayMap::materialize_display_row_text` + tests).
+    - `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range` uses the view-owned materialization).
 - [ ] Migrate editor paint + hit-test + caret/selection mapping to consume the composed view mapping.
   - Goal: remove the paint-time preedit injection path and avoid “dual mapping” seams.
 - [ ] Update a11y export to consume the composed display value (and composition range) from the view layer.

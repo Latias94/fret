@@ -45,6 +45,36 @@ pub enum DisplayRowFragmentsError {
     MissingLineText,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DisplayRowSpan {
+    /// Byte range within the materialized row's **base buffer slice**.
+    ///
+    /// Coordinate space: `0..base.len()`.
+    pub buffer_range: Range<usize>,
+    /// Byte range within the materialized row's **composed display text**.
+    ///
+    /// Coordinate space: `0..text.len()`.
+    pub display_range: Range<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MaterializedDisplayRow {
+    /// Visible row range in the underlying buffer (UTF-8 byte indices).
+    pub row_range: Range<usize>,
+    /// Composed row text (fold placeholders + injected inlays + optional inline preedit).
+    pub text: Arc<str>,
+    /// Mapping spans between `row_range`'s base buffer slice and `text`.
+    ///
+    /// The spans cover:
+    /// - fold placeholders (buffer removal -> display insertion),
+    /// - inlays (buffer insertion point -> display insertion),
+    /// - inline preedit (buffer insertion point -> display insertion) (ADR 0203).
+    pub spans: Vec<DisplayRowSpan>,
+    /// Display-local range of the inline preedit fragment within `text` (when present for this
+    /// row).
+    pub preedit_range: Option<Range<usize>>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DisplayPoint {
     pub row: usize,
@@ -293,6 +323,296 @@ impl DisplayMap {
         };
 
         start..end
+    }
+
+    /// Materialize a display row's composed text for windowed export.
+    ///
+    /// This is a view-owned seam used by paint, semantics export, and diagnostics snapshots. It
+    /// keeps output bounded to a single display row (ADR 0190) and avoids spreading display text
+    /// composition across layers (ADR 0203).
+    ///
+    /// Mapping spans are returned in row-local coordinates (0..base.len() -> 0..text.len()) so
+    /// downstream consumers can build stable caret/hit-test/a11y conversions without re-deriving
+    /// fold/inlay rules.
+    pub fn materialize_display_row_text(
+        &self,
+        buf: &TextBuffer,
+        display_row: usize,
+    ) -> MaterializedDisplayRow {
+        let row_range = self.display_row_byte_range(buf, display_row);
+        let base: String = buf.slice_to_string(row_range.clone()).unwrap_or_default();
+
+        let line = self.display_row_line(display_row);
+        let folds = self.line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
+        let inlays = self
+            .line_inlays
+            .get(line)
+            .map(|v| v.as_ref())
+            .unwrap_or(&[]);
+
+        let preedit_for_row = self.preedit.as_ref().and_then(|preedit| {
+            let anchor = preedit.anchor.min(buf.len_bytes());
+            let anchor_pt = self.byte_to_display_point(buf, anchor);
+            (anchor_pt.row == display_row && !preedit.text.is_empty()).then_some(preedit)
+        });
+
+        if folds.is_empty() && inlays.is_empty() {
+            if let Some(preedit) = preedit_for_row {
+                let mut insert_at = preedit
+                    .anchor
+                    .min(buf.len_bytes())
+                    .saturating_sub(row_range.start);
+                insert_at = insert_at.min(base.len());
+                insert_at = clamp_to_char_boundary(base.as_str(), insert_at).min(base.len());
+
+                let before = base.get(..insert_at).unwrap_or("");
+                let after = base.get(insert_at..).unwrap_or("");
+                let mut out =
+                    String::with_capacity(before.len() + preedit.text.len() + after.len());
+                out.push_str(before);
+                out.push_str(preedit.text.as_ref());
+                out.push_str(after);
+
+                let pre_start = insert_at;
+                let pre_end = insert_at.saturating_add(preedit.text.len());
+                let spans = vec![DisplayRowSpan {
+                    buffer_range: insert_at..insert_at,
+                    display_range: pre_start..pre_end,
+                }];
+
+                return MaterializedDisplayRow {
+                    row_range,
+                    text: Arc::<str>::from(out),
+                    spans,
+                    preedit_range: Some(pre_start..pre_end),
+                };
+            }
+
+            return MaterializedDisplayRow {
+                row_range,
+                text: Arc::<str>::from(base),
+                spans: Vec::new(),
+                preedit_range: None,
+            };
+        }
+
+        // Fold/inlay spans are line-local. Validate against the full logical line, then translate
+        // to row-local offsets within the current wrapped slice.
+        let line_start = buf.line_start(line).unwrap_or(row_range.start);
+        let row_start_in_line = row_range.start.saturating_sub(line_start);
+        let row_end_in_line = row_range
+            .end
+            .saturating_sub(line_start)
+            .max(row_start_in_line);
+
+        let line_text_owned = buf.line_text(line).unwrap_or_default();
+        let line_text = line_text_owned.as_str();
+        if validate_fold_spans(line_text, folds).is_err()
+            || validate_inlay_spans(line_text, inlays).is_err()
+        {
+            return MaterializedDisplayRow {
+                row_range,
+                text: Arc::<str>::from(base),
+                spans: Vec::new(),
+                preedit_range: None,
+            };
+        }
+
+        let mut row_folds: Vec<FoldSpan> = Vec::new();
+        for fold in folds.iter() {
+            let start = fold.range.start.min(line_text.len());
+            let end = fold.range.end.min(line_text.len()).max(start);
+            if start < row_start_in_line || start >= row_end_in_line {
+                continue;
+            }
+            let local_start = start.saturating_sub(row_start_in_line).min(base.len());
+            let local_end = end
+                .min(row_end_in_line)
+                .saturating_sub(row_start_in_line)
+                .min(base.len())
+                .max(local_start);
+            if local_start >= local_end {
+                continue;
+            }
+            row_folds.push(FoldSpan {
+                range: local_start..local_end,
+                placeholder: Arc::clone(&fold.placeholder),
+            });
+        }
+
+        let mut row_inlays: Vec<InlaySpan> = Vec::new();
+        for inlay in inlays.iter() {
+            let byte = inlay.byte.min(line_text.len());
+            if byte < row_start_in_line || byte >= row_end_in_line {
+                continue;
+            }
+            let inside_fold = folds.iter().any(|f| {
+                let start = f.range.start.min(line_text.len());
+                let end = f.range.end.min(line_text.len()).max(start);
+                start < byte && byte < end
+            });
+            if inside_fold {
+                continue;
+            }
+            let local = byte.saturating_sub(row_start_in_line).min(base.len());
+            row_inlays.push(InlaySpan {
+                byte: local,
+                text: Arc::clone(&inlay.text),
+            });
+        }
+
+        let preedit_insert_at = preedit_for_row.map(|preedit| {
+            let mut local = preedit
+                .anchor
+                .min(buf.len_bytes())
+                .saturating_sub(row_range.start)
+                .min(base.len());
+            local = clamp_to_char_boundary(base.as_str(), local).min(base.len());
+            for fold in row_folds.iter() {
+                let start = fold.range.start.min(base.len());
+                let end = fold.range.end.min(base.len()).max(start);
+                if start < local && local < end {
+                    local = start;
+                    break;
+                }
+            }
+            local
+        });
+
+        if row_folds.is_empty() && row_inlays.is_empty() && preedit_insert_at.is_none() {
+            return MaterializedDisplayRow {
+                row_range,
+                text: Arc::<str>::from(base),
+                spans: Vec::new(),
+                preedit_range: None,
+            };
+        }
+
+        let mut removed = 0usize;
+        let mut added = 0usize;
+        for span in row_folds.iter() {
+            removed = removed.saturating_add(span.range.end.saturating_sub(span.range.start));
+            added = added.saturating_add(span.placeholder.len());
+        }
+        for span in row_inlays.iter() {
+            added = added.saturating_add(span.text.len());
+        }
+        if let Some(preedit) = preedit_for_row {
+            added = added.saturating_add(preedit.text.len());
+        }
+
+        let cap = base
+            .len()
+            .saturating_sub(removed)
+            .saturating_add(added)
+            .max(1);
+        let mut out = String::with_capacity(cap);
+
+        let mut spans = Vec::<DisplayRowSpan>::new();
+        let mut preedit_range = None::<Range<usize>>;
+        let mut cursor = 0usize;
+        let mut display_cursor = 0usize;
+        let mut fold_idx = 0usize;
+        let mut inlay_idx = 0usize;
+        let mut preedit_done = preedit_insert_at.is_none();
+
+        while cursor < base.len()
+            || fold_idx < row_folds.len()
+            || inlay_idx < row_inlays.len()
+            || !preedit_done
+        {
+            if let (Some(preedit), Some(insert_at)) = (preedit_for_row, preedit_insert_at)
+                && !preedit_done
+                && insert_at == cursor
+            {
+                let start = display_cursor;
+                let len = preedit.text.len();
+                out.push_str(preedit.text.as_ref());
+                spans.push(DisplayRowSpan {
+                    buffer_range: cursor..cursor,
+                    display_range: start..start.saturating_add(len),
+                });
+                preedit_range = Some(start..start.saturating_add(len));
+                display_cursor = display_cursor.saturating_add(len);
+                preedit_done = true;
+                continue;
+            }
+
+            while inlay_idx < row_inlays.len() && row_inlays[inlay_idx].byte < cursor {
+                // Inlays inside a folded span are skipped by advancing past the fold jump.
+                inlay_idx = inlay_idx.saturating_add(1);
+            }
+
+            let next_fold = row_folds.get(fold_idx).map(|s| s.range.start);
+            let next_inlay = row_inlays.get(inlay_idx).map(|s| s.byte);
+            let next = match (next_fold, next_inlay) {
+                (Some(a), Some(b)) => a.min(b),
+                (Some(a), None) => a,
+                (None, Some(b)) => b,
+                (None, None) => base.len(),
+            }
+            .min(base.len());
+            let next = if let Some(insert_at) = preedit_insert_at
+                && !preedit_done
+                && insert_at >= cursor
+            {
+                insert_at.min(next)
+            } else {
+                next
+            };
+
+            if cursor < next {
+                out.push_str(&base[cursor..next]);
+                let delta = next.saturating_sub(cursor);
+                cursor = next;
+                display_cursor = display_cursor.saturating_add(delta);
+                continue;
+            }
+
+            while let Some(inlay) = row_inlays.get(inlay_idx)
+                && inlay.byte == cursor
+            {
+                let start = display_cursor;
+                let len = inlay.text.len();
+                out.push_str(inlay.text.as_ref());
+                spans.push(DisplayRowSpan {
+                    buffer_range: cursor..cursor,
+                    display_range: start..start.saturating_add(len),
+                });
+                display_cursor = display_cursor.saturating_add(len);
+                inlay_idx = inlay_idx.saturating_add(1);
+            }
+
+            if let Some(fold) = row_folds.get(fold_idx)
+                && fold.range.start == cursor
+            {
+                let start = display_cursor;
+                let len = fold.placeholder.len();
+                out.push_str(fold.placeholder.as_ref());
+                spans.push(DisplayRowSpan {
+                    buffer_range: fold.range.clone(),
+                    display_range: start..start.saturating_add(len),
+                });
+                display_cursor = display_cursor.saturating_add(len);
+                cursor = fold.range.end.min(base.len()).max(fold.range.start);
+                fold_idx = fold_idx.saturating_add(1);
+                continue;
+            }
+
+            if cursor >= base.len() {
+                break;
+            }
+
+            // If we reach here, we failed to make progress (should be unreachable after validation).
+            break;
+        }
+
+        MaterializedDisplayRow {
+            row_range,
+            text: Arc::<str>::from(out),
+            spans,
+            preedit_range,
+        }
     }
 
     /// Return display-row text fragments for unwrapped (1 row == 1 logical line) mapping.
@@ -1690,5 +2010,102 @@ mod display_map_tests {
             let back = map.display_point_to_byte(&buf, pt);
             assert_eq!(back, byte);
         }
+    }
+
+    #[test]
+    fn materialize_display_row_text_includes_fold_inlay_and_preedit_unwrapped() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let mut folds_by_line: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        folds_by_line.insert(
+            0,
+            Arc::from([FoldSpan {
+                range: 1..4,
+                placeholder: Arc::<str>::from("…"),
+            }]),
+        );
+        let mut inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        inlays_by_line.insert(
+            0,
+            Arc::from([InlaySpan {
+                byte: 1,
+                text: Arc::<str>::from("<i>"),
+            }]),
+        );
+
+        let preedit = InlinePreedit {
+            anchor: 4,
+            text: Arc::<str>::from("XY"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit(
+            &buf,
+            None,
+            &folds_by_line,
+            &inlays_by_line,
+            Some(preedit),
+        );
+
+        let row = map.materialize_display_row_text(&buf, 0);
+        assert_eq!(row.row_range, 0..buf.len_bytes());
+        assert_eq!(row.text.as_ref(), "a<i>…XYef");
+        assert_eq!(row.preedit_range, Some(7..9));
+        assert_eq!(
+            row.spans,
+            vec![
+                DisplayRowSpan {
+                    buffer_range: 1..1,
+                    display_range: 1..4,
+                },
+                DisplayRowSpan {
+                    buffer_range: 1..4,
+                    display_range: 4..7,
+                },
+                DisplayRowSpan {
+                    buffer_range: 4..4,
+                    display_range: 7..9,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn materialize_display_row_text_inserts_preedit_into_wrapped_row() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let folds_by_line: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let preedit = InlinePreedit {
+            anchor: 2,
+            text: Arc::<str>::from("XY"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit(
+            &buf,
+            Some(4),
+            &folds_by_line,
+            &inlays_by_line,
+            Some(preedit),
+        );
+
+        let row0 = map.materialize_display_row_text(&buf, 0);
+        assert_eq!(row0.row_range, 0..2);
+        assert_eq!(row0.text.as_ref(), "abXY");
+        assert_eq!(row0.preedit_range, Some(2..4));
+        assert_eq!(
+            row0.spans,
+            vec![DisplayRowSpan {
+                buffer_range: 2..2,
+                display_range: 2..4,
+            }]
+        );
+
+        let row1 = map.materialize_display_row_text(&buf, 1);
+        assert_eq!(row1.row_range, 2..buf.len_bytes());
+        assert_eq!(row1.text.as_ref(), "cdef");
+        assert_eq!(row1.preedit_range, None);
+        assert!(row1.spans.is_empty());
     }
 }
