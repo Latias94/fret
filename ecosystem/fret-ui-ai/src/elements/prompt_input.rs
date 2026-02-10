@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, Px};
+use fret_core::{Axis, Edges, ExternalDragKind, Px};
 use fret_icons::IconId;
-use fret_runtime::Model;
-use fret_ui::action::{ActivateReason, OnActivate, OnKeyDown};
+use fret_runtime::{Effect, Model};
+use fret_ui::action::{ActivateReason, OnActivate, OnExternalDrag, OnKeyDown};
 use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -12,7 +12,9 @@ use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, InputGroup};
 
-use crate::elements::attachments::{Attachment, AttachmentData, AttachmentVariant, Attachments};
+use crate::elements::attachments::{
+    Attachment, AttachmentData, AttachmentFileData, AttachmentVariant, Attachments,
+};
 use crate::model::item_key_from_external_id;
 
 #[derive(Clone)]
@@ -523,6 +525,71 @@ impl PromptInput {
             group = group.control_test_id(id);
         }
 
-        group.into_element(cx)
+        let content = group.into_element(cx);
+
+        let drop_handler: Option<OnExternalDrag> =
+            self.attachments
+                .clone()
+                .map(|attachments| -> OnExternalDrag {
+                    let disabled = self.disabled;
+                    let loading = self.loading;
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              e: &fret_core::ExternalDragEvent| {
+                            if disabled || loading {
+                                return false;
+                            }
+
+                            let ExternalDragKind::DropFiles(files) = &e.kind else {
+                                return false;
+                            };
+                            if files.files.is_empty() {
+                                host.push_effect(Effect::ExternalDropRelease {
+                                    token: files.token,
+                                });
+                                return true;
+                            }
+
+                            let token_id = files.token.0;
+                            let dropped: Vec<AttachmentData> = files
+                                .files
+                                .iter()
+                                .enumerate()
+                                .map(|(i, f)| {
+                                    let id = Arc::<str>::from(format!("drop-{token_id}-{i}"));
+                                    AttachmentData::File(
+                                        AttachmentFileData::new(id).filename(f.name.clone()),
+                                    )
+                                })
+                                .collect();
+
+                            let _ = host.models_mut().update(&attachments, |v| {
+                                for item in &dropped {
+                                    let id = item.id();
+                                    if v.iter()
+                                        .any(|existing| existing.id().as_ref() == id.as_ref())
+                                    {
+                                        continue;
+                                    }
+                                    v.push(item.clone());
+                                }
+                            });
+
+                            host.push_effect(Effect::ExternalDropRelease { token: files.token });
+                            host.notify(action_cx);
+                            true
+                        },
+                    )
+                });
+
+        if let Some(on_drop) = drop_handler {
+            cx.external_drag_region(fret_ui::element::ExternalDragRegionProps::default(), |cx| {
+                cx.external_drag_region_on_external_drag(on_drop);
+                vec![content]
+            })
+        } else {
+            content
+        }
     }
 }

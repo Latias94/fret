@@ -327,7 +327,10 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP1-chat-087 PromptInput add-attachments action parity: plus-button action emits an app-owned “open file dialog” intent.
   - Surface: `PromptInput::on_add_attachments` + `PromptInput::test_id_add_attachments` (also exposed via `AiChat::on_add_attachments`).
   - Gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json` (click plus → chips → Backspace pop → send).
-- [ ] AIEL-MVP1-chat-088 PromptInput drag-and-drop fallback: accept external file drops as attachments (primary path while clipboard files are unsupported).
+- [x] AIEL-MVP1-chat-088 PromptInput drag-and-drop fallback: accept external file drops as attachments (primary path while clipboard files are unsupported).
+  - Surface: `PromptInput` wraps its root with `ExternalDragRegion` and handles `ExternalDragKind::DropFiles` by appending file-name-based attachment chips.
+  - Notes: this is metadata-only (no bytes); the component releases the `ExternalDropToken` via `Effect::ExternalDropRelease` after it has updated the attachments model.
+  - Gate: unit test `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_external_drag_region_can_handle_external_drag_events`).
 - [ ] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
