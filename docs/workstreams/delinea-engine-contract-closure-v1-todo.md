@@ -19,6 +19,17 @@ Each TODO is labeled:
 - [x] DEL-ENG0-docs-003 Update ADR implementation alignment notes for ADR 1150 (remove stale “WeakFilter == Filter only” claim).
 - [x] DEL-ENG0-docs-004 Update multi-grid adapter notes: retained hosts a single engine; remove stale spec-splitting references.
 
+## M-1 — Main sync (keep worktree green)
+
+- [x] DEL-ENGM1-sync-001 Merge latest local `main` into the workstream branch and resolve conflicts.
+  - Evidence: merge commits `e9c13385` (2026-02-10) + earlier merges.
+- [x] DEL-ENGM1-sync-002 Adapt ecosystem tests/helpers to `UiServices: ... + MaterialService` and `Paint`-based `SceneOp::Quad`.
+  - Evidence: `fix(workspace): adapt tests to MaterialService and Paint APIs` (`5cad446f`) (2026-02-10).
+- [x] DEL-ENGM1-sync-003 Fix portal measurement publishing to remain stable under absolute positioning constraints.
+  - Evidence: `fix(fret-node): measure portal content bounds for stable hints` (`fcc14780`) (2026-02-10).
+- [x] DEL-ENGM1-sync-004 Validate workspace compiles after sync.
+  - Evidence: `cargo check --workspace --all-targets` (2026-02-10) on the worktree.
+
 ## M1 — Single-engine multi-grid viewport/layout contract
 
 Design gates (write contracts before code):
@@ -101,3 +112,6 @@ Regression gates:
   - Script: `tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`
   - Gate: verifies that a domain-window change in the top chart propagates to the bottom chart.
   - Run (example): `cargo run -p fretboard -- diag run tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json --check-pixels-changed chart-multi-axis-top --check-pixels-changed chart-multi-axis-bottom --env FRET_DIAG_SCREENSHOTS=1 --launch -- cargo run -p fret-demo --bin chart_multi_axis_demo --release`
+
+- [~] DEL-ENG4-gates-010 Document a “fast” local/CI nextest subset for chart semantics regressions (keep refactors safe without running the full workspace).
+  - Proposed command (example): `cargo nextest run -p delinea -p fret-chart -p fret-ui-kit --tests`

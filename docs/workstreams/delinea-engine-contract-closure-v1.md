@@ -28,6 +28,15 @@ The remaining “hard-to-change” gaps are **engine-level contracts**, not UI p
 
 This workstream tracks those closures as a sequence of milestones with explicit “done” gates (tests + demos).
 
+## 0.1) Worktree posture (fearless refactors are OK)
+
+This workstream is currently developed in a dedicated worktree/branch and is not expected to have
+stable external callers yet. That means we prefer the “correct shape” over compatibility hacks:
+
+- write/refresh ADRs first when behavior contracts change,
+- refactor aggressively to keep contract surfaces small and coherent,
+- delete redundant legacy paths once the v1 posture is locked by tests + goldens.
+
 ## 1) Invariants (do not break)
 
 1. **Headless portability**
@@ -132,3 +141,12 @@ We consider this workstream “done” when:
    transforms).
 3. Incremental data update semantics are explicit and regression-gated.
 4. The participation/output contract is stable, documented, and consumed consistently by all downstream stages.
+
+## 8) Current plan (2026-02-10)
+
+1. Keep the worktree green while `main` evolves (materials + `Paint`/`SceneOp::Quad` API changes).
+   - Evidence: see the “Main sync” section in the TODO tracker.
+2. Finish M4 conformance harness closure:
+   - ensure headless goldens remain stable after refactors,
+   - keep at least one interactive/scripted linking gate runnable (`fretboard diag`),
+   - document a minimal “fast” nextest suite for local + CI use.

@@ -25,6 +25,24 @@ Acceptance criteria:
 
 Status: Done (2026-02-09).
 
+## M-1 — Main sync (keep worktree green)
+
+Scope:
+
+- Regularly merge local `main` into the workstream branch.
+- Keep the worktree compiling as core contract surfaces evolve (notably:
+  - `UiServices` gaining `MaterialService`,
+  - `Paint`-based `SceneOp::Quad` fields (`background`, `border_paint`),
+  - component-level prop additions like `PressableProps.key_activation`).
+
+Acceptance criteria:
+
+- `cargo check --workspace --all-targets` passes after each sync.
+- A minimal set of representative tests can still run (at least one nextest gate in `fret-node` or `fret-chart`).
+
+Status: Done (2026-02-10).
+Evidence: `5cad446f`, `fcc14780`, merge `e9c13385`.
+
 ## M1 — Single-engine multi-grid viewport/layout contract
 
 Scope:
@@ -115,3 +133,8 @@ Acceptance criteria:
 - Interactive demo(s) exist with a stable “what to validate” checklist.
 
 Status: In progress (2026-02-10).
+
+Known remaining closure items:
+
+- document a “fast” nextest subset for local + CI,
+- ensure the linking `fretboard diag` script remains runnable after refactors and `main` syncs.
