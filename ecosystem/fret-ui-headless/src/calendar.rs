@@ -186,6 +186,104 @@ pub fn day_picker_day_modifiers(
     }
 }
 
+/// A composed day-cell state for DayPicker-like views.
+///
+/// This combines:
+/// - `modifiers.disabled` / `modifiers.hidden`
+/// - outside-day policy (`show_outside_days`, `disable_outside_days`)
+/// - caller-provided bounds checks (`in_bounds`)
+///
+/// Notes:
+/// - Hidden days are always treated as disabled.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DayPickerCellState {
+    pub hidden: bool,
+    pub disabled: bool,
+}
+
+pub fn day_picker_cell_state(
+    day: CalendarDay,
+    show_outside_days: bool,
+    disable_outside_days: bool,
+    in_bounds: bool,
+    modifiers: &DayPickerModifiers,
+) -> DayPickerCellState {
+    let base = day_picker_day_modifiers(day, show_outside_days, modifiers);
+    let hidden = base.hidden || !in_bounds;
+
+    let mut disabled = base.disabled || (!day.in_month && disable_outside_days) || !in_bounds;
+    if hidden {
+        disabled = true;
+    }
+
+    DayPickerCellState { hidden, disabled }
+}
+
+pub fn day_grid_step_target_skipping_disabled(
+    current: usize,
+    len: usize,
+    step: i32,
+    disabled: &[bool],
+) -> usize {
+    if len == 0 || step == 0 || current >= len {
+        return current;
+    }
+
+    let mut idx = (current as i32 + step).clamp(0, (len.saturating_sub(1)) as i32) as usize;
+    if idx == current {
+        return current;
+    }
+
+    while idx != current && disabled.get(idx).copied().unwrap_or(true) {
+        let next = idx as i32 + step;
+        if next < 0 || next >= len as i32 {
+            break;
+        }
+        idx = next as usize;
+    }
+
+    if idx != current && !disabled.get(idx).copied().unwrap_or(true) {
+        idx
+    } else {
+        current
+    }
+}
+
+pub fn day_grid_row_edge_target_skipping_disabled(
+    current: usize,
+    len: usize,
+    target: usize,
+    disabled: &[bool],
+) -> usize {
+    if len == 0 || current >= len {
+        return current;
+    }
+
+    let row_start = (current / 7) * 7;
+    let row_end = (row_start + 6).min(len.saturating_sub(1));
+    let target = target.clamp(row_start, row_end);
+
+    if !disabled.get(target).copied().unwrap_or(true) {
+        return target;
+    }
+
+    if target == row_start {
+        for idx in row_start..=row_end {
+            if !disabled.get(idx).copied().unwrap_or(true) {
+                return idx;
+            }
+        }
+    } else if target == row_end {
+        for idx in (row_start..=row_end).rev() {
+            if !disabled.get(idx).copied().unwrap_or(true) {
+                return idx;
+            }
+        }
+    }
+
+    current
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DayPickerGridLayout {
     Compact,
@@ -754,6 +852,92 @@ mod tests {
                 from: Some(d10),
                 to: None
             }
+        );
+    }
+
+    #[test]
+    fn day_picker_cell_state_composes_hidden_disabled_outside_and_bounds() {
+        let date = Date::from_calendar_date(2026, Month::January, 2).unwrap();
+
+        let in_month = CalendarDay {
+            date,
+            in_month: true,
+        };
+        let outside = CalendarDay {
+            date,
+            in_month: false,
+        };
+
+        let mut modifiers = DayPickerModifiers::default();
+        modifiers.hidden.push(DayMatcher::Date(date));
+
+        // Hidden always disables.
+        let st = day_picker_cell_state(in_month, true, false, true, &modifiers);
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: true,
+                disabled: true
+            }
+        );
+
+        // Outside days can be shown but disabled.
+        let st = day_picker_cell_state(outside, true, true, true, &DayPickerModifiers::default());
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: false,
+                disabled: true
+            }
+        );
+
+        // Out-of-bounds days are hidden (and disabled).
+        let st =
+            day_picker_cell_state(in_month, true, false, false, &DayPickerModifiers::default());
+        assert_eq!(
+            st,
+            DayPickerCellState {
+                hidden: true,
+                disabled: true
+            }
+        );
+    }
+
+    #[test]
+    fn day_grid_navigation_skips_disabled() {
+        let len = 14;
+        let mut disabled = vec![true; len];
+        for idx in [1usize, 6, 8, 13] {
+            disabled[idx] = false;
+        }
+
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(6, len, 1, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(8, len, -1, &disabled),
+            6
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(1, len, 7, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(13, len, -7, &disabled),
+            6
+        );
+
+        let current = 10;
+        let row_start = (current / 7) * 7;
+        let row_end = (row_start + 6).min(len - 1);
+        assert_eq!(
+            day_grid_row_edge_target_skipping_disabled(current, len, row_start, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_row_edge_target_skipping_disabled(current, len, row_end, &disabled),
+            13
         );
     }
 

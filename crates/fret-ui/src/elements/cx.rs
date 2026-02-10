@@ -109,6 +109,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 window_state
                     .set_committed_prefers_reduced_motion(metrics.prefers_reduced_motion(window));
             }
+            if metrics.text_scale_factor_is_known(window) {
+                window_state.set_committed_text_scale_factor(metrics.text_scale_factor(window));
+            }
+            if metrics.prefers_reduced_transparency_is_known(window) {
+                window_state.set_committed_prefers_reduced_transparency(
+                    metrics.prefers_reduced_transparency(window),
+                );
+            }
+            if metrics.accent_color_is_known(window) {
+                window_state.set_committed_accent_color(metrics.accent_color(window));
+            }
             if metrics.color_scheme_is_known(window) {
                 window_state.set_committed_color_scheme(metrics.color_scheme(window));
             }
@@ -571,6 +582,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.environment_viewport_bounds(invalidation).size.width
     }
 
+    pub fn environment_viewport_height(&mut self, invalidation: Invalidation) -> Px {
+        self.environment_viewport_bounds(invalidation).size.height
+    }
+
     pub fn environment_scale_factor(&mut self, invalidation: Invalidation) -> f32 {
         self.observe_environment_query(EnvironmentQueryKey::ScaleFactor, invalidation);
         self.window_state.committed_scale_factor()
@@ -587,6 +602,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> Option<bool> {
         self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
         self.window_state.committed_prefers_reduced_motion()
+    }
+
+    pub fn environment_text_scale_factor(&mut self, invalidation: Invalidation) -> Option<f32> {
+        self.observe_environment_query(EnvironmentQueryKey::TextScaleFactor, invalidation);
+        self.window_state.committed_text_scale_factor()
+    }
+
+    pub fn environment_prefers_reduced_transparency(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<bool> {
+        self.observe_environment_query(
+            EnvironmentQueryKey::PrefersReducedTransparency,
+            invalidation,
+        );
+        self.window_state.committed_prefers_reduced_transparency()
+    }
+
+    pub fn environment_accent_color(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<fret_core::Color> {
+        self.observe_environment_query(EnvironmentQueryKey::AccentColor, invalidation);
+        self.window_state.committed_accent_color()
     }
 
     pub fn environment_prefers_contrast(

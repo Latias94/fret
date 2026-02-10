@@ -24,7 +24,7 @@ use crate::calendar::{
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, DayMatcher, DayPickerModifiers, SelectionUpdate, day_picker_day_modifiers,
+    CalendarMonth, DayMatcher, DayPickerModifiers, SelectionUpdate, day_picker_cell_state,
     day_picker_select_multi, month_grid, month_grid_compact, week_number,
 };
 
@@ -617,15 +617,15 @@ fn calendar_month_view<H: UiHost>(
     let mut hidden = Vec::with_capacity(grid.len());
     let mut disabled = Vec::with_capacity(grid.len());
     for day in grid.iter() {
-        let base = day_picker_day_modifiers(*day, show_outside_days, &modifiers);
-        let is_hidden = base.hidden || !in_bounds(day.date);
-        let mut is_disabled =
-            base.disabled || (!day.in_month && disable_outside_days) || !in_bounds(day.date);
-        if is_hidden {
-            is_disabled = true;
-        }
-        hidden.push(is_hidden);
-        disabled.push(is_disabled);
+        let st = day_picker_cell_state(
+            *day,
+            show_outside_days,
+            disable_outside_days,
+            in_bounds(day.date),
+            &modifiers,
+        );
+        hidden.push(st.hidden);
+        disabled.push(st.disabled);
     }
     let disabled: Arc<[bool]> = disabled.into();
     let hidden: Arc<[bool]> = hidden.into();

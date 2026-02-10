@@ -3170,6 +3170,8 @@ See: `docs/tracy.md`.\n";
             let is_ui_gallery_code_editor_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-code-editor";
             let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
+            let is_ui_gallery_date_picker_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-date-picker";
             let is_ui_gallery_virt_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
             let is_ui_gallery_virt_retained_measured_suite =
@@ -3262,6 +3264,33 @@ See: `docs/tracy.md`.\n";
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
                         Some(BuiltinSuite::UiGalleryCodeEditor),
+                    )
+                } else if is_ui_gallery_date_picker_suite {
+                    // Date picker scripts rely on stable role-and-name semantics selectors; ensure
+                    // diagnostics redaction is disabled so selectors can match.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    // Use deterministic date + page seed so roving navigation is repeatable.
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_START_PAGE",
+                        "date_picker",
+                    );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING",
+                        "1",
+                    );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_FIXED_TODAY",
+                        "2024-02-01",
+                    );
+                    (
+                        ui_gallery_date_picker_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_layout_suite {
                     (
@@ -8408,6 +8437,10 @@ fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
         "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
     ]
+}
+
+fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
+    ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
 }
 
 fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {

@@ -4,6 +4,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelLayout, AnchoredPanelOptions, Side, anchored_panel_bounds_sized, inset_rect,
 };
+use fret_ui::pixel_snap;
 use fret_ui::{ElementContext, Invalidation};
 
 fn prefer_visual_bounds(visual: Option<Rect>, layout: Option<Rect>) -> Option<Rect> {
@@ -36,7 +37,12 @@ pub fn outer_bounds_with_window_margin_for_environment<H: UiHost>(
     invalidation: Invalidation,
     window_margin: Px,
 ) -> Rect {
-    outer_bounds_with_window_margin(cx.environment_viewport_bounds(invalidation), window_margin)
+    let outer = outer_bounds_with_window_margin(
+        cx.environment_viewport_bounds(invalidation),
+        window_margin,
+    );
+    let scale_factor = cx.environment_scale_factor(invalidation);
+    pixel_snap::snap_rect_edges_round(outer, scale_factor)
 }
 
 /// Wraps a point as a 1x1 rect anchor for placement solvers.

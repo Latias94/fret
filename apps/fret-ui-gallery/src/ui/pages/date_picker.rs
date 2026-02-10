@@ -21,7 +21,26 @@ pub(super) fn preview_date_picker(
         rtl_selected: Option<Model<Option<Date>>>,
     }
 
-    let today = time::OffsetDateTime::now_utc().date();
+    fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
+        let raw = raw.trim();
+        let (year, rest) = raw.split_once('-')?;
+        let (month, day) = rest.split_once('-')?;
+
+        let year: i32 = year.parse().ok()?;
+        let month: u8 = month.parse().ok()?;
+        let day: u8 = day.parse().ok()?;
+
+        let month = time::Month::try_from(month).ok()?;
+        Date::from_calendar_date(year, month, day).ok()
+    }
+
+    let diag_calendar_roving =
+        std::env::var_os("FRET_UI_GALLERY_DIAG_CALENDAR_ROVING").is_some_and(|v| !v.is_empty());
+
+    let today = std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
+        .ok()
+        .and_then(|raw| parse_iso_date_ymd(&raw))
+        .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
 
     let (
         range_open,
@@ -91,13 +110,37 @@ pub(super) fn preview_date_picker(
         ),
         _ => {
             let range_open = cx.app.models_mut().insert(false);
-            let range_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
-            let range_selected = cx.app.models_mut().insert(DateRangeSelection::default());
+            let diag_month = CalendarMonth::from_date(
+                Date::from_calendar_date(2024, time::Month::February, 1).expect("valid date"),
+            );
+            let diag_from =
+                Date::from_calendar_date(2024, time::Month::February, 13).expect("valid date");
+            let range_month = cx.app.models_mut().insert(if diag_calendar_roving {
+                diag_month
+            } else {
+                CalendarMonth::from_date(today)
+            });
+            let range_selected = cx.app.models_mut().insert(if diag_calendar_roving {
+                DateRangeSelection {
+                    from: Some(diag_from),
+                    to: None,
+                }
+            } else {
+                DateRangeSelection::default()
+            });
             let dob_open = cx.app.models_mut().insert(false);
-            let dob_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
+            let dob_month = cx.app.models_mut().insert(if diag_calendar_roving {
+                diag_month
+            } else {
+                CalendarMonth::from_date(today)
+            });
             let dob_selected = cx.app.models_mut().insert(None::<Date>);
             let rtl_open = cx.app.models_mut().insert(false);
-            let rtl_month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
+            let rtl_month = cx.app.models_mut().insert(if diag_calendar_roving {
+                diag_month
+            } else {
+                CalendarMonth::from_date(today)
+            });
             let rtl_selected = cx.app.models_mut().insert(Some(today));
 
             cx.with_state(DatePickerModels::default, |st| {
@@ -218,14 +261,22 @@ pub(super) fn preview_date_picker(
         .map(|d| d.to_string())
         .unwrap_or_else(|| "<none>".to_string());
 
-    let range_picker = shadcn::DateRangePicker::new(
+    let mut range_picker = shadcn::DateRangePicker::new(
         range_open.clone(),
         range_month.clone(),
         range_selected.clone(),
     )
-    .placeholder("Pick a date range")
-    .into_element(cx)
-    .test_id("ui-gallery-date-picker-range");
+    .placeholder("Pick a date range");
+
+    if diag_calendar_roving {
+        let d14 = Date::from_calendar_date(2024, time::Month::February, 14).expect("valid date");
+        let d15 = Date::from_calendar_date(2024, time::Month::February, 15).expect("valid date");
+        range_picker = range_picker.disabled_by(move |d| d == d14 || d == d15);
+    }
+
+    let range_picker = range_picker
+        .into_element(cx)
+        .test_id("ui-gallery-date-picker-range");
 
     let range_content = stack::vstack(
         cx,

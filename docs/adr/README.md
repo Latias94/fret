@@ -158,6 +158,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - **Container queries (panel-width responsiveness)**: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
 - **Environment queries (viewport/device capabilities)**: `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+- **Environment queries (preference extensions)**: `docs/adr/1185-environment-queries-preference-extensions-v1.md`
 - **Rounded clipping / overflow-hidden**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - **Overflow conventions (surfaces, focus rings, portals)**: `docs/adr/0088-overflow-and-clipping-conventions.md`
 - **Docking + multi-window tear-off**: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`

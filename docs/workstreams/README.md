@@ -13,6 +13,12 @@ Active workstreams:
 - `docs/workstreams/workspace-crate-boundaries-v1.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
+- `docs/workstreams/environment-queries-v1.md`
+- `docs/workstreams/environment-queries-v1-todo.md`
+- `docs/workstreams/environment-queries-v1-milestones.md`
+- `docs/workstreams/environment-queries-v1-extensions.md`
+- `docs/workstreams/environment-queries-v1-extensions-todo.md`
+- `docs/workstreams/environment-queries-v1-extensions-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`

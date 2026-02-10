@@ -6,8 +6,8 @@ use std::sync::{
 };
 
 use fret_core::{
-    AppWindowId, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId, PointerType,
-    Rect,
+    AppWindowId, Color, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId,
+    PointerType, Rect,
 };
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
@@ -27,6 +27,9 @@ pub(crate) enum EnvironmentQueryKey {
     ScaleFactor,
     ColorScheme,
     PrefersReducedMotion,
+    TextScaleFactor,
+    PrefersReducedTransparency,
+    AccentColor,
     PrefersContrast,
     ForcedColorsMode,
     PrimaryPointerType,
@@ -109,6 +112,9 @@ pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub scale_factor: f32,
     pub color_scheme: Option<ColorScheme>,
     pub prefers_reduced_motion: Option<bool>,
+    pub text_scale_factor: Option<f32>,
+    pub prefers_reduced_transparency: Option<bool>,
+    pub accent_color: Option<Color>,
     pub contrast_preference: Option<ContrastPreference>,
     pub forced_colors_mode: Option<ForcedColorsMode>,
     pub primary_pointer_type: PointerType,
@@ -325,6 +331,9 @@ pub struct WindowElementState {
     committed_scale_factor: f32,
     committed_color_scheme: Option<ColorScheme>,
     committed_prefers_reduced_motion: Option<bool>,
+    committed_text_scale_factor: Option<f32>,
+    committed_prefers_reduced_transparency: Option<bool>,
+    committed_accent_color: Option<Color>,
     committed_contrast_preference: Option<ContrastPreference>,
     committed_forced_colors_mode: Option<ForcedColorsMode>,
     committed_primary_pointer_type: Option<PointerType>,
@@ -696,6 +705,9 @@ impl WindowElementState {
             EnvironmentQueryKey::OcclusionInsets => 6u8,
             EnvironmentQueryKey::PrefersContrast => 7u8,
             EnvironmentQueryKey::ForcedColorsMode => 8u8,
+            EnvironmentQueryKey::TextScaleFactor => 9u8,
+            EnvironmentQueryKey::PrefersReducedTransparency => 10u8,
+            EnvironmentQueryKey::AccentColor => 11u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1276,6 +1288,18 @@ impl WindowElementState {
         self.committed_prefers_reduced_motion
     }
 
+    pub(crate) fn committed_text_scale_factor(&self) -> Option<f32> {
+        self.committed_text_scale_factor
+    }
+
+    pub(crate) fn committed_prefers_reduced_transparency(&self) -> Option<bool> {
+        self.committed_prefers_reduced_transparency
+    }
+
+    pub(crate) fn committed_accent_color(&self) -> Option<Color> {
+        self.committed_accent_color
+    }
+
     pub(crate) fn committed_contrast_preference(&self) -> Option<ContrastPreference> {
         self.committed_contrast_preference
     }
@@ -1308,6 +1332,51 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn set_committed_text_scale_factor(&mut self, value: Option<f32>) {
+        let changed = match (self.committed_text_scale_factor, value) {
+            (Some(a), Some(b)) => (a - b).abs() > 0.0001,
+            (None, None) => false,
+            _ => true,
+        };
+        if !changed {
+            return;
+        }
+
+        self.committed_text_scale_factor = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::TextScaleFactor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::TextScaleFactor);
+    }
+
+    pub(crate) fn set_committed_prefers_reduced_transparency(&mut self, value: Option<bool>) {
+        if self.committed_prefers_reduced_transparency == value {
+            return;
+        }
+        self.committed_prefers_reduced_transparency = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersReducedTransparency)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersReducedTransparency);
+    }
+
+    pub(crate) fn set_committed_accent_color(&mut self, value: Option<Color>) {
+        if self.committed_accent_color == value {
+            return;
+        }
+        self.committed_accent_color = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::AccentColor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::AccentColor);
     }
 
     pub(crate) fn set_committed_color_scheme(&mut self, value: Option<ColorScheme>) {
@@ -1448,6 +1517,9 @@ impl WindowElementState {
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
             EnvironmentQueryKey::ColorScheme => "color_scheme",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+            EnvironmentQueryKey::TextScaleFactor => "text_scale_factor",
+            EnvironmentQueryKey::PrefersReducedTransparency => "prefers_reduced_transparency",
+            EnvironmentQueryKey::AccentColor => "accent_color",
             EnvironmentQueryKey::PrefersContrast => "prefers_contrast",
             EnvironmentQueryKey::ForcedColorsMode => "forced_colors_mode",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
@@ -1581,6 +1653,9 @@ impl WindowElementState {
             scale_factor: self.committed_scale_factor,
             color_scheme: self.committed_color_scheme,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
+            text_scale_factor: self.committed_text_scale_factor,
+            prefers_reduced_transparency: self.committed_prefers_reduced_transparency,
+            accent_color: self.committed_accent_color,
             contrast_preference: self.committed_contrast_preference,
             forced_colors_mode: self.committed_forced_colors_mode,
             primary_pointer_type: self.committed_primary_pointer_type(),

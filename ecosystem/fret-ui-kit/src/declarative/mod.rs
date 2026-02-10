@@ -1,3 +1,4 @@
+pub mod accent_color_queries;
 pub mod action_hooks;
 pub mod active_descendant;
 pub mod cached_subtree;
@@ -29,6 +30,7 @@ pub mod pointer_queries;
 pub mod prelude;
 pub mod presence;
 pub mod reduced_motion_queries;
+pub mod reduced_transparency_queries;
 pub mod safe_area_queries;
 pub mod scheduling;
 pub mod scroll;
@@ -39,6 +41,7 @@ pub mod stack;
 pub mod style;
 pub mod table;
 pub mod text;
+pub mod text_scale_queries;
 pub mod theme_access;
 pub mod transition;
 pub mod tree;
@@ -47,6 +50,7 @@ pub mod viewport_surface;
 pub mod visually_hidden;
 pub mod windowed_rows_surface;
 
+pub use accent_color_queries::accent_color;
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use color_scheme_queries::{preferred_color_scheme, prefers_dark_color_scheme};
 pub use container_queries::tailwind;
@@ -63,13 +67,16 @@ pub use pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };
 pub use reduced_motion_queries::prefers_reduced_motion;
+pub use reduced_transparency_queries::prefers_reduced_transparency;
 pub use safe_area_queries::{safe_area_insets, safe_area_insets_or_zero};
 pub use semantics::AnyElementSemanticsExt;
+pub use text_scale_queries::text_scale_factor;
 pub use theme_access::ElementContextThemeExt;
 pub use viewport_queries::tailwind as viewport_tailwind;
 pub use viewport_queries::{
-    ViewportQueryHysteresis, viewport_breakpoints, viewport_height_at_least,
-    viewport_height_breakpoints, viewport_width_at_least,
+    ViewportOrientation, ViewportQueryHysteresis, viewport_aspect_ratio, viewport_breakpoints,
+    viewport_height_at_least, viewport_height_breakpoints, viewport_is_landscape,
+    viewport_is_portrait, viewport_orientation, viewport_width_at_least,
 };
 
 #[cfg(test)]

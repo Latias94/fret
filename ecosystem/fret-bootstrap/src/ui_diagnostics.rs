@@ -8739,6 +8739,12 @@ pub struct ElementEnvironmentSnapshotV1 {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefers_reduced_motion: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefers_reduced_transparency: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent_color: Option<fret_core::Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contrast_preference: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub forced_colors_mode: Option<String>,
@@ -8761,6 +8767,9 @@ impl ElementEnvironmentSnapshotV1 {
                 .color_scheme
                 .map(|s| color_scheme_label(s).to_string()),
             prefers_reduced_motion: snapshot.prefers_reduced_motion,
+            text_scale_factor: snapshot.text_scale_factor,
+            prefers_reduced_transparency: snapshot.prefers_reduced_transparency,
+            accent_color: snapshot.accent_color,
             contrast_preference: snapshot
                 .contrast_preference
                 .map(|c| contrast_preference_label(c).to_string()),
@@ -10589,6 +10598,14 @@ mod tests {
             scale_factor: 2.0,
             color_scheme: Some(ColorScheme::Dark),
             prefers_reduced_motion: Some(true),
+            text_scale_factor: Some(1.25),
+            prefers_reduced_transparency: Some(true),
+            accent_color: Some(fret_core::Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            }),
             contrast_preference: Some(ContrastPreference::More),
             forced_colors_mode: Some(ForcedColorsMode::Active),
             primary_pointer_type: PointerType::Touch,
@@ -10604,6 +10621,17 @@ mod tests {
         let exported = ElementEnvironmentSnapshotV1::from_diagnostics_snapshot(&snapshot);
         assert_eq!(exported.color_scheme.as_deref(), Some("dark"));
         assert_eq!(exported.prefers_reduced_motion, Some(true));
+        assert_eq!(exported.text_scale_factor, Some(1.25));
+        assert_eq!(exported.prefers_reduced_transparency, Some(true));
+        assert_eq!(
+            exported.accent_color,
+            Some(fret_core::Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            })
+        );
         assert_eq!(exported.contrast_preference.as_deref(), Some("more"));
         assert_eq!(exported.forced_colors_mode.as_deref(), Some("active"));
         assert_eq!(exported.primary_pointer_type.as_deref(), Some("touch"));
