@@ -6,9 +6,9 @@ use fret_core::{
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
-    UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1, UiKeyModifiersV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1, UiPredicateV1, UiRoleAndNameV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
+    UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1,
+    UiPredicateV1, UiRoleAndNameV1, UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -233,6 +233,7 @@ pub struct UiDiagnosticsService {
     exit_armed: bool,
     exit_last_mtime: Option<std::time::SystemTime>,
     ready_written: bool,
+    capabilities_written: bool,
     inspect_enabled: bool,
     inspect_consume_clicks: bool,
     pending_script: Option<PendingScript>,
@@ -2797,6 +2798,8 @@ impl UiDiagnosticsService {
             let _ = std::fs::create_dir_all(parent);
         }
 
+        self.ensure_capabilities_file();
+
         let ts = unix_ms_now();
         if let Ok(mut f) = std::fs::OpenOptions::new()
             .create(true)
@@ -2810,6 +2813,40 @@ impl UiDiagnosticsService {
         }
 
         self.ready_written = true;
+    }
+
+    fn ensure_capabilities_file(&mut self) {
+        if self.capabilities_written {
+            return;
+        }
+        if !self.cfg.enabled {
+            return;
+        }
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            self.capabilities_written = true;
+            return;
+        }
+
+        let mut caps = vec!["diag.script_v2".to_string()];
+        if self.cfg.screenshots_enabled {
+            caps.push("diag.screenshot_png".to_string());
+        }
+
+        let path = self.cfg.out_dir.join("capabilities.json");
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+
+        let payload = FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: caps,
+        };
+        if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
+            text.push('\n');
+            let _ = std::fs::write(&path, text);
+        }
+
+        self.capabilities_written = true;
     }
 
     pub fn clear_window(&mut self, window: AppWindowId) {

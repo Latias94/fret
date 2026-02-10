@@ -16,27 +16,28 @@ Guiding idea: keep `diag` useful for day-to-day debugging *and* safe to depend o
 - [x] Write an extensibility-focused ADR:
   - [x] `docs/adr/0204-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - [x] Split the workstream into small sub-documents (capabilities/evidence/script tooling/text+IME/determinism).
-- [ ] Enforce “single source of truth” for script protocol types:
-  - [ ] runner MUST not fork protocol structs/enums (parse/execute against `crates/fret-diag-protocol`).
-  - [ ] add an explicit note in docs about this rule (prevents silent drift).
+- [x] Enforce “single source of truth” for script protocol types:
+  - [x] runner MUST not fork protocol structs/enums (parse/execute against `crates/fret-diag-protocol`).
+  - [x] add an explicit note in docs about this rule (prevents silent drift).
+  - [ ] delete the legacy forked-protocol block (currently under `#[cfg(any())]`) once confident.
 
 ## Capabilities (vocabulary, discovery, gating)
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 
-- [ ] Decide capability namespaces and initial stable vocabulary:
-  - [ ] `devtools.*` vs `diag.*` naming,
-  - [ ] minimum `diag.*` list for v1.
-- [ ] Script metadata surface:
-  - [ ] define `meta` object shape (name/tags/required_capabilities/target_hints),
-  - [ ] rule: tooling ignores unknown `meta` keys.
+- [x] Decide capability namespaces and initial stable vocabulary:
+  - [x] `devtools.*` vs `diag.*` naming,
+  - [x] minimum `diag.*` list for v1.
+- [x] Script metadata surface:
+  - [x] define `meta` object shape (name/tags/required_capabilities/target_hints),
+  - [x] rule: tooling ignores unknown `meta` keys.
 - [ ] Filesystem discovery:
-  - [ ] runner writes deterministic `capabilities.json` under `FRET_DIAG_DIR`.
+  - [x] runner writes deterministic `capabilities.json` under `FRET_DIAG_DIR`.
 - [ ] DevTools WS discovery:
   - [ ] runner/session descriptors advertise `diag.*` capabilities.
 - [ ] Tooling gating:
-  - [ ] fail fast when required capabilities are missing,
-  - [ ] emit evidence file `check.capabilities.json` (machine-readable),
+  - [x] fail fast when required capabilities are missing,
+  - [x] emit evidence file `check.capabilities.json` (machine-readable),
   - [ ] `diag repro` includes gating failures in `repro.summary.json`.
 
 ## Evidence & trace (debuggability surfaces)

@@ -2053,6 +2053,20 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
             )?;
+
+            let required_caps = script_required_capabilities(&src);
+            if !required_caps.is_empty() {
+                let available_caps = read_filesystem_capabilities(&resolved_out_dir);
+                if let Err(e) = gate_required_capabilities(
+                    &resolved_out_dir.join("check.capabilities.json"),
+                    &required_caps,
+                    &available_caps,
+                ) {
+                    let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    return Err(e);
+                }
+            }
+
             let mut result = run_script_and_wait(
                 &src,
                 &resolved_script_path,
@@ -8967,6 +8981,200 @@ fn script_requests_screenshots(script: &Path) -> bool {
         })
 }
 
+fn script_required_capabilities(script: &Path) -> Vec<String> {
+    let Ok(bytes) = std::fs::read(script) else {
+        return Vec::new();
+    };
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return Vec::new();
+    };
+
+    let mut required: Vec<String> = Vec::new();
+
+    let schema_version = value
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    if schema_version >= 2 {
+        required.push("diag.script_v2".to_string());
+    }
+
+    if script_requests_screenshots(script) {
+        required.push("diag.screenshot_png".to_string());
+    }
+
+    if let Some(meta_required) = value
+        .get("meta")
+        .and_then(|m| m.get("required_capabilities"))
+        .and_then(|v| v.as_array())
+    {
+        for cap in meta_required.iter().filter_map(|v| v.as_str()) {
+            let cap = cap.trim();
+            if cap.is_empty() {
+                continue;
+            }
+            required.push(cap.to_string());
+        }
+    }
+
+    let mut normalized: Vec<String> = required
+        .into_iter()
+        .filter_map(|c| normalize_capability_string(&c))
+        .collect();
+    normalized.sort();
+    normalized.dedup();
+    normalized
+}
+
+fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
+    let path = out_dir.join("capabilities.json");
+    let Ok(bytes) = std::fs::read(&path) else {
+        return Vec::new();
+    };
+    let Ok(parsed) = serde_json::from_slice::<fret_diag_protocol::FilesystemCapabilitiesV1>(&bytes)
+    else {
+        return Vec::new();
+    };
+    let mut caps: Vec<String> = parsed
+        .capabilities
+        .into_iter()
+        .filter_map(|c| normalize_capability_string(&c))
+        .collect();
+    caps.sort();
+    caps.dedup();
+    caps
+}
+
+fn normalize_capability_string(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+
+    if raw.contains('.') {
+        return Some(raw.to_string());
+    }
+
+    let mapped = match raw {
+        "script_v2" => "diag.script_v2",
+        "screenshot_png" => "diag.screenshot_png",
+        "multi_window" => "diag.multi_window",
+        "pointer_kind_touch" => "diag.pointer_kind_touch",
+        "gesture_pinch" => "diag.gesture_pinch",
+        _ => raw,
+    };
+    Some(mapped.to_string())
+}
+
+fn gate_required_capabilities(
+    out_path: &Path,
+    required: &[String],
+    available: &[String],
+) -> Result<(), String> {
+    let available_set: std::collections::HashSet<&str> =
+        available.iter().map(|s| s.as_str()).collect();
+    let mut missing: Vec<String> = required
+        .iter()
+        .filter(|c| !available_set.contains(c.as_str()))
+        .cloned()
+        .collect();
+    missing.sort();
+    missing.dedup();
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "required": required,
+        "available": available,
+        "missing": missing,
+    });
+    let _ = write_json_value(out_path, &payload);
+
+    Err(format!(
+        "missing required diagnostics capabilities: {} (see {})",
+        missing.join(", "),
+        out_path.display()
+    ))
+}
+
+#[cfg(test)]
+mod capability_tests {
+    use super::*;
+
+    fn make_temp_dir(prefix: &str) -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        let unique = format!(
+            "{}-{}-{}",
+            prefix,
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        );
+        dir.push(unique);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    #[test]
+    fn gates_missing_screenshot_capability_and_writes_check_file() {
+        let out_dir = make_temp_dir("fret-diag-capabilities-gate");
+        let script_path = out_dir.join("script.json");
+        let check_path = out_dir.join("check.capabilities.json");
+
+        let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+            schema_version: 1,
+            capabilities: vec!["diag.script_v2".to_string()],
+        };
+        std::fs::write(
+            out_dir.join("capabilities.json"),
+            serde_json::to_string_pretty(&caps).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                { "type": "capture_screenshot", "label": null, "timeout_frames": 30 }
+            ]
+        });
+        std::fs::write(
+            &script_path,
+            serde_json::to_string_pretty(&script).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let required = script_required_capabilities(&script_path);
+        assert!(required.contains(&"diag.script_v2".to_string()));
+        assert!(required.contains(&"diag.screenshot_png".to_string()));
+
+        let available = read_filesystem_capabilities(&out_dir);
+        assert_eq!(available, vec!["diag.script_v2".to_string()]);
+
+        let err = gate_required_capabilities(&check_path, &required, &available).unwrap_err();
+        assert!(err.contains("missing required diagnostics capabilities"));
+        assert!(check_path.is_file());
+
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&check_path).unwrap()).unwrap();
+        let missing = value
+            .get("missing")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect::<Vec<_>>();
+        assert!(missing.contains(&"diag.screenshot_png".to_string()));
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+}
+
 #[derive(Debug, Clone)]
 struct ResolvedScriptPaths {
     out_dir: PathBuf,
@@ -9198,6 +9406,24 @@ fn run_script_suite_collect_bundles(
         timeout_ms,
         poll_ms,
     )?;
+
+    let mut required_caps: Vec<String> = Vec::new();
+    for src in scripts {
+        required_caps.extend(script_required_capabilities(src));
+    }
+    required_caps.sort();
+    required_caps.dedup();
+    if !required_caps.is_empty() {
+        let available_caps = read_filesystem_capabilities(&paths.out_dir);
+        if let Err(e) = gate_required_capabilities(
+            &paths.out_dir.join("check.capabilities.json"),
+            &required_caps,
+            &available_caps,
+        ) {
+            let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+            return Err(e);
+        }
+    }
 
     let mut bundle_paths: Vec<PathBuf> = Vec::new();
     for src in scripts {

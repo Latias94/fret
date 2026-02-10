@@ -53,9 +53,23 @@ pub struct DevtoolsSessionRemovedV1 {
     pub session_id: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiScriptMetaV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub required_capabilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_hints: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<UiScriptMetaV1>,
     pub steps: Vec<UiActionStepV1>,
 }
 
@@ -125,7 +139,16 @@ pub enum UiActionStepV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV2 {
     pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meta: Option<UiScriptMetaV1>,
     pub steps: Vec<UiActionStepV2>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemCapabilitiesV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

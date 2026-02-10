@@ -181,6 +181,7 @@ impl ScriptV2Builder {
     pub fn build(self) -> UiActionScriptV2 {
         UiActionScriptV2 {
             schema_version: 2,
+            meta: None,
             steps: self.steps,
         }
     }

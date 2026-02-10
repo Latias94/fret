@@ -76,13 +76,17 @@ Ecosystem authors should be able to:
 
 Typed helpers (Rust builders, script generators) are allowed, but MUST compile down to the same JSON schema.
 
+Implementation rule (fearless refactor prerequisite): the runner MUST parse/execute scripts against the canonical
+schema types in `crates/fret-diag-protocol`. The runner must not carry forked copies of the protocol structs/enums,
+because silent drift turns into “hang until timeout” failure modes.
+
 ### 2) Capability negotiation
 
 The script runner/tooling must make “what is supported” explicit. Examples:
 
-- `screenshot_png` (on-demand PNG screenshots used by `capture_screenshot`)
-- `multi_window` (window targeting and cross-window assertions)
-- `pointer_kind_touch` / `gesture_pinch` (future mobile-style input)
+- `diag.screenshot_png` (on-demand PNG screenshots used by `capture_screenshot`)
+- `diag.multi_window` (window targeting and cross-window assertions)
+- `diag.pointer_kind_touch` / `diag.gesture_pinch` (future mobile-style input)
 
 Tooling should:
 

@@ -33,9 +33,9 @@ Definition of done:
 Goal: prevent silent drift between tooling, scripts, and runner execution.
 
 - [ ] Runner script execution uses `crates/fret-diag-protocol` as the canonical schema:
-  - [ ] no forked protocol types in the runner crate,
-  - [ ] schema evolution is owned by the protocol crate.
-- [ ] Add a small regression check that prevents reintroducing forked protocol definitions.
+  - [x] no forked protocol types in the runner crate (parse/execute against the protocol crate),
+  - [x] schema evolution is owned by the protocol crate.
+- [x] Add a small regression check that prevents reintroducing forked protocol definitions.
 
 Definition of done:
 
@@ -55,13 +55,16 @@ Definition of done:
 
 ### M3: Capability negotiation (fail fast, not by timeout)
 
-- [ ] Decide namespaces and initial stable vocabulary (`devtools.*` vs `diag.*`).
-- [ ] Define `meta.required_capabilities` and “unknown meta ignored” rule.
+- [x] Decide namespaces and initial stable vocabulary (`devtools.*` vs `diag.*`).
+- [x] Define `meta.required_capabilities` and “unknown meta ignored” rule.
 - [ ] Implement capability discovery:
-  - [ ] filesystem-trigger transport (`capabilities.json`),
+  - [x] filesystem-trigger transport (`capabilities.json`),
   - [ ] devtools WS transport (session-advertised capabilities).
-- [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing.
-- [ ] Emit `check.capabilities.json` evidence file on gating failure.
+- [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
+  - [x] `diag run` (filesystem transport),
+  - [x] `diag suite` (filesystem transport),
+  - [ ] `diag repro` (filesystem transport).
+- [x] Emit `check.capabilities.json` evidence file on gating failure.
 
 Definition of done:
 
