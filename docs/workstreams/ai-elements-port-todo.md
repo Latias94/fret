@@ -52,7 +52,7 @@ Status legend:
 | `reasoning` | Prototype | `fret-ui-ai` | `Reasoning` + `ReasoningTrigger` + `ReasoningContent` exist with streaming-driven auto-open + timed auto-close; UI Gallery demo + diag gate added. |
 | `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
 | `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
-| `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
@@ -193,6 +193,10 @@ Existing gates (UI Gallery `ai_environment_variables_demo`):
 Existing gates (UI Gallery `ai_plan_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`
+
+Existing gates (UI Gallery `ai_model_selector_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
 
 Existing gates (UI Gallery `ai_transcript_torture`):
 

@@ -65,6 +65,8 @@ Notes:
 - `MessageBranch` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
   - Verified PASS: 2026-02-10 (local).
+- `ModelSelector` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
 - `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop + provider mode) is aligned with upstream `prompt-input.tsx` and gated:
   - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
   - Verified PASS: 2026-02-10 (local).

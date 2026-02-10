@@ -687,7 +687,7 @@ Legend:
 | `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Defer | Workflow-specific. |
 | `agent.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/agent.rs` | Defer | Likely app-specific persona chrome. |
 | `persona.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/persona.rs` | Defer | Same. |
-| `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Defer | Only if app needs it; depends on overlay/select recipes. |
+| `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Prototype | Optional; demo page + diag gate exist (`ai_model_selector_demo`, `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`). Provider logos are placeholders (no remote fetch). |
 | `mic-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/mic_selector.rs` | Defer | Voice surfaces are optional. |
 | `voice-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/voice_selector.rs` | Defer | Voice surfaces are optional. |
 | `speech-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/speech_input.rs` | Defer | Depends on audio/ASR stack. |
