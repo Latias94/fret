@@ -68,6 +68,11 @@ Notes:
 - `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop + provider mode) is aligned with upstream `prompt-input.tsx` and gated:
   - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
   - Verified PASS: 2026-02-10 (local).
+- Next parity focus inside M1 is PromptInput “parts-first” decomposition so apps can compose prompt chrome without forking:
+  - Target: `PromptInputBody` / `PromptInputTextarea` / `PromptInputHeader` / `PromptInputFooter` / `PromptInputTools` /
+    `PromptInputButton` / `PromptInputSubmit` / `PromptInputActionMenu*` / `PromptInputActionAddAttachments`.
+  - Add a UI Gallery provider-mode composition demo + diag gate:
+    - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
 - Next parity focus inside M1 is clipboard file/image paste (blocked on a runtime/platform capability; clipboard effects are text-only today).
 
 ### M2 — Tooling UIs (sources + citations)

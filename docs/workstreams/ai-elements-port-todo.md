@@ -334,6 +334,20 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
   - Surface: `PromptInputProvider` + `use_prompt_input_controller` + `PromptInput::new_uncontrolled` (provider/local/uncontrolled resolution).
   - Gate: unit test `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_provider_text_model_receives_text_input`).
+- [x] AIEL-MVP1-chat-090 PromptInput parts decomposition parity (align upstream composition surface).
+  - Goal: mirror the upstream “parts-first” API so apps can rearrange prompt chrome without forking.
+  - Target parts (initial set):
+    - `PromptInputBody`, `PromptInputTextarea`, `PromptInputHeader`, `PromptInputFooter`
+    - `PromptInputTools`, `PromptInputButton`, `PromptInputSubmit`
+    - `PromptInputActionMenu*` and an intent-driven `PromptInputActionAddAttachments`
+  - Keep `PromptInput` as a default recipe wrapper for backward compatibility.
+  - Surface (Fret): `PromptInputRoot` + `PromptInputSlots` + `PromptInputHeader`/`Footer`/`Tools`/`Button`/`Submit`/`ActionAddAttachments` (+ `PromptInputProvider`, `use_prompt_input_controller`, `use_prompt_input_config`).
+- [x] AIEL-MVP1-chat-091 Provider-mode composition demo + gate.
+  - Add a UI Gallery page that composes `PromptInputProvider` + parts and demonstrates “external actions”
+    (e.g. a toolbar button/menu item that triggers `on_add_attachments`).
+  - Add a diag script gate:
+    - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
+  - UI Gallery page: `ai_prompt_input_provider_demo`.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
 

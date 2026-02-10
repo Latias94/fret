@@ -184,6 +184,11 @@ P0 (Chat usability + correctness):
   - provider mode: optional `PromptInputProvider` lifts text + attachments models outside the `PromptInput` surface.
   - height constraints: align the textarea “grows but clamps” behavior (min/max height outcome).
   - gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
+- **PromptInput parts-first composition parity** (`prompt-input.tsx`) (next):
+  - ship a parts-based API so apps can compose prompt chrome without forking (header/footer/tools/buttons/menus).
+  - keep `PromptInput` as a backwards-compatible default recipe wrapper.
+  - add a provider-mode composition demo (external “add attachments” action) + diag gate:
+    - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
 - Blocker: **clipboard file/image paste** needs a runtime/platform capability (Fret currently has clipboard text effects only).
 - **Regression gates**:
   - add a `fretboard diag` script that covers the attachment keyboard behaviors (add → backspace remove → send).
