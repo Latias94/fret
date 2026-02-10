@@ -23,3 +23,6 @@ fret-markdown = { path = "../fret-markdown" }
 fret-code-view = { path = "../fret-code-view" }
 serde_json.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

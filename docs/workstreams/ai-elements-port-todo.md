@@ -331,7 +331,9 @@ Keep this list in sync with the pinned upstream commit recorded in
   - Surface: `PromptInput` wraps its root with `ExternalDragRegion` and handles `ExternalDragKind::DropFiles` by appending file-name-based attachment chips.
   - Notes: this is metadata-only (no bytes); the component releases the `ExternalDropToken` via `Effect::ExternalDropRelease` after it has updated the attachments model.
   - Gate: unit test `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_external_drag_region_can_handle_external_drag_events`).
-- [ ] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
+- [x] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
+  - Surface: `PromptInputProvider` + `use_prompt_input_controller` + `PromptInput::new_uncontrolled` (provider/local/uncontrolled resolution).
+  - Gate: unit test `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_provider_text_model_receives_text_input`).
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
 

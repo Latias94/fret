@@ -6,6 +6,7 @@ use fret_runtime::{Effect, Model};
 use fret_ui::action::{ActivateReason, OnActivate, OnExternalDrag, OnKeyDown};
 use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
@@ -17,9 +18,105 @@ use crate::elements::attachments::{
 };
 use crate::model::item_key_from_external_id;
 
+#[derive(Debug, Clone)]
+pub struct PromptInputController {
+    pub text: Model<String>,
+    pub attachments: Option<Model<Vec<AttachmentData>>>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct PromptInputProviderState {
+    controller: Option<PromptInputController>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct PromptInputLocalState {
+    controller: Option<PromptInputController>,
+}
+
+/// Returns the nearest prompt input controller in scope.
+///
+/// This mirrors AI Elements `PromptInputProvider` behavior: prefer a local controller (inside a
+/// `PromptInput`), falling back to a provider controller when present.
+pub fn use_prompt_input_controller<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<PromptInputController> {
+    if let Some(local) = cx.inherited_state::<PromptInputLocalState>() {
+        if let Some(controller) = local.controller.clone() {
+            return Some(controller);
+        }
+    }
+    cx.inherited_state::<PromptInputProviderState>()
+        .and_then(|st| st.controller.clone())
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputProvider {
+    text: Option<Model<String>>,
+    attachments: Option<Model<Vec<AttachmentData>>>,
+    initial_input: Arc<str>,
+}
+
+impl PromptInputProvider {
+    pub fn new() -> Self {
+        Self {
+            text: None,
+            attachments: None,
+            initial_input: Arc::<str>::from(""),
+        }
+    }
+
+    pub fn initial_input(mut self, input: impl Into<Arc<str>>) -> Self {
+        self.initial_input = input.into();
+        self
+    }
+
+    pub fn text_model(mut self, model: Model<String>) -> Self {
+        self.text = Some(model);
+        self
+    }
+
+    pub fn attachments_model(mut self, model: Model<Vec<AttachmentData>>) -> Self {
+        self.attachments = Some(model);
+        self
+    }
+
+    pub fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl FnOnce(&mut ElementContext<'_, H>, PromptInputController) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let controlled_text = self.text.clone();
+        let controlled_attachments = self.attachments.clone();
+        let initial_input = self.initial_input.to_string();
+
+        cx.container(Default::default(), move |cx| {
+            let text =
+                controllable_state::use_controllable_model(cx, controlled_text, || initial_input)
+                    .model();
+            let attachments = controllable_state::use_controllable_model(
+                cx,
+                controlled_attachments,
+                Vec::<AttachmentData>::new,
+            )
+            .model();
+
+            let controller = PromptInputController {
+                text,
+                attachments: Some(attachments),
+            };
+            cx.with_state(PromptInputProviderState::default, |st| {
+                st.controller = Some(controller.clone());
+            });
+
+            children(cx, controller)
+        })
+    }
+}
+
 #[derive(Clone)]
 pub struct PromptInput {
-    model: Model<String>,
+    model: Option<Model<String>>,
     textarea_min_height: Px,
     textarea_max_height: Option<Px>,
     disabled: bool,
@@ -42,7 +139,7 @@ pub struct PromptInput {
 impl std::fmt::Debug for PromptInput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PromptInput")
-            .field("model", &"<model>")
+            .field("model", &self.model.as_ref().map(|_| "<model>"))
             .field("textarea_min_height", &self.textarea_min_height)
             .field("textarea_max_height", &self.textarea_max_height)
             .field("disabled", &self.disabled)
@@ -79,7 +176,30 @@ impl std::fmt::Debug for PromptInput {
 impl PromptInput {
     pub fn new(model: Model<String>) -> Self {
         Self {
-            model,
+            model: Some(model),
+            textarea_min_height: Px(96.0),
+            textarea_max_height: None,
+            disabled: false,
+            loading: false,
+            clear_on_send: true,
+            clear_attachments_on_send: true,
+            on_send: None,
+            on_stop: None,
+            on_add_attachments: None,
+            attachments: None,
+            test_id_root: None,
+            test_id_textarea: None,
+            test_id_send: None,
+            test_id_stop: None,
+            test_id_attachments: None,
+            test_id_add_attachments: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn new_uncontrolled() -> Self {
+        Self {
+            model: None,
             textarea_min_height: Px(96.0),
             textarea_max_height: None,
             disabled: false,
@@ -192,27 +312,52 @@ impl PromptInput {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let provider = use_prompt_input_controller(cx);
+        let text_model = controllable_state::use_controllable_model(
+            cx,
+            self.model
+                .clone()
+                .or_else(|| provider.as_ref().map(|c| c.text.clone())),
+            String::new,
+        )
+        .model();
+
+        let attachments_model = self
+            .attachments
+            .clone()
+            .or_else(|| provider.as_ref().and_then(|c| c.attachments.clone()));
+
+        cx.with_state(PromptInputLocalState::default, |st| {
+            st.controller = Some(PromptInputController {
+                text: text_model.clone(),
+                attachments: attachments_model.clone(),
+            });
+        });
+
         let current = cx
-            .get_model_cloned(&self.model, Invalidation::Layout)
+            .get_model_cloned(&text_model, Invalidation::Layout)
             .unwrap_or_default();
         let is_empty = current.trim().is_empty();
 
-        let attachments = self.attachments.as_ref().and_then(|m| {
+        let attachments = attachments_model.as_ref().and_then(|m| {
             cx.get_model_cloned(m, Invalidation::Layout)
                 .or_else(|| Some(Vec::new()))
         });
         let attachments_len = attachments.as_ref().map(|v| v.len()).unwrap_or(0);
 
-        let model = self.model.clone();
+        let text_model_for_handlers = text_model.clone();
         let clear_on_send = self.clear_on_send;
         let on_send = self.on_send.clone();
-        let attachments_model = self.attachments.clone();
+        let attachments_model_for_send = attachments_model.clone();
         let clear_attachments_on_send = self.clear_attachments_on_send;
         let send_activate: OnActivate = Arc::new(move |host, action_cx, reason| {
-            let text = host.models_mut().read(&model, Clone::clone).ok();
+            let text = host
+                .models_mut()
+                .read(&text_model_for_handlers, Clone::clone)
+                .ok();
             let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
 
-            let attachments_len = attachments_model
+            let attachments_len = attachments_model_for_send
                 .as_ref()
                 .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
                 .unwrap_or(0);
@@ -226,10 +371,12 @@ impl PromptInput {
             }
 
             if clear_on_send {
-                let _ = host.models_mut().update(&model, |v| v.clear());
+                let _ = host
+                    .models_mut()
+                    .update(&text_model_for_handlers, |v| v.clear());
             }
             if clear_attachments_on_send {
-                if let Some(attachments_model) = attachments_model.as_ref() {
+                if let Some(attachments_model) = attachments_model_for_send.as_ref() {
                     let _ = host.models_mut().update(attachments_model, |v| v.clear());
                 }
             }
@@ -341,7 +488,7 @@ impl PromptInput {
                 return None;
             }
 
-            let attachments_model = self.attachments.clone();
+            let attachments_model = attachments_model.clone();
             let on_remove = attachments_model.map(|attachments_model| {
                 let model = attachments_model.clone();
                 Arc::new(
@@ -398,8 +545,8 @@ impl PromptInput {
         });
 
         let control_key_handler: OnKeyDown = {
-            let model = self.model.clone();
-            let attachments_model = self.attachments.clone();
+            let text_model = text_model.clone();
+            let attachments_model = attachments_model.clone();
             let disabled = self.disabled;
             let loading = self.loading;
             let send_activate = send_activate.clone();
@@ -418,7 +565,7 @@ impl PromptInput {
                             return false;
                         }
 
-                        let text = host.models_mut().read(&model, Clone::clone).ok();
+                        let text = host.models_mut().read(&text_model, Clone::clone).ok();
                         let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
                         let attachments_len = attachments_model
                             .as_ref()
@@ -445,7 +592,7 @@ impl PromptInput {
                             return false;
                         }
 
-                        let text = host.models_mut().read(&model, Clone::clone).ok();
+                        let text = host.models_mut().read(&text_model, Clone::clone).ok();
                         let is_empty = text.as_deref().map(|v| v.trim().is_empty()).unwrap_or(true);
                         if !is_empty {
                             return false;
@@ -494,7 +641,7 @@ impl PromptInput {
             )
         });
 
-        let mut group = InputGroup::new(self.model)
+        let mut group = InputGroup::new(text_model.clone())
             .textarea()
             .textarea_min_height(textarea_min_height)
             .control_on_key_down(control_key_handler)
@@ -528,7 +675,7 @@ impl PromptInput {
         let content = group.into_element(cx);
 
         let drop_handler: Option<OnExternalDrag> =
-            self.attachments
+            attachments_model
                 .clone()
                 .map(|attachments| -> OnExternalDrag {
                     let disabled = self.disabled;
@@ -591,5 +738,142 @@ impl PromptInput {
         } else {
             content
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType, Px, Rect,
+        Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_ui::UiTree;
+    use fret_ui::declarative::render_root;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn prompt_input_provider_text_model_receives_text_input() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let controlled_text = app.models_mut().insert(String::new());
+        let controlled_attachments = app.models_mut().insert(Vec::<AttachmentData>::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "prompt-input-provider-test",
+            |cx| {
+                vec![
+                    PromptInputProvider::new()
+                        .text_model(controlled_text.clone())
+                        .attachments_model(controlled_attachments.clone())
+                        .into_element_with_children(cx, |cx, _controller| {
+                            vec![
+                                PromptInput::new_uncontrolled()
+                                    .test_id_root("pi-root")
+                                    .test_id_textarea("pi-textarea")
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx),
+                            ]
+                        }),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let click_pos = Point::new(Px(20.0), Px(20.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(&mut app, &mut services, &Event::TextInput("a".to_string()));
+
+        let value = app
+            .models_mut()
+            .read(&controlled_text, Clone::clone)
+            .unwrap();
+        assert_eq!(value, "a");
     }
 }

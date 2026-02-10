@@ -65,7 +65,7 @@ Notes:
 - `MessageBranch` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
   - Verified PASS: 2026-02-10 (local).
-- `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop) is aligned with upstream `prompt-input.tsx` and gated:
+- `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop + provider mode) is aligned with upstream `prompt-input.tsx` and gated:
   - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
   - Verified PASS: 2026-02-10 (local).
 - Next parity focus inside M1 is clipboard file/image paste (blocked on a runtime/platform capability; clipboard effects are text-only today).
