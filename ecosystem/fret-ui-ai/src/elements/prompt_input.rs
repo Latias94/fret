@@ -11,7 +11,10 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, InputGroup};
+use fret_ui_shadcn::{
+    Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+    DropdownMenuItem, DropdownMenuSide, InputGroup,
+};
 
 use crate::elements::attachments::{
     Attachment, AttachmentData, AttachmentFileData, AttachmentVariant, Attachments,
@@ -1473,6 +1476,288 @@ impl PromptInputButton {
             btn = btn.test_id(id);
         }
         btn.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Action menu trigger aligned with AI Elements `PromptInputActionMenuTrigger`.
+///
+/// This is a small “+” button that toggles a dropdown menu open model.
+pub struct PromptInputActionMenuTrigger {
+    test_id: Option<Arc<str>>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputActionMenuTrigger {
+    pub fn new() -> Self {
+        Self {
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element_with_open<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        open: Model<bool>,
+    ) -> AnyElement {
+        let cfg = use_prompt_input_config(cx);
+        let disabled = cfg
+            .as_ref()
+            .map(|c| c.disabled || c.loading)
+            .unwrap_or(false);
+
+        let on_toggle: OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = !*v);
+            host.notify(action_cx);
+        });
+
+        let mut btn = PromptInputButton::new("Prompt actions")
+            .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+            .disabled(disabled)
+            .on_activate(on_toggle)
+            .refine_layout(self.layout);
+
+        if let Some(id) = self.test_id {
+            btn = btn.test_id(id);
+        }
+        btn.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Action menu item aligned with AI Elements `PromptInputActionMenuItem`.
+pub struct PromptInputActionMenuItem {
+    label: Arc<str>,
+    value: Option<Arc<str>>,
+    leading: Option<AnyElement>,
+    disabled: bool,
+    close_on_select: bool,
+    on_activate: Option<OnActivate>,
+    test_id: Option<Arc<str>>,
+}
+
+impl PromptInputActionMenuItem {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            value: None,
+            leading: None,
+            disabled: false,
+            close_on_select: true,
+            on_activate: None,
+            test_id: None,
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    pub fn leading(mut self, leading: AnyElement) -> Self {
+        self.leading = Some(leading);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_entry(self) -> DropdownMenuEntry {
+        let mut item = DropdownMenuItem::new(self.label.clone());
+        if let Some(value) = self.value.or_else(|| Some(self.label.clone())) {
+            item.value = value;
+        }
+        item.leading = self.leading;
+        item.disabled = self.disabled;
+        item.close_on_select = self.close_on_select;
+        item.on_activate = self.on_activate;
+        item.test_id = self.test_id;
+        DropdownMenuEntry::Item(item)
+    }
+}
+
+#[derive(Clone)]
+/// Action menu content wrapper aligned with AI Elements `PromptInputActionMenuContent`.
+pub struct PromptInputActionMenuContent {
+    entries: Vec<DropdownMenuEntry>,
+}
+
+impl PromptInputActionMenuContent {
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+
+    pub fn into_entries(self) -> Vec<DropdownMenuEntry> {
+        self.entries
+    }
+}
+
+#[derive(Default)]
+struct PromptInputActionMenuState {
+    open: Option<Model<bool>>,
+}
+
+fn prompt_input_action_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    let open = cx.with_state(PromptInputActionMenuState::default, |st| st.open.clone());
+    match open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(PromptInputActionMenuState::default, |st| {
+                st.open = Some(model.clone())
+            });
+            model
+        }
+    }
+}
+
+#[derive(Clone)]
+/// Action menu root aligned with AI Elements `PromptInputActionMenu`.
+pub struct PromptInputActionMenu {
+    align: DropdownMenuAlign,
+    side: DropdownMenuSide,
+    side_offset: Px,
+    modal: bool,
+    trigger: PromptInputActionMenuTrigger,
+    content: PromptInputActionMenuContent,
+}
+
+impl PromptInputActionMenu {
+    pub fn new(content: PromptInputActionMenuContent) -> Self {
+        Self {
+            align: DropdownMenuAlign::Start,
+            side: DropdownMenuSide::Top,
+            side_offset: Px(4.0),
+            modal: false,
+            trigger: PromptInputActionMenuTrigger::new(),
+            content,
+        }
+    }
+
+    pub fn align(mut self, align: DropdownMenuAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: DropdownMenuSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = offset;
+        self
+    }
+
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
+        self
+    }
+
+    pub fn trigger(mut self, trigger: PromptInputActionMenuTrigger) -> Self {
+        self.trigger = trigger;
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let open = prompt_input_action_menu_open_model(cx);
+        let modal = self.modal;
+        let align = self.align;
+        let side = self.side;
+        let side_offset = self.side_offset;
+        let trigger = self.trigger;
+        let entries = self.content.into_entries();
+
+        DropdownMenu::new(open.clone())
+            .modal(modal)
+            .align(align)
+            .side(side)
+            .side_offset(side_offset)
+            .into_element(
+                cx,
+                move |cx| trigger.into_element_with_open(cx, open.clone()),
+                move |_cx| entries,
+            )
+    }
+}
+
+#[derive(Clone)]
+/// Menu item aligned with AI Elements `PromptInputActionAddAttachments` (intent-driven).
+pub struct PromptInputActionAddAttachmentsMenuItem {
+    label: Arc<str>,
+    test_id: Option<Arc<str>>,
+}
+
+impl PromptInputActionAddAttachmentsMenuItem {
+    pub fn new() -> Self {
+        Self {
+            label: Arc::<str>::from("Add photos or files"),
+            test_id: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = label.into();
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_entry<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> DropdownMenuEntry {
+        let cfg = use_prompt_input_config(cx);
+        let disabled = cfg
+            .as_ref()
+            .map(|c| c.disabled || c.loading || c.on_add_attachments.is_none())
+            .unwrap_or(true);
+        let on_activate = cfg.as_ref().and_then(|c| c.on_add_attachments.clone());
+
+        let mut item = PromptInputActionMenuItem::new(self.label)
+            .leading(decl_icon::icon(cx, IconId::new("lucide.image")))
+            .disabled(disabled);
+
+        if let Some(on_activate) = on_activate {
+            item = item.on_activate(on_activate);
+        }
+        if let Some(id) = self.test_id {
+            item = item.test_id(id);
+        }
+        item.into_entry()
     }
 }
 
