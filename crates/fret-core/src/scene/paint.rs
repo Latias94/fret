@@ -1,3 +1,4 @@
+use crate::MaterialId;
 use crate::geometry::{Point, Size};
 
 use super::Color;
@@ -49,11 +50,43 @@ pub struct RadialGradient {
     pub stops: [GradientStop; MAX_STOPS],
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaterialParams {
+    pub vec4s: [[f32; 4]; 4],
+}
+
+impl MaterialParams {
+    pub const ZERO: Self = Self {
+        vec4s: [[0.0; 4]; 4],
+    };
+
+    pub fn sanitize(self) -> Self {
+        let mut out = self;
+        for v in &mut out.vec4s {
+            for x in v {
+                if !x.is_finite() {
+                    *x = 0.0;
+                }
+            }
+        }
+        out
+    }
+
+    pub fn is_finite(self) -> bool {
+        self.vec4s.iter().flatten().all(|&x| x.is_finite())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Paint {
     Solid(Color),
     LinearGradient(LinearGradient),
     RadialGradient(RadialGradient),
+    Material {
+        id: MaterialId,
+        params: MaterialParams,
+    },
 }
 
 impl From<Color> for Paint {
@@ -200,6 +233,10 @@ impl Paint {
 
                 Paint::RadialGradient(g)
             }
+            Paint::Material { id, params } => Paint::Material {
+                id,
+                params: params.sanitize(),
+            },
         }
     }
 }
