@@ -1,6 +1,6 @@
 # ADR 1183: Procedural Material Determinism (Seeds and Time Inputs) (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -83,4 +83,3 @@ shared tooling (diag overlays, inspectors) can present reasonable labels.
 - This ADR does not standardize a full procedural language or node graph.
 - This ADR does not guarantee cross-GPU bit-identical noise; it guarantees input determinism and
   policy seams for stable behavior.
-
