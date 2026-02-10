@@ -506,3 +506,51 @@ pub(crate) fn color_with_opacity(color: Color, opacity: f32) -> Color {
         ..color
     }
 }
+
+pub(crate) fn find_best_text_color_near(
+    scene: &Scene,
+    search_within: Rect,
+    near: Point,
+) -> Option<css_color::Rgba> {
+    let mut best_raw: Option<css_color::Rgba> = None;
+    let mut best_raw_score = f32::INFINITY;
+    let mut best_tx: Option<css_color::Rgba> = None;
+    let mut best_tx_score = f32::INFINITY;
+    let mut best_any: Option<css_color::Rgba> = None;
+    let mut best_any_score = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Text { origin, color, .. } = *op else {
+            return;
+        };
+        let raw_origin = origin;
+        let tx_origin = st.transform.apply_point(origin);
+        let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
+        if rgba.a <= 0.01 {
+            return;
+        }
+
+        if rect_contains_point_with_margin(search_within, tx_origin, 10.0) {
+            let dist_score = (tx_origin.x.0 - near.x.0).abs() + (tx_origin.y.0 - near.y.0).abs();
+            if dist_score < best_tx_score {
+                best_tx_score = dist_score;
+                best_tx = Some(rgba);
+            }
+        }
+        if rect_contains_point_with_margin(search_within, raw_origin, 10.0) {
+            let dist_score = (raw_origin.x.0 - near.x.0).abs() + (raw_origin.y.0 - near.y.0).abs();
+            if dist_score < best_raw_score {
+                best_raw_score = dist_score;
+                best_raw = Some(rgba);
+            }
+        }
+
+        let dist_score = (tx_origin.x.0 - near.x.0).abs() + (tx_origin.y.0 - near.y.0).abs();
+        if dist_score < best_any_score {
+            best_any_score = dist_score;
+            best_any = Some(rgba);
+        }
+    });
+
+    best_tx.or(best_raw).or(best_any)
+}

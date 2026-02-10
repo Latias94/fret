@@ -1,5 +1,7 @@
 use super::*;
 
+use std::cmp::Ordering;
+
 pub(crate) fn split_box_shadow_layers(s: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let mut depth = 0_u32;
@@ -109,4 +111,107 @@ pub(crate) fn shadow_insets_score(a: ShadowInsets, b: ShadowInsets) -> f32 {
         + (a.top - b.top).abs()
         + (a.right - b.right).abs()
         + (a.bottom - b.bottom).abs()
+}
+
+pub(crate) fn maybe_dump_shadow_candidates(
+    label: &str,
+    expected: &[ShadowInsets],
+    candidates: &[ShadowInsets],
+) {
+    if std::env::var("FRET_DEBUG_SHADOW_INSETS").is_err() {
+        return;
+    }
+    eprintln!("-- shadow insets debug: {label}");
+    eprintln!("expected: {expected:?}");
+    let mut sorted = candidates.to_vec();
+    sorted.sort_by(|a, b| a.top.partial_cmp(&b.top).unwrap_or(Ordering::Equal));
+    for (idx, cand) in sorted.iter().take(16).enumerate() {
+        eprintln!("cand[{idx}] {cand:?}");
+    }
+}
+
+pub(crate) fn assert_shadow_insets_match(
+    web_name: &str,
+    web_theme_name: &str,
+    expected: &[ShadowInsets],
+    candidates: &[ShadowInsets],
+) {
+    if expected.is_empty() {
+        return;
+    }
+    assert!(
+        candidates.len() >= expected.len(),
+        "{web_name} {web_theme_name}: not enough shadow candidates (expected ≥{}, got {})",
+        expected.len(),
+        candidates.len()
+    );
+
+    let chosen: Vec<ShadowInsets> = match expected.len() {
+        1 => {
+            let exp = expected[0];
+            let mut best = candidates[0];
+            let mut best_score = f32::INFINITY;
+            for cand in candidates {
+                let score = shadow_insets_score(*cand, exp);
+                if score < best_score {
+                    best_score = score;
+                    best = *cand;
+                }
+            }
+            vec![best]
+        }
+        2 => {
+            let exp0 = expected[0];
+            let exp1 = expected[1];
+            let mut best0 = candidates[0];
+            let mut best1 = candidates[1];
+            let mut best_score = f32::INFINITY;
+
+            for (i, cand0) in candidates.iter().enumerate() {
+                for (j, cand1) in candidates.iter().enumerate() {
+                    if i == j {
+                        continue;
+                    }
+                    let score =
+                        shadow_insets_score(*cand0, exp0) + shadow_insets_score(*cand1, exp1);
+                    if score < best_score {
+                        best_score = score;
+                        best0 = *cand0;
+                        best1 = *cand1;
+                    }
+                }
+            }
+
+            vec![best0, best1]
+        }
+        n => panic!("{web_name} {web_theme_name}: unsupported shadow layer count {n}"),
+    };
+
+    let tol = 1.0;
+    for (idx, (exp, act)) in expected.iter().zip(chosen.iter()).enumerate() {
+        assert_close(
+            &format!("{web_name} {web_theme_name} shadow[{idx}] left"),
+            act.left,
+            exp.left,
+            tol,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} shadow[{idx}] top"),
+            act.top,
+            exp.top,
+            tol,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} shadow[{idx}] right"),
+            act.right,
+            exp.right,
+            tol,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} shadow[{idx}] bottom"),
+            act.bottom,
+            exp.bottom,
+            tol,
+        );
+    }
 }
