@@ -123,7 +123,14 @@ pub(crate) fn open(
             let token = st.allocate_token();
             let files_meta = selected
                 .iter()
-                .map(|f| ExternalDragFile { name: f.name() })
+                .map(|f| ExternalDragFile {
+                    name: f.name(),
+                    size_bytes: Some(f.size() as u64),
+                    media_type: {
+                        let ty = f.type_();
+                        (!ty.is_empty()).then_some(ty)
+                    },
+                })
                 .collect::<Vec<_>>();
             st.selections.insert(token, selected);
             (token, files_meta)

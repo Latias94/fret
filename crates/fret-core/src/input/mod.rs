@@ -237,6 +237,15 @@ pub struct ExternalDragFiles {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalDragFile {
     pub name: String,
+    /// File size in bytes when known.
+    ///
+    /// Web runners can provide this from the `File` object. Native runners may provide this from
+    /// filesystem metadata.
+    pub size_bytes: Option<u64>,
+    /// MIME type when known (e.g. `"image/png"`).
+    ///
+    /// Web runners can provide this from the `File` object. Native runners may leave this unset.
+    pub media_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

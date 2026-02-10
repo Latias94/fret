@@ -187,6 +187,8 @@ impl FileDialogProvider for NativeFileDialog {
                         .file_name()
                         .map(|n| n.to_string_lossy().to_string())
                         .unwrap_or_else(|| path.to_string_lossy().to_string()),
+                    size_bytes: std::fs::metadata(path).ok().map(|m| m.len()),
+                    media_type: None,
                 })
                 .collect::<Vec<_>>();
 

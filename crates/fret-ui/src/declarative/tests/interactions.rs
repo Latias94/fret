@@ -696,6 +696,8 @@ fn declarative_external_drag_region_can_handle_external_drag_events() {
                 token,
                 files: vec![fret_core::ExternalDragFile {
                     name: "hello.txt".to_string(),
+                    size_bytes: None,
+                    media_type: None,
                 }],
             }),
         }),
