@@ -219,6 +219,71 @@ pub fn day_picker_cell_state(
     DayPickerCellState { hidden, disabled }
 }
 
+pub fn day_grid_step_target_skipping_disabled(
+    current: usize,
+    len: usize,
+    step: i32,
+    disabled: &[bool],
+) -> usize {
+    if len == 0 || step == 0 || current >= len {
+        return current;
+    }
+
+    let mut idx = (current as i32 + step).clamp(0, (len.saturating_sub(1)) as i32) as usize;
+    if idx == current {
+        return current;
+    }
+
+    while idx != current && disabled.get(idx).copied().unwrap_or(true) {
+        let next = idx as i32 + step;
+        if next < 0 || next >= len as i32 {
+            break;
+        }
+        idx = next as usize;
+    }
+
+    if idx != current && !disabled.get(idx).copied().unwrap_or(true) {
+        idx
+    } else {
+        current
+    }
+}
+
+pub fn day_grid_row_edge_target_skipping_disabled(
+    current: usize,
+    len: usize,
+    target: usize,
+    disabled: &[bool],
+) -> usize {
+    if len == 0 || current >= len {
+        return current;
+    }
+
+    let row_start = (current / 7) * 7;
+    let row_end = (row_start + 6).min(len.saturating_sub(1));
+    let target = target.clamp(row_start, row_end);
+
+    if !disabled.get(target).copied().unwrap_or(true) {
+        return target;
+    }
+
+    if target == row_start {
+        for idx in row_start..=row_end {
+            if !disabled.get(idx).copied().unwrap_or(true) {
+                return idx;
+            }
+        }
+    } else if target == row_end {
+        for idx in (row_start..=row_end).rev() {
+            if !disabled.get(idx).copied().unwrap_or(true) {
+                return idx;
+            }
+        }
+    }
+
+    current
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DayPickerGridLayout {
     Compact,
@@ -835,6 +900,32 @@ mod tests {
                 hidden: true,
                 disabled: true
             }
+        );
+    }
+
+    #[test]
+    fn day_grid_navigation_skips_disabled() {
+        let len = 14;
+        let mut disabled = vec![true; len];
+        for idx in [1usize, 6, 8, 13] {
+            disabled[idx] = false;
+        }
+
+        assert_eq!(day_grid_step_target_skipping_disabled(6, len, 1, &disabled), 8);
+        assert_eq!(day_grid_step_target_skipping_disabled(8, len, -1, &disabled), 6);
+        assert_eq!(day_grid_step_target_skipping_disabled(1, len, 7, &disabled), 8);
+        assert_eq!(day_grid_step_target_skipping_disabled(13, len, -7, &disabled), 6);
+
+        let current = 10;
+        let row_start = (current / 7) * 7;
+        let row_end = (row_start + 6).min(len - 1);
+        assert_eq!(
+            day_grid_row_edge_target_skipping_disabled(current, len, row_start, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_row_edge_target_skipping_disabled(current, len, row_end, &disabled),
+            13
         );
     }
 

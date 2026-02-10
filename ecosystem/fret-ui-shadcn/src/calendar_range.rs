@@ -25,8 +25,9 @@ use crate::calendar::{
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, DateRangeSelection, DayMatcher, DayPickerModifiers, day_picker_cell_state,
-    month_grid, month_grid_compact, week_number,
+    CalendarMonth, DateRangeSelection, DayMatcher, DayPickerModifiers,
+    day_grid_row_edge_target_skipping_disabled, day_grid_step_target_skipping_disabled,
+    day_picker_cell_state, month_grid, month_grid_compact, week_number,
 };
 
 #[derive(Clone)]
@@ -627,6 +628,7 @@ impl CalendarRange {
                             let days_grid = cx.roving_flex(roving_props, move |cx| {
                                 let direction = direction_prim::use_direction_in_scope(cx, None);
                                 let month_model = month_model_days.clone();
+                                let disabled_for_nav = Arc::clone(&disabled);
                                 cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
                                     use fret_core::KeyCode;
                                     use fret_ui::action::RovingNavigateResult;
@@ -638,9 +640,12 @@ impl CalendarRange {
                                     let step = calendar_day_grid_step_for_key(direction, it.key);
 
                                     if let Some(step) = step {
-                                        let next = (current as i32 + step)
-                                            .clamp(0, (it.len.saturating_sub(1)) as i32)
-                                            as usize;
+                                        let next = day_grid_step_target_skipping_disabled(
+                                            current,
+                                            it.len,
+                                            step,
+                                            disabled_for_nav.as_ref(),
+                                        );
                                         return RovingNavigateResult::Handled {
                                             target: Some(next),
                                         };
@@ -649,8 +654,14 @@ impl CalendarRange {
                                     if let Some(target) = calendar_day_grid_row_edge_target_for_key(
                                         direction, it.key, current, it.len,
                                     ) {
+                                        let next = day_grid_row_edge_target_skipping_disabled(
+                                            current,
+                                            it.len,
+                                            target,
+                                            disabled_for_nav.as_ref(),
+                                        );
                                         return RovingNavigateResult::Handled {
-                                            target: Some(target),
+                                            target: Some(next),
                                         };
                                     }
 
@@ -1227,6 +1238,7 @@ fn calendar_range_month_view<H: UiHost>(
     let days_grid = cx.roving_flex(roving_props, move |cx| {
         let direction = direction_prim::use_direction_in_scope(cx, None);
         let month_model = month_model.clone();
+        let disabled_for_nav = Arc::clone(&disabled);
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
             use fret_core::KeyCode;
             use fret_ui::action::RovingNavigateResult;
@@ -1238,16 +1250,26 @@ fn calendar_range_month_view<H: UiHost>(
             let step = calendar_day_grid_step_for_key(direction, it.key);
 
             if let Some(step) = step {
-                let next =
-                    (current as i32 + step).clamp(0, (it.len.saturating_sub(1)) as i32) as usize;
+                let next = day_grid_step_target_skipping_disabled(
+                    current,
+                    it.len,
+                    step,
+                    disabled_for_nav.as_ref(),
+                );
                 return RovingNavigateResult::Handled { target: Some(next) };
             }
 
             if let Some(target) =
                 calendar_day_grid_row_edge_target_for_key(direction, it.key, current, it.len)
             {
+                let next = day_grid_row_edge_target_skipping_disabled(
+                    current,
+                    it.len,
+                    target,
+                    disabled_for_nav.as_ref(),
+                );
                 return RovingNavigateResult::Handled {
-                    target: Some(target),
+                    target: Some(next),
                 };
             }
 
