@@ -40,12 +40,12 @@ Evidence:
 Definition of done:
 
 - Web/wasm runner supplies best-effort `text_scale_factor` and `prefers_reduced_transparency`.
-- Desktop runners set best-effort values (may be `None` until OS sources are wired).
+- Desktop runners set best-effort values (leave `None` when unavailable).
 
 Evidence:
 
 - `crates/fret-launch/src/runner/web/render_loop.rs` (`read_text_scale_factor`, `prefers_reduced_transparency`)
-- `crates/fret-launch/src/runner/desktop/mod.rs` (`read_desktop_text_scale_factor` stubs; `WindowMetricsService` plumbing)
+- `crates/fret-launch/src/runner/desktop/mod.rs` (`read_desktop_text_scale_factor`, `read_desktop_prefers_reduced_transparency`, `read_desktop_accent_color`)
 
 ## M3 — Ecosystem adoption gates
 
@@ -53,3 +53,8 @@ Definition of done:
 
 - At least one shadcn-aligned recipe respects reduced transparency via `fret-ui-kit` helper
   defaults and has a regression gate (unit test or `fretboard diag` script).
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/declarative/glass.rs` (`glass_panel`)
+- `ecosystem/fret-ui-kit/src/recipes/glass.rs` (`glass_effect_chain_for_environment` + unit test)

@@ -231,3 +231,40 @@ pub fn glass_effect_chain(effect: ResolvedGlassEffect) -> EffectChain {
 
     EffectChain::from_steps(&steps)
 }
+
+/// Returns the glass effect chain, respecting reduced-transparency preferences (ADR 1185).
+///
+/// When reduced transparency is preferred, this returns an empty chain (no blur or color-adjust).
+pub fn glass_effect_chain_for_environment(
+    effect: ResolvedGlassEffect,
+    prefers_reduced_transparency: bool,
+) -> EffectChain {
+    if prefers_reduced_transparency {
+        EffectChain::EMPTY
+    } else {
+        glass_effect_chain(effect)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::Px;
+
+    #[test]
+    fn glass_effect_chain_disables_effects_when_reduced_transparency_is_true() {
+        let effect = ResolvedGlassEffect {
+            blur_radius_px: Px(12.0),
+            blur_downsample: 2,
+            saturation: 1.1,
+            brightness: 1.0,
+            contrast: 1.0,
+        };
+
+        let disabled = glass_effect_chain_for_environment(effect, true);
+        assert!(disabled.is_empty());
+
+        let enabled = glass_effect_chain_for_environment(effect, false);
+        assert!(!enabled.is_empty());
+    }
+}

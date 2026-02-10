@@ -1863,6 +1863,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-workspace",
+ "slotmap",
  "thiserror 2.0.18",
  "wgpu",
 ]

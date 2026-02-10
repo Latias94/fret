@@ -24,10 +24,12 @@ date: 2026-02-10
 - [x] Web/wasm:
   - [x] `prefers_reduced_transparency` via `matchMedia` when available.
   - [x] `text_scale_factor` via computed root `font-size` (best-effort).
-- [ ] Desktop:
-  - [ ] Wire OS-specific sources (optional; keep `None` until reliable).
+- [x] Desktop:
+  - [x] Wire OS-specific sources (best-effort; leave `None` when unavailable).
+  - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs` (`read_desktop_text_scale_factor`, `read_desktop_prefers_reduced_transparency`, `read_desktop_accent_color`).
 
 ## Ecosystem adoption
 
-- [ ] Add at least one reduced-transparency gate in shadcn recipes:
+- [x] Add at least one reduced-transparency gate in shadcn-ish recipes:
   - Prefer disabling blur/frosted-glass effects when `prefers_reduced_transparency` is true.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/glass.rs` (`glass_panel`) + `ecosystem/fret-ui-kit/src/recipes/glass.rs` (`glass_effect_chain_for_environment`).

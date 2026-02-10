@@ -513,3 +513,67 @@ pub fn run<S: 'static>(
 ) -> Result<()> {
     run_with_hooks(root_name, init_window, view, |d| d)
 }
+
+#[cfg(all(
+    test,
+    not(target_arch = "wasm32"),
+    feature = "desktop",
+    feature = "shadcn"
+))]
+mod tests {
+    use std::any::TypeId;
+
+    use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
+    use fret_ui::{Theme, UiTree};
+
+    use super::App;
+
+    #[test]
+    fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
+        let mut app = App::new();
+        fret_ui_shadcn::install_app(&mut app);
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Dark));
+        });
+
+        let mut ui = UiTree::<App>::default();
+        let mut state = ();
+
+        let before_bg = Theme::global(&app).colors.surface_background;
+        let before_rev = Theme::global(&app).revision();
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), before_rev);
+        assert_eq!(Theme::global(&app).colors.surface_background, before_bg);
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_ne!(Theme::global(&app).colors.surface_background, before_bg);
+        let rev_after = Theme::global(&app).revision();
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), rev_after);
+    }
+}
