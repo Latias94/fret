@@ -1182,6 +1182,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     next_environment_poll_at: Instant,
 
+    #[cfg(target_os = "linux")]
+    linux_portal_settings_listener_started: bool,
+
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
@@ -1312,6 +1315,10 @@ mod linux_portal_settings {
         None
     }
 }
+
+#[cfg(target_os = "linux")]
+static LINUX_PORTAL_ENV_DIRTY: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentSnapshot {
     DesktopEnvironmentSnapshot {
@@ -2686,6 +2693,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             next_environment_poll_at: now,
+            #[cfg(target_os = "linux")]
+            linux_portal_settings_listener_started: false,
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
@@ -2917,6 +2926,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ///
     /// Without a proxy, the runner falls back to synchronous delivery for platform effects.
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
+        #[cfg(target_os = "linux")]
+        let linux_settings_waker = proxy.clone();
+
         #[cfg(feature = "hotpatch-subsecond")]
         if let Some(hotpatch) = self.hotpatch.as_ref() {
             hotpatch.set_event_loop_proxy(proxy.clone());
@@ -2927,6 +2939,47 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
+
+        #[cfg(target_os = "linux")]
+        self.maybe_start_linux_portal_settings_listener(linux_settings_waker);
+    }
+
+    #[cfg(target_os = "linux")]
+    fn maybe_start_linux_portal_settings_listener(&mut self, waker: EventLoopProxy) {
+        if self.linux_portal_settings_listener_started {
+            return;
+        }
+        self.linux_portal_settings_listener_started = true;
+
+        std::thread::spawn(move || {
+            use zbus::blocking::{Connection, Proxy};
+
+            const SETTINGS_SERVICE: &str = "org.freedesktop.portal.Desktop";
+            const SETTINGS_PATH: &str = "/org/freedesktop/portal/desktop";
+            const SETTINGS_INTERFACE: &str = "org.freedesktop.portal.Settings";
+
+            let Ok(connection) = Connection::session() else {
+                return;
+            };
+            let Ok(proxy) = Proxy::new(
+                &connection,
+                SETTINGS_SERVICE,
+                SETTINGS_PATH,
+                SETTINGS_INTERFACE,
+            ) else {
+                return;
+            };
+            let Ok(signals) = proxy.receive_signal("SettingChanged") else {
+                return;
+            };
+
+            for _msg in signals {
+                if LINUX_PORTAL_ENV_DIRTY.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                    continue;
+                }
+                waker.wake_up();
+            }
+        });
     }
 
     fn spawn_platform_completion_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
@@ -3373,7 +3426,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn poll_window_environment_if_due(&mut self, now: Instant) {
-        if now < self.next_environment_poll_at {
+        #[cfg(target_os = "linux")]
+        let linux_dirty = LINUX_PORTAL_ENV_DIRTY.swap(false, std::sync::atomic::Ordering::SeqCst);
+        #[cfg(not(target_os = "linux"))]
+        let linux_dirty = false;
+
+        if now < self.next_environment_poll_at && !linux_dirty {
             return;
         }
         self.next_environment_poll_at = now + Duration::from_millis(500);

@@ -78,6 +78,8 @@ ADR anchor:
   - forced-colors mode (best-effort; `None` when unavailable)
   - Linux: reads preferences from the xdg-desktop-portal Settings API (best-effort; falls back to
     `winit::window::Window::theme()` when available).
+  - Linux: listens to xdg-desktop-portal `SettingChanged` signals and wakes the event loop to
+    refresh the committed snapshot (reduces polling latency; still keeps a 500ms fallback poll).
   - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs`
   - Evidence: `crates/fret-launch/src/runner/desktop/app_handler.rs` (polling + ThemeChanged refresh)
 
