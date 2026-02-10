@@ -177,8 +177,9 @@ impl SearchView {
                 return bar;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(
-                cx.bounds,
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
                 self.window_margin,
             );
 
