@@ -398,6 +398,25 @@ fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRun
 
 fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select) -> AnyElement {
     cx.scope(|cx| {
+        let Select {
+            model,
+            items,
+            variant,
+            menu_align,
+            match_anchor_width,
+            menu_width_floor,
+            typeahead_delay_ms,
+            disabled,
+            leading_icon,
+            label,
+            placeholder,
+            supporting_text,
+            error,
+            a11y_label,
+            test_id,
+            style,
+        } = select;
+        let style: Arc<SelectStyle> = Arc::new(style);
         let runtime = select_runtime_models(cx);
 
         let is_open = cx
@@ -429,24 +448,23 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         }
 
         let selected = cx
-            .get_model_cloned(&select.model, Invalidation::Layout)
+            .get_model_cloned(&model, Invalidation::Layout)
             .unwrap_or(None);
 
         let populated = selected.as_ref().is_some_and(|v| !v.is_empty());
 
         if opening {
             let selected_idx = selected.as_ref().and_then(|value| {
-                select
-                    .items
+                items
                     .iter()
                     .position(|it| it.value.as_ref() == value.as_ref() && !it.disabled)
             });
-            let first_enabled_idx = select.items.iter().position(|it| !it.disabled);
+            let first_enabled_idx = items.iter().position(|it| !it.disabled);
             let tab_stop_idx = selected_idx.or(first_enabled_idx).unwrap_or(0);
 
             let item_height = {
                 let theme = Theme::global(&*cx.app);
-                select_tokens::menu_list_item_height(theme, select.variant)
+                select_tokens::menu_list_item_height(theme, variant)
             };
             let menu_vertical_padding = Px(8.0);
             let target_y =
@@ -456,12 +474,9 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 .scroll_to_offset(Point::new(Px(0.0), target_y));
         }
 
-        let selected_label = selected.as_ref().and_then(|value| {
-            select
-                .items
-                .iter()
-                .find(|it| it.value.as_ref() == value.as_ref())
-        });
+        let selected_label = selected
+            .as_ref()
+            .and_then(|value| items.iter().find(|it| it.value.as_ref() == value.as_ref()));
 
         let value_text = selected_label
             .map(select_item_display_text)
@@ -470,21 +485,21 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
         let trigger = select_trigger_element(
             cx,
-            select.variant,
-            select.disabled,
-            select.error,
+            variant,
+            disabled,
+            error,
             overlay_presence.interactive,
             runtime.listbox_element_id.get().map(|id| id.0),
             value_text,
             populated,
-            select.leading_icon.clone(),
-            select.label.clone(),
-            select.placeholder.clone(),
-            select.supporting_text.clone(),
-            select.a11y_label.clone(),
-            select.test_id.clone(),
+            leading_icon,
+            label,
+            placeholder,
+            supporting_text,
+            a11y_label.clone(),
+            test_id.clone(),
             runtime.open.clone(),
-            select.style.clone(),
+            style.clone(),
         );
         let anchor_id = trigger.anchor_id;
         let trigger = trigger.element;
@@ -499,26 +514,25 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let item_height = {
                 let theme = Theme::global(&*cx.app);
-                select_tokens::menu_list_item_height(theme, select.variant)
+                select_tokens::menu_list_item_height(theme, variant)
             };
             let menu_vertical_padding = Px(8.0);
             let select_width = anchor.size.width;
-            let desired_width = if select.match_anchor_width {
+            let desired_width = if match_anchor_width {
                 select_width
             } else {
-                let estimate =
-                    estimate_select_menu_content_width(&*cx, select.variant, &select.items);
-                resolve_select_menu_width(select_width, estimate, select.menu_width_floor)
+                let estimate = estimate_select_menu_content_width(&*cx, variant, &items);
+                resolve_select_menu_width(select_width, estimate, menu_width_floor)
             };
-            let desired_height = Px((item_height.0 * (select.items.len().max(1) as f32))
-                + menu_vertical_padding.0 * 2.0);
+            let desired_height =
+                Px((item_height.0 * (items.len().max(1) as f32)) + menu_vertical_padding.0 * 2.0);
             let desired = Size::new(desired_width, desired_height);
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
             let placement = popper::PopperContentPlacement::new(
                 direction,
                 Side::Bottom,
-                match select.menu_align {
+                match menu_align {
                     SelectMenuAlign::Start => Align::Start,
                     SelectMenuAlign::End => Align::End,
                 },
@@ -547,19 +561,19 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 move |cx| {
                     vec![select_listbox_panel(
                         cx,
-                        select.variant,
-                        select.model.clone(),
+                        variant,
+                        model.clone(),
                         open_model_for_panel.clone(),
-                        select.items.clone(),
+                        items.clone(),
                         selected.clone(),
-                        select.a11y_label.clone(),
-                        select.test_id.clone(),
+                        a11y_label.clone(),
+                        test_id.clone(),
                         Some(anchor_id.0),
                         initial_focus_id_for_list,
                         listbox_element_id_out,
                         runtime.scroll_handle.clone(),
-                        select.typeahead_delay_ms,
-                        select.style.clone(),
+                        typeahead_delay_ms,
+                        style.clone(),
                     )]
                 },
             );
@@ -621,7 +635,7 @@ fn select_trigger_element<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     open_model: Model<bool>,
-    style: SelectStyle,
+    style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
     let hovered_out: Cell<bool> = Cell::new(false);
@@ -1103,7 +1117,7 @@ fn select_trigger_element<H: UiHost>(
                             cx,
                             variant,
                             states_for_style,
-                            &style_override,
+                            style_override.as_ref(),
                             label.clone(),
                             float_progress,
                             has_leading_icon.then_some(leading_icon_size),
@@ -1166,7 +1180,7 @@ fn select_trigger_element<H: UiHost>(
                     cx,
                     variant,
                     supporting_states,
-                    &supporting_style_override,
+                    supporting_style_override.as_ref(),
                     text.clone(),
                     has_leading_icon.then_some(leading_icon_size),
                     hovered,
@@ -1583,7 +1597,7 @@ fn select_listbox_panel<H: UiHost>(
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     typeahead_delay_ms: u32,
-    style: SelectStyle,
+    style: Arc<SelectStyle>,
 ) -> AnyElement {
     let listbox_test_id = test_id.as_ref().map(|id| {
         let id = id.as_ref();

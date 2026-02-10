@@ -143,8 +143,8 @@ impl List {
         cx.scope(|cx| {
             let sem = SemanticsProps {
                 role: SemanticsRole::List,
-                label: a11y_label.clone(),
-                test_id: test_id.clone(),
+                label: a11y_label,
+                test_id,
                 ..Default::default()
             };
 

@@ -211,25 +211,31 @@ impl Menu {
         initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
     ) -> AnyElement {
         cx.scope(|cx| {
+            let Menu {
+                entries,
+                a11y_label,
+                test_id,
+                style,
+            } = self;
             let (height, container_bg, shadow, corner) = {
                 let theme = Theme::global(&*cx.app);
                 let height = menu_tokens::list_item_height(theme);
 
                 let container_bg = resolve_override_slot_with(
-                    self.style.container_background.as_ref(),
+                    style.container_background.as_ref(),
                     WidgetStates::empty(),
                     |color| color.resolve(theme),
                     || menu_tokens::container_background(theme),
                 );
                 let elevation = resolve_override_slot_with(
-                    self.style.container_elevation.as_ref(),
+                    style.container_elevation.as_ref(),
                     WidgetStates::empty(),
                     |v| *v,
                     || menu_tokens::container_elevation(theme),
                 );
                 let shadow_color = menu_tokens::container_shadow_color(theme);
                 let corner = resolve_override_slot_with(
-                    self.style.container_corner_radii.as_ref(),
+                    style.container_corner_radii.as_ref(),
                     WidgetStates::empty(),
                     |v| *v,
                     || menu_tokens::container_shape(theme),
@@ -246,13 +252,13 @@ impl Menu {
 
             let sem = SemanticsProps {
                 role: SemanticsRole::Menu,
-                label: self.a11y_label.clone(),
-                test_id: self.test_id.clone(),
+                label: a11y_label,
+                test_id,
                 ..Default::default()
             };
 
             let mut items: Vec<MenuEntry> = Vec::new();
-            items.extend(self.entries.into_iter());
+            items.extend(entries.into_iter());
 
             let mut flat_items: Vec<MenuItem> = Vec::new();
             let mut disabled: Vec<bool> = Vec::new();
@@ -280,7 +286,7 @@ impl Menu {
                 wrap: true,
                 disabled: disabled.clone(),
             };
-            let style = self.style.clone();
+            let style: Arc<MenuStyle> = Arc::new(style);
 
             cx.semantics(sem, move |cx| {
                 vec![cx.container(
@@ -424,7 +430,7 @@ fn material_menu_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     item: MenuItem,
     height: Px,
-    style: MenuStyle,
+    style: Arc<MenuStyle>,
     tab_stop: bool,
     idx: usize,
     set_size: usize,
