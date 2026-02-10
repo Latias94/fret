@@ -724,6 +724,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
@@ -818,6 +820,8 @@ pub struct UiFocusTraceEntryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_input_snapshot: Option<UiTextInputSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_test_id: Option<String>,
@@ -847,6 +851,48 @@ pub struct UiFocusTraceEntryV1 {
     pub focused_role: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matches_expected: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiTextInputSnapshotV1 {
+    #[serde(default)]
+    pub focus_is_text_input: bool,
+    #[serde(default)]
+    pub is_composing: bool,
+    #[serde(default)]
+    pub text_len_utf16: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marked_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_cursor_area: Option<UiRectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiShortcutRoutingTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default)]
+    pub frame_id: u64,
+    pub phase: String,
+    #[serde(default)]
+    pub deferred: bool,
+    #[serde(default)]
+    pub focus_is_text_input: bool,
+    #[serde(default)]
+    pub ime_composing: bool,
+    pub key: String,
+    pub modifiers: UiKeyModifiersV1,
+    pub repeat: bool,
+    pub outcome: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending_sequence_len: Option<u32>,
 }
 
 /// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).

@@ -24,6 +24,7 @@ pub mod menu;
 pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
+pub mod shortcut_routing_diagnostics;
 pub mod text_interaction_settings;
 pub mod time;
 pub mod ui_host;
@@ -99,6 +100,10 @@ pub use model::{
 };
 pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
+pub use shortcut_routing_diagnostics::{
+    ShortcutRoutingDecision, ShortcutRoutingOutcome, ShortcutRoutingPhase,
+    WindowShortcutRoutingDiagnosticsStore,
+};
 pub use text_interaction_settings::TextInteractionSettings;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};

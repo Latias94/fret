@@ -1391,6 +1391,10 @@ impl<H: UiHost> UiTree<H> {
                     input_ctx: &input_ctx,
                     barrier_root,
                     focus_is_text_input,
+                    #[cfg(feature = "diagnostics")]
+                    phase: fret_runtime::ShortcutRoutingPhase::PreDispatch,
+                    #[cfg(feature = "diagnostics")]
+                    deferred: false,
                     key: *key,
                     modifiers: *modifiers,
                     repeat: *repeat,
@@ -2722,6 +2726,47 @@ impl<H: UiHost> UiTree<H> {
                 .remove(&e.pointer_id);
         }
 
+        #[cfg(feature = "diagnostics")]
+        if defer_keydown_shortcuts_until_after_dispatch
+            && stop_propagation_requested
+            && let Some(window) = self.window
+            && let Event::KeyDown {
+                key,
+                modifiers,
+                repeat,
+            } = event
+        {
+            let focus_is_text_input = self.focus_is_text_input(app);
+            app.with_global_mut_untracked(
+                fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
+                |store, app| {
+                    store.record(
+                        window,
+                        fret_runtime::ShortcutRoutingDecision {
+                            seq: 0,
+                            frame_id: app.frame_id(),
+                            phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                            key: *key,
+                            modifiers: *modifiers,
+                            repeat: *repeat,
+                            deferred: true,
+                            focus_is_text_input,
+                            ime_composing: self.ime_composing,
+                            pending_sequence_len: self
+                                .pending_shortcut
+                                .keystrokes
+                                .len()
+                                .min(u32::MAX as usize)
+                                as u32,
+                            outcome: fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget,
+                            command: None,
+                            command_enabled: None,
+                        },
+                    );
+                },
+            );
+        }
+
         if defer_keydown_shortcuts_until_after_dispatch
             && !stop_propagation_requested
             && let Event::KeyDown {
@@ -2743,6 +2788,40 @@ impl<H: UiHost> UiTree<H> {
                     focus_is_text_input,
                 );
 
+            #[cfg(feature = "diagnostics")]
+            if let Some(window) = self.window {
+                if ime_reserved {
+                    app.with_global_mut_untracked(
+                        fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
+                        |store, app| {
+                            store.record(
+                                window,
+                                fret_runtime::ShortcutRoutingDecision {
+                                    seq: 0,
+                                    frame_id: app.frame_id(),
+                                    phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                                    key: *key,
+                                    modifiers: *modifiers,
+                                    repeat: *repeat,
+                                    deferred: true,
+                                    focus_is_text_input,
+                                    ime_composing: self.ime_composing,
+                                    pending_sequence_len: self
+                                        .pending_shortcut
+                                        .keystrokes
+                                        .len()
+                                        .min(u32::MAX as usize)
+                                        as u32,
+                                    outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
+                                    command: None,
+                                    command_enabled: None,
+                                },
+                            );
+                        },
+                    );
+                }
+            }
+
             if !ime_reserved
                 && self.handle_keydown_shortcuts(
                     app,
@@ -2751,6 +2830,10 @@ impl<H: UiHost> UiTree<H> {
                         input_ctx: &input_ctx_for_shortcuts,
                         barrier_root,
                         focus_is_text_input,
+                        #[cfg(feature = "diagnostics")]
+                        phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                        #[cfg(feature = "diagnostics")]
+                        deferred: true,
                         key: *key,
                         modifiers: *modifiers,
                         repeat: *repeat,

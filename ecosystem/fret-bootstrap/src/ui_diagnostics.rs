@@ -11,7 +11,8 @@ use fret_diag_protocol::{
     UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1,
     UiOptionalRootStateV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
     UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiWebImeTraceEntryV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -711,6 +712,7 @@ impl UiDiagnosticsService {
                     steps: script.steps,
                     run_id,
                     next_step: 0,
+                    last_injected_step: None,
                     wait_frames_remaining: 0,
                     wait_until: None,
                     screenshot_wait: None,
@@ -719,6 +721,8 @@ impl UiDiagnosticsService {
                     selector_resolution_trace: Vec::new(),
                     hit_test_trace: Vec::new(),
                     focus_trace: Vec::new(),
+                    shortcut_routing_trace: Vec::new(),
+                    last_shortcut_routing_seq: 0,
                     web_ime_trace: Vec::new(),
                     ime_event_trace: Vec::new(),
                 },
@@ -1023,6 +1027,7 @@ impl UiDiagnosticsService {
                     let note = format!("press_key key={key:?} mods={modifiers:?} repeat={repeat}");
                     record_focus_trace(
                         &mut active.focus_trace,
+                        app,
                         window,
                         element_runtime,
                         semantics_snapshot,
@@ -1038,6 +1043,7 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         note.as_str(),
                     );
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                     output
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
@@ -1065,6 +1071,7 @@ impl UiDiagnosticsService {
                         format!("press_shortcut key={key:?} mods={modifiers:?} repeat={repeat}");
                     record_focus_trace(
                         &mut active.focus_trace,
+                        app,
                         window,
                         element_runtime,
                         semantics_snapshot,
@@ -1080,6 +1087,7 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         note.as_str(),
                     );
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                     output
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
@@ -1102,6 +1110,7 @@ impl UiDiagnosticsService {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
                 active.screenshot_wait = None;
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -2509,6 +2518,7 @@ impl UiDiagnosticsService {
                                 }
                                 record_focus_trace(
                                     &mut active.focus_trace,
+                                    app,
                                     window,
                                     element_runtime,
                                     Some(snapshot),
@@ -2524,6 +2534,8 @@ impl UiDiagnosticsService {
                                     step_index as u32,
                                     "type_text_into.click_injected",
                                 );
+                                active.last_injected_step =
+                                    Some(step_index.min(u32::MAX as usize) as u32);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2544,6 +2556,7 @@ impl UiDiagnosticsService {
                         _ => {
                             record_focus_trace(
                                 &mut active.focus_trace,
+                                app,
                                 window,
                                 element_runtime,
                                 Some(snapshot),
@@ -2573,6 +2586,7 @@ impl UiDiagnosticsService {
                             if focus_matches {
                                 record_focus_trace(
                                     &mut active.focus_trace,
+                                    app,
                                     window,
                                     element_runtime,
                                     Some(snapshot),
@@ -2589,6 +2603,8 @@ impl UiDiagnosticsService {
                                     "type_text_into.text_input",
                                 );
 
+                                active.last_injected_step =
+                                    Some(step_index.min(u32::MAX as usize) as u32);
                                 output.events.push(Event::TextInput(text));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
@@ -3385,6 +3401,9 @@ impl UiDiagnosticsService {
         if self.cfg.screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }
+        caps.push("diag.text_ime_trace".to_string());
+        caps.push("diag.text_input_snapshot".to_string());
+        caps.push("diag.shortcut_routing_trace".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -3737,7 +3756,9 @@ impl UiDiagnosticsService {
         if let Some(active) = self.active_scripts.get_mut(&window)
             && let Event::Ime(ime) = event
         {
-            let step_index = active.next_step.min(u32::MAX as usize) as u32;
+            let step_index = active
+                .last_injected_step
+                .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
             record_ime_event_trace(&mut active.ime_event_trace, step_index, "record_event", ime);
         }
     }
@@ -3884,6 +3905,8 @@ impl UiDiagnosticsService {
             element_diag,
             semantics,
             self.cfg.max_gating_trace_entries,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
         );
         debug.viewport_input = viewport_input;
 
@@ -3913,6 +3936,8 @@ impl UiDiagnosticsService {
 
         ring.push_snapshot(&self.cfg, snapshot);
 
+        self.record_shortcut_routing_trace_for_window(app, window);
+
         if let Some(pending) = self.pending_pick.clone()
             && pending.window == window
         {
@@ -3922,6 +3947,69 @@ impl UiDiagnosticsService {
                 raw_semantics,
                 ui,
                 element_runtime,
+            );
+        }
+    }
+
+    fn record_shortcut_routing_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+        let Some(active) = self.active_scripts.get_mut(&window) else {
+            return;
+        };
+        let Some(store) = app.global::<fret_runtime::WindowShortcutRoutingDiagnosticsStore>()
+        else {
+            return;
+        };
+
+        let step_index = active
+            .last_injected_step
+            .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
+
+        let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
+        let decisions = store.snapshot_since(window, active.last_shortcut_routing_seq, max_entries);
+        if decisions.is_empty() {
+            return;
+        }
+
+        for decision in decisions {
+            active.last_shortcut_routing_seq = active
+                .last_shortcut_routing_seq
+                .max(decision.seq.saturating_add(1));
+
+            let phase = match decision.phase {
+                fret_runtime::ShortcutRoutingPhase::PreDispatch => "pre_dispatch",
+                fret_runtime::ShortcutRoutingPhase::PostDispatch => "post_dispatch",
+            };
+            let outcome = match decision.outcome {
+                fret_runtime::ShortcutRoutingOutcome::ReservedForIme => "reserved_for_ime",
+                fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget => "consumed_by_widget",
+                fret_runtime::ShortcutRoutingOutcome::CommandDispatched => "command_dispatched",
+                fret_runtime::ShortcutRoutingOutcome::CommandDisabled => "command_disabled",
+                fret_runtime::ShortcutRoutingOutcome::SequenceContinuation => {
+                    "sequence_continuation"
+                }
+                fret_runtime::ShortcutRoutingOutcome::SequenceReplay => "sequence_replay",
+                fret_runtime::ShortcutRoutingOutcome::NoMatch => "no_match",
+                fret_runtime::ShortcutRoutingOutcome::NoKeymap => "no_keymap",
+            };
+
+            push_shortcut_routing_trace(
+                &mut active.shortcut_routing_trace,
+                UiShortcutRoutingTraceEntryV1 {
+                    step_index,
+                    note: None,
+                    frame_id: decision.frame_id.0,
+                    phase: phase.to_string(),
+                    deferred: decision.deferred,
+                    focus_is_text_input: decision.focus_is_text_input,
+                    ime_composing: decision.ime_composing,
+                    key: format!("{:?}", decision.key),
+                    modifiers: UiKeyModifiersV1::from_modifiers(decision.modifiers),
+                    repeat: decision.repeat,
+                    outcome: outcome.to_string(),
+                    command: decision.command.as_ref().map(|c| c.as_str().to_string()),
+                    command_enabled: decision.command_enabled,
+                    pending_sequence_len: Some(decision.pending_sequence_len),
+                },
             );
         }
     }
@@ -5596,6 +5684,7 @@ struct ActiveScript {
     steps: Vec<UiActionStepV2>,
     run_id: u64,
     next_step: usize,
+    last_injected_step: Option<u32>,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     screenshot_wait: Option<ScreenshotWaitState>,
@@ -5604,6 +5693,8 @@ struct ActiveScript {
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     focus_trace: Vec<UiFocusTraceEntryV1>,
+    shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
+    last_shortcut_routing_seq: u64,
     web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     ime_event_trace: Vec<UiImeEventTraceEntryV1>,
 }
@@ -5960,7 +6051,20 @@ pub struct UiWebImeBridgeDebugSnapshotV1 {
 }
 
 impl UiWebImeBridgeDebugSnapshotV1 {
-    fn from_snapshot(snapshot: &fret_core::input::WebImeBridgeDebugSnapshot) -> Self {
+    fn from_snapshot(
+        snapshot: &fret_core::input::WebImeBridgeDebugSnapshot,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        let mut recent_events = if redact_text {
+            Vec::new()
+        } else {
+            snapshot.recent_events.clone()
+        };
+        for ev in &mut recent_events {
+            truncate_string_bytes(ev, max_debug_string_bytes);
+        }
+
         Self {
             enabled: snapshot.enabled,
             composing: snapshot.composing,
@@ -5978,15 +6082,23 @@ impl UiWebImeBridgeDebugSnapshotV1 {
             textarea_scroll_width_px: snapshot.textarea_scroll_width_px,
             textarea_scroll_height_px: snapshot.textarea_scroll_height_px,
             last_input_type: snapshot.last_input_type.clone(),
-            last_beforeinput_data: snapshot.last_beforeinput_data.clone(),
-            last_input_data: snapshot.last_input_data.clone(),
+            last_beforeinput_data: (!redact_text)
+                .then(|| snapshot.last_beforeinput_data.clone())
+                .flatten(),
+            last_input_data: (!redact_text)
+                .then(|| snapshot.last_input_data.clone())
+                .flatten(),
             last_key_code: snapshot.last_key_code,
             last_cursor_area: snapshot.last_cursor_area.map(RectV1::from),
             last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
-            last_preedit_text: snapshot.last_preedit_text.clone(),
+            last_preedit_text: (!redact_text)
+                .then(|| snapshot.last_preedit_text.clone())
+                .flatten(),
             last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
-            last_commit_text: snapshot.last_commit_text.clone(),
-            recent_events: snapshot.recent_events.clone(),
+            last_commit_text: (!redact_text)
+                .then(|| snapshot.last_commit_text.clone())
+                .flatten(),
+            recent_events,
             beforeinput_seen: snapshot.beforeinput_seen,
             input_seen: snapshot.input_seen,
             suppressed_input_seen: snapshot.suppressed_input_seen,
@@ -6009,6 +6121,8 @@ impl UiTreeDebugSnapshotV1 {
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
         max_gating_trace_entries: usize,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
     ) -> Self {
         let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
             .debug_view_cache_contained_relayout_roots()
@@ -6122,7 +6236,13 @@ impl UiTreeDebugSnapshotV1 {
             web_ime_bridge: app
                 .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
                 .filter(|snapshot| **snapshot != fret_core::input::WebImeBridgeDebugSnapshot::default())
-                .map(UiWebImeBridgeDebugSnapshotV1::from_snapshot),
+                .map(|snapshot| {
+                    UiWebImeBridgeDebugSnapshotV1::from_snapshot(
+                        snapshot,
+                        redact_text,
+                        max_debug_string_bytes,
+                    )
+                }),
             docking_interaction: app
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
@@ -10148,6 +10268,7 @@ const MAX_SELECTOR_TRACE_ENTRIES: usize = 64;
 const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
 const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
 const MAX_FOCUS_TRACE_ENTRIES: usize = 64;
+const MAX_SHORTCUT_ROUTING_TRACE_ENTRIES: usize = 128;
 const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
 const MAX_IME_EVENT_TRACE_ENTRIES: usize = 64;
 
@@ -10241,6 +10362,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
     if active.selector_resolution_trace.is_empty()
         && active.hit_test_trace.is_empty()
         && active.focus_trace.is_empty()
+        && active.shortcut_routing_trace.is_empty()
         && active.web_ime_trace.is_empty()
         && active.ime_event_trace.is_empty()
     {
@@ -10250,6 +10372,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
         focus_trace: active.focus_trace.clone(),
+        shortcut_routing_trace: active.shortcut_routing_trace.clone(),
         web_ime_trace: active.web_ime_trace.clone(),
         ime_event_trace: active.ime_event_trace.clone(),
     })
@@ -10274,6 +10397,19 @@ fn push_focus_trace(trace: &mut Vec<UiFocusTraceEntryV1>, entry: UiFocusTraceEnt
     trace.push(entry);
     if trace.len() > MAX_FOCUS_TRACE_ENTRIES {
         let extra = trace.len().saturating_sub(MAX_FOCUS_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn push_shortcut_routing_trace(
+    trace: &mut Vec<UiShortcutRoutingTraceEntryV1>,
+    entry: UiShortcutRoutingTraceEntryV1,
+) {
+    trace.push(entry);
+    if trace.len() > MAX_SHORTCUT_ROUTING_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_SHORTCUT_ROUTING_TRACE_ENTRIES);
         trace.drain(0..extra);
     }
 }
@@ -10308,6 +10444,7 @@ fn push_ime_event_trace(trace: &mut Vec<UiImeEventTraceEntryV1>, entry: UiImeEve
 
 fn record_focus_trace(
     trace: &mut Vec<UiFocusTraceEntryV1>,
+    app: &App,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
@@ -10409,6 +10546,22 @@ fn record_focus_trace(
             step_index,
             note: Some(note.to_string()),
             reason_code,
+            text_input_snapshot: app
+                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                .and_then(|svc| svc.snapshot(window).cloned())
+                .map(|snapshot| UiTextInputSnapshotV1 {
+                    focus_is_text_input: snapshot.focus_is_text_input,
+                    is_composing: snapshot.is_composing,
+                    text_len_utf16: snapshot.text_len_utf16,
+                    selection_utf16: snapshot.selection_utf16,
+                    marked_utf16: snapshot.marked_utf16,
+                    ime_cursor_area: snapshot.ime_cursor_area.map(|r| UiRectV1 {
+                        x_px: r.origin.x.0,
+                        y_px: r.origin.y.0,
+                        w_px: r.size.width.0,
+                        h_px: r.size.height.0,
+                    }),
+                }),
             expected_node_id,
             expected_test_id: expected_test_id.map(|s| s.to_string()),
             modal_barrier_root,
