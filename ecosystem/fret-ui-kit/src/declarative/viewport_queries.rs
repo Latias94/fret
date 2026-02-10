@@ -189,7 +189,7 @@ pub fn viewport_height_at_least<H: UiHost>(
     hysteresis: ViewportQueryHysteresis,
 ) -> bool {
     cx.scope(|cx| {
-        let height = cx.environment_viewport_bounds(invalidation).size.height;
+        let height = cx.environment_viewport_height(invalidation);
         cx.with_state(ViewportHeightAtLeastState::default, |st| {
             if !st.initialized {
                 st.active = viewport_dimension_at_least_init(height, threshold);
@@ -219,7 +219,7 @@ where
     H: UiHost,
 {
     cx.scope(|cx| {
-        let height = cx.environment_viewport_bounds(invalidation).size.height;
+        let height = cx.environment_viewport_height(invalidation);
         cx.with_state(ViewportBreakpointsState::default, |st| {
             if !st.initialized {
                 st.active_index = viewport_breakpoints_init_active_index(height, breakpoints);

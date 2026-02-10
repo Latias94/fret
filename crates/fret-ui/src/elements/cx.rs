@@ -571,6 +571,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.environment_viewport_bounds(invalidation).size.width
     }
 
+    pub fn environment_viewport_height(&mut self, invalidation: Invalidation) -> Px {
+        self.environment_viewport_bounds(invalidation).size.height
+    }
+
     pub fn environment_scale_factor(&mut self, invalidation: Invalidation) -> f32 {
         self.observe_environment_query(EnvironmentQueryKey::ScaleFactor, invalidation);
         self.window_state.committed_scale_factor()
