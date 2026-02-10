@@ -1713,12 +1713,14 @@ impl PromptInputActionMenu {
 
 #[derive(Clone)]
 /// Menu item aligned with AI Elements `PromptInputActionAddAttachments` (intent-driven).
-pub struct PromptInputActionAddAttachmentsMenuItem {
+///
+/// Upstream reference: `prompt-input.tsx` (`DropdownMenuItem` that opens the file dialog).
+pub struct PromptInputActionAddAttachments {
     label: Arc<str>,
     test_id: Option<Arc<str>>,
 }
 
-impl PromptInputActionAddAttachmentsMenuItem {
+impl PromptInputActionAddAttachments {
     pub fn new() -> Self {
         Self {
             label: Arc::<str>::from("Add photos or files"),
@@ -1760,6 +1762,9 @@ impl PromptInputActionAddAttachmentsMenuItem {
         item.into_entry()
     }
 }
+
+#[deprecated(note = "Renamed to PromptInputActionAddAttachments (AI Elements-aligned menu item).")]
+pub type PromptInputActionAddAttachmentsMenuItem = PromptInputActionAddAttachments;
 
 #[derive(Clone)]
 /// Attachments chips row aligned with upstream prompt input attachment outcomes.
@@ -1852,12 +1857,12 @@ impl PromptInputAttachmentsRow {
 }
 
 #[derive(Clone)]
-/// Intent-driven “add attachments” action aligned with AI Elements `PromptInputActionAddAttachments`.
-pub struct PromptInputActionAddAttachments {
+/// Intent-driven “add attachments” button (extra recipe; not in upstream AI Elements taxonomy).
+pub struct PromptInputActionAddAttachmentsButton {
     layout: LayoutRefinement,
 }
 
-impl PromptInputActionAddAttachments {
+impl PromptInputActionAddAttachmentsButton {
     pub fn new() -> Self {
         Self {
             layout: LayoutRefinement::default(),

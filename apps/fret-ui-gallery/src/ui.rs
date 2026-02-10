@@ -1187,7 +1187,8 @@ fn preview_ai_prompt_input_provider_demo(
                     out.block_end.push(
                         ui_ai::PromptInputFooter::new(
                             [ui_ai::PromptInputTools::new([
-                                ui_ai::PromptInputActionAddAttachments::new().into_element(slot_cx),
+                                ui_ai::PromptInputActionAddAttachmentsButton::new()
+                                    .into_element(slot_cx),
                             ])
                             .into_element(slot_cx)],
                             [ui_ai::PromptInputSubmit::new().into_element(slot_cx)],
@@ -1321,7 +1322,7 @@ fn preview_ai_prompt_input_action_menu_demo(
 
                     let menu = ui_ai::PromptInputActionMenu::new(
                         ui_ai::PromptInputActionMenuContent::new([
-                            ui_ai::PromptInputActionAddAttachmentsMenuItem::new()
+                            ui_ai::PromptInputActionAddAttachments::new()
                                 .test_id(
                                     "ui-gallery-ai-prompt-input-action-menu-add-attachments-item",
                                 )

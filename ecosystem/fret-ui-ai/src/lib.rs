@@ -88,7 +88,7 @@ pub use elements::{
     OnAttachmentActivate, OnAttachmentRemove, OnFileTreeActionActivate, OnFileTreeExpandedChange,
     OnFileTreeSelect, OnMessageBranchChange, OnQueueItemActionActivate, OnStackTraceFilePathClick,
     OnSuggestionClick, ParsedStackTrace, PromptInput, PromptInputActionAddAttachments,
-    PromptInputActionAddAttachmentsMenuItem, PromptInputActionMenu, PromptInputActionMenuContent,
+    PromptInputActionAddAttachmentsButton, PromptInputActionMenu, PromptInputActionMenuContent,
     PromptInputActionMenuItem, PromptInputActionMenuTrigger, PromptInputAttachmentsRow,
     PromptInputButton, PromptInputConfig, PromptInputController, PromptInputFooter,
     PromptInputHeader, PromptInputProvider, PromptInputRoot, PromptInputSlots, PromptInputSubmit,

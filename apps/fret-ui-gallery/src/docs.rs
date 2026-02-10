@@ -597,7 +597,7 @@ This page demonstrates `PromptInputProvider` + a parts-first `PromptInputRoot` c
 - an external button mutates the attachments model (simulating an app-owned file picker effect),
 - `PromptInputRoot::into_element_with_slots` composes block-start and block-end content using parts:
   - `PromptInputHeader` + `PromptInputAttachmentsRow`
-  - `PromptInputFooter` + `PromptInputTools` + `PromptInputActionAddAttachments` + `PromptInputSubmit`
+  - `PromptInputFooter` + `PromptInputTools` + `PromptInputActionAddAttachmentsButton` + `PromptInputSubmit`
 
 It exists to validate:
 
@@ -610,7 +610,8 @@ pub(crate) const USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{
     PromptInputProvider, PromptInputRoot, PromptInputSlots, PromptInputHeader, PromptInputFooter,
-    PromptInputTools, PromptInputSubmit, PromptInputActionAddAttachments, PromptInputAttachmentsRow,
+    PromptInputTools, PromptInputSubmit, PromptInputActionAddAttachmentsButton,
+    PromptInputAttachmentsRow,
 };
 ```
 "#;
@@ -631,7 +632,7 @@ It exists to validate:
 pub(crate) const USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{
-    PromptInputActionAddAttachmentsMenuItem, PromptInputActionMenu, PromptInputActionMenuContent,
+    PromptInputActionAddAttachments, PromptInputActionMenu, PromptInputActionMenuContent,
     PromptInputActionMenuTrigger,
 };
 ```
