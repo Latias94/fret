@@ -163,6 +163,10 @@ Existing gates (UI Gallery `ai_stack_trace_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
 
+Existing gates (UI Gallery `ai_stack_trace_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+
 Existing gates (UI Gallery `ai_test_results_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
@@ -202,10 +206,11 @@ Prioritize thin adapters over new engines:
       - Done: `StackTraceCopyButton` `on_copy` hook exists (repeat-copy semantics remain allowed).
     - [~] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
       - Done: commit file rows + file paths have `test_id` and a large-list demo uses them.
-      - Pending: per-frame `test_id` for stack trace rows (optional but useful for deep-frame gates).
+      - Done: per-frame `test_id` for stack trace rows + file path buttons (used by the large-list gate).
     - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
       - commit: many files; stack trace: many frames; test results: many suites.
       - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
+      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`).
     - [~] Confirm extension hooks exist for app-owned effects:
       - commit: file row click / open file
       - stack trace: file path click / open file

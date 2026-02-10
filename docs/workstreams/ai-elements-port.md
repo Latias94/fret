@@ -112,6 +112,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
   - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `AI stack trace large (demo)` (`ai_stack_trace_large_demo`): long frame list + scroll + file-path click seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
   - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
