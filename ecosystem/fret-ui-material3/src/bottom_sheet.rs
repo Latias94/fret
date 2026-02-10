@@ -138,7 +138,7 @@ impl DockedBottomSheet {
             let content_el = cx.flex(column, move |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
                 if drag_handle {
-                    out.push(drag_handle_element(cx, test_id_for_children.clone()));
+                    out.push(drag_handle_element(cx, test_id_for_children.as_ref()));
                 }
                 out.extend(content(cx));
                 out
@@ -147,7 +147,7 @@ impl DockedBottomSheet {
             cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::Group,
-                    test_id: test_id.clone(),
+                    test_id,
                     ..Default::default()
                 },
                 move |cx| vec![cx.container(container, move |_cx| vec![content_el])],
@@ -262,11 +262,12 @@ impl ModalBottomSheet {
                 let default_duration_ms = theme
                     .duration_ms_by_key("md.sys.motion.duration.medium2")
                     .unwrap_or(300);
-                let easing_key =
-                    easing_key.unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
+                let easing_key = easing_key
+                    .as_deref()
+                    .unwrap_or("md.sys.motion.easing.emphasized");
                 let bezier =
                     theme
-                        .easing_by_key(easing_key.as_ref())
+                        .easing_by_key(easing_key)
                         .unwrap_or(fret_ui::theme::CubicBezier {
                             x1: 0.0,
                             y1: 0.0,
@@ -437,7 +438,7 @@ impl ModalBottomSheet {
 
 fn drag_handle_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    sheet_test_id: Option<Arc<str>>,
+    sheet_test_id: Option<&Arc<str>>,
 ) -> AnyElement {
     let (width, height, color) = {
         let theme = Theme::global(&*cx.app);
@@ -479,7 +480,7 @@ fn drag_handle_element<H: UiHost>(
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Generic,
-            test_id: sheet_test_id.map(|id| Arc::from(format!("{id}-drag-handle"))),
+            test_id: sheet_test_id.map(|id| Arc::from(format!("{}-drag-handle", id.as_ref()))),
             ..Default::default()
         },
         move |cx| {

@@ -18,7 +18,7 @@ imui = ["ui", "dep:fret-authoring"]
 syntax-rust = ["fret-code-view/syntax-rust"]
 syntax-all = ["fret-code-view/syntax-all"]
 mathjax-svg = ["dep:mathjax_svg", "dep:fret-query", "fret-query/ui"]
-mermaid = ["dep:mermaid-rs-renderer", "dep:fret-query", "fret-query/ui"]
+mermaid = ["dep:merman", "dep:fret-query", "fret-query/ui"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
@@ -32,4 +32,4 @@ pulldown-cmark.workspace = true
 mdstream = { workspace = true, features = ["pulldown"] }
 mathjax_svg = { workspace = true, optional = true }
 tracing.workspace = true
-mermaid-rs-renderer = { workspace = true, optional = true }
+merman = { workspace = true, optional = true, features = ["render"] }

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub mod builder;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagTransportMessageV1 {
     pub schema_version: u32,

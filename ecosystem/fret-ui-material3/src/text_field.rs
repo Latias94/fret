@@ -454,8 +454,8 @@ impl TextField {
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
-                                .get_model_cloned(&model, Invalidation::Layout)
-                                .map(|v| !v.is_empty())
+                                .read_model_ref(&model, Invalidation::Layout, |v| !v.is_empty())
+                                .ok()
                                 .unwrap_or(false);
 
                             let mut container = ContainerProps::default();
@@ -894,10 +894,11 @@ impl TextField {
                                         },
                                         move |cx, state| {
                                             if enabled {
+                                                let handler = handler.clone();
                                                 cx.pressable_on_pointer_down(Arc::new(
                                                     move |host, action_cx, down: PointerDownCx| {
                                                         host.request_focus(input_id_for_focus);
-                                                        if let Some(h) = handler.clone() {
+                                                        if let Some(ref h) = handler {
                                                             return h(host, action_cx, down);
                                                         }
                                                         PressablePointerDownResult::Continue

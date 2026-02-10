@@ -14,6 +14,7 @@ mod cli;
 mod compare;
 pub mod devtools;
 mod gates;
+mod perf_seed_policy;
 mod stats;
 pub mod transport;
 mod util;
@@ -30,6 +31,7 @@ use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
     check_redraw_hitches_max_total_ms, check_resource_footprint_thresholds,
 };
+use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path,
@@ -163,6 +165,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
+    let mut perf_baseline_seed_preset_paths: Vec<PathBuf> = Vec::new();
+    let mut perf_baseline_seed_specs: Vec<String> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
@@ -687,6 +691,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 perf_baseline_headroom_pct = v
                     .parse::<u32>()
                     .map_err(|_| "invalid value for --perf-baseline-headroom-pct".to_string())?;
+                i += 1;
+            }
+            "--perf-baseline-seed-preset" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed-preset".to_string());
+                };
+                perf_baseline_seed_preset_paths.push(PathBuf::from(v));
+                i += 1;
+            }
+            "--perf-baseline-seed" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed".to_string());
+                };
+                perf_baseline_seed_specs.push(v);
                 i += 1;
             }
             "--check-idle-no-paint-min" => {
@@ -4795,57 +4815,74 @@ See: `docs/tracy.md`.\n";
                 );
             }
 
-            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-            } else if rest.len() == 1 && rest[0] == "ui-gallery-steady" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-            } else if rest.len() == 1 && rest[0] == "ui-resize-probes" {
-                [
-                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-            } else if rest.len() == 1 && rest[0] == "ui-code-editor-resize-probes" {
-                ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
+            let mut suite_name: Option<String> = None;
+            let scripts: Vec<PathBuf> = if rest.len() == 1 {
+                let name = rest[0].as_str();
+                if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(name) {
+                    suite_name = Some(name.to_string());
+                    paths
+                        .iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
+                        .collect()
+                } else if name == "ui-gallery" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+                        "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+                        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+                        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                        "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+                        "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
+                        "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-stress.json",
+                    ]
                     .into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
-            } else if rest.len() == 1 && rest[0] == "extras-marquee-steady" {
-                ["tools/diag-scripts/extras-marquee-steady.json"]
+                } else if name == "ui-gallery-steady" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+                        "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+                        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+                        "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+                        "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+                        "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+                        "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                    ]
                     .into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
+                } else if name == "ui-resize-probes" {
+                    suite_name = Some(name.to_string());
+                    [
+                        "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                        "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+                    ]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+                } else if name == "ui-code-editor-resize-probes" {
+                    suite_name = Some(name.to_string());
+                    ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect()
+                } else if name == "extras-marquee-steady" {
+                    suite_name = Some(name.to_string());
+                    ["tools/diag-scripts/extras-marquee-steady.json"]
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect()
+                } else {
+                    vec![resolve_path(&workspace_root, PathBuf::from(name))]
+                }
             } else {
-                rest.into_iter()
+                rest.iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
             };
@@ -4871,6 +4908,19 @@ See: `docs/tracy.md`.\n";
             let perf_baseline_out = perf_baseline_out
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
+
+            let seed_policy: Option<ResolvedPerfBaselineSeedPolicy> = if perf_baseline_out.is_some()
+            {
+                Some(perf_seed_policy::resolve_perf_baseline_seed_policy(
+                    &workspace_root,
+                    suite_name.as_deref(),
+                    &scripts,
+                    &perf_baseline_seed_preset_paths,
+                    &perf_baseline_seed_specs,
+                )?)
+            } else {
+                None
+            };
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child: Option<LaunchedDemo> = None;
             let launched_by_fretboard = reuse_launch && launch.is_some();
@@ -5304,19 +5354,119 @@ See: `docs/tracy.md`.\n";
                         }
 
                         if perf_baseline_out.is_some() {
+                            let policy = seed_policy
+                                .as_ref()
+                                .ok_or_else(|| "internal error: missing seed policy".to_string())?;
+
+                            let p90_total = top_total;
+                            let p95_total = top_total;
+                            let p90_layout = top_layout;
+                            let p95_layout = top_layout;
+                            let p90_solve = top_solve;
+                            let p95_solve = top_solve;
+
+                            let seed_total =
+                                policy.seed_for(&script_key, PerfSeedMetric::TopTotalTimeUs);
+                            let seed_layout =
+                                policy.seed_for(&script_key, PerfSeedMetric::TopLayoutTimeUs);
+                            let seed_solve = policy
+                                .seed_for(&script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs);
+
+                            let seed_total_value = match seed_total {
+                                PerfBaselineSeed::Max => top_total,
+                                PerfBaselineSeed::P90 => p90_total,
+                                PerfBaselineSeed::P95 => p95_total,
+                            };
+                            let seed_layout_value = match seed_layout {
+                                PerfBaselineSeed::Max => top_layout,
+                                PerfBaselineSeed::P90 => p90_layout,
+                                PerfBaselineSeed::P95 => p95_layout,
+                            };
+                            let seed_solve_value = match seed_solve {
+                                PerfBaselineSeed::Max => top_solve,
+                                PerfBaselineSeed::P90 => p90_solve,
+                                PerfBaselineSeed::P95 => p95_solve,
+                            };
+
+                            let thr_total = apply_perf_baseline_headroom(
+                                seed_total_value,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_layout = apply_perf_baseline_headroom(
+                                seed_layout_value,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_solve = apply_perf_baseline_headroom(
+                                seed_solve_value,
+                                perf_baseline_headroom_pct,
+                            );
+
+                            let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
+                                pointer_move_max_dispatch_time_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
+                                pointer_move_max_hit_test_time_us,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
+                                pointer_move_snapshots_with_global_changes,
+                                perf_baseline_headroom_pct,
+                            );
+                            let thr_min_run_paint_cache_hit_test_only_replay_allowed_max =
+                                apply_perf_baseline_floor(
+                                    run_paint_cache_hit_test_only_replay_allowed_max,
+                                    perf_baseline_headroom_pct,
+                                );
+                            let thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                                apply_perf_baseline_headroom(
+                                    run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                    perf_baseline_headroom_pct,
+                                );
+
                             perf_baseline_rows.push(serde_json::json!({
-	                                "script": script_key.clone(),
-	                                "max": {
-	                                    "top_total_time_us": top_total,
-	                                    "top_layout_time_us": top_layout,
-	                                    "top_layout_engine_solve_time_us": top_solve,
-	                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-	                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-	                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-	                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
-	                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-	                                },
-	                            }));
+                                "script": script_key.clone(),
+                                "measured_max": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                },
+                                "measured_p90": {
+                                    "top_total_time_us": p90_total,
+                                    "top_layout_time_us": p90_layout,
+                                    "top_layout_engine_solve_time_us": p90_solve,
+                                },
+                                "measured_p95": {
+                                    "top_total_time_us": p95_total,
+                                    "top_layout_time_us": p95_layout,
+                                    "top_layout_engine_solve_time_us": p95_solve,
+                                },
+                                "threshold_seed": {
+                                    "top_total_time_us": seed_total_value,
+                                    "top_layout_time_us": seed_layout_value,
+                                    "top_layout_engine_solve_time_us": seed_solve_value,
+                                },
+                                "threshold_seed_source": {
+                                    "top_total_time_us": seed_total.as_str(),
+                                    "top_layout_time_us": seed_layout.as_str(),
+                                    "top_layout_engine_solve_time_us": seed_solve.as_str(),
+                                },
+                                "thresholds": {
+                                    "max_top_total_us": thr_total,
+                                    "max_top_layout_us": thr_layout,
+                                    "max_top_solve_us": thr_solve,
+                                    "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
+                                    "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
+                                    "max_pointer_move_global_changes": thr_pointer_move_global_changes,
+                                    "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                },
+                            }));
                         }
                         if wants_perf_thresholds {
                             let baseline_thresholds = perf_baseline
@@ -6288,6 +6438,21 @@ See: `docs/tracy.md`.\n";
                     let max_total = *runs_total.iter().max().unwrap_or(&0);
                     let max_layout = *runs_layout.iter().max().unwrap_or(&0);
                     let max_solve = *runs_solve.iter().max().unwrap_or(&0);
+
+                    let mut sorted_total = runs_total.clone();
+                    sorted_total.sort_unstable();
+                    let p90_total = percentile_nearest_rank_sorted(&sorted_total, 0.90);
+                    let p95_total = percentile_nearest_rank_sorted(&sorted_total, 0.95);
+
+                    let mut sorted_layout = runs_layout.clone();
+                    sorted_layout.sort_unstable();
+                    let p90_layout = percentile_nearest_rank_sorted(&sorted_layout, 0.90);
+                    let p95_layout = percentile_nearest_rank_sorted(&sorted_layout, 0.95);
+
+                    let mut sorted_solve = runs_solve.clone();
+                    sorted_solve.sort_unstable();
+                    let p90_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.90);
+                    let p95_solve = percentile_nearest_rank_sorted(&sorted_solve, 0.95);
                     let max_pointer_move_dispatch =
                         *runs_pointer_move_dispatch.iter().max().unwrap_or(&0);
                     let max_pointer_move_hit_test =
@@ -6312,19 +6477,111 @@ See: `docs/tracy.md`.\n";
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
                     if perf_baseline_out.is_some() {
+                        let policy = seed_policy
+                            .as_ref()
+                            .ok_or_else(|| "internal error: missing seed policy".to_string())?;
+
+                        let seed_total =
+                            policy.seed_for(&script_key, PerfSeedMetric::TopTotalTimeUs);
+                        let seed_layout =
+                            policy.seed_for(&script_key, PerfSeedMetric::TopLayoutTimeUs);
+                        let seed_solve = policy
+                            .seed_for(&script_key, PerfSeedMetric::TopLayoutEngineSolveTimeUs);
+
+                        let seed_total_value = match seed_total {
+                            PerfBaselineSeed::Max => max_total,
+                            PerfBaselineSeed::P90 => p90_total,
+                            PerfBaselineSeed::P95 => p95_total,
+                        };
+                        let seed_layout_value = match seed_layout {
+                            PerfBaselineSeed::Max => max_layout,
+                            PerfBaselineSeed::P90 => p90_layout,
+                            PerfBaselineSeed::P95 => p95_layout,
+                        };
+                        let seed_solve_value = match seed_solve {
+                            PerfBaselineSeed::Max => max_solve,
+                            PerfBaselineSeed::P90 => p90_solve,
+                            PerfBaselineSeed::P95 => p95_solve,
+                        };
+
+                        let thr_total = apply_perf_baseline_headroom(
+                            seed_total_value,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_layout = apply_perf_baseline_headroom(
+                            seed_layout_value,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_solve = apply_perf_baseline_headroom(
+                            seed_solve_value,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
+                            max_pointer_move_dispatch,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
+                            max_pointer_move_hit_test,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
+                            max_pointer_move_global_changes,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_min_run_paint_cache_hit_test_only_replay_allowed_max =
+                            apply_perf_baseline_floor(
+                                max_run_paint_cache_hit_test_only_replay_allowed_max,
+                                perf_baseline_headroom_pct,
+                            );
+                        let thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                            apply_perf_baseline_headroom(
+                                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                perf_baseline_headroom_pct,
+                            );
+
                         perf_baseline_rows.push(serde_json::json!({
-	                            "script": script_key.clone(),
-	                            "max": {
-	                                "top_total_time_us": max_total,
-	                                "top_layout_time_us": max_layout,
-	                                "top_layout_engine_solve_time_us": max_solve,
-	                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-	                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
-	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-	                            },
-	                        }));
+                            "script": script_key.clone(),
+                            "measured_max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
+                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            },
+                            "measured_p90": {
+                                "top_total_time_us": p90_total,
+                                "top_layout_time_us": p90_layout,
+                                "top_layout_engine_solve_time_us": p90_solve,
+                            },
+                            "measured_p95": {
+                                "top_total_time_us": p95_total,
+                                "top_layout_time_us": p95_layout,
+                                "top_layout_engine_solve_time_us": p95_solve,
+                            },
+                            "threshold_seed": {
+                                "top_total_time_us": seed_total_value,
+                                "top_layout_time_us": seed_layout_value,
+                                "top_layout_engine_solve_time_us": seed_solve_value,
+                            },
+                            "threshold_seed_source": {
+                                "top_total_time_us": seed_total.as_str(),
+                                "top_layout_time_us": seed_layout.as_str(),
+                                "top_layout_engine_solve_time_us": seed_solve.as_str(),
+                            },
+                            "thresholds": {
+                                "max_top_total_us": thr_total,
+                                "max_top_layout_us": thr_layout,
+                                "max_top_solve_us": thr_solve,
+                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
+                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
+                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
+                                "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            },
+                        }));
                     }
 
                     if wants_perf_thresholds {
@@ -6440,80 +6697,9 @@ See: `docs/tracy.md`.\n";
 
             if let Some(path) = perf_baseline_out.as_ref() {
                 let out_path = path;
-                let rows = perf_baseline_rows
-	                    .iter()
-	                    .filter_map(|row| {
-	                        let script = row.get("script")?.as_str()?.to_string();
-	                        let max = row.get("max")?;
-	                        let max_total = max.get("top_total_time_us")?.as_u64()?;
-	                        let max_layout = max.get("top_layout_time_us")?.as_u64()?;
-	                        let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
-	                        let max_pointer_move_dispatch =
-	                            max.get("pointer_move_max_dispatch_time_us")?.as_u64()?;
-	                        let max_pointer_move_hit_test =
-	                            max.get("pointer_move_max_hit_test_time_us")?.as_u64()?;
-	                        let max_pointer_move_global_changes = max
-	                            .get("pointer_move_snapshots_with_global_changes")?
-	                            .as_u64()?;
-	                        let max_run_paint_cache_hit_test_only_replay_allowed_max = max
-	                            .get("run_paint_cache_hit_test_only_replay_allowed_max")?
-	                            .as_u64()?;
-	                        let max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = max
-	                            .get("run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")?
-	                            .as_u64()?;
-	                        let thr_total =
-	                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
-	                        let thr_layout =
-	                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
-	                        let thr_solve =
-	                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
-	                        let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
-	                            max_pointer_move_dispatch,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
-	                            max_pointer_move_hit_test,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
-	                            max_pointer_move_global_changes,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_min_run_paint_cache_hit_test_only_replay_allowed_max =
-	                            apply_perf_baseline_floor(
-	                                max_run_paint_cache_hit_test_only_replay_allowed_max,
-	                                perf_baseline_headroom_pct,
-	                            );
-	                        let thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
-	                            apply_perf_baseline_headroom(
-	                                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-	                                perf_baseline_headroom_pct,
-	                            );
-	                        Some(serde_json::json!({
-	                            "script": script,
-	                            "thresholds": {
-	                                "max_top_total_us": thr_total,
-	                                "max_top_layout_us": thr_layout,
-	                                "max_top_solve_us": thr_solve,
-	                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-	                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-	                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-	                                "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
-	                                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-	                            },
-	                            "measured_max": {
-	                                "top_total_time_us": max_total,
-	                                "top_layout_time_us": max_layout,
-	                                "top_layout_engine_solve_time_us": max_solve,
-	                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-	                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
-	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-	                            },
-	                        }))
-	                    })
-	                    .collect::<Vec<_>>();
+                let policy = seed_policy
+                    .as_ref()
+                    .ok_or_else(|| "internal error: missing seed policy".to_string())?;
                 let payload = serde_json::json!({
                     "schema_version": 1,
                     "generated_unix_ms": now_unix_ms(),
@@ -6523,7 +6709,8 @@ See: `docs/tracy.md`.\n";
                     "sort": sort.as_str(),
                     "repeat": repeat,
                     "headroom_pct": perf_baseline_headroom_pct,
-                    "rows": rows,
+                    "threshold_seed_policy": policy.threshold_seed_policy_json(),
+                    "rows": perf_baseline_rows,
                 });
                 write_json_value(out_path, &payload)?;
                 if !stats_json {
@@ -8106,7 +8293,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 53] {
+fn ui_gallery_suite_scripts() -> [&'static str; 55] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -8118,6 +8305,8 @@ fn ui_gallery_suite_scripts() -> [&'static str; 53] {
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
         "tools/diag-scripts/ui-gallery-slider-set-value.json",
+        "tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json",
+        "tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json",
         "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
         "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
         "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",

@@ -158,3 +158,13 @@ Artifacts:
 - selection summary: `<work-dir>/selection-summary.json`
 
 This workflow reduces the chance of promoting a baseline generated from a transient resize outlier.
+
+## Windows / cross-platform note
+
+The shell selector (`tools/perf/diag_perf_baseline_select.sh`) requires `bash` + `jq`.
+
+For a cross-platform alternative (no `jq`), use:
+
+```bash
+python tools/perf/diag_perf_baseline_select.py --help
+```

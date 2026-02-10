@@ -152,6 +152,24 @@ Notes:
 }
 ```
 
+Optional: generate scripts from typed Rust templates
+
+If you prefer authoring scripts in Rust (type-safe selectors + reusable helpers) but still want the portable/reviewable
+JSON artifact, use `fret-diag-scriptgen`:
+
+```bash
+cargo run -p fret-diag-scriptgen -- list
+cargo run -p fret-diag-scriptgen -- write todo-baseline-v2
+```
+
+This writes a JSON file under `.fret/diag/scripts/` by default and prints the path. You can then run it via:
+
+```bash
+cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
+```
+
+Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`

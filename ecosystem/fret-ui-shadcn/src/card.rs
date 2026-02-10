@@ -130,17 +130,20 @@ impl Card {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let chrome = card_chrome(&theme, size).merge(self.chrome);
-            let mut props = decl_style::container_props(&theme, chrome, self.layout);
-            let radius = props.corner_radii.top_left;
-            props.shadow = Some(decl_style::shadow_sm(&theme, radius));
-            let children = self.children;
+            let (props, gap) = {
+                let theme = Theme::global(&*cx.app);
+                let chrome = card_chrome(theme, size).merge(self.chrome);
+                let mut props = decl_style::container_props(theme, chrome, self.layout);
+                let radius = props.corner_radii.top_left;
+                props.shadow = Some(decl_style::shadow_sm(theme, radius));
 
-            let gap = match size {
-                CardSize::Default => Space::N6,
-                CardSize::Sm => Space::N4,
+                let gap = match size {
+                    CardSize::Default => Space::N6,
+                    CardSize::Sm => Space::N4,
+                };
+                (props, gap)
             };
+            let children = self.children;
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
@@ -190,18 +193,20 @@ impl CardHeader {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
 
         let mut action: Option<AnyElement> = None;
         let mut left: Vec<AnyElement> = Vec::with_capacity(self.children.len());
@@ -267,13 +272,14 @@ impl CardAction {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default().merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().merge(self.layout),
+            )
+        };
 
         let children = self.children;
         let el = cx.container(props, move |cx| {
@@ -350,18 +356,20 @@ impl CardContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
         let children = self.children;
         with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
             shadcn_layout::container_vstack(
@@ -386,18 +394,20 @@ impl CardFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_hstack(
             cx,
@@ -421,17 +431,19 @@ impl CardTitle {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("card-foreground");
-
-        let px = theme
-            .metric_by_key("component.card.title_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.card.title_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("card-foreground");
+            let px = theme
+                .metric_by_key("component.card.title_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.card.title_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .w_full()
@@ -456,17 +468,19 @@ impl CardDescription {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-
-        let px = theme
-            .metric_by_key("component.card.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.card.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("muted-foreground");
+            let px = theme
+                .metric_by_key("component.card.description_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.card.description_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .w_full()

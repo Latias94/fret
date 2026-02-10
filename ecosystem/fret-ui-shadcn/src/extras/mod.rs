@@ -12,6 +12,7 @@
 pub mod announcement;
 pub mod avatar_stack;
 pub mod banner;
+pub mod kanban;
 pub mod marquee;
 pub mod rating;
 pub mod relative_time;
@@ -21,6 +22,7 @@ pub mod ticker;
 pub use announcement::{Announcement, AnnouncementTag, AnnouncementTitle};
 pub use avatar_stack::{AvatarStack, AvatarStackItem};
 pub use banner::{Banner, BannerAction, BannerClose, BannerIcon, BannerTitle};
+pub use kanban::{Kanban, KanbanColumn, KanbanItem};
 pub use marquee::{Marquee, MarqueeDirection};
 pub use rating::Rating;
 pub use relative_time::{

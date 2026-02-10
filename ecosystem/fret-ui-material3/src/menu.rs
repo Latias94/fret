@@ -260,12 +260,10 @@ impl Menu {
             let mut items: Vec<MenuEntry> = Vec::new();
             items.extend(entries.into_iter());
 
-            let mut flat_items: Vec<MenuItem> = Vec::new();
             let mut disabled: Vec<bool> = Vec::new();
             for it in items.iter() {
                 match it {
                     MenuEntry::Item(item) => {
-                        flat_items.push(item.clone());
                         disabled.push(item.disabled);
                     }
                     MenuEntry::Separator => {}
@@ -274,7 +272,20 @@ impl Menu {
 
             let first_enabled_idx = disabled.iter().position(|&d| !d).unwrap_or(0);
             let disabled: Arc<[bool]> = Arc::from(disabled);
-            let count = flat_items.len();
+            let count = disabled.len();
+            let typeahead_items: Arc<[Arc<str>]> = Arc::from(
+                items
+                    .iter()
+                    .filter_map(|it| match it {
+                        MenuEntry::Item(item) => Some(
+                            item.a11y_label
+                                .clone()
+                                .unwrap_or_else(|| item.label.clone()),
+                        ),
+                        MenuEntry::Separator => None,
+                    })
+                    .collect::<Vec<_>>(),
+            );
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
@@ -363,16 +374,7 @@ impl Menu {
                             // Prefix typeahead (best-effort): matches `RadioGroup` semantics in this crate.
                             roving_typeahead_prefix_arc_str_always_wrap(
                                 cx,
-                                Arc::from(
-                                    flat_items
-                                        .iter()
-                                        .map(|it| {
-                                            it.a11y_label
-                                                .clone()
-                                                .unwrap_or_else(|| it.label.clone())
-                                        })
-                                        .collect::<Vec<_>>(),
-                                ),
+                                typeahead_items.clone(),
                                 30,
                             );
 

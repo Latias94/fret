@@ -266,10 +266,11 @@ fn command_text_input<H: UiHost>(
     height: Px,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let theme = &theme;
 
     let fg = theme.color_required("foreground");
     let placeholder_fg = theme.color_required("muted-foreground");
-    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
+    let pad_y = MetricRef::space(Space::N3).resolve(theme);
 
     let mut chrome = TextInputStyle::from_theme(theme.snapshot());
     // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
@@ -296,7 +297,7 @@ fn command_text_input<H: UiHost>(
     props.active_descendant = active_descendant;
     props.expanded = expanded;
     props.chrome = chrome;
-    props.text_style = item_text_style(&theme);
+    props.text_style = item_text_style(theme);
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(height),
@@ -342,8 +343,7 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into_element(cx);
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-    let muted_fg = theme.color_required("muted-foreground");
+    let muted_fg = Theme::global(&*cx.app).color_required("muted-foreground");
 
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
@@ -502,8 +502,9 @@ impl CommandShortcut {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let theme = &theme;
         let fg = theme.color_required("muted-foreground");
-        let style = shortcut_text_style(&theme);
+        let style = shortcut_text_style(theme);
         let mut text = ui::text(cx, self.text)
             .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
             .text_size_px(style.size)
@@ -560,19 +561,19 @@ impl Command {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let base = ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .merge(
-                ChromeRefinement::default()
-                    .border_width(Px(1.0))
-                    .border_color(ColorRef::Color(border(&theme)))
-                    .bg(ColorRef::Color(bg(&theme))),
-            )
-            .merge(self.chrome);
-
-        let props = decl_style::container_props(&theme, base, self.layout);
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let base = ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .merge(
+                    ChromeRefinement::default()
+                        .border_width(Px(1.0))
+                        .border_color(ColorRef::Color(border(theme)))
+                        .bg(ColorRef::Color(bg(theme))),
+                )
+                .merge(self.chrome);
+            decl_style::container_props(theme, base, self.layout)
+        };
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }
@@ -638,10 +639,11 @@ impl CommandInput {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
             cx.watch_model(&self.model).observe();
+            let theme = Theme::global(&*cx.app).clone();
+            let theme = &theme;
 
-            let border = border(&theme);
+            let border = border(theme);
             let disabled = self.disabled;
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
@@ -663,28 +665,30 @@ impl CommandInput {
             let border_w = chrome
                 .border_width
                 .as_ref()
-                .map(|m| m.resolve(&theme))
+                .map(|m| m.resolve(theme))
                 .unwrap_or(Px(1.0));
             let border_color = chrome
                 .border_color
                 .as_ref()
-                .map(|c| c.resolve(&theme))
+                .map(|c| c.resolve(theme))
                 .unwrap_or(border);
-            let background = chrome.background.as_ref().map(|c| c.resolve(&theme));
+            let background = chrome.background.as_ref().map(|c| c.resolve(theme));
             let radius = chrome
                 .radius
                 .as_ref()
-                .map(|m| m.resolve(&theme))
+                .map(|m| m.resolve(theme))
                 .unwrap_or(Px(0.0));
 
             let padding = chrome.padding.clone().unwrap_or_default();
-            let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
-            let pad_right = padding.right.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
-            let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
-            let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+            let pad_top = padding.top.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+            let pad_right = padding.right.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+            let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+            let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+
+            let icon_fg = theme.color_required("muted-foreground");
 
             let mut wrapper = decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default(),
                 self.layout.merge(LayoutRefinement::default().w_full()),
             );
@@ -713,7 +717,6 @@ impl CommandInput {
                     .clone()
                     .unwrap_or_else(|| Arc::from("Command input"));
                 let placeholder = self.placeholder.clone();
-                let icon_fg = theme.color_required("muted-foreground");
 
                 let icon = decl_icon::icon_with(
                     cx,
@@ -946,9 +949,12 @@ impl CommandEmpty {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-        let text_style = item_text_style(&theme);
+        let (fg, text_style) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("muted-foreground");
+            let text_style = item_text_style(theme);
+            (fg, text_style)
+        };
         cx.container(
             ContainerProps {
                 layout: {
@@ -1087,7 +1093,6 @@ impl CommandList {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
             let disabled = self.disabled;
             let items = self.items;
             let highlight_query = self.highlight_query;
@@ -1121,20 +1126,34 @@ impl CommandList {
                 ..Default::default()
             };
 
-            let row_h = MetricRef::space(Space::N8).resolve(&theme);
-            let row_gap = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
-            let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-            let ring = decl_style::focus_ring(&theme, radius);
-            let bg_hover = item_bg_hover(&theme);
-            let fg = theme.color_required("foreground");
-            let text_style = item_text_style(&theme);
-            let item_layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
-            );
+            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) = {
+                let theme = Theme::global(&*cx.app);
+                let row_h = MetricRef::space(Space::N8).resolve(theme);
+                let row_gap = MetricRef::space(Space::N2).resolve(theme);
+                let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
+                let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
+                let radius = MetricRef::radius(Radius::Sm).resolve(theme);
+                let ring = decl_style::focus_ring(theme, radius);
+                let bg_hover = item_bg_hover(theme);
+                let fg = theme.color_required("foreground");
+                let text_style = item_text_style(theme);
+                let item_layout = decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
+                );
+                (
+                    row_gap,
+                    pad_x,
+                    pad_y,
+                    radius,
+                    ring,
+                    bg_hover,
+                    fg,
+                    text_style,
+                    item_layout,
+                )
+            };
 
             let scroll = self.scroll.w_full().min_w_0();
 
