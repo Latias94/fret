@@ -6,8 +6,10 @@ use fret_runtime::{DragKindId, Model};
 use fret_ui::action::{
     OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
 };
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, ScrollAxis,
+};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -19,6 +21,7 @@ use fret_ui_kit::dnd::{
 use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
+use crate::ScrollArea;
 use crate::test_id::attach_test_id;
 
 const DRAG_KIND_KANBAN: DragKindId = DragKindId(101);
@@ -86,6 +89,20 @@ impl KanbanColumn {
             name: name.into(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KanbanCardMode {
+    Board,
+    Overlay,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct KanbanCardCtx {
+    pub mode: KanbanCardMode,
+    pub dragging: bool,
+    pub active: bool,
+    pub over: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -341,6 +358,21 @@ impl Kanban {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with(cx, |cx, item, _ctx| {
+            ui::text(cx, item.name.clone())
+                .font_medium()
+                .w_full()
+                .min_w_0()
+                .truncate()
+                .into_element(cx)
+        })
+    }
+
+    pub fn into_element_with<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        render_card: impl Fn(&mut ElementContext<'_, H>, &KanbanItem, KanbanCardCtx) -> AnyElement,
+    ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -389,6 +421,20 @@ impl Kanban {
 
             let el = cx.container(root_props, move |cx| {
                 let items_snapshot = cx.watch_model(&items).layout().cloned_or_default();
+                let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+                    cx,
+                    Invalidation::Layout,
+                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+                );
+                let board_gap_x = if sm_breakpoint { Space::N4 } else { Space::N3 };
+                let column_layout = if sm_breakpoint {
+                    column_layout.clone()
+                } else {
+                    column_layout
+                        .clone()
+                        .merge(LayoutRefinement::default().w_px(Px(240.0)).min_w_0())
+                };
 
                 let overlay_presence =
                     presence::fade_presence_with_durations(cx, dragging_open, 1, 6);
@@ -507,6 +553,8 @@ impl Kanban {
                     })
                 })();
 
+                let render_card = &render_card;
+
                 let mut cols: Vec<AnyElement> = Vec::with_capacity(columns.len());
                 for col in columns.iter().cloned() {
                     let dnd_for_render = dnd_svc.clone();
@@ -601,7 +649,7 @@ impl Kanban {
                         );
                         for (card_index, card) in column_cards.drain(..).enumerate() {
                             let card_id = card.id.clone();
-                            let card_name = card.name.clone();
+                            let card = card;
                             let card_dnd_id = kanban_card_dnd_id(card_id.as_ref());
 
                             let card_test_id = Arc::<str>::from(format!(
@@ -709,8 +757,6 @@ impl Kanban {
                                             return false;
                                         }
 
-                                        host.capture_pointer();
-
                                         let _ = dnd::handle_pointer_down_in_scope(
                                             host.models_mut(),
                                             &dnd_on_down,
@@ -742,13 +788,14 @@ impl Kanban {
                                         });
 
                                         host.request_redraw(action_cx.window);
-                                        true
+                                        false
                                     });
 
                                 let on_move: OnPointerMove =
                                     Arc::new(move |host, action_cx, mv: PointerMoveCx| {
                                         let mut tracked = false;
                                         let mut canceled = false;
+                                        let mut became_dragging = false;
                                         let _ = host.models_mut().update(&state_on_move, |st| {
                                             if !st.pointers.contains_key(&mv.pointer_id) {
                                                 return;
@@ -856,6 +903,7 @@ impl Kanban {
                                                         return;
                                                     };
                                                     if !state.dragging {
+                                                        became_dragging = true;
                                                         state.origin_rect = origin_rect;
                                                     }
                                                     state.dragging = true;
@@ -865,6 +913,9 @@ impl Kanban {
                                                     state.pointer = mv.position;
                                                 });
 
+                                            if became_dragging {
+                                                host.capture_pointer();
+                                            }
                                             host.request_redraw(action_cx.window);
                                             return true;
                                         }
@@ -879,6 +930,7 @@ impl Kanban {
 
                                         let mut reorder: Option<(DndItemId, DndItemId)> = None;
                                         let mut had_pointer = false;
+                                        let mut was_dragging = false;
 
                                         let _ = host.models_mut().update(&state_on_up, |st| {
                                             let Some(state) = st.pointers.remove(&up.pointer_id)
@@ -887,6 +939,7 @@ impl Kanban {
                                             };
                                             had_pointer = true;
                                             if state.dragging {
+                                                was_dragging = true;
                                                 st.last_drag = Some(KanbanLastDrag {
                                                     active: state.active,
                                                     translation: state.translation,
@@ -919,7 +972,9 @@ impl Kanban {
                                             collision_strategy,
                                             None,
                                         );
-                                        host.release_pointer_capture();
+                                        if was_dragging {
+                                            host.release_pointer_capture();
+                                        }
 
                                         if let Some((active, over)) = reorder {
                                             let over_rect = dnd::droppable_rect_in_scope(
@@ -943,8 +998,10 @@ impl Kanban {
                                                 });
                                         }
 
-                                        host.request_redraw(action_cx.window);
-                                        true
+                                        if was_dragging {
+                                            host.request_redraw(action_cx.window);
+                                        }
+                                        was_dragging
                                     });
 
                                 let el = cx.pointer_region(pr, |cx| {
@@ -1013,14 +1070,16 @@ impl Kanban {
                                             }
                                         }
 
-                                        vec![
-                                            ui::text(cx, card_name)
-                                                .font_medium()
-                                                .w_full()
-                                                .min_w_0()
-                                                .truncate()
-                                                .into_element(cx),
-                                        ]
+                                        vec![render_card(
+                                            cx,
+                                            &card,
+                                            KanbanCardCtx {
+                                                mode: KanbanCardMode::Board,
+                                                dragging,
+                                                active: active_card,
+                                                over: over_card,
+                                            },
+                                        )]
                                     });
 
                                     let card = if active_card {
@@ -1109,11 +1168,15 @@ impl Kanban {
                 let board = stack::hstack(
                     cx,
                     stack::HStackProps::default()
-                        .gap_x(Space::N4)
+                        .gap_x(board_gap_x)
                         .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
+                        .layout(LayoutRefinement::default()),
                     |_cx| cols,
                 );
+                let board = ScrollArea::new([board])
+                    .axis(ScrollAxis::X)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
 
                 let overlay = if dragging {
                     (|| -> Option<AnyElement> {
@@ -1150,7 +1213,6 @@ impl Kanban {
                             ..Default::default()
                         };
 
-                        let active_name = active_item.name.clone();
                         let overlay_test_id = Arc::<str>::from(format!(
                             "shadcn-extras.kanban.card-{}.overlay",
                             sanitize_test_id_suffix(active_item.id.as_ref())
@@ -1175,16 +1237,17 @@ impl Kanban {
                             let radius = card_props.corner_radii.top_left;
                             card_props.shadow = Some(decl_style::shadow_md(&theme, radius));
 
-                            let active_name = active_name.clone();
                             let card = cx.container(card_props, |cx| {
-                                vec![
-                                    ui::text(cx, active_name)
-                                        .font_medium()
-                                        .w_full()
-                                        .min_w_0()
-                                        .truncate()
-                                        .into_element(cx),
-                                ]
+                                vec![render_card(
+                                    cx,
+                                    active_item,
+                                    KanbanCardCtx {
+                                        mode: KanbanCardMode::Overlay,
+                                        dragging,
+                                        active: true,
+                                        over: false,
+                                    },
+                                )]
                             });
 
                             vec![cx.opacity(overlay_presence.opacity, |cx| {

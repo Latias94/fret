@@ -106,7 +106,51 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
         shadcn::extras::Kanban::new(columns, items)
             .test_id("ui-gallery-shadcn-extras-kanban")
-            .into_element(cx)
+            .into_element_with(cx, |cx, item, ctx| {
+                let title = ui::text(cx, item.name.clone())
+                    .font_medium()
+                    .w_full()
+                    .min_w_0()
+                    .truncate()
+                    .into_element(cx);
+
+                let badge = shadcn::Badge::new(item.column.clone())
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx);
+
+                let meta = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap_x(Space::N2)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |_cx| vec![badge],
+                );
+
+                let header = if ctx.mode == shadcn::extras::KanbanCardMode::Board {
+                    let checkbox =
+                        shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap_x(Space::N2)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full()),
+                        move |_cx| vec![checkbox, title],
+                    )
+                } else {
+                    title
+                };
+
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N1)
+                        .items_stretch()
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |_cx| vec![header, meta],
+                )
+            })
     });
 
     let ticker_row = stack::hstack(

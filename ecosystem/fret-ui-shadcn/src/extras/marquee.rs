@@ -164,6 +164,12 @@ impl Marquee {
 
             let theme_for_inner = theme.clone();
             let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
+                let reduced_motion = fret_ui_kit::declarative::prefers_reduced_motion(
+                    cx,
+                    fret_ui::Invalidation::Paint,
+                    false,
+                );
+                let paused = paused || reduced_motion;
                 let animating = speed.0.abs() > 0.0 && !paused;
                 scheduling::set_continuous_frames(cx, animating);
 

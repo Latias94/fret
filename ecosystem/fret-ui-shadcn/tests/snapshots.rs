@@ -815,3 +815,61 @@ fn snapshot_extras_kanban_default() {
         vec![fret_ui_shadcn::extras::Kanban::new(columns, items).into_element(cx)]
     });
 }
+
+#[test]
+fn snapshot_extras_kanban_custom_cards() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(920.0), Px(420.0)),
+    );
+    snapshot_for_root("extras_kanban_custom_cards", bounds, |cx| {
+        let columns = vec![
+            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+        ];
+
+        let items = cx.app.models_mut().insert(vec![
+            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+        ]);
+
+        let board = fret_ui_shadcn::extras::Kanban::new(columns, items).into_element_with(
+            cx,
+            |cx, item, ctx| {
+                let title = fret_ui_kit::ui::text(cx, item.name.clone())
+                    .font_medium()
+                    .w_full()
+                    .min_w_0()
+                    .truncate()
+                    .into_element(cx);
+
+                let badge = fret_ui_shadcn::Badge::new(item.column.clone())
+                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+                    .into_element(cx);
+
+                let mut children = vec![title, badge];
+                if ctx.mode == fret_ui_shadcn::extras::KanbanCardMode::Overlay {
+                    children.push(
+                        fret_ui_kit::ui::text(cx, "overlay")
+                            .nowrap()
+                            .into_element(cx),
+                    );
+                }
+
+                fret_ui_kit::declarative::stack::vstack(
+                    cx,
+                    fret_ui_kit::declarative::stack::VStackProps::default()
+                        .gap(fret_ui_kit::Space::N1)
+                        .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                    |_cx| children,
+                )
+            },
+        );
+
+        vec![board]
+    });
+}

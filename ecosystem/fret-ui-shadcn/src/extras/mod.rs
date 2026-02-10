@@ -22,7 +22,7 @@ pub mod ticker;
 pub use announcement::{Announcement, AnnouncementTag, AnnouncementTitle};
 pub use avatar_stack::{AvatarStack, AvatarStackItem};
 pub use banner::{Banner, BannerAction, BannerClose, BannerIcon, BannerTitle};
-pub use kanban::{Kanban, KanbanColumn, KanbanItem};
+pub use kanban::{Kanban, KanbanCardCtx, KanbanCardMode, KanbanColumn, KanbanItem};
 pub use marquee::{Marquee, MarqueeDirection};
 pub use rating::Rating;
 pub use relative_time::{
