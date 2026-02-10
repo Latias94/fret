@@ -2032,34 +2032,6 @@ fn assert_overlay_surface_colors_match(
     }
 }
 
-fn web_drop_shadow_insets(node: &WebNode) -> Vec<ShadowInsets> {
-    let box_shadow = node
-        .computed_style
-        .get("boxShadow")
-        .map(String::as_str)
-        .unwrap_or("");
-    if box_shadow.is_empty() || box_shadow == "none" {
-        return Vec::new();
-    }
-
-    let mut out = Vec::new();
-    for layer in split_box_shadow_layers(box_shadow) {
-        let Some((color, x, y, blur, spread)) = parse_box_shadow_layer(layer) else {
-            continue;
-        };
-        if let Some(rgba) = parse_css_color(&color)
-            && rgba.a <= 0.01
-        {
-            continue;
-        }
-        if x.abs() <= 0.01 && y.abs() <= 0.01 && blur.abs() <= 0.01 && spread.abs() <= 0.01 {
-            continue;
-        }
-        out.push(shadow_insets_for_box_shadow_layer(x, y, blur, spread));
-    }
-    out
-}
-
 fn find_by_data_slot<'a>(node: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
     find_first(node, &|n| {
         n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
@@ -2297,41 +2269,6 @@ fn web_find_highlighted_listbox_option_chrome(
         .expect("web highlighted option color");
 
     WebHighlightedNodeChrome { bg, fg }
-}
-
-fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<ShadowInsets> {
-    let panel_area = rect_area(panel_rect).max(1.0);
-    let mut out = Vec::new();
-
-    for op in scene.ops() {
-        let SceneOp::Quad {
-            rect,
-            background,
-            border,
-            ..
-        } = *op
-        else {
-            continue;
-        };
-
-        let background = paint_solid_color(background);
-        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
-        if has_border(&border) {
-            continue;
-        }
-        // `shadow-lg` can push the outermost layer alpha below 0.01 (e.g. 0.1 / 16 = 0.00625),
-        // but we still need to capture the full footprint for 1:1 `box-shadow` geometry gates.
-        if background.a <= 0.0001 || background.a >= 0.95 {
-            continue;
-        }
-        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.01 {
-            continue;
-        }
-
-        out.push(shadow_insets_for_rect(panel_rect, rect));
-    }
-
-    out
 }
 
 fn assert_overlay_panel_size_matches_by_portal_slot_theme(
