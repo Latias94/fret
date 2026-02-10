@@ -74,25 +74,44 @@ struct ClipStack {
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
 
+const MAX_STOPS: u32 = 8u;
+
+struct Paint {
+  kind: u32,
+  tile_mode: u32,
+  color_space: u32,
+  stop_count: u32,
+  params0: vec4<f32>,
+  params1: vec4<f32>,
+  stop_colors: array<vec4<f32>, 8>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
 struct QuadInstance {
   rect: vec4<f32>,
   transform0: vec4<f32>,
   transform1: vec4<f32>,
-  color: vec4<f32>,
+  fill_paint: Paint,
+  border_paint: Paint,
   corner_radii: vec4<f32>,
   border: vec4<f32>,
-  border_color: vec4<f32>,
 };
+
+struct QuadInstances {
+  instances: array<QuadInstance>,
+};
+
+@group(1) @binding(0) var<storage, read> quad_instances: QuadInstances;
 
 struct VsOut {
   @builtin(position) clip_pos: vec4<f32>,
   @location(0) pixel_pos: vec2<f32>,
   @location(1) local_pos: vec2<f32>,
   @location(2) rect: vec4<f32>,
-  @location(3) color: vec4<f32>,
-  @location(4) corner_radii: vec4<f32>,
-  @location(5) border: vec4<f32>,
-  @location(6) border_color: vec4<f32>,
+  @location(3) corner_radii: vec4<f32>,
+  @location(4) border: vec4<f32>,
+  @location(5) @interpolate(flat) instance_index: u32,
 };
 
 fn quad_vertex_xy(vertex_index: u32) -> vec2<f32> {
@@ -115,14 +134,12 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
 @vertex
 fn vs_main(
   @builtin(vertex_index) vertex_index: u32,
-  @location(0) rect: vec4<f32>,
-  @location(1) transform0: vec4<f32>,
-  @location(2) transform1: vec4<f32>,
-  @location(3) color: vec4<f32>,
-  @location(4) corner_radii: vec4<f32>,
-  @location(5) border: vec4<f32>,
-  @location(6) border_color: vec4<f32>,
+  @builtin(instance_index) instance_index: u32,
 ) -> VsOut {
+  let inst = quad_instances.instances[instance_index];
+  let rect = inst.rect;
+  let transform0 = inst.transform0;
+  let transform1 = inst.transform1;
   let uv = quad_vertex_xy(vertex_index);
   let local_pos = rect.xy + uv * rect.zw;
   let pixel_pos = vec2<f32>(
@@ -136,10 +153,9 @@ fn vs_main(
   out.pixel_pos = pixel_pos;
   out.local_pos = local_pos;
   out.rect = rect;
-  out.color = color;
-  out.corner_radii = corner_radii;
-  out.border = border;
-  out.border_color = border_color;
+  out.corner_radii = inst.corner_radii;
+  out.border = inst.border;
+  out.instance_index = instance_index;
   return out;
 }
 "#;
@@ -186,9 +202,77 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn paint_stop_offset(p: Paint, i: u32) -> f32 {
+  if (i < 4u) {
+    return p.stop_offsets0[i];
+  }
+  return p.stop_offsets1[i - 4u];
+}
+
+fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
+  let n = min(p.stop_count, MAX_STOPS);
+  if (n == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  var prev_offset = paint_stop_offset(p, 0u);
+  var prev_color = p.stop_colors[0u];
+  if (n == 1u || t <= prev_offset) {
+    return prev_color;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = paint_stop_offset(p, i);
+    let col = p.stop_colors[i];
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_color, col, u);
+    }
+    prev_offset = off;
+    prev_color = col;
+  }
+  return prev_color;
+}
+
+fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+  switch p.kind {
+    // 0 = Solid
+    case 0u: {
+      return p.params0;
+    }
+    // 1 = LinearGradient
+    case 1u: {
+      let start = p.params0.xy;
+      let end = p.params0.zw;
+      let dir = end - start;
+      let len2 = dot(dir, dir);
+      let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+      let tt = clamp(t, 0.0, 1.0);
+      return paint_sample_stops(p, tt);
+    }
+    // 2 = RadialGradient
+    case 2u: {
+      let center = p.params0.xy;
+      let radius = max(p.params0.zw, vec2<f32>(1e-6));
+      let d = (local_pos - center) / radius;
+      let t = length(d);
+      let tt = clamp(t, 0.0, 1.0);
+      return paint_sample_stops(p, tt);
+    }
+    default: {
+      return vec4<f32>(0.0);
+    }
+  }
+}
+
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let inst = quad_instances.instances[input.instance_index];
 
   let outer_sdf = quad_sdf(input.local_pos, input.rect.xy, input.rect.zw, input.corner_radii);
 
@@ -224,8 +308,8 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let border_cov_raw = saturate(alpha_outer - alpha_inner);
   let border_cov = select(0.0, border_cov_raw, border_present);
 
-  let fill = vec4<f32>(input.color.rgb, input.color.a) * alpha_fill;
-  let border = vec4<f32>(input.border_color.rgb, input.border_color.a) * border_cov;
+  let fill = paint_eval(inst.fill_paint, input.local_pos) * alpha_fill;
+  let border = paint_eval(inst.border_paint, input.local_pos) * border_cov;
 
   let out = (fill + border) * clip;
   return encode_output_premul(out);

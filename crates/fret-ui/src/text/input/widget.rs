@@ -1,6 +1,6 @@
 use fret_core::{
-    Color, DrawOrder, Event, MouseButton, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow,
-    TextWrap,
+    Color, DrawOrder, Event, MouseButton, Paint, Px, Rect, SceneOp, Size, TextConstraints,
+    TextOverflow, TextWrap,
 };
 use fret_runtime::{CommandId, Effect};
 
@@ -1231,9 +1231,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: self.chrome_style.background,
+            background: Paint::Solid(self.chrome_style.background),
             border: self.chrome_style.border,
-            border_color,
+            border_paint: Paint::Solid(border_color),
             corner_radii: self.chrome_style.corner_radii,
         });
 
@@ -1281,9 +1281,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         Px((cx.bounds.size.height.0 - padding_top.0 - padding_bottom.0).max(0.0)),
                     ),
                 ),
-                background: self.chrome_style.selection_color,
+                background: Paint::Solid(self.chrome_style.selection_color),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: self.chrome_style.corner_radii,
             });
         }
@@ -1390,9 +1390,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: caret,
-            background: self.chrome_style.caret_color,
+            background: Paint::Solid(self.chrome_style.caret_color),
             border: fret_core::geometry::Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
         });
     }

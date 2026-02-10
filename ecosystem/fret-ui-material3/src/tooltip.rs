@@ -191,7 +191,6 @@ struct TooltipTriggerHoverEdgeState {
 
 fn tooltip_policy_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: Theme,
     base_trigger: AnyElement,
     trigger_id: fret_ui::elements::GlobalElementId,
     anchor_id: fret_ui::elements::GlobalElementId,
@@ -424,7 +423,13 @@ fn tooltip_policy_root<H: UiHost>(
             vec![trigger]
         });
 
-        let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
+        let close_grace_frames = {
+            let close_ms = {
+                let theme = Theme::global(&*cx.app);
+                tooltip_tokens::close_duration_ms(theme)
+            };
+            Some(ms_to_frames(close_ms))
+        };
         let motion = drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
 
         let overlay_presence = OverlayPresence {
@@ -1351,10 +1356,8 @@ impl RichTooltip {
             )
         });
 
-        let theme = Theme::global(&*cx.app).clone();
         tooltip_policy_root(
             cx,
-            theme,
             base_trigger,
             trigger_id,
             anchor_id,

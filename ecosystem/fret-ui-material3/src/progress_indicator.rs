@@ -67,9 +67,9 @@ fn paint_quad(
     scene.push(fret_core::SceneOp::Quad {
         order,
         rect,
-        background,
+        background: fret_core::Paint::Solid(background),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
         corner_radii,
     });
 }

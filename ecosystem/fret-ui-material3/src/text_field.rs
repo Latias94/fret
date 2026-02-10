@@ -374,8 +374,30 @@ impl TextField {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let variant = self.variant;
-            let token_namespace = self.token_namespace;
+            let TextField {
+                model,
+                variant,
+                label,
+                placeholder,
+                supporting_text,
+                style: style_override,
+                field_id_out,
+                trailing_icon,
+                trailing_icon_a11y_label,
+                trailing_icon_test_id,
+                trailing_icon_rotation_progress,
+                on_trailing_icon_pointer_down,
+                disabled,
+                error,
+                a11y_label,
+                test_id,
+                a11y_role,
+                active_descendant,
+                controls_element,
+                expanded,
+                input_id_out,
+                token_namespace,
+            } = self;
             let height = {
                 let theme = Theme::global(&*cx.app);
                 match token_namespace {
@@ -395,31 +417,10 @@ impl TextField {
                 layout: hover_layout,
             };
 
-            let model = self.model.clone();
             let variant_for_children = variant;
-            let label = self.label.clone();
-            let placeholder = self.placeholder.clone();
-            let supporting_text = self.supporting_text.clone();
-            let style_override = self.style;
-            let disabled = self.disabled;
-            let error = self.error;
-            let a11y_role = self.a11y_role;
-            let active_descendant = self.active_descendant;
-            let controls_element = self.controls_element;
-            let expanded = self.expanded;
-            let a11y_label = self
-                .a11y_label
-                .clone()
+            let a11y_label = a11y_label
                 .or_else(|| label.clone())
                 .or_else(|| placeholder.clone());
-            let test_id = self.test_id.clone();
-            let trailing_icon = self.trailing_icon;
-            let trailing_icon_a11y_label = self.trailing_icon_a11y_label.clone();
-            let trailing_icon_test_id = self.trailing_icon_test_id.clone();
-            let trailing_icon_rotation_progress = self.trailing_icon_rotation_progress;
-            let on_trailing_icon_pointer_down = self.on_trailing_icon_pointer_down.clone();
-            let input_id_out = self.input_id_out.clone();
-            let field_id_out = self.field_id_out.clone();
 
             cx.hover_region(hover, move |cx, hovered| {
                 let mut focused = false;

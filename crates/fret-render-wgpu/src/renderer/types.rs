@@ -1,4 +1,5 @@
 use bytemuck::{Pod, Zeroable};
+use fret_core::scene::MAX_STOPS;
 use fret_core::scene::UvRect;
 use std::sync::Arc;
 use std::time::Duration;
@@ -51,14 +52,28 @@ pub(super) struct ScaleParamsUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct PaintGpu {
+    pub(super) kind: u32,
+    pub(super) tile_mode: u32,
+    pub(super) color_space: u32,
+    pub(super) stop_count: u32,
+    pub(super) params0: [f32; 4],
+    pub(super) params1: [f32; 4],
+    pub(super) stop_colors: [[f32; 4]; MAX_STOPS],
+    pub(super) stop_offsets0: [f32; 4],
+    pub(super) stop_offsets1: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct QuadInstance {
     pub(super) rect: [f32; 4],
     pub(super) transform0: [f32; 4],
     pub(super) transform1: [f32; 4],
-    pub(super) color: [f32; 4],
+    pub(super) fill_paint: PaintGpu,
+    pub(super) border_paint: PaintGpu,
     pub(super) corner_radii: [f32; 4],
     pub(super) border: [f32; 4],
-    pub(super) border_color: [f32; 4],
 }
 
 #[repr(C)]

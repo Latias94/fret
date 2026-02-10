@@ -803,9 +803,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: left_color,
+                        background: fret_core::Paint::Solid(left_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -823,9 +823,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: right_color,
+                        background: fret_core::Paint::Solid(right_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -845,9 +845,12 @@ pub fn slider<H: UiHost>(
                         p.scene().push(fret_core::SceneOp::Quad {
                             order: DrawOrder(2),
                             rect,
-                            background: alpha_mul(state_layer_color, state_layer_opacity),
+                            background: fret_core::Paint::Solid(alpha_mul(
+                                state_layer_color,
+                                state_layer_opacity,
+                            )),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: Corners::all(Px(size.0 * 0.5)),
                         });
                     }
@@ -910,9 +913,9 @@ pub fn slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: alpha_mul(color, opacity),
+                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
                                 border: Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
                                 corner_radii: tick_shape,
                             });
                         }
@@ -933,9 +936,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(3),
                         rect: handle,
-                        background: handle_color,
+                        background: fret_core::Paint::Solid(handle_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: handle_shape,
                     });
                 }
@@ -1693,9 +1696,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: inactive_track_color,
+                        background: fret_core::Paint::Solid(inactive_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1713,9 +1716,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: inactive_track_color,
+                        background: fret_core::Paint::Solid(inactive_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1729,9 +1732,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: active_track_color,
+                        background: fret_core::Paint::Solid(active_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1785,9 +1788,9 @@ pub fn range_slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: alpha_mul(color, opacity),
+                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
                                 border: Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
                                 corner_radii: tick_shape,
                             });
                         }
@@ -1814,9 +1817,12 @@ pub fn range_slider<H: UiHost>(
                         p.scene().push(fret_core::SceneOp::Quad {
                             order: DrawOrder(2),
                             rect,
-                            background: alpha_mul(state_layer_color, state_layer_opacity),
+                            background: fret_core::Paint::Solid(alpha_mul(
+                                state_layer_color,
+                                state_layer_opacity,
+                            )),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: Corners::all(Px(size.0 * 0.5)),
                         });
                     }
@@ -1838,9 +1844,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(3),
                         rect,
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: handle_shape,
                     });
                 };

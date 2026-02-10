@@ -176,6 +176,17 @@ pub trait Program: 'static {
         state: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
     ) -> Elements;
+
+    fn on_command(
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut UiTree<App>,
+        _state: &mut Self::State,
+        _command: &CommandId,
+    ) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]
@@ -288,17 +299,24 @@ fn mvu_view<P: Program>(
 
 fn mvu_on_command<P: Program>(
     app: &mut App,
-    _services: &mut dyn UiServices,
+    services: &mut dyn UiServices,
     window: AppWindowId,
-    _ui: &mut UiTree<App>,
+    ui: &mut UiTree<App>,
     st: &mut MvuWindowState<P::State, P::Message>,
     command: &CommandId,
 ) {
-    let Some(message) = st.router.try_take(command) else {
+    if let Some(message) = st.router.try_take(command) {
+        P::update(app, &mut st.user, message);
+        let _ = app
+            .models_mut()
+            .update(&st.tick, |v| *v = v.saturating_add(1));
+        app.request_redraw(window);
         return;
-    };
+    }
 
-    P::update(app, &mut st.user, message);
+    if !P::on_command(app, services, window, ui, &mut st.user, command) {
+        return;
+    }
 
     let _ = app
         .models_mut()

@@ -90,35 +90,60 @@ impl ModalNavigationDrawer {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let open_ms = self
-                .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
+            let (open_ms, close_ms, bezier, scrim_color_base, scrim_opacity, drawer_w) = {
+                let theme = Theme::global(&*cx.app);
+
+                let open_ms = self
+                    .open_duration_ms
+                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
+                    .unwrap_or(300);
+                let close_ms = self
+                    .close_duration_ms
+                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
+                    .unwrap_or(300);
+
+                let easing_key = self
+                    .easing_key
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
+                let bezier = theme.easing_by_key(easing_key.as_ref()).unwrap_or(
+                    fret_ui::theme::CubicBezier {
                         x1: 0.0,
                         y1: 0.0,
                         x2: 1.0,
                         y2: 1.0,
-                    });
+                    },
+                );
+
+                let tokens = MaterialTokenResolver::new(theme);
+                let scrim_color_base = tokens.color_comp_or_sys(
+                    "md.comp.navigation-drawer.scrim.color",
+                    "md.sys.color.scrim",
+                );
+                let scrim_opacity = theme
+                    .number_by_key("md.comp.navigation-drawer.scrim.opacity")
+                    .unwrap_or(0.4);
+
+                let drawer_w = theme
+                    .metric_by_key("md.comp.navigation-drawer.container.width")
+                    .unwrap_or(Px(360.0));
+
+                (
+                    open_ms,
+                    close_ms,
+                    bezier,
+                    scrim_color_base,
+                    scrim_opacity,
+                    drawer_w,
+                )
+            };
+
+            let open_ticks = motion::ms_to_frames(open_ms);
+            let close_ticks = motion::ms_to_frames(close_ms);
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -136,22 +161,9 @@ impl ModalNavigationDrawer {
             let content_el = content(cx);
 
             if presence.present {
-                let tokens = MaterialTokenResolver::new(&theme);
-
-                let scrim_color = tokens.color_comp_or_sys(
-                    "md.comp.navigation-drawer.scrim.color",
-                    "md.sys.color.scrim",
-                );
-                let scrim_opacity = theme
-                    .number_by_key("md.comp.navigation-drawer.scrim.opacity")
-                    .unwrap_or(0.4);
                 let scrim_alpha =
-                    (scrim_color.a * scrim_opacity * transition.progress).clamp(0.0, 1.0);
-                let scrim_color = with_alpha(scrim_color, scrim_alpha);
-
-                let drawer_w = theme
-                    .metric_by_key("md.comp.navigation-drawer.container.width")
-                    .unwrap_or(Px(360.0));
+                    (scrim_color_base.a * scrim_opacity * transition.progress).clamp(0.0, 1.0);
+                let scrim_color = with_alpha(scrim_color_base, scrim_alpha);
 
                 let dismiss_handler: OnDismissRequest =
                     self.on_dismiss_request.clone().unwrap_or_else(|| {

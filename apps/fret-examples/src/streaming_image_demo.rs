@@ -139,14 +139,15 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoSt
                 Px(bounds.size.height.0.max(1.0)),
             ),
         ),
-        background: Color {
+        background: fret_core::Paint::Solid(Color {
             r: 0.10,
             g: 0.11,
             b: 0.13,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
+
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -189,19 +190,19 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoSt
         scene.push(SceneOp::Quad {
             order: DrawOrder(1),
             rect,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.18,
                 g: 0.18,
                 b: 0.20,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(1.0)),
-            border_color: Color {
+            border_paint: fret_core::Paint::Solid(Color {
                 r: 0.35,
                 g: 0.35,
                 b: 0.40,
                 a: 1.0,
-            },
+            }),
             corner_radii: Corners::all(Px(6.0)),
         });
         app.push_effect(Effect::RequestAnimationFrame(window));
