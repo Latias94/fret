@@ -49,6 +49,8 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
     check_bundle_for_ui_gallery_code_editor_a11y_selection,
     check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
+    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
     check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
     check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
@@ -206,6 +208,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool =
@@ -868,6 +874,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-ui-gallery-code-editor-torture-decorations-toggle-a11y-composition-consistent-under-inline-preedit-composed" =>
             {
                 check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-composed-preedit-stable-after-wheel-scroll" => {
+                check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-composed-preedit-cancels-on-drag-selection" => {
+                check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
                     true;
                 i += 1;
             }
@@ -1843,6 +1859,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
                     || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                    || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                     || check_ui_gallery_code_editor_torture_inlays_present
@@ -1963,6 +1981,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
@@ -2180,6 +2200,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
@@ -2538,6 +2560,8 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
                         || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
                         || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                        || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                        || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                         || check_ui_gallery_code_editor_torture_inlays_present
@@ -2632,6 +2656,8 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
                             check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
                             check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                            check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                            check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                             check_ui_gallery_code_editor_torture_inlays_present,
@@ -3973,6 +3999,8 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
                     || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
                     || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+                    || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                    || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
@@ -4052,6 +4080,8 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
@@ -4341,6 +4371,12 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
                         ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
                             && !check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
+                    let suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
+                        ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
+                    let suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
+                        ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
@@ -4509,6 +4545,10 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
                         check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
                             || suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
+                        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+                            || suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+                        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
+                            || suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -8727,6 +8767,32 @@ fn ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_compos
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-drag-select-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_code_editor_torture_inlays_present_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -9267,6 +9333,8 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed: bool,
     check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed: bool,
     check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed: bool,
+    check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: bool,
+    check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_torture_inlays_present: bool,
@@ -9580,6 +9648,18 @@ fn apply_post_run_checks(
     if check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
     {
         check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll {
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection {
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection(
             bundle_path,
             warmup_frames,
         )?;
@@ -10435,6 +10515,8 @@ mod tests {
         check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json,
         check_bundle_for_ui_gallery_code_editor_a11y_selection_json,
         check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json,
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json,
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json,
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json,
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json,
         check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json,
@@ -10860,6 +10942,345 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_wheel_gate_passes_when_stable() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_wheel_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, rev: u64| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123,
+                            "selection": { "anchor": 4, "caret": 4 }
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [4, 4],
+                                "text_composition": [2, 4]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 10 }
+                    ],
+                    "snapshots": [
+                        snapshot(9, 1),
+                        snapshot(10, 1)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_wheel_gate_fails_when_buffer_changes() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_wheel_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64, rev: u64| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": true,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [4, 4],
+                                "text_composition": [2, 4]
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 10 }
+                    ],
+                    "snapshots": [
+                        snapshot(9, 1),
+                        snapshot(10, 2)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll_json(
+                &bundle,
+                &bundle_path,
+                0,
+            )
+            .unwrap_err();
+        assert!(err.contains("wheel gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_drag_select_gate_passes() {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_drag_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let snapshot = |frame_id: u64,
+                        preedit_active: bool,
+                        rev: u64,
+                        anchor: u64,
+                        caret: u64,
+                        text_composition: serde_json::Value| {
+            json!({
+                "tick_id": frame_id,
+                "frame_id": frame_id,
+                "app_snapshot": {
+                    "kind": "fret_ui_gallery",
+                    "selected_page": "code_editor_torture",
+                    "code_editor": {
+                        "soft_wrap_cols": 80,
+                        "torture": {
+                            "preedit_active": preedit_active,
+                            "allow_decorations_under_inline_preedit": true,
+                            "compose_inline_preedit": true,
+                            "buffer_revision": rev,
+                            "text_len_bytes": 123,
+                            "selection": { "anchor": anchor, "caret": caret }
+                        }
+                    }
+                },
+                "debug": {
+                    "semantics": {
+                        "nodes": [
+                            {
+                                "id": 10,
+                                "role": "text_field",
+                                "value": "zzab",
+                                "text_selection": [anchor, caret],
+                                "text_composition": text_composition
+                            },
+                            {
+                                "id": 11,
+                                "parent": 10,
+                                "test_id": "ui-gallery-code-editor-torture-viewport"
+                            }
+                        ]
+                    }
+                }
+            })
+        };
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        snapshot(10, true, 1, 4, 4, json!([2,4])),
+                        snapshot(11, false, 1, 0, 4, serde_json::Value::Null)
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+
+        assert!(
+            out_dir
+                .join("check.ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_torture_composed_preedit_drag_select_gate_fails_when_buffer_changes()
+    {
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_torture_composed_preedit_drag_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 10,
+                            "frame_id": 10,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true,
+                                        "buffer_revision": 1,
+                                        "text_len_bytes": 123,
+                                        "selection": { "anchor": 4, "caret": 4 }
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "zzab",
+                                            "text_selection": [4, 4],
+                                            "text_composition": [2, 4]
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 11,
+                            "frame_id": 11,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "torture": {
+                                        "preedit_active": false,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "compose_inline_preedit": true,
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 123,
+                                        "selection": { "anchor": 0, "caret": 4 }
+                                    }
+                                }
+                            },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 10,
+                                            "role": "text_field",
+                                            "value": "zzab",
+                                            "text_selection": [0, 4],
+                                            "text_composition": null
+                                        },
+                                        {
+                                            "id": 11,
+                                            "parent": 10,
+                                            "test_id": "ui-gallery-code-editor-torture-viewport"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection_json(
+                &bundle,
+                &bundle_path,
+                0,
+            )
+            .unwrap_err();
+        assert!(err.contains("drag-select gate failed"));
     }
 
     #[test]
