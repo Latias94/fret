@@ -691,6 +691,19 @@ mod tests {
 
     struct FakeServices;
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
@@ -793,7 +806,7 @@ mod tests {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
@@ -802,14 +815,17 @@ mod tests {
 
             let is_dot = (rect.size.width.0 - indicator.0).abs() <= 0.1
                 && (rect.size.height.0 - indicator.0).abs() <= 0.1
-                && *background == dot;
+                && *background == fret_core::Paint::Solid(dot);
             if is_dot {
                 dot_rect = Some(*rect);
             }
 
+            let fret_core::Paint::Solid(border_color) = *border_paint else {
+                continue;
+            };
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == Color::TRANSPARENT
+                && *background == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
@@ -907,23 +923,26 @@ mod tests {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
                 continue;
             };
 
+            let fret_core::Paint::Solid(border_color) = *border_paint else {
+                continue;
+            };
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == Color::TRANSPARENT
+                && *background == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
                 && border_color.a > 0.0;
             if is_icon {
-                icon_border_colors.push(*border_color);
+                icon_border_colors.push(border_color);
             }
         }
 
@@ -997,15 +1016,15 @@ mod tests {
             let fret_core::SceneOp::Quad {
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
                 continue;
             };
 
-            if *background == expected_bg
-                && *border_color == primary
+            if *background == fret_core::Paint::Solid(expected_bg)
+                && *border_paint == fret_core::Paint::Solid(primary)
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0

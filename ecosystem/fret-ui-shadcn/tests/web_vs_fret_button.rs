@@ -285,6 +285,19 @@ fn assert_button_variant_matches_web(golden_name: &str, variant: fret_ui_shadcn:
 
 struct FakeServices;
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -358,10 +371,16 @@ fn find_button_quad_style(
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 corner_radii,
                 ..
             } if rect == button_bounds => {
+                let fret_core::Paint::Solid(background) = background else {
+                    continue;
+                };
+                let fret_core::Paint::Solid(border_color) = border_paint else {
+                    continue;
+                };
                 return (
                     rect,
                     background,

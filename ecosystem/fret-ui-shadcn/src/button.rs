@@ -737,6 +737,19 @@ mod tests {
 
     struct FakeServices;
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
@@ -1363,6 +1376,9 @@ mod tests {
             else {
                 continue;
             };
+            let fret_core::Paint::Solid(background) = *background else {
+                continue;
+            };
             if background.a < 0.5 {
                 continue;
             }
@@ -1372,7 +1388,7 @@ mod tests {
             }
             let replace = best_quad.is_none_or(|(_, _, best)| score > best);
             if replace {
-                best_quad = Some((*rect, *background, score));
+                best_quad = Some((*rect, background, score));
             }
         }
 

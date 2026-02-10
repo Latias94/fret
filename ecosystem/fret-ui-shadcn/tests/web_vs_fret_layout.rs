@@ -605,6 +605,9 @@ fn find_best_background_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad>
         else {
             continue;
         };
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
+        };
 
         let score = (rect.origin.x.0 - target.origin.x.0).abs()
             + (rect.origin.y.0 - target.origin.y.0).abs()
@@ -629,6 +632,9 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             rect, background, ..
         } = *op
         else {
+            continue;
+        };
+        let fret_core::Paint::Solid(background) = background else {
             continue;
         };
 
@@ -1004,6 +1010,9 @@ fn find_scene_quad_background_with_rect_close(
         else {
             return None;
         };
+        let fret_core::Paint::Solid(background) = background else {
+            return None;
+        };
         if rect_close_px(rect, expected, tol) {
             Some((rect, background))
         } else {
@@ -1057,6 +1066,9 @@ fn find_scene_quad_background_with_world_rect_close(
             SceneOp::Quad {
                 rect, background, ..
             } => {
+                let fret_core::Paint::Solid(background) = background else {
+                    continue;
+                };
                 let current = *transform_stack.last().expect("transform stack not empty");
                 let world_rect = rect_aabb_after_transform(current, rect);
                 if rect_close_px(world_rect, expected, tol) {
@@ -1107,6 +1119,9 @@ fn debug_dump_scene_quads_near_expected(
             SceneOp::Quad {
                 rect, background, ..
             } => {
+                let fret_core::Paint::Solid(background) = background else {
+                    continue;
+                };
                 let current = *transform_stack.last().expect("transform stack not empty");
                 let world_rect = rect_aabb_after_transform(current, rect);
                 let d = rect_diff_metric(world_rect, expected);
@@ -1184,6 +1199,19 @@ fn debug_dump_scene_quads_near_expected(
 #[derive(Default)]
 struct FakeServices;
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
@@ -1238,6 +1266,19 @@ struct RecordedTextPrepare {
 #[derive(Default)]
 struct StyleAwareServices {
     prepared: Vec<RecordedTextPrepare>,
+}
+
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
 }
 
 impl fret_core::TextService for StyleAwareServices {
@@ -2974,6 +3015,9 @@ fn web_vs_fret_layout_switch_demo_thumb_geometry_matches_web() {
         };
 
         // Ignore low-alpha shadow quads. The switch thumb/track are fully opaque in shadcn-web.
+        let fret_core::Paint::Solid(background) = *background else {
+            continue;
+        };
         if background.a < 0.5 {
             continue;
         }
@@ -25283,6 +25327,9 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
             rect, background, ..
         } = *op
         else {
+            continue;
+        };
+        let fret_core::Paint::Solid(background) = background else {
             continue;
         };
 

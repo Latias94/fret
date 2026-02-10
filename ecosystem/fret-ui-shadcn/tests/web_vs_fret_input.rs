@@ -105,6 +105,19 @@ fn collect_tag<'a>(node: &'a WebNode, tag: &str, out: &mut Vec<&'a WebNode>) {
 #[derive(Default)]
 struct StyleAwareServices;
 
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
         &mut self,

@@ -1756,6 +1756,7 @@ pub fn render<H: UiHost + 'static>(
                                                             focusable: true,
                                                             focus_ring: Some(ring),
                                                             focus_ring_bounds: None,
+                                                            key_activation: Default::default(),
                                                             a11y: Default::default(),
                                                         },
                                                         move |cx, st| {
@@ -1826,6 +1827,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 focusable: true,
                                                                 focus_ring: Some(ring),
                                                                 focus_ring_bounds: None,
+                                                                key_activation: Default::default(),
                                                                 a11y: Default::default(),
                                                             },
                                                             move |cx, st| {
@@ -1901,6 +1903,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 focusable: true,
                                                                 focus_ring: Some(ring),
                                                                 focus_ring_bounds: None,
+                                                                key_activation: Default::default(),
                                                                 a11y: Default::default(),
                                                             },
                                                             move |cx, st| {
@@ -2176,6 +2179,7 @@ pub fn render<H: UiHost + 'static>(
                                                             focusable: toast_visible,
                                                             focus_ring: Some(ring),
                                                             focus_ring_bounds: None,
+                                                            key_activation: Default::default(),
                                                             a11y: fret_ui::element::PressableA11y {
                                                                 role: Some(SemanticsRole::Alert),
                                                                 test_id: Some(a11y_test_id),

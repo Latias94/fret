@@ -3444,6 +3444,19 @@ mod tests {
     #[derive(Default)]
     struct FakeServices;
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
@@ -4590,6 +4603,9 @@ mod tests {
             else {
                 continue;
             };
+            let fret_core::Paint::Solid(background) = *background else {
+                continue;
+            };
             if background.a <= 0.01 {
                 continue;
             }
@@ -4598,7 +4614,7 @@ mod tests {
                 continue;
             }
             if best.is_none_or(|(_, _, best_score)| score > best_score) {
-                best = Some((*rect, *background, score));
+                best = Some((*rect, background, score));
             }
         }
         let (_, bg, _) = best.expect("hovered menu item background quad");

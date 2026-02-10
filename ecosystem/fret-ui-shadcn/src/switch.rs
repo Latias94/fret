@@ -495,6 +495,19 @@ mod tests {
 
     struct FakeServices;
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
@@ -610,9 +623,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app).clone();
-        let track_bg = switch_bg_off(&theme);
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(&theme));
         let thumb_size = switch_thumb(&theme);
-        let thumb_bg = switch_thumb_bg(&theme);
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(&theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;

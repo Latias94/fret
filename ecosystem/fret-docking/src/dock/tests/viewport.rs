@@ -528,14 +528,14 @@ fn viewport_overlay_hooks_can_implement_layout_api_only() {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(9999),
                 rect: layout.draw_rect,
-                background: Color {
+                background: fret_core::Paint::Solid(Color {
                     r: 1.0,
                     g: 0.0,
                     b: 0.0,
                     a: 0.35,
-                },
+                }),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }

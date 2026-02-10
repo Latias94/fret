@@ -235,10 +235,16 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             background,
             border,
             corner_radii,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
+            continue;
+        };
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
+        };
+        let fret_core::Paint::Solid(border_color) = border_paint else {
             continue;
         };
 
@@ -278,6 +284,19 @@ fn assert_color_close(label: &str, actual: Color, expected_css: &str, tol: f32) 
 }
 
 struct FakeServices;
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
 
 impl fret_core::TextService for FakeServices {
     fn prepare(
@@ -532,10 +551,17 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             background,
             border,
             corner_radii,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
+            continue;
+        };
+
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
+        };
+        let fret_core::Paint::Solid(border_color) = border_paint else {
             continue;
         };
 
@@ -5610,11 +5636,17 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 corner_radii,
                 ..
             } = *op
             else {
+                continue;
+            };
+            let fret_core::Paint::Solid(background) = background else {
+                continue;
+            };
+            let fret_core::Paint::Solid(border_color) = border_paint else {
                 continue;
             };
             let score = (rect.origin.x.0 - target.origin.x.0).abs()
