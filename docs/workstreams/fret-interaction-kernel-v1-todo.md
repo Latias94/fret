@@ -25,6 +25,8 @@ This is a working checklist for the `fret-interaction` kernel workstream.
   - Evidence: `ecosystem/fret-interaction/src/runtime_drag.rs` (`update_thresholded_move`, `update_immediate_move`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (floating title-bar drag surfaces call `update_thresholded_move`; legacy resize handles call `update_immediate_move`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (resize handles call `update_immediate_move`).
+- [ ] (Optional) Extract pointer capture/focus choreography into a kernel helper without importing `fret-ui`.
+  - Goal: keep policy at call sites, but avoid subtly different capture/release flows across surfaces.
 - [ ] Add/extend `fretboard diag` gates:
   - [x] title bar drag screenshots + stale paint check
     - Evidence: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json`

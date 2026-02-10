@@ -139,3 +139,9 @@ For a concrete checklist and gates, see:
 
 - `docs/workstreams/fret-interaction-kernel-v1-todo.md`
 - `docs/workstreams/fret-interaction-kernel-v1-milestones.md`
+
+## Gates (executable)
+
+Preferred one-shot gate script for this workstream:
+
+- `pwsh tools/diag_gate_interaction_kernel_v1.ps1`

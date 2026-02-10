@@ -15,6 +15,8 @@ Exit criteria:
 
 - `cargo test -p fret-interaction` passes.
 - The workstream doc + TODO doc reflect the chosen boundaries.
+- A one-shot gate script exists and is kept up to date:
+  - `pwsh tools/diag_gate_interaction_kernel_v1.ps1`
 
 ## M1 — `imui` floating windows (3–5 days)
 
