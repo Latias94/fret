@@ -4878,6 +4878,7 @@ impl WinitAppDriver for UiGalleryDriver {
                     window,
                     bounds,
                     scale_factor,
+                    Some(&state.ui),
                     semantics_snapshot,
                     element_runtime,
                 )

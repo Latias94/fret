@@ -46,9 +46,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 
 - [x] Add a stable `reason_code` surface to `script.result.json` (`UiScriptResultV1.reason_code`).
 - [x] Add selector resolution evidence to `script.result.json` (`evidence.selector_resolution_trace`).
+- [x] Add hit-test / routing evidence to `script.result.json` (`evidence.hit_test_trace`).
 - [ ] Expand the reason-code taxonomy as new evidence surfaces land (avoid premature over-taxonomy).
 - [ ] Add bounded trace evidence (ring buffer) dumped on failure:
-  - [ ] hit-test + routing evidence (capture/barriers/occlusion),
+  - [ ] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability (hit path, occluder hints),
   - [ ] focus change evidence with reasons,
   - [ ] predicate evaluation deltas (what changed, what did not).
 - [ ] Add `diag lint` mode for captured bundles:

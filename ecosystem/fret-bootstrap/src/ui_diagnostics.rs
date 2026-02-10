@@ -8,7 +8,8 @@ use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTrans
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
     UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1,
-    UiPredicateV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiPointV1, UiPredicateV1, UiRectV1,
+    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
     UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
 };
 use fret_ui::elements::ElementRuntime;
@@ -687,6 +688,7 @@ impl UiDiagnosticsService {
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
+        ui: Option<&UiTree<App>>,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -714,6 +716,7 @@ impl UiDiagnosticsService {
                     v2_step_state: None,
                     last_reported_step: Some(0),
                     selector_resolution_trace: Vec::new(),
+                    hit_test_trace: Vec::new(),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -1173,9 +1176,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("selector.not_found".to_string()),
                         reason: Some("click_no_semantics_match".to_string()),
-                        evidence: Some(UiScriptEvidenceV1 {
-                            selector_resolution_trace: active.selector_resolution_trace.clone(),
-                        }),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1185,6 +1186,18 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some("click"),
+                    );
+                }
                 let modifiers = core_modifiers_from_ui(modifiers);
                 output.events.extend(click_events_with_modifiers(
                     pos,
@@ -1247,7 +1260,20 @@ impl UiDiagnosticsService {
                             },
                         };
 
+                        let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         if state.remaining_frames == 0 {
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &target,
+                                    step_index as u32,
+                                    center,
+                                    Some(node),
+                                    Some("click_stable.timeout"),
+                                );
+                            }
                             force_dump_label =
                                 Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                             stop_script = true;
@@ -1255,8 +1281,6 @@ impl UiDiagnosticsService {
                             active.v2_step_state = None;
                             output.request_redraw = true;
                         } else {
-                            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-
                             let moved = match state.last_center {
                                 Some(last) => {
                                     let dx = (center.x.0 - last.x.0).abs();
@@ -1274,6 +1298,18 @@ impl UiDiagnosticsService {
                             state.last_center = Some(center);
 
                             if state.stable_count >= stable_required {
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        center,
+                                        Some(node),
+                                        Some("click_stable.click"),
+                                    );
+                                }
                                 output.events.extend(click_events_with_modifiers(
                                     center,
                                     button,
@@ -1745,9 +1781,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("selector.not_found".to_string()),
                         reason: Some("move_pointer_no_semantics_match".to_string()),
-                        evidence: Some(UiScriptEvidenceV1 {
-                            selector_resolution_trace: active.selector_resolution_trace.clone(),
-                        }),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -1757,6 +1791,18 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some("move_pointer"),
+                    );
+                }
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
@@ -1832,11 +1878,7 @@ impl UiDiagnosticsService {
                                 step_index: Some(step_index as u32),
                                 reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("drag_pointer_no_semantics_match".to_string()),
-                                evidence: Some(UiScriptEvidenceV1 {
-                                    selector_resolution_trace: active
-                                        .selector_resolution_trace
-                                        .clone(),
-                                }),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1846,6 +1888,18 @@ impl UiDiagnosticsService {
                         };
 
                         let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        if let Some(ui) = ui {
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                Some(snapshot),
+                                &target,
+                                step_index as u32,
+                                start,
+                                Some(node),
+                                Some("drag_pointer.start"),
+                            );
+                        }
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1863,6 +1917,18 @@ impl UiDiagnosticsService {
 
                 let done = push_drag_playback_frame(&mut state, &mut output.events);
                 if done {
+                    if let Some(ui) = ui {
+                        record_hit_test_trace_for_selector(
+                            &mut active.hit_test_trace,
+                            ui,
+                            semantics_snapshot,
+                            &target,
+                            step_index as u32,
+                            state.end,
+                            None,
+                            Some("drag_pointer.end"),
+                        );
+                    }
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
                     if self.cfg.script_auto_dump {
@@ -1940,11 +2006,7 @@ impl UiDiagnosticsService {
                                 step_index: Some(step_index as u32),
                                 reason_code: Some("selector.not_found".to_string()),
                                 reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
-                                evidence: Some(UiScriptEvidenceV1 {
-                                    selector_resolution_trace: active
-                                        .selector_resolution_trace
-                                        .clone(),
-                                }),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -1954,6 +2016,18 @@ impl UiDiagnosticsService {
                         };
 
                         let start = center_of_rect(node.bounds);
+                        if let Some(ui) = ui {
+                            record_hit_test_trace_for_selector(
+                                &mut active.hit_test_trace,
+                                ui,
+                                Some(snapshot),
+                                &target,
+                                step_index as u32,
+                                start,
+                                Some(node),
+                                Some("move_pointer_sweep.start"),
+                            );
+                        }
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1975,6 +2049,18 @@ impl UiDiagnosticsService {
                     active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
                     output.request_redraw = true;
                 } else if state.next_step > state.steps {
+                    if let Some(ui) = ui {
+                        record_hit_test_trace_for_selector(
+                            &mut active.hit_test_trace,
+                            ui,
+                            semantics_snapshot,
+                            &target,
+                            step_index as u32,
+                            state.end,
+                            None,
+                            Some("move_pointer_sweep.end"),
+                        );
+                    }
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
@@ -2046,9 +2132,7 @@ impl UiDiagnosticsService {
                         step_index: Some(step_index as u32),
                         reason_code: Some("selector.not_found".to_string()),
                         reason: Some("wheel_no_semantics_match".to_string()),
-                        evidence: Some(UiScriptEvidenceV1 {
-                            selector_resolution_trace: active.selector_resolution_trace.clone(),
-                        }),
+                        evidence: script_evidence_for_active(&active),
                         last_bundle_dir: self
                             .last_dump_dir
                             .as_ref()
@@ -2058,6 +2142,19 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                if let Some(ui) = ui {
+                    let note = format!("wheel dx={delta_x} dy={delta_y}");
+                    record_hit_test_trace_for_selector(
+                        &mut active.hit_test_trace,
+                        ui,
+                        Some(snapshot),
+                        &target,
+                        step_index as u32,
+                        pos,
+                        Some(node),
+                        Some(note.as_str()),
+                    );
+                }
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
@@ -2243,6 +2340,20 @@ impl UiDiagnosticsService {
                                 container_node.bounds,
                                 window_bounds,
                             );
+                            if let Some(ui) = ui {
+                                let note =
+                                    format!("scroll_into_view.wheel dx={delta_x} dy={delta_y}");
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    semantics_snapshot,
+                                    &container,
+                                    step_index as u32,
+                                    pos,
+                                    Some(container_node),
+                                    Some(note.as_str()),
+                                );
+                            }
                             output.events.push(wheel_event(pos, delta_x, delta_y));
                         }
 
@@ -2325,6 +2436,18 @@ impl UiDiagnosticsService {
                             ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("type_text_into.click"),
+                                    );
+                                }
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2427,6 +2550,18 @@ impl UiDiagnosticsService {
                             ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &menu,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("menu_select.menu_click"),
+                                    );
+                                }
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2483,6 +2618,18 @@ impl UiDiagnosticsService {
                                 &mut active.selector_resolution_trace,
                             ) {
                                 let pos = center_of_rect(node.bounds);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &item,
+                                        step_index as u32,
+                                        pos,
+                                        Some(node),
+                                        Some("menu_select.item_click"),
+                                    );
+                                }
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2587,17 +2734,34 @@ impl UiDiagnosticsService {
                                 }
                             }
                             _ => {
+                                let selector = &path[state.next_index];
                                 if let Some(node) = select_semantics_node_with_trace(
                                     snapshot,
                                     window,
                                     element_runtime,
-                                    &path[state.next_index],
+                                    selector,
                                     step_index as u32,
                                     self.cfg.redact_text,
                                     &mut active.selector_resolution_trace,
                                 ) {
                                     let pos =
                                         center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                                    if let Some(ui) = ui {
+                                        let note = format!(
+                                            "menu_select_path.click index={}",
+                                            state.next_index
+                                        );
+                                        record_hit_test_trace_for_selector(
+                                            &mut active.hit_test_trace,
+                                            ui,
+                                            Some(snapshot),
+                                            selector,
+                                            step_index as u32,
+                                            pos,
+                                            Some(node),
+                                            Some(note.as_str()),
+                                        );
+                                    }
                                     output.events.extend(click_events(
                                         pos,
                                         UiMouseButtonV1::Left,
@@ -2678,6 +2842,28 @@ impl UiDiagnosticsService {
                             let start =
                                 center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
                             let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            if let Some(ui) = ui {
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &from,
+                                    step_index as u32,
+                                    start,
+                                    Some(from_node),
+                                    Some("drag_to.start"),
+                                );
+                                record_hit_test_trace_for_selector(
+                                    &mut active.hit_test_trace,
+                                    ui,
+                                    Some(snapshot),
+                                    &to,
+                                    step_index as u32,
+                                    end,
+                                    Some(to_node),
+                                    Some("drag_to.end"),
+                                );
+                            }
                             V2DragPointerState {
                                 step_index,
                                 steps: steps.max(1),
@@ -2702,13 +2888,7 @@ impl UiDiagnosticsService {
                                 reason_code: reason_code_for_script_failure("drag_to_timeout")
                                     .map(|s| s.to_string()),
                                 reason: Some("drag_to_timeout".to_string()),
-                                evidence: (!active.selector_resolution_trace.is_empty()).then(
-                                    || UiScriptEvidenceV1 {
-                                        selector_resolution_trace: active
-                                            .selector_resolution_trace
-                                            .clone(),
-                                    },
-                                ),
+                                evidence: script_evidence_for_active(&active),
                                 last_bundle_dir: self
                                     .last_dump_dir
                                     .as_ref()
@@ -2809,6 +2989,28 @@ impl UiDiagnosticsService {
                                 let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                 let start = Point::new(fret_core::Px(start_x), start.y);
                                 let end = Point::new(fret_core::Px(x), start.y);
+                                if let Some(ui) = ui {
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        start,
+                                        Some(node),
+                                        Some("set_slider_value.drag_start"),
+                                    );
+                                    record_hit_test_trace_for_selector(
+                                        &mut active.hit_test_trace,
+                                        ui,
+                                        Some(snapshot),
+                                        &target,
+                                        step_index as u32,
+                                        end,
+                                        Some(node),
+                                        Some("set_slider_value.drag_end"),
+                                    );
+                                }
                                 output.events.extend(drag_events(
                                     start,
                                     end,
@@ -2852,6 +3054,28 @@ impl UiDiagnosticsService {
                                         let end_x = clamp_x(start_x + dx);
                                         let start = Point::new(fret_core::Px(start_x), start.y);
                                         let end = Point::new(fret_core::Px(end_x), start.y);
+                                        if let Some(ui) = ui {
+                                            record_hit_test_trace_for_selector(
+                                                &mut active.hit_test_trace,
+                                                ui,
+                                                Some(snapshot),
+                                                &target,
+                                                step_index as u32,
+                                                start,
+                                                Some(node),
+                                                Some("set_slider_value.adjust_drag_start"),
+                                            );
+                                            record_hit_test_trace_for_selector(
+                                                &mut active.hit_test_trace,
+                                                ui,
+                                                Some(snapshot),
+                                                &target,
+                                                step_index as u32,
+                                                end,
+                                                Some(node),
+                                                Some("set_slider_value.adjust_drag_end"),
+                                            );
+                                        }
                                         output.events.extend(drag_events(
                                             start,
                                             end,
@@ -2921,10 +3145,7 @@ impl UiDiagnosticsService {
                 .as_deref()
                 .and_then(reason_code_for_script_failure)
                 .map(|s| s.to_string());
-            let evidence =
-                (!active.selector_resolution_trace.is_empty()).then(|| UiScriptEvidenceV1 {
-                    selector_resolution_trace: active.selector_resolution_trace.clone(),
-                });
+            let evidence = script_evidence_for_active(&active);
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
@@ -5238,6 +5459,7 @@ struct ActiveScript {
     v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
+    hit_test_trace: Vec<UiHitTestTraceEntryV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -9776,6 +9998,7 @@ fn select_semantics_node<'a>(
 
 const MAX_SELECTOR_TRACE_ENTRIES: usize = 64;
 const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
+const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
 
 fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
     match (a, b) {
@@ -9821,6 +10044,14 @@ fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
     }
 }
 
+fn hit_test_trace_entry_eq(a: &UiHitTestTraceEntryV1, b: &UiHitTestTraceEntryV1) -> bool {
+    a.step_index == b.step_index
+        && selector_trace_eq(&a.selector, &b.selector)
+        && a.note == b.note
+        && a.position.x_px == b.position.x_px
+        && a.position.y_px == b.position.y_px
+}
+
 fn push_selector_resolution_trace(
     trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
     entry: UiSelectorResolutionTraceEntryV1,
@@ -9837,6 +10068,127 @@ fn push_selector_resolution_trace(
         let extra = trace.len().saturating_sub(MAX_SELECTOR_TRACE_ENTRIES);
         trace.drain(0..extra);
     }
+}
+
+fn push_hit_test_trace(trace: &mut Vec<UiHitTestTraceEntryV1>, entry: UiHitTestTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| hit_test_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_HIT_TEST_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_HIT_TEST_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
+    if active.selector_resolution_trace.is_empty() && active.hit_test_trace.is_empty() {
+        return None;
+    }
+    Some(UiScriptEvidenceV1 {
+        selector_resolution_trace: active.selector_resolution_trace.clone(),
+        hit_test_trace: active.hit_test_trace.clone(),
+    })
+}
+
+fn hit_test_scope_roots_evidence(
+    position: Point,
+    ui: &UiTree<App>,
+) -> (
+    Option<u64>,
+    Option<u64>,
+    Option<u64>,
+    Vec<UiHitTestScopeRootEvidenceV1>,
+) {
+    let snap = UiHitTestSnapshotV1::from_tree(position, ui);
+    let scope_roots = snap
+        .scope_roots
+        .into_iter()
+        .map(|r| UiHitTestScopeRootEvidenceV1 {
+            kind: r.kind,
+            root: r.root,
+            layer_id: r.layer_id,
+            pointer_occlusion: r.pointer_occlusion,
+            blocks_underlay_input: r.blocks_underlay_input,
+            hit_testable: r.hit_testable,
+        })
+        .collect();
+    (
+        snap.hit,
+        snap.barrier_root,
+        snap.focus_barrier_root,
+        scope_roots,
+    )
+}
+
+fn record_hit_test_trace_for_selector(
+    trace: &mut Vec<UiHitTestTraceEntryV1>,
+    ui: &UiTree<App>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    selector: &UiSelectorV1,
+    step_index: u32,
+    position: Point,
+    intended: Option<&fret_core::SemanticsNode>,
+    note: Option<&str>,
+) {
+    let (hit_node_id, barrier_root, focus_barrier_root, scope_roots) =
+        hit_test_scope_roots_evidence(position, ui);
+
+    let hit_semantics =
+        semantics_snapshot.and_then(|snapshot| pick_semantics_node_at(snapshot, ui, position));
+    let hit_semantics_node_id = hit_semantics.map(|n| n.id.data().as_ffi());
+    let hit_semantics_test_id = hit_semantics.and_then(|n| n.test_id.clone());
+
+    let intended_node_id = intended.map(|n| n.id.data().as_ffi());
+    let intended_test_id = intended.and_then(|n| n.test_id.clone());
+    let intended_bounds = intended.map(|n| UiRectV1 {
+        x_px: n.bounds.origin.x.0,
+        y_px: n.bounds.origin.y.0,
+        w_px: n.bounds.size.width.0,
+        h_px: n.bounds.size.height.0,
+    });
+
+    let includes_intended = intended.map(|target| {
+        if let Some(hit_id) = hit_semantics_node_id {
+            if hit_id == target.id.data().as_ffi() {
+                return true;
+            }
+        }
+        if let (Some(want), Some(got)) =
+            (target.test_id.as_deref(), hit_semantics_test_id.as_deref())
+        {
+            return want == got;
+        }
+        false
+    });
+
+    push_hit_test_trace(
+        trace,
+        UiHitTestTraceEntryV1 {
+            step_index,
+            selector: selector.clone(),
+            position: UiPointV1 {
+                x_px: position.x.0,
+                y_px: position.y.0,
+            },
+            intended_node_id,
+            intended_test_id,
+            intended_bounds,
+            hit_node_id,
+            hit_semantics_node_id,
+            hit_semantics_test_id,
+            includes_intended,
+            barrier_root,
+            focus_barrier_root,
+            scope_roots,
+            note: note.map(|s| s.to_string()),
+        },
+    );
 }
 
 fn select_semantics_node_with_trace<'a>(
@@ -12239,8 +12591,15 @@ mod tests {
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
-        let _ =
-            svc.drive_script_for_window(&app, window, window_bounds, 1.0, Some(&snapshot), None);
+        let _ = svc.drive_script_for_window(
+            &app,
+            window,
+            window_bounds,
+            1.0,
+            None,
+            Some(&snapshot),
+            None,
+        );
 
         let bytes =
             std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");

@@ -77,8 +77,9 @@ Definition of done:
   - [x] add `reason_code` to `script.result.json`,
   - [x] add `evidence.selector_resolution_trace` to `script.result.json`.
 - [ ] M4b: Hit-test + input routing explainability (why did the click/drag not land?):
-  - [ ] capture/barrier/occlusion evidence,
-  - [ ] “chosen point” vs “hit-test path” mismatch evidence.
+  - [x] emit `evidence.hit_test_trace` for injected pointer actions (click/drag/wheel),
+  - [ ] add capture/barrier/occlusion *explainability* (hit path, occluder hints, capture owner),
+  - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
 - [ ] M4c: Focus + text/IME explainability:
   - [ ] focus change trace with reasons,
   - [ ] composition state summary (redaction-friendly).

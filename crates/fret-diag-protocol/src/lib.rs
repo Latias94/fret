@@ -719,6 +719,8 @@ pub struct UiScriptResultV1 {
 pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -743,6 +745,63 @@ pub struct UiSelectorResolutionCandidateV1 {
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub test_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiPointV1 {
+    pub x_px: f32,
+    pub y_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRectV1 {
+    pub x_px: f32,
+    pub y_px: f32,
+    pub w_px: f32,
+    pub h_px: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub position: UiPointV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_semantics_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_semantics_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub includes_intended: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestScopeRootEvidenceV1 {
+    pub kind: String,
+    pub root: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocks_underlay_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_testable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1468,6 +1468,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 window,
                 bounds,
                 scale_factor,
+                Some(&state.ui),
                 semantics_snapshot,
                 element_runtime,
             )

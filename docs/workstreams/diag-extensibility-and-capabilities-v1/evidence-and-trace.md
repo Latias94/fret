@@ -77,6 +77,18 @@ Selector resolution trace entry fields:
 
 Redaction: when `redact_text` is enabled, candidate `name` is omitted.
 
+Hit-test / routing trace entry fields:
+
+- `step_index`
+- `selector` (the selector associated with the injected action)
+- `position` (the injected pointer position)
+- `hit_node_id` (the immediate hit-test result, if any; not stable across runs)
+- `hit_semantics_node_id` / `hit_semantics_test_id` (best-effort semantics node observed at that position)
+- `includes_intended` (best-effort: whether the hit semantics matches the intended target)
+- `barrier_root` / `focus_barrier_root` (in-run references)
+- `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
+- `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
+
 ## Trace surface (ring buffer, dumped on failure)
 
 When a script fails (or when tooling requests it), the runner SHOULD emit a trace slice for the last K frames:
