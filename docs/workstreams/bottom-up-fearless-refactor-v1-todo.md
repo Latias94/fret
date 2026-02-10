@@ -38,6 +38,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
   - Evidence (module split):
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/harness.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/insets.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/web.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
