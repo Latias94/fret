@@ -2973,7 +2973,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 return;
             };
 
-            for _msg in signals {
+            for msg in signals {
+                let Ok((namespace, key, _value)) =
+                    msg.body()
+                        .deserialize::<(String, String, zbus::zvariant::OwnedValue)>()
+                else {
+                    continue;
+                };
+                if namespace != linux_portal_settings::APPEARANCE_NAMESPACE {
+                    continue;
+                }
+                if !matches!(
+                    key.as_str(),
+                    "color-scheme" | "contrast" | "reduce-motion" | "reduced-motion"
+                ) {
+                    continue;
+                }
                 if LINUX_PORTAL_ENV_DIRTY.swap(true, std::sync::atomic::Ordering::SeqCst) {
                     continue;
                 }
