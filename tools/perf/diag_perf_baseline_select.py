@@ -78,18 +78,36 @@ def _run(
 
 
 def _load_json(path: Path) -> Any:
-    with path.open("rb") as f:
-        return json.load(f)
+    if not path.is_file():
+        raise FileNotFoundError(str(path))
+
+    # Occasionally, a writer may truncate/replace a JSON artifact while we read it (or the process
+    # may exit early, leaving a 0-byte file). A short retry loop makes this helper less flaky.
+    last_err: Exception | None = None
+    for attempt in range(5):
+        try:
+            data = path.read_bytes()
+            if not data:
+                raise json.JSONDecodeError("empty JSON file", doc="", pos=0)
+            return json.loads(data)
+        except json.JSONDecodeError as e:
+            last_err = e
+            time.sleep(min(0.5, 0.05 * (2**attempt)))
+            continue
+    raise RuntimeError(f"failed to parse JSON after retries: {path}: {last_err}") from last_err
 
 
 def _count_failures(check_path: Path) -> int:
-    if not check_path.is_file():
-        raise RuntimeError(f"missing validation report: {check_path}")
-    doc = _load_json(check_path)
+    try:
+        doc = _load_json(check_path)
+    except (FileNotFoundError, RuntimeError) as e:
+        # Treat missing/invalid artifacts as a hard failure signal for baseline selection, but
+        # keep scanning other candidates to avoid aborting the whole selection run.
+        print(f"warning: invalid validation report: {check_path}: {e}", file=sys.stderr)
+        return 10_000
+
     failures = doc.get("failures", [])
-    if isinstance(failures, list):
-        return len(failures)
-    return 0
+    return len(failures) if isinstance(failures, list) else 0
 
 
 @dataclass(frozen=True)
@@ -223,6 +241,26 @@ def main() -> int:
         if rc != 0:
             print(f"error: baseline run failed (rc={rc}). See: {stderr_path}", file=sys.stderr)
             return rc
+
+        # Validate that the baseline JSON artifact is readable before spending time on validations.
+        try:
+            _ = _baseline_metrics(candidate_baseline)
+        except Exception as e:
+            print(
+                f"warning: invalid baseline JSON: {candidate_baseline}: {e}. See: {stderr_path}",
+                file=sys.stderr,
+            )
+            candidate_results.append(
+                {
+                    "name": candidate_name,
+                    "baseline": str(candidate_baseline),
+                    "fail_total": 10_000,
+                    "suite_p90_total_time_us_sum": 2**31 - 1,
+                    "threshold_sum_max_top_total_us": 2**31 - 1,
+                    "validate_runs": [],
+                }
+            )
+            continue
 
         fail_total = 0
         validate_runs: list[dict[str, Any]] = []
