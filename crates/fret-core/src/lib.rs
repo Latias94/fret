@@ -70,8 +70,9 @@ pub use layout_direction::LayoutDirection;
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
 pub use scene::{
-    Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,
-    SceneOp, SceneRecording, SceneValidationError, SceneValidationErrorKind, UvRect,
+    Color, ColorSpace, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep,
+    GradientStop, LinearGradient, MAX_STOPS, Paint, RadialGradient, Scene, SceneOp, SceneRecording,
+    SceneValidationError, SceneValidationErrorKind, TileMode, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,

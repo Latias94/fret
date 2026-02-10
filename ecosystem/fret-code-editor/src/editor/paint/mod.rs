@@ -43,9 +43,11 @@ pub(super) fn paint_row(
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Color::TRANSPARENT,
+        background: fret_core::Paint::TRANSPARENT,
+
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
+
         corner_radii: Corners::all(Px(0.0)),
     });
     if perf_enabled {
@@ -528,9 +530,11 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                     if perf_enabled {
@@ -616,9 +620,11 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                     if perf_enabled {
@@ -662,9 +668,11 @@ pub(super) fn paint_row(
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: caret_color,
+                    background: fret_core::Paint::Solid(caret_color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -692,9 +700,11 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -768,9 +778,11 @@ pub(super) fn paint_row(
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: caret_color,
+                    background: fret_core::Paint::Solid(caret_color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
                 if perf_enabled {

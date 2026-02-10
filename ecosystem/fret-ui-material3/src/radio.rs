@@ -930,9 +930,9 @@ fn radio_icon<H: UiHost>(
         p.scene().push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: icon_rect,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::TRANSPARENT,
             border: Edges::all(outline_width),
-            border_color: color,
+            border_paint: fret_core::Paint::Solid(color),
             corner_radii: Corners::all(icon_radius),
         });
 
@@ -945,9 +945,9 @@ fn radio_icon<H: UiHost>(
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: dot_rect,
-                background: color,
+                background: fret_core::Paint::Solid(color),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: Corners::all(Px(dot_size.0 * 0.5)),
             });
         }

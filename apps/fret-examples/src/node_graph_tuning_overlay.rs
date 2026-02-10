@@ -766,9 +766,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_000),
             rect: layout.panel,
-            background: self.style.context_menu_background,
+            background: fret_core::Paint::Solid(self.style.context_menu_background),
+
             border: Edges::all(Px(1.0)),
-            border_color: self.style.context_menu_border,
+            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+
             corner_radii: Corners::all(Px(corner)),
         });
 
@@ -808,9 +810,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: mode_btn_rect,
-            background: mode_bg,
+            background: fret_core::Paint::Solid(mode_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         let mode_short = match state.interaction.connection_mode {
@@ -868,17 +872,21 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(22_020),
                 rect: dec_rect,
-                background: bg(dec),
+                background: fret_core::Paint::Solid(bg(dec)),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(22_020),
                 rect: inc_rect,
-                background: bg(inc),
+                background: fret_core::Paint::Solid(bg(inc)),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
@@ -939,9 +947,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: wheel_pan_btn_rect,
-            background: wheel_pan_bg,
+            background: fret_core::Paint::Solid(wheel_pan_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -980,9 +990,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: pan_inertia_btn_rect,
-            background: pan_inertia_bg,
+            background: fret_core::Paint::Solid(pan_inertia_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1021,9 +1033,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: wheel_zoom_btn_rect,
-            background: wheel_zoom_bg,
+            background: fret_core::Paint::Solid(wheel_zoom_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1063,9 +1077,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: zoom_key_btn_rect,
-            background: zoom_key_bg,
+            background: fret_core::Paint::Solid(zoom_key_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         let zoom_key_short = match state.interaction.zoom_activation_key {
@@ -1132,9 +1148,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: connect_on_click_btn_rect,
-            background: connect_on_click_bg,
+            background: fret_core::Paint::Solid(connect_on_click_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1183,9 +1201,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: drag_handle_btn_rect,
-            background: drag_handle_bg,
+            background: fret_core::Paint::Solid(drag_handle_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         let drag_handle_short = match state.interaction.node_drag_handle_mode {
@@ -1263,25 +1283,31 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(22_020),
                 rect: toggle_rect,
-                background: bg(toggle),
+                background: fret_core::Paint::Solid(bg(toggle)),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(22_020),
                 rect: dec_rect,
-                background: bg(dec),
+                background: fret_core::Paint::Solid(bg(dec)),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(22_020),
                 rect: inc_rect,
-                background: bg(inc),
+                background: fret_core::Paint::Solid(bg(inc)),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
@@ -1403,9 +1429,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: edges_reconnectable_btn_rect,
-            background: edges_reconnectable_bg,
+            background: fret_core::Paint::Solid(edges_reconnectable_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1444,9 +1472,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: reset_btn_rect,
-            background: reset_bg,
+            background: fret_core::Paint::Solid(reset_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1480,9 +1510,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: stress_1k_btn_rect,
-            background: stress_1k_bg,
+            background: fret_core::Paint::Solid(stress_1k_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1516,9 +1548,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: stress_5k_btn_rect,
-            background: stress_5k_bg,
+            background: fret_core::Paint::Solid(stress_5k_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(
@@ -1552,9 +1586,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_020),
             rect: stress_10k_btn_rect,
-            background: stress_10k_bg,
+            background: fret_core::Paint::Solid(stress_10k_bg),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(corner.max(4.0))),
         });
         self.draw_text(

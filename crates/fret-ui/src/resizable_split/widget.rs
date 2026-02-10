@@ -1,5 +1,5 @@
 use fret_core::{
-    Axis, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, Size,
+    Axis, Color, Corners, DrawOrder, Edges, Event, MouseButton, Paint, Point, Px, Rect, Size,
 };
 use fret_runtime::Model;
 
@@ -348,14 +348,14 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
             cx.scene.push(fret_core::SceneOp::Quad {
                 order: DrawOrder(10_000),
                 rect: line,
-                background: Color {
+                background: Paint::Solid(Color {
                     r: 1.0,
                     g: 1.0,
                     b: 1.0,
                     a: if self.dragging.is_some() { 0.35 } else { 0.18 },
-                },
+                }),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(Px(0.0)),
             });
         }

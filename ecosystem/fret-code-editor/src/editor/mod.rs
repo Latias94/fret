@@ -1371,9 +1371,11 @@ impl CodeEditor {
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
                             rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
-                            background: overlay_bg,
+                            background: fret_core::Paint::Solid(overlay_bg),
+
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
                             corner_radii: Corners::all(Px(6.0)),
                         });
 
