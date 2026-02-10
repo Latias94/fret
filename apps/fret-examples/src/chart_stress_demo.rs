@@ -206,6 +206,7 @@ impl ChartStressDriver {
                         column: 2,
                     },
                 ],
+                ..Default::default()
             }],
             grids: vec![delinea::GridSpec { id: grid_id }],
             axes: vec![
@@ -384,6 +385,7 @@ impl ChartStressDriver {
                             column: 2,
                         },
                     ],
+                    ..Default::default()
                 }],
                 grids: vec![delinea::GridSpec { id: grid_id }],
                 axes: vec![

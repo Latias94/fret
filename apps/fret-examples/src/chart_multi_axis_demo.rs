@@ -132,6 +132,7 @@ impl ChartMultiAxisDemoDriver {
                         column: 5,
                     },
                 ],
+                ..Default::default()
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
