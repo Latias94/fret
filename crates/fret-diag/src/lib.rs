@@ -8496,10 +8496,11 @@ fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
 }
 
-fn ui_gallery_select_suite_scripts() -> [&'static str; 4] {
+fn ui_gallery_select_suite_scripts() -> [&'static str; 5] {
     [
         "tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json",
         "tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json",
+        "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
         "tools/diag-scripts/ui-gallery-select-wheel-scroll.json",
         "tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json",
     ]
