@@ -17531,7 +17531,9 @@ fn preview_select(
                 let value: Arc<str> = Arc::from(format!("item-{i:02}"));
                 let label: Arc<str> = Arc::from(format!("Item {i:02}"));
                 let test_id: Arc<str> = Arc::from(format!("ui-gallery-select-item-{value}"));
-                shadcn::SelectItem::new(value, label).test_id(test_id)
+                shadcn::SelectItem::new(value, label)
+                    .test_id(test_id)
+                    .disabled(i == 15)
             })),
         )
         .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))

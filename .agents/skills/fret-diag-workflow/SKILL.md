@@ -179,6 +179,19 @@ Practical authoring tips for scripts:
 - Prefer semantics selectors (`test_id`, role+name) over coordinates.
 - Add one `capture_bundle` near the “interesting” step so failures are explainable without rerunning.
 
+Concrete shadcn `Select` scripts (UI Gallery suite):
+
+- Run: `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+- Scripts:
+  - `tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json` (pointer commit)
+  - `tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json` (ArrowDown + Enter commit)
+  - `tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json` (typeahead + Enter commit)
+  - `tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json` (disabled option does not commit)
+  - `tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json` (outside-press dismiss + click-through policy)
+  - `tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json` (Escape dismiss + focus restore)
+  - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (wheel scroll stability)
+  - `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json` (wheel-up from bottom stability)
+
 ## Evidence anchors
 
 Where the code lives:
