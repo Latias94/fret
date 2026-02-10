@@ -178,7 +178,7 @@ This list is intentionally short. The rule is: **close one user-visible gap, the
 P0 (Chat usability + correctness):
 
 - **PromptInput attachments parity** (`prompt-input.tsx`) (done; gated):
-  - attachments chips row (`add/remove/clear`) with app-owned effects (file picker / open URL).
+  - attachments chips row (`add/remove/clear`) + add-attachments action (plus button emits an app-owned intent) with app-owned effects (file picker / open URL).
   - keyboard parity: `Enter` submits (IME-safe; `Shift+Enter` inserts newline), `Backspace` on empty input removes the last attachment.
   - height constraints: align the textarea “grows but clamps” behavior (min/max height outcome).
   - gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
@@ -608,7 +608,7 @@ Legend:
 | `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript exists; parts for empty/download/scroll button exist as separate surfaces (see `conversation_*` files). |
 | `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Role chrome exists; parts-based composition is available via `MessageParts` + `MessageToolbar` (action policies remain app-owned). Message branching surfaces are ported (`ecosystem/fret-ui-ai/src/elements/message_branch.rs`) + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`). |
 | (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming append + finalize supported; richer per-block actions (copy/download) are TODO. |
-| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + stable selectors. |
+| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + attachments row + add-attachments intent + stable selectors. |
 | `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call_block.rs` | Partial | Tool call block exists (collapsible + state chrome); richer payload views are pending. |
 | `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; v0 highlight contract supports “select citation → highlight source row”. |
 | `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; v0 select/highlight contract is implemented via a shared model. |

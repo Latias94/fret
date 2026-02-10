@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use fret_core::{Axis, Edges, Px};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{ActivateReason, OnActivate, OnKeyDown};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
+use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 
@@ -24,12 +26,14 @@ pub struct PromptInput {
     clear_attachments_on_send: bool,
     on_send: Option<OnActivate>,
     on_stop: Option<OnActivate>,
+    on_add_attachments: Option<OnActivate>,
     attachments: Option<Model<Vec<AttachmentData>>>,
     test_id_root: Option<Arc<str>>,
     test_id_textarea: Option<Arc<str>>,
     test_id_send: Option<Arc<str>>,
     test_id_stop: Option<Arc<str>>,
     test_id_attachments: Option<Arc<str>>,
+    test_id_add_attachments: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
 
@@ -46,6 +50,13 @@ impl std::fmt::Debug for PromptInput {
             .field("on_send", &self.on_send.as_ref().map(|_| "<on_send>"))
             .field("on_stop", &self.on_stop.as_ref().map(|_| "<on_stop>"))
             .field(
+                "on_add_attachments",
+                &self
+                    .on_add_attachments
+                    .as_ref()
+                    .map(|_| "<on_add_attachments>"),
+            )
+            .field(
                 "attachments",
                 &self.attachments.as_ref().map(|_| "<attachments>"),
             )
@@ -54,6 +65,10 @@ impl std::fmt::Debug for PromptInput {
             .field("test_id_send", &self.test_id_send.as_deref())
             .field("test_id_stop", &self.test_id_stop.as_deref())
             .field("test_id_attachments", &self.test_id_attachments.as_deref())
+            .field(
+                "test_id_add_attachments",
+                &self.test_id_add_attachments.as_deref(),
+            )
             .field("layout", &self.layout)
             .finish()
     }
@@ -71,12 +86,14 @@ impl PromptInput {
             clear_attachments_on_send: true,
             on_send: None,
             on_stop: None,
+            on_add_attachments: None,
             attachments: None,
             test_id_root: None,
             test_id_textarea: None,
             test_id_send: None,
             test_id_stop: None,
             test_id_attachments: None,
+            test_id_add_attachments: None,
             layout: LayoutRefinement::default(),
         }
     }
@@ -121,6 +138,15 @@ impl PromptInput {
         self
     }
 
+    /// Add an "add attachments" affordance aligned with AI Elements `PromptInputActionAddAttachments`.
+    ///
+    /// Effects (file dialog, file IO, clipboard files) remain app-owned; this action hook only
+    /// emits an intent.
+    pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
+        self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_root = Some(id.into());
         self
@@ -148,6 +174,11 @@ impl PromptInput {
 
     pub fn test_id_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_attachments = Some(id.into());
+        self
+    }
+
+    pub fn test_id_add_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_add_attachments = Some(id.into());
         self
     }
 
@@ -247,6 +278,27 @@ impl PromptInput {
             btn.into_element(cx)
         });
 
+        let add_attachments_button = self.on_add_attachments.clone().map(|on_add| {
+            let add_disabled = self.disabled || self.loading;
+            let mut btn = Button::new("Add attachments")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::IconSm)
+                .disabled(add_disabled)
+                .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+                .on_activate(on_add);
+
+            let test_id = self.test_id_add_attachments.clone().or_else(|| {
+                self.test_id_root
+                    .clone()
+                    .map(|id| Arc::<str>::from(format!("{id}-add-attachments")))
+            });
+            if let Some(id) = test_id {
+                btn = btn.test_id(id);
+            }
+
+            btn.into_element(cx)
+        });
+
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let actions = cx.flex(
             FlexProps {
@@ -258,8 +310,20 @@ impl PromptInput {
                 align: CrossAlign::Center,
                 wrap: false,
             },
-            |_cx| {
+            move |cx| {
                 let mut out = Vec::new();
+                if let Some(add_button) = add_attachments_button {
+                    out.push(cx.container(
+                        ContainerProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().mr_auto(),
+                            ),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![add_button],
+                    ));
+                }
                 if let Some(stop_button) = stop_button {
                     out.push(stop_button);
                 }

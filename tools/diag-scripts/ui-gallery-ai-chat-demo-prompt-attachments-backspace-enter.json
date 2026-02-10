@@ -27,14 +27,14 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-add-attachment" }
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
       },
       "timeout_frames": 240
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-add-attachment" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" },
       "delta_y": -600.0,
       "require_fully_within_window": true,
       "padding_px": 16.0,
@@ -42,7 +42,7 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-add-attachment" }
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
     },
 
     {
@@ -132,7 +132,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-add-attachment" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" },
       "delta_y": -600.0,
       "require_fully_within_window": true,
       "padding_px": 16.0,
@@ -140,7 +140,7 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-add-attachment" }
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
     },
     {
       "type": "scroll_into_view",

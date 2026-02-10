@@ -324,7 +324,9 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP1-chat-085 Backspace parity: when textarea is empty, `Backspace` removes the last attachment.
 - [!] AIEL-MVP1-chat-086 Clipboard file paste parity: `paste` adds file/image attachments.
   - Blocker: Fret runtime currently supports clipboard *text* effects only; file/image clipboard needs a new platform capability.
-- [ ] AIEL-MVP1-chat-087 PromptInput add-attachments action parity: plus-button action emits an app-owned “open file dialog” intent.
+- [x] AIEL-MVP1-chat-087 PromptInput add-attachments action parity: plus-button action emits an app-owned “open file dialog” intent.
+  - Surface: `PromptInput::on_add_attachments` + `PromptInput::test_id_add_attachments` (also exposed via `AiChat::on_add_attachments`).
+  - Gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json` (click plus → chips → Backspace pop → send).
 - [ ] AIEL-MVP1-chat-088 PromptInput drag-and-drop fallback: accept external file drops as attachments (primary path while clipboard files are unsupported).
 - [ ] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).

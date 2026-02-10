@@ -17817,6 +17817,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         .content_revision_model(content_revision.clone())
         .on_send(send)
         .on_stop(stop)
+        .on_add_attachments(add_attachment.clone())
         .show_download(true)
         .on_download(export_markdown)
         .download_test_id("ui-gallery-ai-chat-download")
@@ -17830,6 +17831,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
         .prompt_attachments_model(attachments.clone())
         .prompt_attachments_test_id("ui-gallery-ai-chat-prompt-attachments")
+        .prompt_add_attachments_test_id("ui-gallery-ai-chat-prompt-add-attachments")
         .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(360.0)))
         .into_element(cx);
 
