@@ -116,10 +116,13 @@ The renderer exposes a registry API (shape is locked here; exact Rust placement 
 The registry MUST support (at minimum) the following kinds, with stable parameter meanings:
 
 - `DotGrid`: repeating dots on a grid.
+- `Grid`: repeating grid lines (rectilinear).
+- `Checkerboard`: repeating checkerboard tiles.
 - `Stripe`: repeating stripes with angle control.
 - `Noise`: stable, deterministic noise/grain (no hidden time dependency).
 - `Beam`: a directional highlight band intended for “moving shine” when animated by the caller.
 - `Sparkle`: a lightweight sparkle field intended for subtle ambient motion when animated by the caller.
+- `ConicSweep`: a conic/sweep highlight intended for shimmer-style recipes without requiring conic gradients in `Paint` v1.
 
 This list is intentionally small; it exists to prevent ecosystem crates from inventing divergent
 pattern semantics while still keeping the framework surface controlled.
@@ -194,3 +197,4 @@ This ADR is considered conformant when:
 - Budgets + degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Capabilities: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
 - Paint vocabulary (gradients): `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
+- Determinism (seeds + explicit time): `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`

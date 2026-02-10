@@ -32,8 +32,12 @@ Related ADRs:
 - Effect recipes and tier selection: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
 - Paint primitives: `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
 - Controlled materials: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
+- Sampled materials (v2): `docs/adr/1181-sampled-materials-and-fixed-binding-shapes-v2.md`
 - Masks: `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
+- Compositing groups: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
 - Frame clock and reduced motion: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
+- Pointer motion snapshots: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
+- Procedural determinism: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`
 - Capabilities + budgets: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`,
   `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 
@@ -118,6 +122,15 @@ This keeps the Tier A vs Tier B decision rule stable and user-visible (ADR 0125 
 This section sketches an ergonomic, token-driven surface for component authors. The goal is to
 ensure the ADR is actionable and does not merely restate intent.
 
+### Naming and stability goals (normative intent)
+
+- Kernel mechanisms (`SceneOp` and `fret-ui` wrappers like `EffectLayerProps`) should evolve
+  **additively** whenever possible.
+- Ecosystem-facing authoring APIs should prioritize **wrapper stability**:
+  - keep existing entry points (e.g. `glass_panel`, `pixelate_panel`) stable,
+  - migrate internals to shared traits/catalogs,
+  - avoid making every component depend on renderer details directly.
+
 ### A) Core recipe trait pattern
 
 ```rust
@@ -127,10 +140,20 @@ pub struct ResolveCtx<'a> {
     pub prefers_reduced_motion: Option<bool>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DegradationReason {
+    UnsupportedCapability,
+    BudgetExceeded,
+    ReducedMotion,
+    InvalidInput,
+}
+
 pub struct ResolvedWithFallback<T> {
     pub value: T,
     pub degraded: bool,
-    pub reason: Option<&'static str>,
+    pub reason: Option<DegradationReason>,
+    /// Best-effort stable identifier for diagnostics (e.g. `"glass.effect.blur"`).
+    pub label: Option<&'static str>,
 }
 
 pub trait EffectRecipe {
@@ -141,7 +164,9 @@ pub trait EffectRecipe {
 Notes:
 
 - `ResolveCtx` must be easy to obtain inside `ElementContext`/widget contexts.
-- The resolved form carries a *single* degradation report that diagnostics can surface.
+- The resolved form carries a small, structured degradation report that diagnostics can surface.
+- V1 keeps this intentionally lightweight (one level). A future extension could allow nested
+  reports for complex recipes, but v1 should not require an allocation-heavy tree of reasons.
 
 ### B) Declarative wrapper integration
 
@@ -152,11 +177,52 @@ Recipes should provide wrappers that compile down to mechanism:
 - `PushCompositeGroup/PopCompositeGroup` for blend groups (ADR 1180).
 - `Paint` / `MaterialId` for fills and strokes (ADR 1172 / ADR 1174).
 
+### C) Catalog pattern (centralize registry + stable defaults)
+
+To avoid per-component ad-hoc registration and to reduce churn:
+
+```rust
+pub struct VisualCatalog {
+    pub materials: MaterialCatalog,
+    pub effects: EffectCatalog,
+}
+
+pub struct MaterialCatalog {
+    // Registers baseline Tier B materials once per renderer.
+    // Hands out stable `MaterialId`s to recipes.
+}
+
+pub struct EffectCatalog {
+    // Owns canonical recipe presets and token key namespaces.
+}
+```
+
+The catalog should be created at the app/runtime integration layer (where renderer access exists)
+and passed into component ecosystems via an app-owned seam (model/service) rather than by letting
+each component call renderer APIs directly.
+
 ### C) Migration rule (normative intent)
 
 Existing “limited recipe” helpers in `fret-ui-kit` (glass/pixelate) should be treated as the
 bootstrap implementation of this pattern. Future creative recipes (MagicUI, shadcn extensions)
 must follow the same resolve/fallback/report shape so we do not grow inconsistent one-off APIs.
+
+Migration guidance:
+
+- Keep `glass_panel` / `pixelate_panel` public signatures stable.
+- Move shared token resolution + clamping helpers into a common `recipes::resolve` module.
+- Gradually introduce `DegradationReason` reporting and feed it into diagnostics bundles.
+
+### D) Diagnostics hook (best-effort, v1)
+
+When a recipe degrades, ecosystems should be able to report it without wiring bespoke logging:
+
+- `fret-ui-kit` SHOULD provide a tiny sink API (or re-use an existing diagnostics sink) so recipes
+  can emit `RecipeDegraded { label, reason }` events that show up in `fretboard diag` bundles
+  (ADR 0174).
+
+This does not need to be perfect in v1, but the seam must exist before widespread ecosystem
+adoption, otherwise “silent fallback” becomes impossible to debug.
 
 ## Consequences
 
