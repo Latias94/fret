@@ -37,6 +37,8 @@ use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
 #[path = "web_vs_fret_layout/accordion.rs"]
 mod accordion;
+#[path = "web_vs_fret_layout/calendar.rs"]
+mod calendar;
 #[path = "web_vs_fret_layout/carousel.rs"]
 mod carousel;
 #[path = "web_vs_fret_layout/chart.rs"]
@@ -61,6 +63,8 @@ mod layout_typography_fixtures;
 mod pagination;
 #[path = "web_vs_fret_layout/progress.rs"]
 mod progress;
+#[path = "web_vs_fret_layout/select.rs"]
+mod select;
 #[path = "web_vs_fret_layout/skeleton.rs"]
 mod skeleton;
 #[path = "web_vs_fret_layout/sonner.rs"]
@@ -7958,82 +7962,6 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
 }
 
 #[test]
-fn web_vs_fret_layout_select_scrollable_trigger_size() {
-    let web = read_web_golden("select-scrollable");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_class_tokens(&theme.root, &["w-[280px]"]).expect("web select trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-        &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-    );
-
-    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
-    let open: Model<bool> = app.models_mut().insert(false);
-
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-    let mut services = FakeServices;
-
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "web-vs-fret-layout-select",
-        |cx| {
-            vec![
-                fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                    .items([
-                        fret_ui_shadcn::SelectItem::new("alpha", "Alpha"),
-                        fret_ui_shadcn::SelectItem::new("beta", "Beta"),
-                        fret_ui_shadcn::SelectItem::new("gamma", "Gamma"),
-                    ])
-                    .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default().w_px(Px(web_trigger.rect.w)),
-                    )
-                    .into_element(cx),
-            ]
-        },
-    );
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
-        .expect("expected semantics snapshot");
-
-    let combobox = find_semantics(&snap, SemanticsRole::ComboBox, None)
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret select trigger node");
-
-    assert_close_px(
-        "select trigger width",
-        combobox.bounds.size.width,
-        web_trigger.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "select trigger height",
-        combobox.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
     let web = read_web_golden("spinner-input-group");
     let theme = web_theme(&web);
@@ -9972,11 +9900,6 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
 }
 
 #[test]
-fn web_vs_fret_layout_calendar_01_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-01");
-}
-
-#[test]
 fn web_vs_fret_layout_calendar_01_background_matches_web() {
     let web = read_web_golden("calendar-01");
     let theme = web_theme(&web);
@@ -11770,111 +11693,6 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         "expected transparent calendar bg inside CardContent, got {:?}",
         color_to_rgba(actual_bg)
     );
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_04_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-04");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_06_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-06");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_08_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-08");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_10_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-10");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_13_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-13");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_14_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-14");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_15_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-15");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_16_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-16");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_17_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-17");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_18_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-18");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_19_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-19");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_20_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-20");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_21_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-21");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_31_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-31");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_02_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-02");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_03_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-03");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_05_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-05");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_07_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-07");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_09_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-09");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_11_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-11");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_12_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-12");
 }
 
 #[test]

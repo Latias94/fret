@@ -1,5 +1,25 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+struct FixtureSuite<T> {
+    schema_version: u32,
+    cases: Vec<T>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutCalendarVariantRecipe {
+    SingleMonth,
+    MultiMonth,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutCalendarVariantCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutCalendarVariantRecipe,
+}
+
 #[test]
 fn web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web() {
     let web = read_web_golden("calendar-demo");
