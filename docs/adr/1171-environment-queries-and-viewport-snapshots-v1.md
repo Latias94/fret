@@ -112,6 +112,9 @@ The current implementation provides a small set of typed environment query keys 
 - `viewport_bounds_logical: Rect` (key: `ViewportSize`)
 - `scale_factor: f32` (key: `ScaleFactor`)
 - `prefers_reduced_motion: Option<bool>` (key: `PrefersReducedMotion`)
+  - Best-effort: on web/wasm, the runner commits this preference via
+    `window.matchMedia("(prefers-reduced-motion: reduce)")` when supported. On native desktop, this
+    is currently `None` unless committed by a runner/app integration.
 - `primary_pointer_type: PointerType` (key: `PrimaryPointerType`)
   - Best-effort: `PointerType::Unknown` is returned until a pointer event is observed for the
     window (native and wasm).

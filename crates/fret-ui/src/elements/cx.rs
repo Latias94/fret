@@ -102,6 +102,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         window_state.record_committed_viewport_bounds(bounds);
         window_state.record_committed_scale_factor(scale_factor);
         if let Some(metrics) = metrics {
+            if metrics.prefers_reduced_motion_is_known(window) {
+                window_state
+                    .set_committed_prefers_reduced_motion(metrics.prefers_reduced_motion(window));
+            }
             if metrics.safe_area_insets_is_known(window) {
                 window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
             }
@@ -3350,6 +3354,7 @@ mod tests {
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0)));
 
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_prefers_reduced_motion(window, Some(true));
             svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
             svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
             svc.set_scale_factor(window, 2.0);
@@ -3362,6 +3367,7 @@ mod tests {
         }
 
         let state = runtime.for_window_mut(window);
+        assert_eq!(state.committed_prefers_reduced_motion(), Some(true));
         assert_eq!(
             state.committed_safe_area_insets(),
             Some(Edges::symmetric(Px(8.0), Px(4.0)))

@@ -11,15 +11,26 @@ use super::super::{RenderTargetUpdate, WinitEventContext, WinitRenderContext, Wi
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> WinitRunner<D> {
-    fn update_window_insets_for_frame(&mut self, window: &dyn Window) {
+    fn update_window_environment_for_frame(&mut self, window: &dyn Window) {
         let Some(web_window) = web_sys::window() else {
             return;
         };
 
+        let prefers_reduced_motion = read_prefers_reduced_motion(&web_window);
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
 
         let metrics = self.app.global::<WindowMetricsService>();
+
+        let prev_motion_known =
+            metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(self.app_window));
+        let prev_motion = metrics.and_then(|svc| svc.prefers_reduced_motion(self.app_window));
+        if !prev_motion_known || prev_motion != prefers_reduced_motion {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_prefers_reduced_motion(self.app_window, prefers_reduced_motion);
+                });
+        }
 
         let prev_safe_known =
             metrics.is_some_and(|svc| svc.safe_area_insets_is_known(self.app_window));
@@ -144,7 +155,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.app.set_frame_id(self.frame_id);
 
         self.platform.prepare_frame(window);
-        self.update_window_insets_for_frame(window);
+        self.update_window_environment_for_frame(window);
 
         let scale = window.scale_factor();
         let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
@@ -336,6 +347,13 @@ fn read_occlusion_insets(window: &web_sys::Window) -> Option<Edges> {
         bottom: Px(bottom as f32),
         left: Px(offset_left as f32),
     })
+}
+
+fn read_prefers_reduced_motion(window: &web_sys::Window) -> Option<bool> {
+    let list = window
+        .match_media("(prefers-reduced-motion: reduce)")
+        .ok()??;
+    Some(list.matches())
 }
 
 fn parse_px(value: &str) -> f32 {

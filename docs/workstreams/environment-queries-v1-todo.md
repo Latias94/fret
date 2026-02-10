@@ -39,9 +39,12 @@ ADR anchor:
 
 - [x] Web/wasm runner commits safe-area insets (CSS `env(safe-area-inset-*)`) and viewport occlusion
   insets (`window.visualViewport`) into the per-window environment snapshot seam.
+
+- [x] Web/wasm runner commits prefers-reduced-motion (`window.matchMedia("(prefers-reduced-motion: reduce)")`)
+  into the per-window environment snapshot seam (best-effort; `None` when unsupported).
   - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits insets from `WindowMetricsService`)
-  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional insets)
+  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional insets + preferences)
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 

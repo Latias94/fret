@@ -23,6 +23,7 @@ pub struct WindowMetricsService {
     logical_positions: HashMap<AppWindowId, WindowLogicalPosition>,
     scale_factors: HashMap<AppWindowId, f32>,
     focused: HashMap<AppWindowId, bool>,
+    prefers_reduced_motion: HashMap<AppWindowId, Option<bool>>,
     safe_area_insets: HashMap<AppWindowId, Option<Edges>>,
     occlusion_insets: HashMap<AppWindowId, Option<Edges>>,
 }
@@ -58,6 +59,18 @@ impl WindowMetricsService {
 
     pub fn focused(&self, window: AppWindowId) -> Option<bool> {
         self.focused.get(&window).copied()
+    }
+
+    pub fn set_prefers_reduced_motion(&mut self, window: AppWindowId, prefers: Option<bool>) {
+        self.prefers_reduced_motion.insert(window, prefers);
+    }
+
+    pub fn prefers_reduced_motion(&self, window: AppWindowId) -> Option<bool> {
+        self.prefers_reduced_motion.get(&window).copied().flatten()
+    }
+
+    pub fn prefers_reduced_motion_is_known(&self, window: AppWindowId) -> bool {
+        self.prefers_reduced_motion.contains_key(&window)
     }
 
     pub fn set_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
@@ -112,6 +125,7 @@ impl WindowMetricsService {
         self.logical_positions.remove(&window);
         self.scale_factors.remove(&window);
         self.focused.remove(&window);
+        self.prefers_reduced_motion.remove(&window);
         self.safe_area_insets.remove(&window);
         self.occlusion_insets.remove(&window);
     }
@@ -164,6 +178,7 @@ mod tests {
         svc.set_logical_position(window, WindowLogicalPosition { x: 1, y: 2 });
         svc.set_scale_factor(window, 1.5);
         svc.set_focused(window, true);
+        svc.set_prefers_reduced_motion(window, Some(true));
         svc.set_safe_area_insets(window, Some(Edges::all(Px(1.0))));
         svc.set_occlusion_insets(window, Some(Edges::all(Px(2.0))));
         svc.remove(window);
@@ -172,6 +187,7 @@ mod tests {
         assert_eq!(svc.logical_position(window), None);
         assert_eq!(svc.scale_factor(window), None);
         assert_eq!(svc.focused(window), None);
+        assert_eq!(svc.prefers_reduced_motion(window), None);
         assert_eq!(svc.safe_area_insets(window), None);
         assert_eq!(svc.occlusion_insets(window), None);
     }
@@ -188,5 +204,16 @@ mod tests {
         assert_eq!(svc.occlusion_insets(window), None);
         assert!(svc.safe_area_insets_is_known(window));
         assert!(svc.occlusion_insets_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_prefers_reduced_motion_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(4));
+
+        svc.set_prefers_reduced_motion(window, None);
+
+        assert_eq!(svc.prefers_reduced_motion(window), None);
+        assert!(svc.prefers_reduced_motion_is_known(window));
     }
 }
