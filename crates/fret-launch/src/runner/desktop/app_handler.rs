@@ -476,6 +476,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.drain_effects(event_loop);
                 }
             }
+            WindowEvent::ThemeChanged(_theme) => {
+                let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
+                if let Some(window_ref) = window_ref {
+                    if self
+                        .update_window_environment_for_window_ref(app_window, window_ref.as_ref())
+                    {
+                        self.app.request_redraw(app_window);
+                    }
+                }
+            }
             WindowEvent::Focused(focused) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.is_focused = focused;
