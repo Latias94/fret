@@ -8,6 +8,7 @@
 use std::cell::Cell;
 use std::f32::consts::PI;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsRole, TextOverflow,
@@ -41,6 +42,55 @@ use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion;
 use crate::tokens::time_input as time_input_tokens;
 use crate::tokens::time_picker as time_tokens;
+
+fn cached_two_digit_0_59(n: u32) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (0u32..=59)
+            .map(|v| Arc::<str>::from(format!("{v:02}")))
+            .collect::<Vec<_>>()
+    });
+    table
+        .get(n as usize)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(format!("{n:02}")))
+}
+
+fn cached_decimal_0_59(n: u32) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (0u32..=59)
+            .map(|v| Arc::<str>::from(format!("{v}")))
+            .collect::<Vec<_>>()
+    });
+    table
+        .get(n as usize)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(format!("{n}")))
+}
+
+fn cached_minute_dial_label(n: u32) -> Arc<str> {
+    if n == 0 {
+        cached_decimal_0_59(0)
+    } else {
+        cached_two_digit_0_59(n)
+    }
+}
+
+fn time_picker_hour_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("Hour")).clone()
+}
+
+fn time_picker_minute_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("Minute")).clone()
+}
+
+fn time_picker_separator_text() -> Arc<str> {
+    static SEP: OnceLock<Arc<str>> = OnceLock::new();
+    SEP.get_or_init(|| Arc::<str>::from(":")).clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TimePickerVariant {
@@ -857,8 +907,8 @@ fn time_picker_display<H: UiHost>(
     is_24h: bool,
 ) -> AnyElement {
     let (hour, minute) = time_to_display(time_now, is_24h);
-    let hour_s = Arc::<str>::from(format!("{hour:02}"));
-    let minute_s = Arc::<str>::from(format!("{minute:02}"));
+    let hour_s = cached_two_digit_0_59(hour.into());
+    let minute_s = cached_two_digit_0_59(minute.into());
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
@@ -870,7 +920,7 @@ fn time_picker_display<H: UiHost>(
     cx.flex(props, move |cx| {
         let hour_el = time_selector_field(
             cx,
-            Arc::<str>::from("Hour"),
+            time_picker_hour_field_label(),
             hour_s.clone(),
             selection == TimePickerSelection::Hour,
             "time-picker-hour-selector",
@@ -886,7 +936,7 @@ fn time_picker_display<H: UiHost>(
                 time_tokens::time_selector_separator_color(theme),
             )
         };
-        let mut sep = TextProps::new(Arc::<str>::from(":"));
+        let mut sep = TextProps::new(time_picker_separator_text());
         sep.style = Some(sep_style);
         sep.color = Some(sep_color);
         sep.wrap = TextWrap::None;
@@ -895,7 +945,7 @@ fn time_picker_display<H: UiHost>(
 
         let minute_el = time_selector_field(
             cx,
-            Arc::<str>::from("Minute"),
+            time_picker_minute_field_label(),
             minute_s.clone(),
             selection == TimePickerSelection::Minute,
             "time-picker-minute-selector",
@@ -1838,7 +1888,7 @@ fn dial_label<H: UiHost>(
             focusable: enabled,
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(Arc::<str>::from(format!("{label}"))),
+                label: Some(cached_decimal_0_59(label)),
                 selected,
                 ..Default::default()
             },
@@ -1878,15 +1928,12 @@ fn dial_label<H: UiHost>(
                 container.background = selected.then_some(handle_color);
                 container.corner_radii = handle_shape;
 
-                let mut label_text = if selection == TimePickerSelection::Minute {
-                    format!("{label:02}")
+                let label_text = if selection == TimePickerSelection::Minute {
+                    cached_minute_dial_label(label)
                 } else {
-                    format!("{label}")
+                    cached_decimal_0_59(label)
                 };
-                if label_text == "00" {
-                    label_text = "0".to_string();
-                }
-                let mut tp = TextProps::new(Arc::<str>::from(label_text));
+                let mut tp = TextProps::new(label_text);
                 tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
