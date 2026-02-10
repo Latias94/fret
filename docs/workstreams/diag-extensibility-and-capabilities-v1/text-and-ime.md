@@ -34,6 +34,12 @@ At minimum, expose a redaction-friendly summary for focused text inputs:
 
 The evidence must be stable enough to drive gates.
 
+Current script-level evidence surface (implemented):
+
+- `script.result.json`:
+  - `evidence.focus_trace` (focused element/node + expected target for focus waits)
+  - `evidence.web_ime_trace` (wasm textarea bridge snapshot summary; debug-only; no raw preedit/commit text by default)
+
 ## Suggested regression gates (script + assertions)
 
 Start with “portable, low-flake” gates:
@@ -67,4 +73,3 @@ not raw strings.
 - ADR 0012 (keyboard/IME/text input contract): `docs/adr/0012-keyboard-ime-and-text-input.md`
 - Text editing commands: `docs/adr/0044-text-editing-state-and-commands.md`
 - Caret metrics and geometry queries: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
-

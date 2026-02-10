@@ -7,10 +7,11 @@ use fret_core::{
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1,
-    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiPointV1, UiPredicateV1, UiRectV1,
-    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
-    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiInspectConfigV1,
+    UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPaddingInsetsV1, UiPointV1,
+    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1,
+    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
+    UiSelectorV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -717,6 +718,8 @@ impl UiDiagnosticsService {
                     last_reported_step: Some(0),
                     selector_resolution_trace: Vec::new(),
                     hit_test_trace: Vec::new(),
+                    focus_trace: Vec::new(),
+                    web_ime_trace: Vec::new(),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -778,10 +781,20 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         };
 
-        // Keep selector resolution evidence scoped to the active step so failures remain focused.
+        // Keep evidence scoped to the active step so failures remain focused.
+        let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
         active
             .selector_resolution_trace
-            .retain(|e| e.step_index == step_index.min(u32::MAX as usize) as u32);
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .hit_test_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .focus_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .web_ime_trace
+            .retain(|e| e.step_index == step_index_u32);
 
         let mut output = UiScriptFrameOutput::default();
         let mut force_dump_label: Option<String> = None;
@@ -1003,6 +1016,23 @@ impl UiDiagnosticsService {
                 repeat,
             } => {
                 if let Some(key) = parse_key_code(&key) {
+                    let note = format!("press_key key={key:?} mods={modifiers:?} repeat={repeat}");
+                    record_focus_trace(
+                        &mut active.focus_trace,
+                        window,
+                        element_runtime,
+                        semantics_snapshot,
+                        step_index as u32,
+                        None,
+                        None,
+                        note.as_str(),
+                    );
+                    record_web_ime_trace(
+                        &mut active.web_ime_trace,
+                        app,
+                        step_index as u32,
+                        note.as_str(),
+                    );
                     output
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
@@ -1026,6 +1056,24 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
 
                 if let Some((key, modifiers)) = parse_shortcut(&shortcut) {
+                    let note =
+                        format!("press_shortcut key={key:?} mods={modifiers:?} repeat={repeat}");
+                    record_focus_trace(
+                        &mut active.focus_trace,
+                        window,
+                        element_runtime,
+                        semantics_snapshot,
+                        step_index as u32,
+                        None,
+                        None,
+                        note.as_str(),
+                    );
+                    record_web_ime_trace(
+                        &mut active.web_ime_trace,
+                        app,
+                        step_index as u32,
+                        note.as_str(),
+                    );
                     output
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
@@ -2391,6 +2439,8 @@ impl UiDiagnosticsService {
                             step_index,
                             remaining_frames: timeout_frames,
                             phase: 0,
+                            expected_node_id: None,
+                            expected_test_id: None,
                         },
                     };
 
@@ -2434,6 +2484,9 @@ impl UiDiagnosticsService {
                                 self.cfg.redact_text,
                                 &mut active.selector_resolution_trace,
                             ) {
+                                state.expected_node_id = Some(node.id.data().as_ffi());
+                                state.expected_test_id = node.test_id.clone();
+
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 if let Some(ui) = ui {
@@ -2448,6 +2501,22 @@ impl UiDiagnosticsService {
                                         Some("type_text_into.click"),
                                     );
                                 }
+                                record_focus_trace(
+                                    &mut active.focus_trace,
+                                    window,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    step_index as u32,
+                                    state.expected_node_id,
+                                    state.expected_test_id.as_deref(),
+                                    "type_text_into.click_injected",
+                                );
+                                record_web_ime_trace(
+                                    &mut active.web_ime_trace,
+                                    app,
+                                    step_index as u32,
+                                    "type_text_into.click_injected",
+                                );
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left, 1));
@@ -2466,13 +2535,71 @@ impl UiDiagnosticsService {
                             }
                         }
                         _ => {
-                            output.events.push(Event::TextInput(text));
-                            active.v2_step_state = None;
-                            active.next_step = active.next_step.saturating_add(1);
-                            output.request_redraw = true;
-                            if self.cfg.script_auto_dump {
-                                force_dump_label =
-                                    Some(format!("script-step-{step_index:04}-type_text_into"));
+                            record_focus_trace(
+                                &mut active.focus_trace,
+                                window,
+                                element_runtime,
+                                Some(snapshot),
+                                step_index as u32,
+                                state.expected_node_id,
+                                state.expected_test_id.as_deref(),
+                                "type_text_into.wait_focus",
+                            );
+                            record_web_ime_trace(
+                                &mut active.web_ime_trace,
+                                app,
+                                step_index as u32,
+                                "type_text_into.wait_focus",
+                            );
+
+                            let focused_node_id = element_runtime
+                                .and_then(|rt| rt.diagnostics_snapshot(window))
+                                .and_then(|s| s.focused_element_node)
+                                .map(key_to_u64);
+                            let focus_matches = match (state.expected_node_id, focused_node_id) {
+                                (Some(expected), Some(focused)) => expected == focused,
+                                // If we cannot observe focus, prefer making progress rather than timing out.
+                                _ => true,
+                            };
+
+                            if focus_matches {
+                                record_focus_trace(
+                                    &mut active.focus_trace,
+                                    window,
+                                    element_runtime,
+                                    Some(snapshot),
+                                    step_index as u32,
+                                    state.expected_node_id,
+                                    state.expected_test_id.as_deref(),
+                                    "type_text_into.text_input",
+                                );
+                                record_web_ime_trace(
+                                    &mut active.web_ime_trace,
+                                    app,
+                                    step_index as u32,
+                                    "type_text_into.text_input",
+                                );
+
+                                output.events.push(Event::TextInput(text));
+                                active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-type_text_into"));
+                                }
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-type_text_into-focus-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("type_text_into_focus_timeout".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::TypeTextInto(state));
+                                output.request_redraw = true;
                             }
                         }
                     }
@@ -5460,6 +5587,8 @@ struct ActiveScript {
     last_reported_step: Option<usize>,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
+    focus_trace: Vec<UiFocusTraceEntryV1>,
+    web_ime_trace: Vec<UiWebImeTraceEntryV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -5545,6 +5674,8 @@ struct V2TypeTextIntoState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -9999,6 +10130,8 @@ fn select_semantics_node<'a>(
 const MAX_SELECTOR_TRACE_ENTRIES: usize = 64;
 const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
 const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
+const MAX_FOCUS_TRACE_ENTRIES: usize = 64;
+const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
 
 fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
     match (a, b) {
@@ -10087,13 +10220,183 @@ fn push_hit_test_trace(trace: &mut Vec<UiHitTestTraceEntryV1>, entry: UiHitTestT
 }
 
 fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
-    if active.selector_resolution_trace.is_empty() && active.hit_test_trace.is_empty() {
+    if active.selector_resolution_trace.is_empty()
+        && active.hit_test_trace.is_empty()
+        && active.focus_trace.is_empty()
+        && active.web_ime_trace.is_empty()
+    {
         return None;
     }
     Some(UiScriptEvidenceV1 {
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
+        focus_trace: active.focus_trace.clone(),
+        web_ime_trace: active.web_ime_trace.clone(),
     })
+}
+
+fn focus_trace_entry_eq(a: &UiFocusTraceEntryV1, b: &UiFocusTraceEntryV1) -> bool {
+    a.step_index == b.step_index
+        && a.note == b.note
+        && a.expected_node_id == b.expected_node_id
+        && a.expected_test_id == b.expected_test_id
+}
+
+fn push_focus_trace(trace: &mut Vec<UiFocusTraceEntryV1>, entry: UiFocusTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| focus_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_FOCUS_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_FOCUS_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn web_ime_trace_entry_eq(a: &UiWebImeTraceEntryV1, b: &UiWebImeTraceEntryV1) -> bool {
+    a.step_index == b.step_index && a.note == b.note
+}
+
+fn push_web_ime_trace(trace: &mut Vec<UiWebImeTraceEntryV1>, entry: UiWebImeTraceEntryV1) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| web_ime_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_WEB_IME_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_WEB_IME_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+fn record_focus_trace(
+    trace: &mut Vec<UiFocusTraceEntryV1>,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    step_index: u32,
+    expected_node_id: Option<u64>,
+    expected_test_id: Option<&str>,
+    note: &str,
+) {
+    let snapshot = element_runtime.and_then(|rt| rt.diagnostics_snapshot(window));
+    let focused_element = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element)
+        .map(|id| id.0);
+    let focused_element_path = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element)
+        .and_then(|id| element_runtime.and_then(|rt| rt.debug_path_for_element(window, id)));
+    let focused_node_id = snapshot
+        .as_ref()
+        .and_then(|s| s.focused_element_node)
+        .map(key_to_u64);
+
+    let (focused_test_id, focused_role) =
+        if let (Some(snapshot), Some(focused_node_id)) = (semantics_snapshot, focused_node_id) {
+            let node = snapshot
+                .nodes
+                .iter()
+                .find(|n| n.id.data().as_ffi() == focused_node_id);
+            let test_id = node.and_then(|n| n.test_id.clone());
+            let role = node.map(|n| semantics_role_label(n.role).to_string());
+            (test_id, role)
+        } else {
+            (None, None)
+        };
+
+    let matches_expected = match (expected_node_id, expected_test_id) {
+        (Some(expected_node_id), _) => focused_node_id.map(|id| id == expected_node_id),
+        (None, Some(expected_test_id)) => {
+            focused_test_id.as_deref().map(|id| id == expected_test_id)
+        }
+        _ => None,
+    };
+
+    push_focus_trace(
+        trace,
+        UiFocusTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            expected_node_id,
+            expected_test_id: expected_test_id.map(|s| s.to_string()),
+            focused_element,
+            focused_element_path,
+            focused_node_id,
+            focused_test_id,
+            focused_role,
+            matches_expected,
+        },
+    );
+}
+
+fn record_web_ime_trace(
+    trace: &mut Vec<UiWebImeTraceEntryV1>,
+    app: &App,
+    step_index: u32,
+    note: &str,
+) {
+    let snapshot = app
+        .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+        .filter(|snapshot| **snapshot != fret_core::input::WebImeBridgeDebugSnapshot::default());
+    let Some(snapshot) = snapshot else {
+        return;
+    };
+
+    let last_preedit_len = snapshot
+        .last_preedit_text
+        .as_deref()
+        .map(|s| s.len().min(u32::MAX as usize) as u32);
+    let last_commit_len = snapshot
+        .last_commit_text
+        .as_deref()
+        .map(|s| s.len().min(u32::MAX as usize) as u32);
+
+    push_web_ime_trace(
+        trace,
+        UiWebImeTraceEntryV1 {
+            step_index,
+            note: Some(note.to_string()),
+            enabled: snapshot.enabled,
+            composing: snapshot.composing,
+            suppress_next_input: snapshot.suppress_next_input,
+            textarea_has_focus: snapshot.textarea_has_focus,
+            active_element_tag: snapshot.active_element_tag.clone(),
+            position_mode: snapshot.position_mode.clone(),
+            mount_kind: snapshot.mount_kind.clone(),
+            device_pixel_ratio: snapshot.device_pixel_ratio,
+            textarea_selection_start_utf16: snapshot.textarea_selection_start_utf16,
+            textarea_selection_end_utf16: snapshot.textarea_selection_end_utf16,
+            last_cursor_area: snapshot.last_cursor_area.map(|r| UiRectV1 {
+                x_px: r.origin.x.0,
+                y_px: r.origin.y.0,
+                w_px: r.size.width.0,
+                h_px: r.size.height.0,
+            }),
+            last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
+            last_input_type: snapshot.last_input_type.clone(),
+            last_preedit_len,
+            last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
+            last_commit_len,
+            beforeinput_seen: snapshot.beforeinput_seen,
+            input_seen: snapshot.input_seen,
+            suppressed_input_seen: snapshot.suppressed_input_seen,
+            composition_start_seen: snapshot.composition_start_seen,
+            composition_update_seen: snapshot.composition_update_seen,
+            composition_end_seen: snapshot.composition_end_seen,
+            cursor_area_set_seen: snapshot.cursor_area_set_seen,
+        },
+    );
 }
 
 fn hit_test_scope_roots_evidence(
@@ -10382,6 +10685,7 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
     match reason {
         "no_semantics_snapshot" => Some("semantics.missing"),
         "assert_failed" => Some("assert.failed"),
+        _ if reason.contains("focus") => Some("focus.mismatch"),
         _ if reason.ends_with("_timeout") => Some("timeout"),
         _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
             Some("selector.not_found")

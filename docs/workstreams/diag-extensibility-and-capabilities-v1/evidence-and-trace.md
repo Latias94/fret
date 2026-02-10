@@ -89,6 +89,28 @@ Hit-test / routing trace entry fields:
 - `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
 - `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
 
+Focus trace entry fields:
+
+- `step_index`
+- `note` (phase marker, e.g. `type_text_into.wait_focus`)
+- `expected_node_id` / `expected_test_id` (when waiting for a specific focus target)
+- `focused_element` / `focused_element_path` (element-runtime view)
+- `focused_node_id` / `focused_test_id` / `focused_role` (best-effort semantics view)
+- `matches_expected` (best-effort)
+
+Web IME trace entry fields (wasm only, ADR 0195; debug-only, redactable):
+
+- `step_index`
+- `note` (phase marker)
+- `enabled` / `composing` / `suppress_next_input`
+- `textarea_has_focus` / `active_element_tag`
+- `position_mode` / `mount_kind` / `device_pixel_ratio`
+- `textarea_selection_start_utf16` / `textarea_selection_end_utf16`
+- `last_cursor_area` / `last_cursor_anchor_px`
+- `last_input_type`
+- `last_preedit_len` / `last_preedit_cursor_utf16` / `last_commit_len` (no raw text by default)
+- `beforeinput_seen` / `input_seen` / `suppressed_input_seen` / `composition_*_seen` / `cursor_area_set_seen`
+
 ## Trace surface (ring buffer, dumped on failure)
 
 When a script fails (or when tooling requests it), the runner SHOULD emit a trace slice for the last K frames:

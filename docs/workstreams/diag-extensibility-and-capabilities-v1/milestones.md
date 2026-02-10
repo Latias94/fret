@@ -81,8 +81,10 @@ Definition of done:
   - [ ] add capture/barrier/occlusion *explainability* (hit path, occluder hints, capture owner),
   - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
 - [ ] M4c: Focus + text/IME explainability:
-  - [ ] focus change trace with reasons,
-  - [ ] composition state summary (redaction-friendly).
+  - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
+  - [x] emit `evidence.web_ime_trace` (wasm textarea bridge summary; debug-only),
+  - [ ] focus change trace with reasons (why focus moved / why it did not),
+  - [ ] composition state summary for non-web runners (capability-gated).
 - [ ] M4d: Bundle lint closure:
   - [ ] add `diag lint` and emit `check.lint.json`.
 

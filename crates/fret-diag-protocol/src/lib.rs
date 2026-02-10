@@ -721,6 +721,10 @@ pub struct UiScriptEvidenceV1 {
     pub selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub focus_trace: Vec<UiFocusTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -802,6 +806,93 @@ pub struct UiHitTestScopeRootEvidenceV1 {
     pub blocks_underlay_input: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_testable: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiFocusTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matches_expected: Option<bool>,
+}
+
+/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).
+///
+/// This is intended for diagnostics evidence and is not a normative contract surface.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWebImeTraceEntryV1 {
+    pub step_index: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub composing: bool,
+    #[serde(default)]
+    pub suppress_next_input: bool,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_has_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_element_tag: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mount_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_pixel_ratio: Option<f64>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_start_utf16: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_end_utf16: Option<u32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_area: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_input_type: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_commit_len: Option<u32>,
+
+    #[serde(default)]
+    pub beforeinput_seen: u64,
+    #[serde(default)]
+    pub input_seen: u64,
+    #[serde(default)]
+    pub suppressed_input_seen: u64,
+    #[serde(default)]
+    pub composition_start_seen: u64,
+    #[serde(default)]
+    pub composition_update_seen: u64,
+    #[serde(default)]
+    pub composition_end_seen: u64,
+    #[serde(default)]
+    pub cursor_area_set_seen: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
