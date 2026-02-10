@@ -722,6 +722,7 @@ fn page_preview(
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
+        PAGE_AI_COMMIT_LARGE_DEMO => preview_ai_commit_large_demo(cx, theme),
         PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
@@ -19646,6 +19647,7 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
                     .into_element(cx),
                 ui_ai::CommitFileIcon::default().into_element(cx),
                 ui_ai::CommitFilePath::new("ecosystem/fret-ui-ai/src/elements/file_tree.rs")
+                    .test_id("ui-ai-commit-file-0-path")
                     .into_element(cx),
             ])
             .into_element(cx),
@@ -19655,6 +19657,7 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
             ])
             .into_element(cx),
         ])
+        .test_id("ui-ai-commit-file-0")
         .into_element(cx),
         ui_ai::CommitFile::new([
             ui_ai::CommitFileInfo::new([
@@ -19663,14 +19666,17 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
                 ui_ai::CommitFilePath::new(
                     "tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json",
                 )
+                .test_id("ui-ai-commit-file-1-path")
                 .into_element(cx),
             ])
             .into_element(cx),
             ui_ai::CommitFileChanges::new([ui_ai::CommitFileAdditions::new(1).into_element(cx)])
                 .into_element(cx),
         ])
+        .test_id("ui-ai-commit-file-1")
         .into_element(cx),
     ])
+    .test_id("ui-ai-commit-files")
     .into_element(cx);
 
     let content = ui_ai::CommitContent::new([files]).test_id("ui-ai-commit-content");
@@ -19689,6 +19695,130 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Commit (AI Elements)"), commit],
+    )]
+}
+
+fn preview_ai_commit_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::{Arc, Mutex};
+    use std::time::{Duration, SystemTime};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Clone, Default)]
+    struct OpenedRef(Arc<Mutex<Option<Arc<str>>>>);
+
+    impl OpenedRef {
+        fn lock(&self) -> std::sync::MutexGuard<'_, Option<Arc<str>>> {
+            self.0.lock().unwrap_or_else(|e| e.into_inner())
+        }
+    }
+
+    let opened = cx.with_state(OpenedRef::default, |st| st.clone());
+
+    let on_open: ui_ai::OnCommitFilePathClick = Arc::new({
+        let opened = opened.clone();
+        move |host, action_cx, path| {
+            *opened.lock() = Some(path);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let hash: Arc<str> = Arc::from("deadbeef");
+
+    let info = ui_ai::CommitInfo::new([
+        ui_ai::CommitHash::new(hash.clone()).into_element(cx),
+        ui_ai::CommitMessage::new("Stress: long file list").into_element(cx),
+        ui_ai::CommitMetadata::new([ui_ai::CommitTimestamp::new(
+            SystemTime::now() - Duration::from_secs(86_400),
+        )
+        .into_element(cx)])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let actions = ui_ai::CommitActions::new([ui_ai::CommitCopyButton::new(hash.clone())
+        .test_id("ui-ai-commit-large-copy")
+        .copied_marker_test_id("ui-ai-commit-large-copied-marker")
+        .into_element(cx)])
+    .into_element(cx);
+
+    let header = ui_ai::CommitHeader::new([info, actions]).test_id("ui-ai-commit-large-header");
+
+    let mut file_rows: Vec<AnyElement> = Vec::new();
+    for i in 0..200u32 {
+        let status = match i % 4 {
+            0 => ui_ai::CommitFileStatusKind::Modified,
+            1 => ui_ai::CommitFileStatusKind::Added,
+            2 => ui_ai::CommitFileStatusKind::Deleted,
+            _ => ui_ai::CommitFileStatusKind::Renamed,
+        };
+        let path = Arc::<str>::from(format!("crates/fret-ui-ai/src/generated/file_{i:04}.rs"));
+        let row_test_id = Arc::<str>::from(format!("ui-ai-commit-large-file-{i:04}"));
+        let path_test_id = Arc::<str>::from(format!("ui-ai-commit-large-file-{i:04}-path"));
+
+        let on_open = on_open.clone();
+        file_rows.push(cx.keyed(format!("ai_commit_large_file_{i:04}"), move |cx| {
+            ui_ai::CommitFile::new([
+                ui_ai::CommitFileInfo::new([
+                    ui_ai::CommitFileStatus::new(status).into_element(cx),
+                    ui_ai::CommitFileIcon::default().into_element(cx),
+                    ui_ai::CommitFilePath::new(path.clone())
+                        .test_id(path_test_id.clone())
+                        .on_click(on_open.clone())
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                ui_ai::CommitFileChanges::new([
+                    ui_ai::CommitFileAdditions::new((i % 13) + 1).into_element(cx),
+                    ui_ai::CommitFileDeletions::new(i % 7).into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .test_id(row_test_id.clone())
+            .into_element(cx)
+        }));
+    }
+
+    let files = ui_ai::CommitFiles::new(file_rows)
+        .test_id("ui-ai-commit-large-files")
+        .into_element(cx);
+
+    let content = ui_ai::CommitContent::new([files]).test_id("ui-ai-commit-large-content");
+
+    let commit = ui_ai::Commit::new(header, content)
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-ai-commit-large-root"),
+        );
+
+    let opened_marker = opened.lock().clone().map(|path| {
+        cx.text(format!("Opened: {path}")).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id("ui-ai-commit-large-opened-marker"),
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            let mut children: Vec<AnyElement> = vec![cx.text("Commit Large (AI Elements)"), commit];
+            if let Some(marker) = opened_marker.clone() {
+                children.push(marker);
+            }
+            children
+        },
     )]
 }
 

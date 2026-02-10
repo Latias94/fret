@@ -890,6 +890,24 @@ use fret_ui_ai::{Commit, CommitHeader, CommitContent, CommitCopyButton};
 ```
 "#;
 
+pub(crate) const DOC_AI_COMMIT_LARGE_DEMO: &str = r#"
+## AI commit large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `Commit` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- long file lists remain scrollable and stable under view-cache reuse,
+- per-row `test_id` selectors are stable for automation,
+- file path click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_COMMIT_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Commit, CommitFiles, CommitFile, CommitFilePath, OnCommitFilePathClick};
+```
+"#;
+
 pub(crate) const DOC_AI_STACK_TRACE_DEMO: &str = r#"
 ## AI stack trace (demo)
 

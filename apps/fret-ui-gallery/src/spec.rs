@@ -125,6 +125,7 @@ pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
+pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
 pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
 pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
@@ -271,6 +272,7 @@ pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
+pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str = "ui_gallery.nav.select.ai_commit_large_demo";
 pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
 pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
     "ui_gallery.nav.select.ai_schema_display_demo";
@@ -987,6 +989,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "commit", "git", "copy", "diff", "demo"],
                 docs::DOC_AI_COMMIT_DEMO,
                 docs::USAGE_AI_COMMIT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_COMMIT_LARGE_DEMO,
+                "AI Commit Large (Demo)",
+                "Commit Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_COMMIT_LARGE_DEMO,
+                &["ai", "commit", "large", "scroll", "files", "demo"],
+                docs::DOC_AI_COMMIT_LARGE_DEMO,
+                docs::USAGE_AI_COMMIT_LARGE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_STACK_TRACE_DEMO,
