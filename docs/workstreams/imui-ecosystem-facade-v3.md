@@ -32,6 +32,9 @@ This workstream uses Dear ImGui (C++) as the primary behavior reference for "imm
 Note: `repo-ref/imgui` is local state (not committed). When citing behavior, record the exact commit:
 
 - `git -C repo-ref/imgui rev-parse --short HEAD` (example on one machine: `913a3c605`)
+- If `repo-ref/` is not present in your worktree, run the same command against your local snapshot:
+  - `git -C <path-to-imgui> rev-parse --short HEAD`
+  - Windows tip: `New-Item -ItemType Junction repo-ref -Target <path-to-repo-ref>`
 
 Authoritative anchors used for v3 audits:
 
@@ -169,6 +172,22 @@ M0 contract notes (normative for v3 work):
     choreography are treated as breaking and require:
     - a TODO tracker update with evidence anchors (tests/diag/docs),
     - explicit migration notes when call-site expectations change.
+
+## 0.1 Recently fixed regressions (carry-forward notes)
+
+- Windows fractional DPI (150%, `scale_factor=1.5`) floating window text wrapping:
+  - Pre-fix, wrapped `Text` could under-measure height during sizing and later paint a blob taller than its layout
+    bounds, overlapping following items. This presented as "text shifts/misalignment after dragging" because the
+    overlap is most visible during interactive move.
+  - Fix landed in `crates/fret-ui/src/declarative/host_widget/measure.rs`: treat `Text`-like intrinsic height as
+    independent of parent height constraints when `height=Auto` and no `max_height` is set.
+  - Gate: `tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json`.
+- Windows fractional DPI title bar spill into content (fixed):
+  - Pre-fix, title text could wrap during min-content probes and paint into the body area, which reads as a layout
+    bug in immediate-mode demos (especially when dragging/resizing).
+  - Fix landed in `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs`: clip title bar contents and force
+    the title to a single line with truncation (`wrap=None`, `overflow=Ellipsis`) + `min_width=0` flex shrink.
+  - Gate: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json`.
 
 ### M1 - Floating window primitives (ImGui-aligned, in-window)
 

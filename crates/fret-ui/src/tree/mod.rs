@@ -130,6 +130,7 @@ struct Node<H: UiHost> {
     parent: Option<NodeId>,
     children: Vec<NodeId>,
     bounds: Rect,
+    bounds_written_paint_pass: u64,
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
@@ -208,6 +209,7 @@ impl<H: UiHost> Node<H> {
             parent: None,
             children: Vec::new(),
             bounds: Rect::default(),
+            bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             measure_cache: None,
             invalidation: InvalidationFlags {
@@ -1178,6 +1180,8 @@ pub struct UiDebugPaintTextPrepareHotspot {
     pub element_kind: &'static str,
     pub text_len: u32,
     pub constraints: TextConstraints,
+    pub metrics: fret_core::TextMetrics,
+    pub bounds: fret_core::Rect,
     pub reasons_mask: u16,
     pub prepare_time: Duration,
 }
@@ -1638,10 +1642,13 @@ pub struct UiTree<H: UiHost> {
     debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
     #[cfg(feature = "diagnostics")]
     debug_text_constraints_prepared: HashMap<NodeId, TextConstraints>,
+    #[cfg(feature = "diagnostics")]
+    debug_text_metrics_measured: HashMap<NodeId, fret_core::TextMetrics>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
+    paint_pass: u64,
     paint_cache: PaintCacheState,
     interaction_cache: prepaint::InteractionCacheState,
 
@@ -2072,9 +2079,12 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_text_constraints_measured: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_text_constraints_prepared: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_text_metrics_measured: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
+            paint_pass: 1,
             paint_cache: PaintCacheState::default(),
             interaction_cache: prepaint::InteractionCacheState::default(),
             dirty_cache_roots: HashSet::new(),
@@ -2436,6 +2446,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_reachable_from_layer_roots = None;
             self.debug_text_constraints_measured.clear();
             self.debug_text_constraints_prepared.clear();
+            self.debug_text_metrics_measured.clear();
         }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
@@ -2551,6 +2562,8 @@ impl<H: UiHost> UiTree<H> {
         element_kind: &'static str,
         text_len: u32,
         constraints: TextConstraints,
+        metrics: fret_core::TextMetrics,
+        bounds: fret_core::Rect,
         reasons_mask: u16,
         prepare_time: Duration,
     ) {
@@ -2564,6 +2577,8 @@ impl<H: UiHost> UiTree<H> {
             element_kind,
             text_len,
             constraints,
+            metrics,
+            bounds,
             reasons_mask,
             prepare_time,
         };
@@ -2745,6 +2760,23 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(not(feature = "diagnostics"))]
         {
             let _ = (node, constraints);
+        }
+    }
+
+    pub(crate) fn debug_record_text_metrics_measured(
+        &mut self,
+        node: NodeId,
+        metrics: fret_core::TextMetrics,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if self.debug_enabled {
+                self.debug_text_metrics_measured.insert(node, metrics);
+            }
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (node, metrics);
         }
     }
 
@@ -4077,6 +4109,20 @@ impl<H: UiHost> UiTree<H> {
 
         #[allow(unreachable_code)]
         UiDebugTextConstraintsSnapshot::default()
+    }
+
+    pub fn debug_text_metrics_measured(&self, node: NodeId) -> Option<fret_core::TextMetrics> {
+        #[cfg(feature = "diagnostics")]
+        {
+            return self.debug_text_metrics_measured.get(&node).copied();
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = node;
+        }
+
+        #[allow(unreachable_code)]
+        None
     }
 
     /// Returns the node bounds after applying the accumulated `render_transform` stack.

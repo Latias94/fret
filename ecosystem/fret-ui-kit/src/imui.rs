@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
+use fret_core::window::WindowMetricsService;
 use fret_core::{
     AppWindowId, Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole,
     Size,
@@ -39,6 +40,9 @@ use crate::{UiIntoElement, UiPatchTarget};
 
 pub mod adapters;
 mod floating_window_on_area;
+
+const DEFAULT_IMGUI_ITEM_SPACING_X_PX: f32 = 8.0;
+const DEFAULT_IMGUI_ITEM_SPACING_Y_PX: f32 = 4.0;
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
 ///
@@ -1292,6 +1296,41 @@ fn drag_threshold_sq_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
     v * v
 }
 
+fn item_spacing_x_metric_ref() -> crate::MetricRef {
+    crate::MetricRef::Token {
+        key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_X_PX,
+        fallback: crate::style::MetricFallback::Px(Px(DEFAULT_IMGUI_ITEM_SPACING_X_PX)),
+    }
+}
+
+fn item_spacing_y_metric_ref() -> crate::MetricRef {
+    crate::MetricRef::Token {
+        key: crate::theme_tokens::metric::COMPONENT_IMUI_ITEM_SPACING_Y_PX,
+        fallback: crate::style::MetricFallback::Px(Px(DEFAULT_IMGUI_ITEM_SPACING_Y_PX)),
+    }
+}
+
+pub(super) fn snap_px_to_device_pixels(scale_factor: f32, px: Px) -> Px {
+    if !scale_factor.is_finite() || scale_factor <= 0.0 {
+        return px;
+    }
+    Px((px.0 * scale_factor).round() / scale_factor)
+}
+
+pub(super) fn snap_point_to_device_pixels(scale_factor: f32, p: Point) -> Point {
+    Point::new(
+        snap_px_to_device_pixels(scale_factor, p.x),
+        snap_px_to_device_pixels(scale_factor, p.y),
+    )
+}
+
+pub(super) fn snap_size_to_device_pixels(scale_factor: f32, s: Size) -> Size {
+    Size::new(
+        snap_px_to_device_pixels(scale_factor, s.width),
+        snap_px_to_device_pixels(scale_factor, s.height),
+    )
+}
+
 fn point_sub(a: Point, b: Point) -> Point {
     Point::new(Px(a.x.0 - b.x.0), Px(a.y.0 - b.y.0))
 }
@@ -2465,7 +2504,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn text(&mut self, text: impl Into<Arc<str>>) {
-        let element = self.with_cx_mut(|cx| cx.text(text));
+        // ImGui-style item flow: avoid flex main-axis shrink so text never "compresses" and
+        // overlaps subsequent items when the container is shorter than the intrinsic text height.
+        let element = self.with_cx_mut(|cx| {
+            let mut props = fret_ui::element::TextProps::new(text);
+            props.layout.flex.shrink = 0.0;
+            cx.text_props(props)
+        });
         self.add(element);
     }
 
@@ -2485,6 +2530,26 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.horizontal_ex(HorizontalOptions::default(), f);
     }
 
+    /// ImGui-style `SameLine()`: render items on the same row with default item spacing.
+    ///
+    /// Notes:
+    /// - This is a convenience alias for `horizontal_ex(...)` with a default gap aligned to
+    ///   ImGui's `Style.ItemSpacing.x` (`component.imui.item_spacing_x_px`, fallback `8px`).
+    fn same_line(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.same_line_ex(None, f);
+    }
+
+    /// Variant of `same_line(...)` that optionally overrides the gap metric.
+    fn same_line_ex(
+        &mut self,
+        gap: Option<crate::MetricRef>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let mut options = HorizontalOptions::default();
+        options.gap = gap.unwrap_or_else(item_spacing_x_metric_ref);
+        self.horizontal_ex(options, f);
+    }
+
     fn horizontal_ex(
         &mut self,
         options: HorizontalOptions,
@@ -2496,6 +2561,29 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
         self.vertical_ex(VerticalOptions::default(), f);
+    }
+
+    /// ImGui-style default vertical item flow: render items in a column with default item spacing.
+    ///
+    /// Notes:
+    /// - This is a convenience alias for `vertical_ex(...)` with a default gap aligned to
+    ///   ImGui's `Style.ItemSpacing.y` (`component.imui.item_spacing_y_px`, fallback `4px`).
+    /// - Cross-axis sizing defaults to `Items::Start` (closer to ImGui's "size to contents"
+    ///   behavior) instead of the `vertical()` default `Items::Stretch`.
+    fn items(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.items_ex(None, f);
+    }
+
+    /// Variant of `items(...)` that optionally overrides the gap metric.
+    fn items_ex(
+        &mut self,
+        gap: Option<crate::MetricRef>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let mut options = VerticalOptions::default();
+        options.gap = gap.unwrap_or_else(item_spacing_y_metric_ref);
+        options.items = crate::Items::Start;
+        self.vertical_ex(options, f);
     }
 
     fn vertical_ex(
@@ -2682,6 +2770,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .map(|(dragging, _, _)| dragging)
                     .unwrap_or(false);
 
+                let scale_factor = cx
+                    .app
+                    .global::<WindowMetricsService>()
+                    .and_then(|svc| svc.scale_factor(cx.window))
+                    .unwrap_or(1.0);
                 let (position, test_id) = cx.with_state_for(
                     area_id,
                     || FloatingAreaState {
@@ -2700,6 +2793,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             if dragging {
                                 let prev = st.last_drag_position.unwrap_or(start);
                                 st.position = point_add(st.position, point_sub(current, prev));
+                                st.position =
+                                    snap_point_to_device_pixels(scale_factor, st.position);
                                 st.last_drag_position = Some(current);
                             } else {
                                 st.last_drag_position = None;

@@ -332,8 +332,21 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let scale_bits = cx.scale_factor.to_bits();
+                // Use the widest wrap width we have seen for this text node this frame.
+                //
+                // Some layout paths measure text against a slightly wider available width than the
+                // final snapped bounds (e.g. fractional DPI). If we prepare against the narrower
+                // bounds width, wrapping can add extra lines that overflow the measured height,
+                // causing intra-window text overlap.
+                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
+                    self.text_cache
+                        .last_measure_width
+                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
+                        .unwrap_or(cx.bounds.size.width)
+                } else {
+                    cx.bounds.size.width
+                };
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -343,7 +356,6 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
-                let scale_bits = cx.scale_factor.to_bits();
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let text_changed = self.text_cache.last_text.as_ref() != Some(&props.text);
@@ -400,6 +412,8 @@ impl ElementHostWidget {
                             "Text",
                             props.text.len().min(u32::MAX as usize) as u32,
                             constraints,
+                            metrics,
+                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -422,9 +436,12 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                let origin = crate::pixel_snap::snap_point_round(
+                    fret_core::Point::new(
+                        cx.bounds.origin.x,
+                        cx.bounds.origin.y + metrics.baseline,
+                    ),
+                    cx.scale_factor,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -447,8 +464,15 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let scale_bits = cx.scale_factor.to_bits();
+                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
+                    self.text_cache
+                        .last_measure_width
+                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
+                        .unwrap_or(cx.bounds.size.width)
+                } else {
+                    cx.bounds.size.width
+                };
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -458,7 +482,6 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
-                let scale_bits = cx.scale_factor.to_bits();
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -515,6 +538,8 @@ impl ElementHostWidget {
                             "StyledText",
                             props.rich.text.len().min(u32::MAX as usize) as u32,
                             constraints,
+                            metrics,
+                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -538,9 +563,12 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                let origin = crate::pixel_snap::snap_point_round(
+                    fret_core::Point::new(
+                        cx.bounds.origin.x,
+                        cx.bounds.origin.y + metrics.baseline,
+                    ),
+                    cx.scale_factor,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -563,8 +591,15 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let max_width =
-                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let scale_bits = cx.scale_factor.to_bits();
+                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
+                    self.text_cache
+                        .last_measure_width
+                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
+                        .unwrap_or(cx.bounds.size.width)
+                } else {
+                    cx.bounds.size.width
+                };
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -574,7 +609,6 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
-                let scale_bits = cx.scale_factor.to_bits();
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -631,6 +665,8 @@ impl ElementHostWidget {
                             "SelectableText",
                             props.rich.text.len().min(u32::MAX as usize) as u32,
                             constraints,
+                            metrics,
+                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -804,9 +840,12 @@ impl ElementHostWidget {
                     }
                 }
 
-                let origin = fret_core::Point::new(
-                    cx.bounds.origin.x,
-                    cx.bounds.origin.y + metrics.baseline,
+                let origin = crate::pixel_snap::snap_point_round(
+                    fret_core::Point::new(
+                        cx.bounds.origin.x,
+                        cx.bounds.origin.y + metrics.baseline,
+                    ),
+                    cx.scale_factor,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),

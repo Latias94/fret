@@ -8,7 +8,8 @@ use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps, ScrollAxis,
+    ScrollProps,
 };
 
 pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
@@ -73,6 +74,12 @@ where
         let collapsed = cx
             .read_model(&collapsed_model, fret_ui::Invalidation::Paint, |_app, v| *v)
             .unwrap_or(false);
+
+        let scale_factor = cx
+            .app
+            .global::<fret_core::window::WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(cx.window))
+            .unwrap_or(1.0);
 
         let (
             position_after_resize,
@@ -195,6 +202,9 @@ where
                     st.last_resize_position = None;
                 }
 
+                st.size = super::snap_size_to_device_pixels(scale_factor, st.size);
+                position = super::snap_point_to_device_pixels(scale_factor, position);
+
                 (
                     position,
                     st.size,
@@ -242,7 +252,9 @@ where
         };
 
         let mut window_props = ContainerProps::default();
-        window_props.layout.overflow = Overflow::Visible;
+        // Clip window contents to the window bounds (ImGui-style): items should not paint outside
+        // the window chrome even when they don't wrap.
+        window_props.layout.overflow = Overflow::Clip;
         if resizable_layout {
             window_props.layout.size.width = Length::Px(size.width);
             if !collapsed {
@@ -271,6 +283,9 @@ where
                     let mut props = ContainerProps::default();
                     props.layout.size.width = Length::Fill;
                     props.layout.size.height = Length::Px(Px(24.0));
+                    // Prevent multi-line title text from painting into the content area at
+                    // non-1.0 DPI when the layout engine probes min-content widths.
+                    props.layout.overflow = Overflow::Clip;
                     props.padding = Edges {
                         left: Px(8.0),
                         right: Px(6.0),
@@ -298,6 +313,7 @@ where
                     row.layout.size.width = Length::Fill;
                     row.layout.size.height = Length::Fill;
                     row.gap = Px(6.0);
+                    row.align = fret_ui::element::CrossAlign::Center;
 
                     let title = title_for_window.clone();
                     let title_bar_test_id = title_bar_test_id.clone();
@@ -330,6 +346,13 @@ where
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Fill;
                                 layout.size.height = Length::Fill;
+                                // Ensure the drag surface claims remaining row space (and can
+                                // shrink) instead of being measured in min-content mode (which
+                                // can force wrapped titles like "Window" + "A").
+                                layout.flex.grow = 1.0;
+                                layout.flex.shrink = 1.0;
+                                layout.flex.basis = Length::Px(Px(0.0));
+                                layout.size.min_width = Some(Px(0.0));
                                 layout
                             },
                             enabled: can_interact,
@@ -358,7 +381,15 @@ where
                         },
                         move |ui| {
                             let element = ui.with_cx_mut(|cx| {
-                                cx.text(title.clone()).attach_semantics(
+                                let mut props = fret_ui::element::TextProps::new(title.clone());
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.min_width = Some(Px(0.0));
+                                props.layout.flex.grow = 1.0;
+                                props.layout.flex.shrink = 1.0;
+                                props.layout.flex.basis = Length::Px(Px(0.0));
+                                props.wrap = fret_core::TextWrap::None;
+                                props.overflow = fret_core::TextOverflow::Ellipsis;
+                                cx.text_props(props).attach_semantics(
                                     fret_ui::element::SemanticsDecoration::default()
                                         .test_id(title_bar_test_id.clone()),
                                 )
@@ -380,6 +411,7 @@ where
                             };
                             props.layout.size.width = Length::Px(Px(20.0));
                             props.layout.size.height = Length::Px(Px(20.0));
+                            props.layout.flex.shrink = 0.0;
                             cx.pressable(props, move |cx, _state| {
                                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                                     let _ = host.update_model(&open, |v: &mut bool| {
@@ -403,21 +435,39 @@ where
 
             let content = {
                 let content_container = |cx: &mut ElementContext<'_, H>| {
-                    cx.container(
-                        {
-                            let mut props = ContainerProps::default();
-                            props.padding = Edges::all(Px(8.0));
-                            props
+                    let handle =
+                        cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+                    let mut scroll_layout = LayoutStyle::default();
+                    scroll_layout.size.width = Length::Fill;
+                    scroll_layout.size.height = Length::Fill;
+                    scroll_layout.overflow = Overflow::Clip;
+
+                    cx.scroll(
+                        ScrollProps {
+                            layout: scroll_layout,
+                            axis: ScrollAxis::Y,
+                            scroll_handle: Some(handle),
+                            ..Default::default()
                         },
                         move |cx| {
-                            let mut out = Vec::new();
-                            let mut ui = super::ImUiFacade {
-                                cx,
-                                out: &mut out,
-                                build_focus: None,
-                            };
-                            build(&mut ui);
-                            out
+                            vec![cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = Length::Fill;
+                                    props.padding = Edges::all(Px(8.0));
+                                    props
+                                },
+                                move |cx| {
+                                    let mut out = Vec::new();
+                                    let mut ui = super::ImUiFacade {
+                                        cx,
+                                        out: &mut out,
+                                        build_focus: None,
+                                    };
+                                    build(&mut ui);
+                                    out
+                                },
+                            )]
                         },
                     )
                 };

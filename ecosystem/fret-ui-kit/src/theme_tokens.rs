@@ -10,6 +10,14 @@ pub mod metric {
     pub const COMPONENT_TEXT_PROSE_PX: &str = "component.text.prose_px";
     pub const COMPONENT_TEXT_PROSE_LINE_HEIGHT: &str = "component.text.prose_line_height";
 
+    /// Default spacing between consecutive `imui` items along the X axis (ImGui-style
+    /// `ImGuiStyle::ItemSpacing.x`).
+    pub const COMPONENT_IMUI_ITEM_SPACING_X_PX: &str = "component.imui.item_spacing_x_px";
+
+    /// Default spacing between consecutive `imui` items along the Y axis (ImGui-style
+    /// `ImGuiStyle::ItemSpacing.y`).
+    pub const COMPONENT_IMUI_ITEM_SPACING_Y_PX: &str = "component.imui.item_spacing_y_px";
+
     /// Pointer drag threshold used by the `imui` facade before a drag session transitions to
     /// `dragging=true`.
     ///

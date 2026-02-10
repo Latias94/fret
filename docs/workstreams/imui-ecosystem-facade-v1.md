@@ -38,12 +38,31 @@ Status snapshot (2026-02-09):
     - `pointer_passthrough`: pointer hit-test transparent (ImGui `NoMouseInputs`-like),
     - `no_inputs`: pointer click-through and skipped by focus traversal (ImGui `NoInputs`-like).
 - `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
+- ImGui-aligned authoring conveniences are available without changing the low-level layout primitives:
+  - `ui.items(...)` models ImGui's default vertical item flow (`Style.ItemSpacing.y`, `Items::Start`).
+  - `ui.same_line(...)` models ImGui's `SameLine()` (`Style.ItemSpacing.x`).
+  - Both are theme-tunable via `component.imui.item_spacing_{x,y}_px` (fallbacks `8px`/`4px`).
 - OS-window promotion scope for non-docking floatings is explicitly locked: docking-only in v1, with a capability-gated promotion checklist for later milestones.
 - Performance guidance is tracked in a dedicated short guide for facade authors and reviewers.
   - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- 150% DPI text wrapping regression (fixed):
+  - Symptom: wrapped text in floating windows could overlap following items on Windows with scale factor 1.5.
+  - Root cause: `Text` measurement was clamping intrinsic height to parent-provided "known height" during sizing, so
+    layout under-reported text height while paint still prepared full glyph blobs.
+  - Fix: treat `Text` / `StyledText` / `SelectableText` intrinsic height as independent of height constraints when
+    `height=Auto` and no `max_height` is set; ignore `known.height` and allow `available.height=MaxContent` during
+    measure so layout reserves the full wrapped height.
+  - Regression gate: `tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json`
+- Floating window title bar wrapping into content area under fractional DPI (fixed):
+  - Symptom (pre-fix): title text could wrap into multiple lines during min-content probes, painting into the window
+    body (visually overlapping the first content line) at 150% DPI.
+  - Fix: clip title bar contents and force the title text to be single-line (`wrap=None`, `overflow=Ellipsis`) with
+    flex shrink + `min_width=0` so the row can shrink without multi-line spill.
+  - Evidence/gate: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json` + stale paint check on
+    `imui-float-demo.a.activate`.
 - Diagnostics bundles now export docking “why did it pick this target?” traces for cross-window drag/drop triage.
   - Field: `debug.docking_interaction.dock_drop_resolve` (source + resolved target + candidate rects).
   - Producer: `ecosystem/fret-docking/src/dock/space.rs` → `fret-runtime::WindowInteractionDiagnosticsStore`.
@@ -307,6 +326,9 @@ Upstream reference anchors (Dear ImGui docking branch):
 Note: `repo-ref/imgui` is local state. When citing behavior, record the commit you audited:
 
 - `git -C repo-ref/imgui rev-parse --short HEAD`
+- If `repo-ref/` is not present in your worktree, run the same command against your local snapshot:
+  - `git -C <path-to-imgui> rev-parse --short HEAD`
+  - Windows tip: `New-Item -ItemType Junction repo-ref -Target <path-to-repo-ref>`
 
 - Viewports and platform window lifecycle:
   - `repo-ref/imgui/imgui.h` (Viewports section; `ImGuiViewportFlags_*`, `RenderPlatformWindowsDefault`, platform callbacks)

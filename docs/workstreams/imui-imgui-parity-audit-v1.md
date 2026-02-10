@@ -11,7 +11,12 @@ editor-grade UI, and to make the remaining divergences **explicit and tracked**.
 
 ImGui reference snapshot (local, not committed):
 
-- `git -C repo-ref/imgui rev-parse --short HEAD` (example audited commit: `913a3c605`)
+- Record the exact ImGui commit you audited (example: `913a3c605`).
+- If you have a local `repo-ref/imgui` checkout at the repo root (recommended via a symlink/junction):
+  - `git -C repo-ref/imgui rev-parse --short HEAD`
+- Otherwise, run the same command against your local snapshot path:
+  - `git -C <path-to-imgui> rev-parse --short HEAD`
+  - Windows tip: `New-Item -ItemType Junction repo-ref -Target <path-to-repo-ref>`
 
 Related workstreams:
 
@@ -64,6 +69,42 @@ Legend:
     - `no_inputs=true`: click-through and skipped by focus traversal.
 - **Focus vs z-order split**: **Aligned**
   - Fret can take focus without z-order activation: `focus_on_click=true` with `activate_on_click=false`.
+
+### 1.1.2 Floating window content clipping / wrapping under fractional DPI (Windows)
+
+This is not an ImGui API gap but a hand-feel correctness issue: when the viewport uses a fractional
+scale factor (common 150% DPI), wrapped text must not overlap subsequent items when a window is
+small.
+
+- **Wrapped text does not overlap following items**: **Aligned (fixed)**
+  - Symptom (pre-fix): in `imui_floating_windows_demo`, `Window B` text could render an extra wrapped line that
+    painted over the next separator / text, producing a "ghosting/misalignment" impression after dragging.
+  - Root cause: `Text` measurement clamped intrinsic height to parent-provided height constraints during sizing,
+    so layout reserved less height than paint prepared.
+  - Fix: ignore height clamps for `Text`-like elements when `height=Auto` and no `max_height` is set.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/measure.rs` + diag script
+    `tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json`.
+- **Title bar contents do not spill into body**: **Aligned (fixed)**
+  - Symptom (pre-fix): title text could wrap and paint into the window body at fractional DPI when the layout engine
+    probed min-content widths (e.g. "Window" + "A" split across lines).
+  - Fix: clip the title bar contents and force title text to single-line truncation (`wrap=None`, `overflow=Ellipsis`)
+    with `min_width=0` + flex shrink.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` + diag script
+    `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json`.
+
+### 1.1.1 Docking tear-off / multi-viewport “peek behind moving window” (runner-owned)
+
+This behavior is **not owned by `imui`** (it is docking + runner policy), but it is critical for
+ImGui-class editor hand-feel when OS windows overlap during a dock drag.
+
+- **Hovered window selection ignores the moving tear-off window**: **Aligned**
+  - ImGui: sets `ImGuiViewportFlags_NoInputs` while dragging a viewport so platform hit-testing can
+    return transparent (Win32 example: `repo-ref/imgui/backends/imgui_impl_win32.cpp` `WM_NCHITTEST`
+    → `HTTRANSPARENT`).
+  - Fret: routing prefers other windows under the cursor when a dock tear-off window is following
+    the cursor (`prefer_not`), even though the pointer is always inside the moving window.
+  - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs` (`route_internal_drag_hover_from_cursor`,
+    `window_under_cursor`, `prefer_not`).
 
 ### 1.2 Item query semantics (hover/active/focus/click)
 
@@ -125,6 +166,18 @@ Not implemented / diverging (explicitly):
   - ImGui: `PushID()/PopID()` or `"Label##suffix"` patterns.
   - Fret: explicit keyed scopes (`ui.push_id(...)`, `ui.id(...)`, `for_each_keyed`).
   - Gap (ergonomics): no helper/note translating ImGui `"##"` / `"###"` patterns into Fret’s keyed scopes.
+
+### 1.4.1 Default item flow (`items` / `SameLine`) convenience (facade-level)
+
+ImGui's default authoring model is a window-scoped "layout cursor" that advances as items are
+submitted. Fret's `imui` facade keeps layout explicit, but provides a small set of helpers to make
+ImGui ports less noisy:
+
+- `ui.items(...)`: vertical item flow with ImGui-like default spacing (`Style.ItemSpacing.y`).
+- `ui.same_line(...)`: horizontal item flow with ImGui-like default spacing (`Style.ItemSpacing.x`).
+- Both are theme-tunable:
+  - `component.imui.item_spacing_x_px` (fallback `8px`)
+  - `component.imui.item_spacing_y_px` (fallback `4px`)
 
 ### 1.5 Popups / context menus
 
