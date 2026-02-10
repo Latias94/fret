@@ -80,8 +80,6 @@ impl DockedBottomSheet {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let DockedBottomSheet {
                 variant,
                 drag_handle,
@@ -89,23 +87,29 @@ impl DockedBottomSheet {
             } = self;
 
             let is_modal = variant == DockedBottomSheetVariant::Modal;
-            let elevation = if is_modal {
-                sheet_tokens::docked_modal_elevation(&theme)
-            } else {
-                sheet_tokens::docked_standard_elevation(&theme)
-            };
+            let (surface, corner_radii, focus_ring) = {
+                let theme = Theme::global(&*cx.app);
+                let elevation = if is_modal {
+                    sheet_tokens::docked_modal_elevation(theme)
+                } else {
+                    sheet_tokens::docked_standard_elevation(theme)
+                };
 
-            let background = sheet_tokens::docked_container_color(&theme);
-            let corner_radii = sheet_tokens::docked_container_shape(&theme);
-            let surface = material_surface_style(&theme, background, elevation, None, corner_radii);
+                let background = sheet_tokens::docked_container_color(theme);
+                let corner_radii = sheet_tokens::docked_container_shape(theme);
+                let surface =
+                    material_surface_style(theme, background, elevation, None, corner_radii);
 
-            let focus_ring = RingStyle {
-                placement: RingPlacement::Outset,
-                width: sheet_tokens::focus_indicator_thickness(&theme),
-                offset: sheet_tokens::focus_indicator_outline_offset(&theme),
-                color: sheet_tokens::focus_indicator_color(&theme),
-                offset_color: None,
-                corner_radii,
+                let focus_ring = RingStyle {
+                    placement: RingPlacement::Outset,
+                    width: sheet_tokens::focus_indicator_thickness(theme),
+                    offset: sheet_tokens::focus_indicator_outline_offset(theme),
+                    color: sheet_tokens::focus_indicator_color(theme),
+                    offset_color: None,
+                    corner_radii,
+                };
+
+                (surface, corner_radii, focus_ring)
             };
 
             let mut column = FlexProps::default();
@@ -134,11 +138,7 @@ impl DockedBottomSheet {
             let content_el = cx.flex(column, move |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
                 if drag_handle {
-                    out.push(drag_handle_element(
-                        cx,
-                        &theme,
-                        test_id_for_children.clone(),
-                    ));
+                    out.push(drag_handle_element(cx, test_id_for_children.clone()));
                 }
                 out.extend(content(cx));
                 out
@@ -243,35 +243,40 @@ impl ModalBottomSheet {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
+            let (default_duration_ms, bezier, scrim_base) = {
+                let theme = Theme::global(&*cx.app);
+                let default_duration_ms = theme
+                    .duration_ms_by_key("md.sys.motion.duration.medium2")
+                    .unwrap_or(300);
+                let easing_key = self
+                    .easing_key
+                    .clone()
+                    .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
+                let bezier =
+                    theme
+                        .easing_by_key(easing_key.as_ref())
+                        .unwrap_or(fret_ui::theme::CubicBezier {
+                            x1: 0.0,
+                            y1: 0.0,
+                            x2: 1.0,
+                            y2: 1.0,
+                        });
+                let scrim_base = theme.color_required("md.sys.color.scrim");
+                (default_duration_ms, bezier, scrim_base)
+            };
+
             let open_ms = self
                 .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
+                .unwrap_or(default_duration_ms);
             let close_ms = self
                 .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
+                .unwrap_or(default_duration_ms);
             let open_ticks = motion::ms_to_frames(open_ms);
             let close_ticks = motion::ms_to_frames(close_ms);
-            let easing_key = self
-                .easing_key
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -288,7 +293,6 @@ impl ModalBottomSheet {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_base = theme.color_required("md.sys.color.scrim");
                 let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -436,13 +440,16 @@ impl ModalBottomSheet {
 
 fn drag_handle_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     sheet_test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    let width = sheet_tokens::docked_drag_handle_width(theme);
-    let height = sheet_tokens::docked_drag_handle_height(theme);
-    let mut color = sheet_tokens::docked_drag_handle_color(theme);
-    color.a = (color.a * sheet_tokens::docked_drag_handle_opacity(theme)).clamp(0.0, 1.0);
+    let (width, height, color) = {
+        let theme = Theme::global(&*cx.app);
+        let width = sheet_tokens::docked_drag_handle_width(theme);
+        let height = sheet_tokens::docked_drag_handle_height(theme);
+        let mut color = sheet_tokens::docked_drag_handle_color(theme);
+        color.a = (color.a * sheet_tokens::docked_drag_handle_opacity(theme)).clamp(0.0, 1.0);
+        (width, height, color)
+    };
 
     // Compose baseline: `DragHandleVerticalPadding = 22.dp`.
     let padding_y = Px(22.0);

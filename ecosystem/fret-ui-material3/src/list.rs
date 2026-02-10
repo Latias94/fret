@@ -141,8 +141,6 @@ impl List {
         } = self;
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let sem = SemanticsProps {
                 role: SemanticsRole::List,
                 label: a11y_label.clone(),
@@ -264,7 +262,6 @@ impl List {
                                     let tab_stop = tab_stop.is_some_and(|t| t == idx);
                                     list_item(
                                         cx,
-                                        &theme,
                                         model.clone(),
                                         item,
                                         idx,
@@ -284,7 +281,6 @@ impl List {
 
 fn list_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     model: Model<Arc<str>>,
     item: &ListItem,
     idx: usize,
@@ -306,7 +302,11 @@ fn list_item<H: UiHost>(
             .map(|v| v.as_ref() == value.as_ref())
             .unwrap_or(false);
 
-        let design_variant = resolved_design_variant(cx, theme_default_design_variant(theme));
+        let default_design_variant = {
+            let theme = Theme::global(&*cx.app);
+            theme_default_design_variant(theme)
+        };
+        let design_variant = resolved_design_variant(cx, default_design_variant);
         let expressive = design_variant == MaterialDesignVariant::Expressive;
 
         if enabled {
@@ -327,18 +327,20 @@ fn list_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let height = list_tokens::one_line_container_height(theme);
-
-        let focus_ring_corner_radii = list_tokens::item_container_shape_for_interaction(
-            theme,
-            selected,
-            enabled,
-            list_tokens::ListItemInteraction::Focused,
-            expressive,
-        );
-
-        let focus_ring =
-            material_focus_ring_for_component(theme, "md.comp.list", focus_ring_corner_radii);
+        let (height, focus_ring) = {
+            let theme = Theme::global(&*cx.app);
+            let height = list_tokens::one_line_container_height(theme);
+            let focus_ring_corner_radii = list_tokens::item_container_shape_for_interaction(
+                theme,
+                selected,
+                enabled,
+                list_tokens::ListItemInteraction::Focused,
+                expressive,
+            );
+            let focus_ring =
+                material_focus_ring_for_component(theme, "md.comp.list", focus_ring_corner_radii);
+            (height, focus_ring)
+        };
 
         let pressable_props = PressableProps {
             enabled,
@@ -357,7 +359,10 @@ fn list_item<H: UiHost>(
                 l.size.width = Length::Fill;
                 l.size.height = Length::Px(height);
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
             focus_ring: Some(focus_ring),
@@ -381,19 +386,71 @@ fn list_item<H: UiHost>(
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
 
-                let (label_color, icon_color, state_layer_color, state_layer_target) =
-                    list_tokens::item_outcomes(theme, selected, enabled, interaction);
+                let (
+                    label_color,
+                    icon_color,
+                    state_layer_color,
+                    state_layer_target,
+                    corner_radii,
+                    ripple_base_opacity,
+                    config,
+                    selected_bg,
+                    gap,
+                    padding,
+                    leading_icon_size,
+                    trailing_icon_size,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let (label_color, icon_color, state_layer_color, state_layer_target) =
+                        list_tokens::item_outcomes(theme, selected, enabled, interaction);
+                    let corner_radii = list_tokens::item_container_shape_for_interaction(
+                        theme,
+                        selected,
+                        enabled,
+                        interaction,
+                        expressive,
+                    );
+                    let ripple_base_opacity =
+                        list_tokens::pressed_state_layer_opacity(theme, selected);
+                    let config = material_pressable_indication_config(theme, None);
 
-                let corner_radii = list_tokens::item_container_shape_for_interaction(
-                    theme,
-                    selected,
-                    enabled,
-                    interaction,
-                    expressive,
-                );
+                    let selected_bg = selected
+                        .then(|| list_tokens::selected_container_background(theme, enabled));
 
-                let ripple_base_opacity = list_tokens::pressed_state_layer_opacity(theme, selected);
-                let config = material_pressable_indication_config(theme, None);
+                    let gap = list_tokens::item_between_space(theme);
+                    let padding = Edges {
+                        left: list_tokens::item_leading_space(theme),
+                        right: list_tokens::item_trailing_space(theme),
+                        top: list_tokens::item_top_space(theme),
+                        bottom: list_tokens::item_bottom_space(theme),
+                    };
+
+                    let leading_icon_size =
+                        list_tokens::leading_icon_size_with_variant(theme, expressive);
+                    let trailing_icon_size =
+                        list_tokens::trailing_icon_size_with_variant(theme, expressive);
+
+                    let label_style = theme
+                        .text_style_by_key("md.sys.typescale.body-large")
+                        .unwrap_or_else(TextStyle::default);
+
+                    (
+                        label_color,
+                        icon_color,
+                        state_layer_color,
+                        state_layer_target,
+                        corner_radii,
+                        ripple_base_opacity,
+                        config,
+                        selected_bg,
+                        gap,
+                        padding,
+                        leading_icon_size,
+                        trailing_icon_size,
+                        label_style,
+                    )
+                };
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -408,12 +465,6 @@ fn list_item<H: UiHost>(
                     false,
                 );
 
-                let selected_bg = if selected {
-                    Some(list_tokens::selected_container_background(theme, enabled))
-                } else {
-                    None
-                };
-
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
                 row.layout.size.height = Length::Px(height);
@@ -421,13 +472,8 @@ fn list_item<H: UiHost>(
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
                 row.align = CrossAlign::Center;
-                row.gap = list_tokens::item_between_space(theme);
-                row.padding = Edges {
-                    left: list_tokens::item_leading_space(theme),
-                    right: list_tokens::item_trailing_space(theme),
-                    top: list_tokens::item_top_space(theme),
-                    bottom: list_tokens::item_bottom_space(theme),
-                };
+                row.gap = gap;
+                row.padding = padding;
 
                 let container = cx.container(
                     ContainerProps {
@@ -443,20 +489,13 @@ fn list_item<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx| {
-                        let leading = leading_icon.as_ref().map(|id| {
-                            list_icon(cx, theme, id, icon_color, expressive, ListIconSlot::Leading)
-                        });
-                        let trailing = trailing_icon.as_ref().map(|id| {
-                            list_icon(
-                                cx,
-                                theme,
-                                id,
-                                icon_color,
-                                expressive,
-                                ListIconSlot::Trailing,
-                            )
-                        });
-                        let label_el = list_item_label(cx, theme, &label, label_color);
+                        let leading = leading_icon
+                            .as_ref()
+                            .map(|id| list_icon(cx, id, icon_color, leading_icon_size));
+                        let trailing = trailing_icon
+                            .as_ref()
+                            .map(|id| list_icon(cx, id, icon_color, trailing_icon_size));
+                        let label_el = list_item_label(cx, &label, label_style, label_color);
 
                         let content = cx.flex(row, move |_cx| {
                             let mut out = Vec::new();
@@ -495,24 +534,12 @@ fn interaction_state(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum ListIconSlot {
-    Leading,
-    Trailing,
-}
-
 fn list_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     icon: &IconId,
     color: Color,
-    expressive: bool,
-    slot: ListIconSlot,
+    size: Px,
 ) -> AnyElement {
-    let size = match slot {
-        ListIconSlot::Leading => list_tokens::leading_icon_size_with_variant(theme, expressive),
-        ListIconSlot::Trailing => list_tokens::trailing_icon_size_with_variant(theme, expressive),
-    };
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);
@@ -525,14 +552,10 @@ fn list_icon<H: UiHost>(
 
 fn list_item_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     text: &Arc<str>,
+    style: TextStyle,
     color: Color,
 ) -> AnyElement {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.body-large")
-        .unwrap_or_else(TextStyle::default);
-
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);

@@ -158,7 +158,7 @@ For `fret-components`:
 
 2) **Compatibility enforcement**:
    - Add CI checks to enforce the dependency direction rules and forbid cycles (required before expanding crate count).
-   - Recommended local/CI gate in this repo: `pwsh -NoProfile -File tools/check_layering.ps1`.
+   - Recommended local/CI gate in this repo: `python3 tools/check_layering.py`.
 
 3) **Facade surface**:
    - The `fret` crate facade remains **framework-only** (no re-export of `fret-components`).

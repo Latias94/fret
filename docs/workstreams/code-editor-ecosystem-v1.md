@@ -713,15 +713,16 @@ Evidence anchors:
 - [~] Fold regions + placeholders without breaking caret/selection.
   - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
   - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
-    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export follows the composed path when enabled (default remains v1).
 - [~] Inlays (injected display fragments) without mutating the underlying buffer.
   - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
   - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
-    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export follows the composed path when enabled (default remains v1).
 - [~] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
   - Implemented (staged): inline preedit can be modeled as a view-layer fragment source (opt-in composed path).
-  - In progress: make semantics export (a11y) consume the same composed mapping.
+  - Implemented (staged): semantics export (a11y) consumes the same composed mapping when the composed preedit path is enabled.
   - Remaining DOD: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
+    - Status: a combined composed baseline exists, but we still need explicit mapping-drift + a11y assertions.
 
 ### 9) Retained host / composable rows (only if required)
 

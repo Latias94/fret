@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Rect, Scene, SemanticsRole,
+    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
@@ -3941,6 +3941,15 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub shape_cache_entries: u64,
     pub measure_cache_buckets: u64,
 
+    #[serde(default)]
+    pub unwrapped_layout_cache_entries: u64,
+    #[serde(default)]
+    pub frame_unwrapped_layout_cache_hits: u64,
+    #[serde(default)]
+    pub frame_unwrapped_layout_cache_misses: u64,
+    #[serde(default)]
+    pub frame_unwrapped_layouts_created: u64,
+
     pub frame_cache_resets: u64,
     pub frame_blob_cache_hits: u64,
     pub frame_blob_cache_misses: u64,
@@ -3964,6 +3973,10 @@ impl UiRendererTextPerfSnapshotV1 {
             blob_cache_entries: snapshot.blob_cache_entries,
             shape_cache_entries: snapshot.shape_cache_entries,
             measure_cache_buckets: snapshot.measure_cache_buckets,
+            unwrapped_layout_cache_entries: snapshot.unwrapped_layout_cache_entries,
+            frame_unwrapped_layout_cache_hits: snapshot.frame_unwrapped_layout_cache_hits,
+            frame_unwrapped_layout_cache_misses: snapshot.frame_unwrapped_layout_cache_misses,
+            frame_unwrapped_layouts_created: snapshot.frame_unwrapped_layouts_created,
             frame_cache_resets: snapshot.frame_cache_resets,
             frame_blob_cache_hits: snapshot.frame_blob_cache_hits,
             frame_blob_cache_misses: snapshot.frame_blob_cache_misses,
@@ -4521,16 +4534,16 @@ fn default_click_count() -> u8 {
     1
 }
 
-fn default_move_frames_per_step() -> u32 {
-    1
-}
-
 fn default_click_stable_frames() -> u32 {
     2
 }
 
 fn default_click_stable_max_move_px() -> f32 {
     1.0
+}
+
+fn default_move_frames_per_step() -> u32 {
+    1
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {

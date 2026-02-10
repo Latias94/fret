@@ -15,6 +15,7 @@ Active workstreams:
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
+- `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
 - `docs/workstreams/localization-i18n-v1.md`
@@ -112,3 +113,6 @@ Active workstreams:
 - `docs/workstreams/router-ui-v1-todo.md`
 - `docs/workstreams/image-support-v1.md`
 - `docs/workstreams/image-support-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1.md`
+- `docs/workstreams/creative-recipes-v1-todo.md`
+- `docs/workstreams/creative-recipes-v1-milestones.md`

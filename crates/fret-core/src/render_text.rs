@@ -17,6 +17,11 @@ pub struct RendererTextPerfSnapshot {
     pub shape_cache_entries: u64,
     pub measure_cache_buckets: u64,
 
+    pub unwrapped_layout_cache_entries: u64,
+    pub frame_unwrapped_layout_cache_hits: u64,
+    pub frame_unwrapped_layout_cache_misses: u64,
+    pub frame_unwrapped_layouts_created: u64,
+
     pub frame_cache_resets: u64,
     pub frame_blob_cache_hits: u64,
     pub frame_blob_cache_misses: u64,

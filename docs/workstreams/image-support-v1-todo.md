@@ -19,9 +19,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] IMG-adr-001 Draft and land an ADR for image `object-fit` semantics.
   - Must cover: fit enum vocabulary, default behavior, `ImageRegion` interaction rule, and backcompat.
   - References: `docs/adr/0121-streaming-images-and-video-surfaces.md`, `docs/adr/0004-resource-handles.md`.
-  - Draft: `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
+  - Draft: `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
   - Evidence:
-    - `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
+    - `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
 
 - [x] IMG-guard-010 Add a minimal regression gate checklist for image work (fast vs full).
   - Fast (mechanism + renderer math):

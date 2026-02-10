@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Axis, Color, Edges, LayoutDirection, Point, Px, Rect, SemanticsRole, Size, SvgFit,
-    TextOverflow, TextWrap,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -238,8 +238,6 @@ impl FilterChip {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
                 let focusable = match self.roving_tab_stop {
@@ -260,8 +258,42 @@ impl FilterChip {
                     }
                 }));
 
+                let checked = cx.get_model_copied(&self.selected, Invalidation::Layout);
                 let now_frame = cx.frame_id.0;
-                let corner_radii = filter_chip_tokens::container_shape(&theme);
+
+                let (
+                    corner_radii,
+                    focus_ring,
+                    height,
+                    leading_icon_px,
+                    trailing_icon_px,
+                    default_layout_direction,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = filter_chip_tokens::container_shape(theme);
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        filter_chip_tokens::COMPONENT_PREFIX,
+                        corner_radii,
+                    );
+                    let height = filter_chip_tokens::container_height(theme);
+                    let leading_icon_px = filter_chip_tokens::leading_icon_size(theme);
+                    let trailing_icon_px = filter_chip_tokens::trailing_icon_size(theme);
+                    let default_layout_direction = theme_default_layout_direction(theme);
+                    let label_style = theme
+                        .text_style_by_key("md.sys.typescale.label-large")
+                        .unwrap_or_else(TextStyle::default);
+                    (
+                        corner_radii,
+                        focus_ring,
+                        height,
+                        leading_icon_px,
+                        trailing_icon_px,
+                        default_layout_direction,
+                        label_style,
+                    )
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -270,20 +302,19 @@ impl FilterChip {
                         role: Some(SemanticsRole::Button),
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),
                         test_id: self.test_id.clone(),
-                        checked: cx.get_model_copied(&self.selected, Invalidation::Layout),
+                        checked,
                         ..Default::default()
                     },
                     layout: {
                         let mut l = fret_ui::element::LayoutStyle::default();
                         l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
+                        {
+                            let theme = Theme::global(&*cx.app);
+                            enforce_minimum_interactive_size(&mut l, theme);
+                        }
                         l
                     },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        filter_chip_tokens::COMPONENT_PREFIX,
-                        corner_radii,
-                    )),
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -310,55 +341,156 @@ impl FilterChip {
                             states |= WidgetStates::SELECTED;
                         }
 
-                        let label_color =
-                            filter_chip_tokens::label_color(&theme, selected, enabled, interaction);
-                        let label_color = resolve_override_slot_with(
-                            self.style.label_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || label_color,
-                        );
+                        let (
+                            label_color,
+                            leading_icon_color,
+                            trailing_icon_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            indication_config,
+                            background,
+                            shadow,
+                            outline,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let leading_icon_color = filter_chip_tokens::leading_icon_color(
-                            &theme,
-                            selected,
-                            enabled,
-                            interaction,
-                        );
-                        let leading_icon_color = resolve_override_slot_with(
-                            self.style.leading_icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || leading_icon_color,
-                        );
+                            let label_color_default = filter_chip_tokens::label_color(
+                                theme,
+                                selected,
+                                enabled,
+                                interaction,
+                            );
+                            let label_color = resolve_override_slot_with(
+                                self.style.label_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || label_color_default,
+                            );
 
-                        let trailing_icon_color = filter_chip_tokens::trailing_icon_color(
-                            &theme,
-                            selected,
-                            enabled,
-                            interaction,
-                        );
-                        let trailing_icon_color = resolve_override_slot_with(
-                            self.style.trailing_icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || trailing_icon_color,
-                        );
+                            let leading_icon_color_default = filter_chip_tokens::leading_icon_color(
+                                theme,
+                                selected,
+                                enabled,
+                                interaction,
+                            );
+                            let leading_icon_color = resolve_override_slot_with(
+                                self.style.leading_icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || leading_icon_color_default,
+                            );
 
-                        let state_layer_color =
-                            filter_chip_tokens::state_layer_color(&theme, selected, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                            let trailing_icon_color_default =
+                                filter_chip_tokens::trailing_icon_color(
+                                    theme,
+                                    selected,
+                                    enabled,
+                                    interaction,
+                                );
+                            let trailing_icon_color = resolve_override_slot_with(
+                                self.style.trailing_icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || trailing_icon_color_default,
+                            );
 
-                        let state_layer_target =
-                            filter_chip_tokens::state_layer_opacity(&theme, selected, interaction);
-                        let ripple_base_opacity =
-                            filter_chip_tokens::pressed_state_layer_opacity(&theme, selected);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let state_layer_color_default =
+                                filter_chip_tokens::state_layer_color(theme, selected, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color_default,
+                            );
+
+                            let state_layer_target = filter_chip_tokens::state_layer_opacity(
+                                theme,
+                                selected,
+                                interaction,
+                            );
+                            let ripple_base_opacity =
+                                filter_chip_tokens::pressed_state_layer_opacity(theme, selected);
+                            let indication_config =
+                                material_pressable_indication_config(theme, None);
+
+                            let (background, shadow, outline) = match self.variant {
+                                FilterChipVariant::Elevated => {
+                                    let bg_default =
+                                        filter_chip_tokens::elevated_container_background(
+                                            theme, selected, enabled,
+                                        );
+                                    let bg = resolve_override_slot_with(
+                                        self.style.container_background.as_ref(),
+                                        states,
+                                        |color| color.resolve(theme),
+                                        || bg_default,
+                                    );
+                                    let elevation =
+                                        filter_chip_tokens::elevated_container_elevation(
+                                            theme,
+                                            enabled,
+                                            interaction,
+                                        );
+                                    let shadow_color =
+                                        filter_chip_tokens::elevated_container_shadow_color(theme);
+                                    let surface = material_surface_style(
+                                        theme,
+                                        bg,
+                                        elevation,
+                                        Some(shadow_color),
+                                        corner_radii,
+                                    );
+                                    (Some(surface.background), surface.shadow, None)
+                                }
+                                FilterChipVariant::Flat => {
+                                    if selected {
+                                        let bg_default =
+                                            filter_chip_tokens::flat_selected_container_background(
+                                                theme, enabled,
+                                            );
+                                        let bg = resolve_override_slot_with(
+                                            self.style.container_background.as_ref(),
+                                            states,
+                                            |color| color.resolve(theme),
+                                            || bg_default,
+                                        );
+                                        (Some(bg), None, None)
+                                    } else {
+                                        let outline_default =
+                                            filter_chip_tokens::flat_unselected_outline(
+                                                theme,
+                                                enabled,
+                                                interaction,
+                                            );
+                                        let outline = resolve_override_slot_opt_with(
+                                            self.style.outline_color.as_ref(),
+                                            states,
+                                            |color| color.resolve(theme),
+                                            || Some(outline_default.color),
+                                        )
+                                        .map(|color| filter_chip_tokens::ChipOutline {
+                                            width: outline_default.width,
+                                            color,
+                                        });
+                                        (None, None, outline)
+                                    }
+                                }
+                            };
+
+                            (
+                                label_color,
+                                leading_icon_color,
+                                trailing_icon_color,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                indication_config,
+                                background,
+                                shadow,
+                                outline,
+                            )
+                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -370,89 +502,23 @@ impl FilterChip {
                             is_pressed,
                             state_layer_target,
                             ripple_base_opacity,
-                            config,
+                            indication_config,
                             false,
                         );
-
-                        let height = filter_chip_tokens::container_height(&theme);
-
-                        let (background, shadow, outline) = match self.variant {
-                            FilterChipVariant::Elevated => {
-                                let bg = filter_chip_tokens::elevated_container_background(
-                                    &theme, selected, enabled,
-                                );
-                                let bg = resolve_override_slot_with(
-                                    self.style.container_background.as_ref(),
-                                    states,
-                                    |color| color.resolve(&theme),
-                                    || bg,
-                                );
-                                let elevation = filter_chip_tokens::elevated_container_elevation(
-                                    &theme,
-                                    enabled,
-                                    interaction,
-                                );
-                                let shadow_color =
-                                    filter_chip_tokens::elevated_container_shadow_color(&theme);
-                                let surface = material_surface_style(
-                                    &theme,
-                                    bg,
-                                    elevation,
-                                    Some(shadow_color),
-                                    corner_radii,
-                                );
-                                (Some(surface.background), surface.shadow, None)
-                            }
-                            FilterChipVariant::Flat => {
-                                if selected {
-                                    let bg = filter_chip_tokens::flat_selected_container_background(
-                                        &theme, enabled,
-                                    );
-                                    let bg = resolve_override_slot_with(
-                                        self.style.container_background.as_ref(),
-                                        states,
-                                        |color| color.resolve(&theme),
-                                        || bg,
-                                    );
-                                    (Some(bg), None, None)
-                                } else {
-                                    let outline = filter_chip_tokens::flat_unselected_outline(
-                                        &theme,
-                                        enabled,
-                                        interaction,
-                                    );
-                                    let outline = resolve_override_slot_opt_with(
-                                        self.style.outline_color.as_ref(),
-                                        states,
-                                        |color| color.resolve(&theme),
-                                        || Some(outline.color),
-                                    )
-                                    .map(|color| filter_chip_tokens::ChipOutline {
-                                        width: outline.width,
-                                        color,
-                                    });
-                                    (None, None, outline)
-                                }
-                            }
-                        };
 
                         let leading_icon = self
                             .leading_icon
                             .or_else(|| selected.then_some(fret_icons::ids::ui::CHECK));
-                        let leading_icon_size = leading_icon
-                            .as_ref()
-                            .map(|_| filter_chip_tokens::leading_icon_size(&theme));
+                        let leading_icon_size = leading_icon.as_ref().map(|_| leading_icon_px);
                         let trailing_icon = self.trailing_icon;
-                        let trailing_icon_size = trailing_icon
-                            .as_ref()
-                            .map(|_| filter_chip_tokens::trailing_icon_size(&theme));
+                        let trailing_icon_size = trailing_icon.as_ref().map(|_| trailing_icon_px);
 
                         let layout_direction =
-                            resolved_layout_direction(cx, theme_default_layout_direction(&theme));
+                            resolved_layout_direction(cx, default_layout_direction);
 
                         let content = chip_content(
                             cx,
-                            &theme,
+                            label_style.clone(),
                             &self.label,
                             label_color,
                             leading_icon,
@@ -497,7 +563,7 @@ impl FilterChip {
 
 fn chip_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    label_style: TextStyle,
     label: &Arc<str>,
     label_color: Color,
     leading_icon: Option<IconId>,
@@ -522,12 +588,8 @@ fn chip_content<H: UiHost>(
     const WITH_LEADING_ICON_LEADING_SPACE: Px = Px(8.0);
     const WITH_TRAILING_ICON_TRAILING_SPACE: Px = Px(8.0);
 
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut text = TextProps::new(label.clone());
-    text.style = Some(style);
+    text.style = Some(label_style);
     text.color = Some(label_color);
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Ellipsis;
@@ -572,7 +634,6 @@ fn chip_content<H: UiHost>(
             if let Some(handler) = on_trailing_icon_activate.clone() {
                 out.push(trailing_icon_touch_target_overlay(
                     cx,
-                    theme,
                     enabled,
                     selected,
                     chip_test_id.clone(),
@@ -601,7 +662,6 @@ fn fixed_space<H: UiHost>(cx: &mut ElementContext<'_, H>, width: Px) -> AnyEleme
 
 fn trailing_icon_touch_target_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     enabled: bool,
     selected: bool,
     chip_test_id: Option<Arc<str>>,
@@ -680,7 +740,10 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
 
             // Match Material Web: trailing action gets a 48px tall "touch" target without changing
             // the visual chrome size/placement.
-            let min_touch = minimum_interactive_size(theme);
+            let min_touch = {
+                let theme = Theme::global(&*cx.app);
+                minimum_interactive_size(theme)
+            };
             let top = Px((chip_height.0 - min_touch.0) * 0.5);
             let width = Px(size.0 + 16.0);
 
@@ -735,20 +798,35 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
                         states |= WidgetStates::SELECTED;
                     }
 
-                    let state_layer_color =
-                        filter_chip_tokens::state_layer_color(theme, selected, interaction);
-                    let state_layer_color = resolve_override_slot_with(
-                        style_state_layer_color.as_ref(),
-                        states,
-                        |color| color.resolve(theme),
-                        || state_layer_color,
-                    );
+                    let (
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        indication_config,
+                    ) = {
+                        let theme = Theme::global(&*cx.app);
+                        let state_layer_color_default =
+                            filter_chip_tokens::state_layer_color(theme, selected, interaction);
+                        let state_layer_color = resolve_override_slot_with(
+                            style_state_layer_color.as_ref(),
+                            states,
+                            |color| color.resolve(theme),
+                            || state_layer_color_default,
+                        );
 
-                    let state_layer_target =
-                        filter_chip_tokens::state_layer_opacity(theme, selected, interaction);
-                    let ripple_base_opacity =
-                        filter_chip_tokens::pressed_state_layer_opacity(theme, selected);
-                    let config = material_pressable_indication_config(theme, None);
+                        let state_layer_target =
+                            filter_chip_tokens::state_layer_opacity(theme, selected, interaction);
+                        let ripple_base_opacity =
+                            filter_chip_tokens::pressed_state_layer_opacity(theme, selected);
+                        let indication_config = material_pressable_indication_config(theme, None);
+
+                        (
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            indication_config,
+                        )
+                    };
 
                     let circle_size = Px(size.0 * (4.0 / 3.0));
                     let corner_radii = fret_core::Corners::all(Px(circle_size.0 / 2.0));
@@ -772,7 +850,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
                         is_pressed,
                         state_layer_target,
                         ripple_base_opacity,
-                        config,
+                        indication_config,
                         false,
                     );
 

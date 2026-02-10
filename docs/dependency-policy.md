@@ -41,5 +41,5 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 
 ## Drift Checks
 
-- Validate crate layering and forbid backend leakage: `pwsh -NoProfile -File tools/check_layering.ps1`
-- Validate ADR ID uniqueness: `pwsh -NoProfile -File tools/check_adr_numbers.ps1`
+- Validate crate layering and forbid backend leakage: `python3 tools/check_layering.py`
+- Validate ADR ID uniqueness: `python3 tools/check_adr_numbers.py`

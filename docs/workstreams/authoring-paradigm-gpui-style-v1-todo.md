@@ -148,7 +148,7 @@ Tasks:
   - Evidence: `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
 - `[x]` Add a lint-style checklist or CI grep gate for `"strip_prefix(\"...\""` patterns in demos.
   - Evidence: `.github/workflows/consistency-checks.yml`
-  - Evidence: `tools/check_stringly_command_parsing.ps1`
+  - Evidence: `tools/check_stringly_command_parsing.py`
 - `[x]` Document a view-cache-safe pattern for dynamic command routing.
   - Motivation: `MessageRouter` is per-frame and view-cache reuse can skip subtree re-builds.
   - Goal: a recommended stable `CommandId` -> message lookup for cached subtrees.

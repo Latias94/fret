@@ -35,7 +35,7 @@ These are the “hard seams” that make refactors safe:
 2. **Crate layering is enforced**
    - Core crates stay backend-agnostic (no `winit`/`wgpu`/`web-sys` in `fret-core`/`fret-runtime`/`fret-app`/`fret-ui`).
    - Ecosystem crates are extractable and backend-agnostic by default.
-   - Validate continuously via `tools/check_layering.ps1` (ADR 0093, `docs/dependency-policy.md`).
+   - Validate continuously via `tools/check_layering.py` (ADR 0093, `docs/dependency-policy.md`).
 
 3. **Hard-to-change contracts live in ADRs**
    - If a refactor changes a contract, update or add an ADR first (or explicitly mark a decision gate as proposed).
@@ -139,11 +139,11 @@ Outcome: breaking changes become obvious quickly.
 
 Exit criteria (v1):
 
-- `pwsh -NoProfile -File tools/check_layering.ps1` is green.
+- `python3 tools/check_layering.py` is green.
 - A documented “refactor safety set” exists (commands + minimal subsets).
 - At least one scripted diagnostics suite is considered “always-run” for regressions.
 - A lightweight module-size drift report exists (to keep “god files” visible).
-  - `pwsh -NoProfile -File tools/report_largest_files.ps1 -Top 30 -MinLines 800`
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
 
 ### M1 — Core contracts closure (portable kernel confidence)
 
@@ -485,7 +485,7 @@ Examples:
 This program is only “fearless” if we have cheap, repeatable gates.
 Recommended default gates (adjust per workstream):
 
-- Layering: `pwsh -NoProfile -File tools/check_layering.ps1`
+- Layering: `python3 tools/check_layering.py`
 - Format: `cargo fmt`
 - Lint (when affordable): `cargo clippy --workspace --all-targets -- -D warnings`
 - Tests (subset, then expand): `cargo nextest run -p fret-ui` and `cargo nextest run -p fret-ui-shadcn`

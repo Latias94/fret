@@ -48,7 +48,7 @@
 - Prefer `cargo nextest run` when available for faster test execution.
 - `cargo fmt`: format code with rustfmt.
 - `cargo clippy --workspace --all-targets -- -D warnings`: lint (treat warnings as errors).
-- `pwsh -File tools/check_layering.ps1`: enforce workspace crate boundary rules (see `docs/dependency-policy.md`).
+- `python3 tools/check_layering.py`: enforce workspace crate boundary rules (see `docs/dependency-policy.md`).
 
 Toolchain is pinned via `rust-toolchain.toml` (Rust 1.92) and the workspace uses Rust 2024 edition.
 

@@ -149,9 +149,11 @@ impl SegmentedButtonSet {
             test_id,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
-        let layout_direction =
-            resolved_layout_direction(cx, theme_default_layout_direction(&theme));
+        let default_layout_direction = {
+            let theme = Theme::global(&*cx.app);
+            theme_default_layout_direction(theme)
+        };
+        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items
@@ -270,8 +272,6 @@ impl SegmentedButtonSet {
                     RovingNavigateResult::Handled { target }
                 }));
 
-                let theme = Theme::global(&*cx.app).clone();
-
                 let selected_single = match &selection {
                     SegmentedSelection::Single(model) => cx
                         .get_model_cloned(model, fret_ui::Invalidation::Layout)
@@ -311,7 +311,6 @@ impl SegmentedButtonSet {
                             enabled,
                             on_activate: handler,
                             roving_tab_stop: tab_stop.is_some_and(|t| t == idx),
-                            theme: theme.clone(),
                         }
                         .into_element(cx)
                     })
@@ -366,7 +365,6 @@ struct SegmentedButtonSegment {
     enabled: bool,
     on_activate: Option<OnActivate>,
     roving_tab_stop: bool,
-    theme: Theme,
 }
 
 impl SegmentedButtonSegment {
@@ -401,7 +399,17 @@ impl SegmentedButtonSegment {
                     }
                 });
 
-                let corner_radii = segment_corner_radii(&self.theme, self.idx, self.len);
+                let (corner_radii, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let shape_radius = segmented_tokens::shape_radius(theme);
+                    let corner_radii = segment_corner_radii(shape_radius, self.idx, self.len);
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        segmented_tokens::COMPONENT_PREFIX,
+                        corner_radii,
+                    );
+                    (corner_radii, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -426,14 +434,13 @@ impl SegmentedButtonSegment {
                         l.size.width = Length::Fill;
                         l.flex.grow = 1.0;
                         l.flex.basis = Length::Fill;
-                        enforce_minimum_interactive_size(&mut l, &self.theme);
+                        {
+                            let theme = Theme::global(&*cx.app);
+                            enforce_minimum_interactive_size(&mut l, theme);
+                        }
                         l
                     },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &self.theme,
-                        segmented_tokens::COMPONENT_PREFIX,
-                        corner_radii,
-                    )),
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -443,41 +450,79 @@ impl SegmentedButtonSegment {
                     cx.pointer_region(props, |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                        let container_height = segmented_tokens::container_height(&self.theme);
-                        let outline_width = segmented_tokens::outline_width(&self.theme);
+                        let (
+                            container_height,
+                            outline_width,
+                            background,
+                            outline_color,
+                            label_color,
+                            icon_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            indication_config,
+                            icon_size,
+                            label_style,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let background =
-                            segmented_tokens::container_background(&self.theme, self.selected);
-                        let outline_color = segmented_tokens::outline_color(&self.theme, enabled);
+                            let container_height = segmented_tokens::container_height(theme);
+                            let outline_width = segmented_tokens::outline_width(theme);
+                            let background =
+                                segmented_tokens::container_background(theme, self.selected);
+                            let outline_color = segmented_tokens::outline_color(theme, enabled);
 
-                        let label_color = segmented_tokens::label_color(
-                            &self.theme,
-                            self.selected,
-                            enabled,
-                            tokens_interaction,
-                        );
-                        let icon_color = segmented_tokens::icon_color(
-                            &self.theme,
-                            self.selected,
-                            enabled,
-                            tokens_interaction,
-                        );
+                            let label_color = segmented_tokens::label_color(
+                                theme,
+                                self.selected,
+                                enabled,
+                                tokens_interaction,
+                            );
+                            let icon_color = segmented_tokens::icon_color(
+                                theme,
+                                self.selected,
+                                enabled,
+                                tokens_interaction,
+                            );
 
-                        let (state_layer_color, state_layer_target) = match tokens_interaction {
-                            None => (Color::TRANSPARENT, 0.0),
-                            Some(interaction) => (
-                                segmented_tokens::state_layer_color(
-                                    &self.theme,
-                                    self.selected,
-                                    interaction,
+                            let (state_layer_color, state_layer_target) = match tokens_interaction {
+                                None => (Color::TRANSPARENT, 0.0),
+                                Some(interaction) => (
+                                    segmented_tokens::state_layer_color(
+                                        theme,
+                                        self.selected,
+                                        interaction,
+                                    ),
+                                    segmented_tokens::state_layer_opacity(theme, interaction),
                                 ),
-                                segmented_tokens::state_layer_opacity(&self.theme, interaction),
-                            ),
-                        };
+                            };
 
-                        let ripple_base_opacity =
-                            segmented_tokens::pressed_state_layer_opacity(&self.theme);
-                        let config = material_pressable_indication_config(&self.theme, None);
+                            let ripple_base_opacity =
+                                segmented_tokens::pressed_state_layer_opacity(theme);
+                            let indication_config =
+                                material_pressable_indication_config(theme, None);
+
+                            let icon_size = segmented_tokens::icon_size(theme);
+                            let label_style = theme
+                                .text_style_by_key("md.comp.outlined-segmented-button.label-text")
+                                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
+                                .unwrap_or_else(fret_core::TextStyle::default);
+
+                            (
+                                container_height,
+                                outline_width,
+                                background,
+                                outline_color,
+                                label_color,
+                                icon_color,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                indication_config,
+                                icon_size,
+                                label_style,
+                            )
+                        };
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -488,7 +533,7 @@ impl SegmentedButtonSegment {
                             is_pressed,
                             state_layer_target,
                             ripple_base_opacity,
-                            config,
+                            indication_config,
                             false,
                         );
 
@@ -497,23 +542,18 @@ impl SegmentedButtonSegment {
                             Some(material_icon(
                                 cx,
                                 &fret_icons::ids::ui::CHECK,
-                                segmented_tokens::icon_size(&self.theme),
+                                icon_size,
                                 icon_color,
                             ))
                         } else if let Some(icon) = self.item.icon.as_ref() {
-                            Some(material_icon(
-                                cx,
-                                icon,
-                                segmented_tokens::icon_size(&self.theme),
-                                icon_color,
-                            ))
+                            Some(material_icon(cx, icon, icon_size, icon_color))
                         } else {
                             None
                         };
 
                         let content = material_segment_content(
                             cx,
-                            &self.theme,
+                            label_style,
                             self.item.label.clone(),
                             leading,
                             label_color,
@@ -542,8 +582,8 @@ impl SegmentedButtonSegment {
     }
 }
 
-fn segment_corner_radii(theme: &Theme, idx: usize, len: usize) -> Corners {
-    let r = segmented_tokens::shape_radius(theme);
+fn segment_corner_radii(radius: Px, idx: usize, len: usize) -> Corners {
+    let r = radius;
     if len <= 1 {
         return Corners::all(r);
     }
@@ -596,7 +636,7 @@ fn material_segment_chrome<H: UiHost>(
 
 fn material_segment_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    label_style: fret_core::TextStyle,
     label: Arc<str>,
     leading: Option<AnyElement>,
     label_color: Color,
@@ -609,13 +649,8 @@ fn material_segment_content<H: UiHost>(
     props.align = CrossAlign::Center;
     props.wrap = false;
 
-    let style = theme
-        .text_style_by_key("md.comp.outlined-segmented-button.label-text")
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut text = TextProps::new(label);
-    text.style = Some(style);
+    text.style = Some(label_style);
     text.color = Some(label_color);
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Clip;

@@ -1,8 +1,9 @@
+#![cfg(any(target_os = "windows", target_os = "linux"))]
+
 use super::*;
 
 use fret_runtime::{CommandMeta, CommandScope, WindowMenuBarFocusService};
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
 fn alt_key_up_emits_focus_menu_bar_when_present() {
     let mut app = crate::test_host::TestHost::new();
@@ -59,7 +60,6 @@ fn alt_key_up_emits_focus_menu_bar_when_present() {
     );
 }
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[test]
 fn alt_key_up_does_not_emit_when_canceled_by_other_key() {
     let mut app = crate::test_host::TestHost::new();

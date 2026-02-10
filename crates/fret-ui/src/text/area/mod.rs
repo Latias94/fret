@@ -237,7 +237,11 @@ impl TextArea {
     }
 
     pub fn set_text(&mut self, text: impl Into<String>) {
-        self.text = text.into();
+        let next = text.into();
+        if self.text == next {
+            return;
+        }
+        self.text = next;
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self.ensure_caret_visible = true;
