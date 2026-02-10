@@ -22,7 +22,7 @@ Each TODO is labeled:
 ## M-1 — Main sync (keep worktree green)
 
 - [x] DEL-ENGM1-sync-001 Merge latest local `main` into the workstream branch and resolve conflicts.
-  - Evidence: merge commits `e9c13385` (2026-02-10) + earlier merges.
+  - Evidence: merge commits `e9c13385` + `8f174420` (2026-02-10) + earlier merges.
 - [x] DEL-ENGM1-sync-002 Adapt ecosystem tests/helpers to `UiServices: ... + MaterialService` and `Paint`-based `SceneOp::Quad`.
   - Evidence: `fix(workspace): adapt tests to MaterialService and Paint APIs` (`5cad446f`) (2026-02-10).
 - [x] DEL-ENGM1-sync-003 Fix portal measurement publishing to remain stable under absolute positioning constraints.
