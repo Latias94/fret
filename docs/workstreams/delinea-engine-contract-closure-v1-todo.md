@@ -91,6 +91,10 @@ Regression gates:
 
 ## M4 — Conformance harnesses (keep refactors safe)
 
-- [ ] DEL-ENG4-gates-001 Expand headless goldens to include a multi-grid scenario once M1 lands.
-- [ ] DEL-ENG4-gates-002 Add a “filter mode torture” headless snapshot (WeakFilter + Empty + Y indices cap edge cases).
+- [x] DEL-ENG4-gates-001 Expand headless goldens to include a multi-grid scenario once M1 lands.
+  - Evidence: `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (`golden_multi_grid_two_series_with_shared_datazoom`)
+  - Golden: `goldens/echarts-headless/v1/multi-grid-two-series-datazoom.json`
+- [x] DEL-ENG4-gates-002 Add a “filter mode torture” headless snapshot (WeakFilter + Empty + Y indices cap edge cases).
+  - Evidence: `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (`golden_filter_mode_weakfilter_x_and_empty_y`, `golden_filter_mode_y_indices_skips_when_view_len_exceeds_cap`)
+  - Goldens: `goldens/echarts-headless/v1/filtermode-weakfilter-x-empty-y.json`, `goldens/echarts-headless/v1/filtermode-y-indices-view-len-cap.json`
 - [ ] DEL-ENG4-gates-003 If/when UI routing stabilizes: add one `fretboard diag` script for multi-grid + linking (optional).

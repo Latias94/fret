@@ -1,7 +1,7 @@
 ---
 title: Delinea Engine Contract Closure v1 — Milestones
 status: draft
-date: 2026-02-09
+date: 2026-02-10
 scope: ecosystem/delinea, ecosystem/fret-chart, contracts, tests, demos
 ---
 
@@ -42,7 +42,7 @@ Acceptance criteria:
 - The existing multi-axis harness can be extended into a multi-grid harness with deterministic routing outcomes.
 - At least one headless regression gate covers multi-grid window + marks outputs.
 
-Status: In progress (engine + retained adapter landed; global controllers landed; brush+link scaffolds landed; remaining: broader linking semantics beyond brush X exports).
+Status: Done (2026-02-10).
 
 Linking follow-ups (now tracked as contracts-first):
 
@@ -73,7 +73,7 @@ Contracts (v1 subset):
 - ADR 1176: minimal dataset transform node set (filter + sort + derived dataset chaining).
 - ADR 1177: cache keys + invalidation boundaries for dataset transforms.
 
-Status: In progress (filter/sort lineage + raw-index identity landed; derived columns still planned).
+Status: Done (2026-02-10) for the v1 subset (derived datasets with filter/sort transforms + stable raw-index identity).
 
 ## M3 — Incremental mutation semantics (append/update)
 
@@ -114,4 +114,4 @@ Acceptance criteria:
 - Headless goldens cover: multi-axis, multi-grid, transforms lineage, filter-mode edge cases.
 - Interactive demo(s) exist with a stable “what to validate” checklist.
 
-Status: Planned.
+Status: In progress (2026-02-10).
