@@ -45,6 +45,7 @@ Optional (future-proofing, gate first):
 - `diag.text_ime_trace`: IME/composition evidence available in bundles/triage (not a step).
 - `diag.text_input_snapshot`: focused text input snapshot evidence available (selection/composition/cursor area).
 - `diag.shortcut_routing_trace`: keydown shortcut routing evidence available (IME reserved vs command dispatch).
+- `diag.overlay_placement_trace`: overlay placement decision evidence available (flip/shift/collision inputs + final rect).
 
 ## Where capabilities live
 

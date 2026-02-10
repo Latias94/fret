@@ -48,6 +48,7 @@ impl UiDiagnosticsWsBridge {
             "diag.text_ime_trace".to_string(),
             "diag.text_input_snapshot".to_string(),
             "diag.shortcut_routing_trace".to_string(),
+            "diag.overlay_placement_trace".to_string(),
         ];
         if screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());

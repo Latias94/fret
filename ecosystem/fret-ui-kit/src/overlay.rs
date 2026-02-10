@@ -122,11 +122,12 @@ pub fn popper_layout_for_element<H: UiHost>(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> Option<AnchoredPanelLayout> {
-    let anchor = anchor_bounds_for_element(cx, anchor)?;
+    let anchor_id = anchor;
+    let anchor = anchor_bounds_for_element(cx, anchor_id)?;
     let outer =
         outer_bounds_with_window_margin_for_environment(cx, Invalidation::Layout, window_margin);
     let size = estimated_element_size(cx, content, fallback_size);
-    Some(popper_layout_sized(
+    let (layout, trace) = crate::primitives::popper::popper_layout_sized_with_trace(
         outer,
         anchor,
         size,
@@ -134,7 +135,14 @@ pub fn popper_layout_for_element<H: UiHost>(
         side,
         align,
         options,
-    ))
+    );
+    cx.diagnostics_record_overlay_placement_anchored_panel(
+        None,
+        Some(anchor_id),
+        Some(content),
+        trace,
+    );
+    Some(layout)
 }
 
 #[cfg(test)]

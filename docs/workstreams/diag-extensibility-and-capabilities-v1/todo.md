@@ -50,6 +50,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 - [ ] Expand the reason-code taxonomy as new evidence surfaces land (avoid premature over-taxonomy).
 - [ ] Add bounded trace evidence (ring buffer) dumped on failure:
   - [ ] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability (hit path, occluder hints),
+  - [x] overlay placement evidence in `script.result.json` (`evidence.overlay_placement_trace`),
   - [x] focus + IME evidence snapshots in `script.result.json` (`evidence.focus_trace`, `evidence.web_ime_trace`),
   - [x] IME event summaries in `script.result.json` (`evidence.ime_event_trace`),
   - [x] shortcut routing evidence in `script.result.json` (`evidence.shortcut_routing_trace`),

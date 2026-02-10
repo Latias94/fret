@@ -117,6 +117,28 @@ Shortcut routing trace entry fields (native + web, runner-driven, no raw text):
 - `command` / `command_enabled` (when applicable)
 - `pending_sequence_len` (multi-keystroke shortcuts)
 
+Overlay placement trace entry fields (runner + component-layer hooks; structured geometry evidence):
+
+- `kind`: `anchored_panel` (popper-like) or `placed_rect` (higher-level placement policies)
+- `step_index` / `note` / `frame_id`
+- `overlay_root_name` (best-effort stable overlay identity, when known)
+- `anchor_element` / `anchor_test_id` (best-effort)
+- `content_element` / `content_test_id` (best-effort)
+
+For `kind=anchored_panel` (placement solver trace):
+
+- `outer_input` (pre-collision outer bounds)
+- `outer_collision` + `collision_padding` / `collision_boundary` (effective boundary)
+- `anchor` / `desired`
+- `preferred_side` / `align` / `direction` / `sticky` / `shift` / `offset` / `gap_px`
+- `preferred_rect` / `flipped_rect` + fit booleans + available space hints
+- `chosen_side` / `chosen_rect` / `rect_after_shift` / `shift_delta` / `final_rect`
+- `arrow` (optional; side + offset + center offset)
+
+For `kind=placed_rect` (non-solver placement):
+
+- `outer` / `anchor` / `placed` (+ optional `side`)
+
 Web IME trace entry fields (wasm only, ADR 0195; debug-only, redactable):
 
 - `step_index`

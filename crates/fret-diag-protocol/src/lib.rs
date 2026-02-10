@@ -726,6 +726,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ime_event_trace: Vec<UiImeEventTraceEntryV1>,
@@ -893,6 +895,151 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub command_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending_sequence_len: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiLayoutDirectionV1 {
+    Ltr,
+    Rtl,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySideV1 {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayAlignV1 {
+    Start,
+    Center,
+    End,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayStickyModeV1 {
+    Partial,
+    Always,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiEdgesV1 {
+    pub top_px: f32,
+    pub right_px: f32,
+    pub bottom_px: f32,
+    pub left_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiSizeV1 {
+    pub w_px: f32,
+    pub h_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayOffsetV1 {
+    pub main_axis_px: f32,
+    pub cross_axis_px: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alignment_axis_px: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayShiftV1 {
+    pub main_axis: bool,
+    pub cross_axis: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlayArrowLayoutV1 {
+    pub side: UiOverlaySideV1,
+    pub offset_px: f32,
+    pub alignment_offset_px: f32,
+    pub center_offset_px: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiOverlayPlacementTraceEntryV1 {
+    AnchoredPanel {
+        step_index: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+        #[serde(default)]
+        frame_id: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        overlay_root_name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_test_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_test_id: Option<String>,
+
+        outer_input: UiRectV1,
+        outer_collision: UiRectV1,
+        anchor: UiRectV1,
+        desired: UiSizeV1,
+        side_offset_px: f32,
+        preferred_side: UiOverlaySideV1,
+        align: UiOverlayAlignV1,
+        direction: UiLayoutDirectionV1,
+        sticky: UiOverlayStickyModeV1,
+        offset: UiOverlayOffsetV1,
+        shift: UiOverlayShiftV1,
+        collision_padding: UiEdgesV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        collision_boundary: Option<UiRectV1>,
+        gap_px: f32,
+
+        preferred_rect: UiRectV1,
+        flipped_rect: UiRectV1,
+        #[serde(default)]
+        preferred_fits_without_main_clamp: bool,
+        #[serde(default)]
+        flipped_fits_without_main_clamp: bool,
+        #[serde(default)]
+        preferred_available_main_px: f32,
+        #[serde(default)]
+        flipped_available_main_px: f32,
+        chosen_side: UiOverlaySideV1,
+        chosen_rect: UiRectV1,
+        rect_after_shift: UiRectV1,
+        shift_delta: UiPointV1,
+        final_rect: UiRectV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        arrow: Option<UiOverlayArrowLayoutV1>,
+    },
+    PlacedRect {
+        step_index: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        note: Option<String>,
+        #[serde(default)]
+        frame_id: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        overlay_root_name: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        anchor_test_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_element: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        content_test_id: Option<String>,
+        outer: UiRectV1,
+        anchor: UiRectV1,
+        placed: UiRectV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        side: Option<UiOverlaySideV1>,
+    },
 }
 
 /// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).

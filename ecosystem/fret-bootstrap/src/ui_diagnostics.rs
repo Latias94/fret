@@ -6,12 +6,14 @@ use fret_core::{
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
-    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
+    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiMouseButtonV1,
-    UiOptionalRootStateV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
+    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
+    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
+    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
+    UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
     UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
     UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
@@ -723,6 +725,7 @@ impl UiDiagnosticsService {
                     focus_trace: Vec::new(),
                     shortcut_routing_trace: Vec::new(),
                     last_shortcut_routing_seq: 0,
+                    overlay_placement_trace: Vec::new(),
                     web_ime_trace: Vec::new(),
                     ime_event_trace: Vec::new(),
                 },
@@ -1043,6 +1046,14 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         note.as_str(),
                     );
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        semantics_snapshot,
+                        window,
+                        step_index as u32,
+                        note.as_str(),
+                    );
                     active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                     output
                         .events
@@ -1084,6 +1095,14 @@ impl UiDiagnosticsService {
                     record_web_ime_trace(
                         &mut active.web_ime_trace,
                         app,
+                        step_index as u32,
+                        note.as_str(),
+                    );
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        semantics_snapshot,
+                        window,
                         step_index as u32,
                         note.as_str(),
                     );
@@ -1134,6 +1153,14 @@ impl UiDiagnosticsService {
                         },
                     };
 
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        Some(snapshot),
+                        window,
+                        step_index as u32,
+                        "wait_until",
+                    );
                     if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
                     {
                         active.wait_until = None;
@@ -1168,6 +1195,14 @@ impl UiDiagnosticsService {
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 if let Some(snapshot) = semantics_snapshot {
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        Some(snapshot),
+                        window,
+                        step_index as u32,
+                        "assert",
+                    );
                     if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
                     {
                         active.next_step = active.next_step.saturating_add(1);
@@ -1261,6 +1296,14 @@ impl UiDiagnosticsService {
                         Some("click"),
                     );
                 }
+                record_overlay_placement_trace(
+                    &mut active.overlay_placement_trace,
+                    element_runtime,
+                    Some(snapshot),
+                    window,
+                    step_index as u32,
+                    "click",
+                );
                 let modifiers = core_modifiers_from_ui(modifiers);
                 output.events.extend(click_events_with_modifiers(
                     pos,
@@ -3404,6 +3447,7 @@ impl UiDiagnosticsService {
         caps.push("diag.text_ime_trace".to_string());
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
+        caps.push("diag.overlay_placement_trace".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -5695,6 +5739,7 @@ struct ActiveScript {
     focus_trace: Vec<UiFocusTraceEntryV1>,
     shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     last_shortcut_routing_seq: u64,
+    overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     ime_event_trace: Vec<UiImeEventTraceEntryV1>,
 }
@@ -10368,6 +10413,7 @@ const MAX_SELECTOR_TRACE_CANDIDATES: usize = 6;
 const MAX_HIT_TEST_TRACE_ENTRIES: usize = 64;
 const MAX_FOCUS_TRACE_ENTRIES: usize = 64;
 const MAX_SHORTCUT_ROUTING_TRACE_ENTRIES: usize = 128;
+const MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES: usize = 128;
 const MAX_WEB_IME_TRACE_ENTRIES: usize = 64;
 const MAX_IME_EVENT_TRACE_ENTRIES: usize = 64;
 
@@ -10462,6 +10508,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         && active.hit_test_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
+        && active.overlay_placement_trace.is_empty()
         && active.web_ime_trace.is_empty()
         && active.ime_event_trace.is_empty()
     {
@@ -10472,6 +10519,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         hit_test_trace: active.hit_test_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
+        overlay_placement_trace: active.overlay_placement_trace.clone(),
         web_ime_trace: active.web_ime_trace.clone(),
         ime_event_trace: active.ime_event_trace.clone(),
     })
@@ -10513,6 +10561,68 @@ fn push_shortcut_routing_trace(
     }
 }
 
+fn overlay_placement_trace_entry_eq(
+    a: &UiOverlayPlacementTraceEntryV1,
+    b: &UiOverlayPlacementTraceEntryV1,
+) -> bool {
+    match (a, b) {
+        (
+            UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                step_index: a_step,
+                overlay_root_name: a_name,
+                anchor_element: a_anchor,
+                content_element: a_content,
+                ..
+            },
+            UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                step_index: b_step,
+                overlay_root_name: b_name,
+                anchor_element: b_anchor,
+                content_element: b_content,
+                ..
+            },
+        ) => a_step == b_step && a_name == b_name && a_anchor == b_anchor && a_content == b_content,
+        (
+            UiOverlayPlacementTraceEntryV1::PlacedRect {
+                step_index: a_step,
+                overlay_root_name: a_name,
+                anchor_element: a_anchor,
+                content_element: a_content,
+                ..
+            },
+            UiOverlayPlacementTraceEntryV1::PlacedRect {
+                step_index: b_step,
+                overlay_root_name: b_name,
+                anchor_element: b_anchor,
+                content_element: b_content,
+                ..
+            },
+        ) => a_step == b_step && a_name == b_name && a_anchor == b_anchor && a_content == b_content,
+        _ => false,
+    }
+}
+
+fn push_overlay_placement_trace(
+    trace: &mut Vec<UiOverlayPlacementTraceEntryV1>,
+    entry: UiOverlayPlacementTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| overlay_placement_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_OVERLAY_PLACEMENT_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
 fn web_ime_trace_entry_eq(a: &UiWebImeTraceEntryV1, b: &UiWebImeTraceEntryV1) -> bool {
     a.step_index == b.step_index && a.note == b.note
 }
@@ -10538,6 +10648,194 @@ fn push_ime_event_trace(trace: &mut Vec<UiImeEventTraceEntryV1>, entry: UiImeEve
     if trace.len() > MAX_IME_EVENT_TRACE_ENTRIES {
         let extra = trace.len().saturating_sub(MAX_IME_EVENT_TRACE_ENTRIES);
         trace.drain(0..extra);
+    }
+}
+
+fn ui_rect_from_rect(rect: Rect) -> UiRectV1 {
+    UiRectV1 {
+        x_px: rect.origin.x.0,
+        y_px: rect.origin.y.0,
+        w_px: rect.size.width.0,
+        h_px: rect.size.height.0,
+    }
+}
+
+fn ui_size_from_size(size: fret_core::Size) -> UiSizeV1 {
+    UiSizeV1 {
+        w_px: size.width.0,
+        h_px: size.height.0,
+    }
+}
+
+fn ui_edges_from_edges(edges: fret_core::Edges) -> UiEdgesV1 {
+    UiEdgesV1 {
+        top_px: edges.top.0,
+        right_px: edges.right.0,
+        bottom_px: edges.bottom.0,
+        left_px: edges.left.0,
+    }
+}
+
+fn ui_layout_direction_from_dir(
+    dir: fret_ui::overlay_placement::LayoutDirection,
+) -> UiLayoutDirectionV1 {
+    match dir {
+        fret_ui::overlay_placement::LayoutDirection::Ltr => UiLayoutDirectionV1::Ltr,
+        fret_ui::overlay_placement::LayoutDirection::Rtl => UiLayoutDirectionV1::Rtl,
+    }
+}
+
+fn ui_overlay_side_from_side(side: fret_ui::overlay_placement::Side) -> UiOverlaySideV1 {
+    match side {
+        fret_ui::overlay_placement::Side::Top => UiOverlaySideV1::Top,
+        fret_ui::overlay_placement::Side::Bottom => UiOverlaySideV1::Bottom,
+        fret_ui::overlay_placement::Side::Left => UiOverlaySideV1::Left,
+        fret_ui::overlay_placement::Side::Right => UiOverlaySideV1::Right,
+    }
+}
+
+fn ui_overlay_align_from_align(align: fret_ui::overlay_placement::Align) -> UiOverlayAlignV1 {
+    match align {
+        fret_ui::overlay_placement::Align::Start => UiOverlayAlignV1::Start,
+        fret_ui::overlay_placement::Align::Center => UiOverlayAlignV1::Center,
+        fret_ui::overlay_placement::Align::End => UiOverlayAlignV1::End,
+    }
+}
+
+fn ui_overlay_sticky_from_sticky(
+    sticky: fret_ui::overlay_placement::StickyMode,
+) -> UiOverlayStickyModeV1 {
+    match sticky {
+        fret_ui::overlay_placement::StickyMode::Partial => UiOverlayStickyModeV1::Partial,
+        fret_ui::overlay_placement::StickyMode::Always => UiOverlayStickyModeV1::Always,
+    }
+}
+
+fn test_id_for_element(
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window: AppWindowId,
+    element: fret_ui::elements::GlobalElementId,
+) -> Option<String> {
+    let (Some(rt), Some(snapshot)) = (element_runtime, semantics_snapshot) else {
+        return None;
+    };
+    let node_id = rt.node_for_element(window, element)?;
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.id.data().as_ffi() == node_id.data().as_ffi())?;
+    node.test_id.clone()
+}
+
+fn record_overlay_placement_trace(
+    trace: &mut Vec<UiOverlayPlacementTraceEntryV1>,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    window: AppWindowId,
+    step_index: u32,
+    note: &str,
+) {
+    let snapshot = element_runtime.and_then(|rt| rt.diagnostics_snapshot(window));
+    let Some(snapshot) = snapshot else {
+        return;
+    };
+
+    for rec in snapshot.overlay_placement.iter() {
+        match rec {
+            fret_ui::elements::OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => {
+                let anchor_test_id = r.anchor_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let content_test_id = r.content_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let t = r.trace;
+                let options = t.options;
+
+                let arrow = t.layout.arrow.map(|a| UiOverlayArrowLayoutV1 {
+                    side: ui_overlay_side_from_side(a.side),
+                    offset_px: a.offset.0,
+                    alignment_offset_px: a.alignment_offset.0,
+                    center_offset_px: a.center_offset.0,
+                });
+
+                push_overlay_placement_trace(
+                    trace,
+                    UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                        step_index,
+                        note: Some(note.to_string()),
+                        frame_id: r.frame_id.0,
+                        overlay_root_name: r.overlay_root_name.as_deref().map(|s| s.to_string()),
+                        anchor_element: r.anchor_element.map(|id| id.0),
+                        anchor_test_id,
+                        content_element: r.content_element.map(|id| id.0),
+                        content_test_id,
+                        outer_input: ui_rect_from_rect(t.outer_input),
+                        outer_collision: ui_rect_from_rect(t.outer_collision),
+                        anchor: ui_rect_from_rect(t.anchor),
+                        desired: ui_size_from_size(t.desired),
+                        side_offset_px: t.side_offset.0,
+                        preferred_side: ui_overlay_side_from_side(t.preferred_side),
+                        align: ui_overlay_align_from_align(t.align),
+                        direction: ui_layout_direction_from_dir(options.direction),
+                        sticky: ui_overlay_sticky_from_sticky(options.sticky),
+                        offset: UiOverlayOffsetV1 {
+                            main_axis_px: options.offset.main_axis.0,
+                            cross_axis_px: options.offset.cross_axis.0,
+                            alignment_axis_px: options.offset.alignment_axis.map(|v| v.0),
+                        },
+                        shift: UiOverlayShiftV1 {
+                            main_axis: options.shift.main_axis,
+                            cross_axis: options.shift.cross_axis,
+                        },
+                        collision_padding: ui_edges_from_edges(options.collision.padding),
+                        collision_boundary: options.collision.boundary.map(ui_rect_from_rect),
+                        gap_px: t.gap.0,
+                        preferred_rect: ui_rect_from_rect(t.preferred_rect),
+                        flipped_rect: ui_rect_from_rect(t.flipped_rect),
+                        preferred_fits_without_main_clamp: t.preferred_fits_without_main_clamp,
+                        flipped_fits_without_main_clamp: t.flipped_fits_without_main_clamp,
+                        preferred_available_main_px: t.preferred_available_main_px,
+                        flipped_available_main_px: t.flipped_available_main_px,
+                        chosen_side: ui_overlay_side_from_side(t.chosen_side),
+                        chosen_rect: ui_rect_from_rect(t.chosen_rect),
+                        rect_after_shift: ui_rect_from_rect(t.rect_after_shift),
+                        shift_delta: UiPointV1 {
+                            x_px: t.shift_delta.x.0,
+                            y_px: t.shift_delta.y.0,
+                        },
+                        final_rect: ui_rect_from_rect(t.layout.rect),
+                        arrow,
+                    },
+                );
+            }
+            fret_ui::elements::OverlayPlacementDiagnosticsRecord::PlacedRect(r) => {
+                let anchor_test_id = r.anchor_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                let content_test_id = r.content_element.and_then(|el| {
+                    test_id_for_element(element_runtime, semantics_snapshot, window, el)
+                });
+                push_overlay_placement_trace(
+                    trace,
+                    UiOverlayPlacementTraceEntryV1::PlacedRect {
+                        step_index,
+                        note: Some(note.to_string()),
+                        frame_id: r.frame_id.0,
+                        overlay_root_name: r.overlay_root_name.as_deref().map(|s| s.to_string()),
+                        anchor_element: r.anchor_element.map(|id| id.0),
+                        anchor_test_id,
+                        content_element: r.content_element.map(|id| id.0),
+                        content_test_id,
+                        outer: ui_rect_from_rect(r.outer),
+                        anchor: ui_rect_from_rect(r.anchor),
+                        placed: ui_rect_from_rect(r.placed),
+                        side: r.side.map(ui_overlay_side_from_side),
+                    },
+                );
+            }
+        }
     }
 }
 

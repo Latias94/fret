@@ -39,6 +39,7 @@ use fret_core::window::WindowMetricsService;
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
+use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 
 pub struct ElementContext<'a, H: UiHost> {
     pub app: &'a mut H,
@@ -837,6 +838,66 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.callsite_counters.pop();
         self.stack.pop();
         out
+    }
+
+    /// Records a debug trace for an anchored overlay placement decision.
+    ///
+    /// This is a diagnostics-only hook intended for `fretboard diag` evidence. It is a no-op when
+    /// the `diagnostics` feature is disabled.
+    pub fn diagnostics_record_overlay_placement_anchored_panel(
+        &mut self,
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        trace: AnchoredPanelLayoutTrace,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_anchored_panel(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            trace,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (overlay_root_name, anchor_element, content_element, trace);
+    }
+
+    /// Records a placed-rect overlay decision (for overlays not solved via the anchored-panel solver).
+    ///
+    /// This is a diagnostics-only hook intended for `fretboard diag` evidence. It is a no-op when
+    /// the `diagnostics` feature is disabled.
+    pub fn diagnostics_record_overlay_placement_placed_rect(
+        &mut self,
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        outer: Rect,
+        anchor: Rect,
+        placed: Rect,
+        side: Option<Side>,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_placed_rect(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (
+            overlay_root_name,
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
     }
 
     #[track_caller]

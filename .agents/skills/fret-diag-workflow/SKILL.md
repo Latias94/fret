@@ -130,6 +130,7 @@ Common `script.result.json` evidence fields (bounded ring buffers):
 - `evidence.hit_test_trace`: injected pointer position vs hit chain, including barrier/capture/occlusion hints
 - `evidence.focus_trace`: focused element/node identity + barrier/capture hints; includes `text_input_snapshot`
 - `evidence.shortcut_routing_trace`: explains whether keydown went to IME/widget path or dispatched a command
+- `evidence.overlay_placement_trace`: overlay placement decisions (flip/shift/collision inputs + final rect), when available
 - `evidence.ime_event_trace`: IME event kinds + length/cursor summaries (no raw text)
 - `evidence.web_ime_trace`: wasm textarea bridge debug summary (ADR 0195; debug-only)
 
@@ -138,6 +139,7 @@ Reason-code first triage:
 - `selector.not_found` ⇒ inspect `selector_resolution_trace` (wrong `test_id`, duplicated ids, hidden nodes)
 - `routing.*` / “click didn’t land” ⇒ inspect `hit_test_trace` (barrier/capture/occlusion)
 - `focus.*` / “type_text_into stalls” ⇒ inspect `focus_trace` + `text_input_snapshot`
+- “overlay jumped/flipped/clipped” ⇒ inspect `overlay_placement_trace` (outer/collision/anchor + chosen side + shift delta)
 - `timeout` ⇒ prefer adding an intermediate `capture_bundle` and shrinking the script
 
 ## Component conformance playbook (example: shadcn `Select`)

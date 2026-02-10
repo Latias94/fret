@@ -2017,6 +2017,17 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+
+                    cx.diagnostics_record_overlay_placement_placed_rect(
+                        Some(overlay_root_name.as_str()),
+                        Some(trigger_id),
+                        None,
+                        outer,
+                        anchor,
+                        placed,
+                        Some(motion_side),
+                    );
+
                     if std::env::var("FRET_DEBUG_SELECT_PLACED")
                         .ok()
                         .is_some_and(|v| v == "1")

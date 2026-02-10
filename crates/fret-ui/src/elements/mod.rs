@@ -18,7 +18,8 @@ pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
 pub use runtime::{
     ElementObservedEnvironmentDiagnosticsSnapshot, EnvironmentQueryDiagnosticsSnapshot,
     NodeEntryRootOverwrite, ObservedEnvironmentKeyDiagnosticsSnapshot,
-    WindowElementDiagnosticsSnapshot,
+    OverlayAnchoredPanelPlacementDiagnosticsRecord, OverlayPlacedRectDiagnosticsRecord,
+    OverlayPlacementDiagnosticsRecord, WindowElementDiagnosticsSnapshot,
 };
 
 pub(crate) use access::{
