@@ -48,14 +48,15 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
                     Px(bounds.size.height.0.max(1.0)),
                 ),
             ),
-            background: fret_core::Color {
+            background: fret_core::Paint::Solid(fret_core::Color {
                 r: 0.12,
                 g: 0.15,
                 b: 0.22,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: fret_core::Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(0.0)),
         });
 

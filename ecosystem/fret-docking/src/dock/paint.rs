@@ -71,18 +71,18 @@ pub(super) fn paint_dock(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect,
-            background: panel_bg,
+            background: fret_core::Paint::Solid(panel_bg),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(1),
             rect: tab_bar,
-            background: surface_bg,
+            background: fret_core::Paint::Solid(surface_bg),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
@@ -127,9 +127,9 @@ pub(super) fn paint_dock(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(2),
                 rect: tab_rect,
-                background: bg,
+                background: fret_core::Paint::Solid(bg),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
 
@@ -145,9 +145,9 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
                     rect: underline,
-                    background: primary,
+                    background: fret_core::Paint::Solid(primary),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
             }
@@ -183,9 +183,9 @@ pub(super) fn paint_dock(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(5),
                         rect: close_rect,
-                        background: hover_bg,
+                        background: fret_core::Paint::Solid(hover_bg),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: fret_core::Corners::all(radius_sm),
                     });
                 }
@@ -221,9 +221,9 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(10),
                     rect: button_rect,
-                    background: hover_bg,
+                    background: fret_core::Paint::Solid(hover_bg),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(radius_sm),
                 });
             }
@@ -256,9 +256,9 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(100),
                     rect: menu_rect,
-                    background: bg,
+                    background: fret_core::Paint::Solid(bg),
                     border: Edges::all(Px(1.0)),
-                    border_color: border,
+                    border_paint: fret_core::Paint::Solid(border),
                     corner_radii: fret_core::Corners::all(radius_sm),
                 });
 
@@ -283,9 +283,9 @@ pub(super) fn paint_dock(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(101),
                             rect: row_rect,
-                            background: hover_bg,
+                            background: fret_core::Paint::Solid(hover_bg),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
                     }
@@ -332,9 +332,9 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
                     rect: content,
-                    background: panel.color,
+                    background: fret_core::Paint::Solid(panel.color),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(radius_sm),
                 });
 
@@ -355,9 +355,9 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
                     rect: content,
-                    background: panel.color,
+                    background: fret_core::Paint::Solid(panel.color),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(radius_sm),
                 });
             }
@@ -454,9 +454,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: zone,
-                background: Color { a: 0.10, ..primary },
+                background: fret_core::Paint::Solid(Color { a: 0.10, ..primary }),
                 border: Edges::all(Px(3.0)),
-                border_color: Color { a: 0.85, ..primary },
+                border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
@@ -472,17 +472,17 @@ pub(super) fn paint_drop_overlay(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(9_985),
                         rect: content,
-                        background: Color { a: 0.12, ..primary },
+                        background: fret_core::Paint::Solid(Color { a: 0.12, ..primary }),
                         border: Edges::all(Px(2.0)),
-                        border_color: Color { a: 0.65, ..primary },
+                        border_paint: fret_core::Paint::Solid(Color { a: 0.65, ..primary }),
                         corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(9_990),
                         rect: tab_bar,
-                        background: Color { a: 0.14, ..primary },
+                        background: fret_core::Paint::Solid(Color { a: 0.14, ..primary }),
                         border: Edges::all(Px(1.0)),
-                        border_color: Color { a: 0.45, ..primary },
+                        border_paint: fret_core::Paint::Solid(Color { a: 0.45, ..primary }),
                         corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                 }
@@ -536,9 +536,9 @@ pub(super) fn paint_drop_overlay(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(9_995),
                             rect: preview,
-                            background: Color { a: 0.22, ..primary },
+                            background: fret_core::Paint::Solid(Color { a: 0.22, ..primary }),
                             border: Edges::all(Px(2.0)),
-                            border_color: Color { a: 0.85, ..primary },
+                            border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
                             corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                         });
 
@@ -589,9 +589,9 @@ pub(super) fn paint_drop_overlay(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(10_000),
                         rect: marker,
-                        background: Color { a: 0.85, ..primary },
+                        background: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
                         border: Edges::all(Px(1.0)),
-                        border_color: Color { a: 1.0, ..primary },
+                        border_paint: fret_core::Paint::Solid(Color { a: 1.0, ..primary }),
                         corner_radii: fret_core::Corners::all(Px(3.0)),
                     });
 
@@ -611,9 +611,9 @@ pub(super) fn paint_drop_overlay(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(10_001),
                             rect: cap,
-                            background: Color { a: 0.92, ..primary },
+                            background: fret_core::Paint::Solid(Color { a: 0.92, ..primary }),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: fret_core::Corners::all(Px(2.0)),
                         });
                     }
@@ -625,9 +625,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
-                background: Color { a: 0.16, ..primary },
+                background: fret_core::Paint::Solid(Color { a: 0.16, ..primary }),
                 border: Edges::all(Px(2.0)),
-                border_color: Color { a: 0.85, ..primary },
+                border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
                 corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
             });
         }
@@ -727,15 +727,15 @@ pub(super) fn paint_drop_hints(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(order.0 - 2),
             rect: plate,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 a: 0.70,
                 ..surface_bg
-            },
+            }),
             border: Edges::all(Px(1.0)),
-            border_color: Color {
+            border_paint: fret_core::Paint::Solid(Color {
                 a: 0.70,
                 ..inactive_border_base
-            },
+            }),
             corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
         });
     }
@@ -769,9 +769,9 @@ pub(super) fn paint_drop_hints(
             scene.push(SceneOp::Quad {
                 order,
                 rect: hint_rect,
-                background: bg,
+                background: fret_core::Paint::Solid(bg),
                 border,
-                border_color: stroke,
+                border_paint: fret_core::Paint::Solid(stroke),
                 corner_radii,
             });
             paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
@@ -826,9 +826,9 @@ fn paint_drop_hint_icon(
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order),
         rect: frame,
-        background: Color::TRANSPARENT,
+        background: fret_core::Paint::TRANSPARENT,
         border: Edges::all(Px(2.0)),
-        border_color: stroke,
+        border_paint: fret_core::Paint::Solid(stroke),
         corner_radii: fret_core::Corners::all(frame_radius),
     });
 
@@ -836,9 +836,9 @@ fn paint_drop_hint_icon(
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order + 1),
         rect: inner,
-        background: base,
+        background: fret_core::Paint::Solid(base),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 
@@ -853,9 +853,9 @@ fn paint_drop_hint_icon(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(order + 2),
                 rect: tab,
-                background: fill,
+                background: fret_core::Paint::Solid(fill),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }
@@ -881,9 +881,9 @@ fn paint_drop_hint_icon(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(order + 2),
                 rect: highlight,
-                background: fill,
+                background: fret_core::Paint::Solid(fill),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
             let line = Rect::new(
@@ -893,9 +893,9 @@ fn paint_drop_hint_icon(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(order + 3),
                 rect: line,
-                background: stroke,
+                background: fret_core::Paint::Solid(stroke),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }
@@ -921,9 +921,9 @@ fn paint_drop_hint_icon(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(order + 2),
                 rect: highlight,
-                background: fill,
+                background: fret_core::Paint::Solid(fill),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
             let line = Rect::new(
@@ -933,9 +933,9 @@ fn paint_drop_hint_icon(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(order + 3),
                 rect: line,
-                background: stroke,
+                background: fret_core::Paint::Solid(stroke),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }

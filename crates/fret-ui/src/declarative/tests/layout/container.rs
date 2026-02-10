@@ -236,7 +236,10 @@ fn container_applies_padding_and_paints_background() {
             rect, background, ..
         } => {
             assert_eq!(rect, container_bounds);
-            assert_eq!(background.a, 1.0);
+            let fret_core::Paint::Solid(c) = background else {
+                panic!("expected solid paint");
+            };
+            assert_eq!(c.a, 1.0);
         }
         _ => panic!("expected quad op"),
     }
@@ -455,7 +458,10 @@ fn container_paints_shadow_before_background() {
             rect, background, ..
         } => {
             assert_eq!(rect, container_bounds);
-            assert_eq!(background.a, 1.0);
+            let fret_core::Paint::Solid(c) = background else {
+                panic!("expected solid paint");
+            };
+            assert_eq!(c.a, 1.0);
         }
         _ => panic!("expected background quad second"),
     }

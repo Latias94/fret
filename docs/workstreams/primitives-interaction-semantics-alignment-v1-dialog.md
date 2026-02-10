@@ -24,6 +24,9 @@ Key implementation anchors (modal barrier + dismiss routing):
   - `ecosystem/fret-ui-kit/src/primitives/dialog.rs` (`modal_barrier_layout`, `modal_barrier*`)
 - Barrier routing of outside-press dismissals through a handler:
   - `ecosystem/fret-ui-kit/src/primitives/dialog.rs` (test `modal_barrier_can_route_dismissals_through_handler`)
+- Reason-aware close auto-focus guard + default-close dismissal wrapper:
+  - `ecosystem/fret-ui-kit/src/primitives/dialog.rs` (`DialogCloseAutoFocusGuardPolicy`, `dialog_close_auto_focus_guard_hooks`)
+  - `ecosystem/fret-ui-shadcn/src/dialog.rs` (uses the guard hooks when wiring `modal_dialog_request_with_options_and_dismiss_handler`)
 
 Related tests/gates:
 

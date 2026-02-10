@@ -169,6 +169,8 @@ impl DateRangePicker {
                             .disable_outside_days(self.disable_outside_days)
                             // Upstream `date-picker-with-range` renders two months in the popover.
                             .number_of_months(2)
+                            // Keep the popover open after the first click so the user can pick an end date.
+                            .min_days(1)
                             .close_on_select(open_content.clone())
                             .initial_focus_out(initial_focus_out.clone());
 

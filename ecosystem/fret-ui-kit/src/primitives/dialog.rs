@@ -31,6 +31,157 @@ use crate::declarative::ModelWatchExt;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+/// Policy for suppressing close auto-focus based on how a dialog overlay was dismissed.
+///
+/// This is primarily intended to prevent "focus stealing" when a close is triggered by a
+/// click-through outside interaction (e.g. non-modal dialog variants, or regressions where the
+/// modal barrier fails to block underlay focus).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DialogCloseAutoFocusGuardPolicy {
+    /// Prevent close auto-focus when dismissed via an outside press.
+    pub prevent_on_outside_press: bool,
+    /// Prevent close auto-focus when dismissed due to focus moving outside the dismissible layer.
+    pub prevent_on_focus_outside: bool,
+}
+
+impl DialogCloseAutoFocusGuardPolicy {
+    /// Default policy for Radix-style dialogs.
+    ///
+    /// - Modal dialogs are not click-through, so outside presses generally should not suppress
+    ///   focus restoration.
+    /// - Focus-outside dismissals represent a real focus transfer, so restoring focus back to the
+    ///   trigger is usually undesirable.
+    pub fn for_modal(modal: bool) -> Self {
+        Self {
+            prevent_on_outside_press: !modal,
+            prevent_on_focus_outside: true,
+        }
+    }
+
+    /// Always prevent close auto-focus.
+    pub fn prevent_always() -> Self {
+        Self {
+            prevent_on_outside_press: true,
+            prevent_on_focus_outside: true,
+        }
+    }
+}
+
+/// Wrap `on_dismiss_request` to preserve default close behavior and install a close auto-focus
+/// guard that persists across frames.
+///
+/// Notes:
+/// - The returned dismiss handler applies Radix-like defaults: it closes the overlay unless the
+///   request is prevented.
+/// - The returned close hook runs the caller hook (if any) and then applies the guard policy
+///   unless the caller prevented default.
+pub fn dialog_close_auto_focus_guard_hooks<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    policy: DialogCloseAutoFocusGuardPolicy,
+    open: Model<bool>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
+) -> (Option<OnDismissRequest>, Option<OnCloseAutoFocus>) {
+    #[derive(Default)]
+    struct DialogCloseAutoFocusGuardState {
+        dismiss_reason: Option<Model<Option<DismissReason>>>,
+    }
+
+    let should_install = policy.prevent_on_outside_press
+        || policy.prevent_on_focus_outside
+        || on_dismiss_request.is_some();
+    let should_install_close = policy.prevent_on_outside_press
+        || policy.prevent_on_focus_outside
+        || on_close_auto_focus.is_some();
+
+    if !should_install && !should_install_close {
+        return (on_dismiss_request, on_close_auto_focus);
+    }
+
+    let dismiss_reason = cx
+        .with_state(DialogCloseAutoFocusGuardState::default, |st| {
+            st.dismiss_reason.clone()
+        })
+        .unwrap_or_else(|| {
+            let model = cx.app.models_mut().insert(None);
+            cx.with_state(DialogCloseAutoFocusGuardState::default, |st| {
+                st.dismiss_reason = Some(model.clone());
+            });
+            model
+        });
+
+    // Clear stale reasons when the overlay is open again (new session).
+    let open_now = cx.app.models().get_copied(&open).unwrap_or(false);
+    if open_now {
+        let _ = cx.app.models_mut().update(&dismiss_reason, |v| *v = None);
+    }
+
+    let dismiss_handler: Option<OnDismissRequest> = should_install.then(|| {
+        let user_dismiss_request = on_dismiss_request.clone();
+        let open_for_default_close = open.clone();
+        let dismiss_reason_for_hook = dismiss_reason.clone();
+        let handler: OnDismissRequest = Arc::new(move |host, cx, req| {
+            if let Some(user) = user_dismiss_request.as_ref() {
+                user(host, cx, req);
+            }
+
+            if !req.default_prevented() {
+                let should_store = match req.reason {
+                    DismissReason::OutsidePress { .. } => policy.prevent_on_outside_press,
+                    DismissReason::FocusOutside => policy.prevent_on_focus_outside,
+                    _ => false,
+                };
+                let _ = host.models_mut().update(&dismiss_reason_for_hook, |v| {
+                    *v = should_store.then_some(req.reason);
+                });
+                let _ = host
+                    .models_mut()
+                    .update(&open_for_default_close, |v| *v = false);
+            } else {
+                let _ = host
+                    .models_mut()
+                    .update(&dismiss_reason_for_hook, |v| *v = None);
+            }
+        });
+        handler
+    });
+
+    let on_close_auto_focus: Option<OnCloseAutoFocus> = should_install_close.then(|| {
+        let dismiss_reason_for_close = dismiss_reason.clone();
+        let user = on_close_auto_focus.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, cx, req| {
+            if let Some(user) = user.as_ref() {
+                user(host, cx, req);
+            }
+
+            let reason = host
+                .models_mut()
+                .read(&dismiss_reason_for_close, |v| *v)
+                .ok()
+                .flatten();
+            let _ = host
+                .models_mut()
+                .update(&dismiss_reason_for_close, |v| *v = None);
+
+            if req.default_prevented() {
+                return;
+            }
+
+            let should_prevent = match reason {
+                Some(DismissReason::OutsidePress { .. }) => policy.prevent_on_outside_press,
+                Some(DismissReason::FocusOutside) => policy.prevent_on_focus_outside,
+                _ => false,
+            };
+            if should_prevent {
+                req.prevent_default();
+            }
+        });
+        handler
+    });
+
+    (dismiss_handler.or(on_dismiss_request), on_close_auto_focus)
+}
+
 #[derive(Clone)]
 pub struct DialogOptions {
     pub dismiss_on_overlay_press: bool,

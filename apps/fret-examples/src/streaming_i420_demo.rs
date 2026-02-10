@@ -173,14 +173,15 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingI420DemoSta
                 Px(bounds.size.height.0.max(1.0)),
             ),
         ),
-        background: Color {
+        background: fret_core::Paint::Solid(Color {
             r: 0.10,
             g: 0.11,
             b: 0.13,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
+
         corner_radii: Corners::all(Px(0.0)),
     });
 

@@ -43,7 +43,7 @@ mod tests;
 
 use a11y::{
     a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer,
-    map_a11y_offset_to_buffer_with_preedit,
+    map_a11y_offset_to_buffer_with_preedit, map_a11y_offsets_to_buffer_composed,
 };
 use geom::{
     RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
@@ -1161,6 +1161,16 @@ impl CodeEditor {
                 ..Default::default()
             };
 
+            let viewport_rows = if row_h.0 > 0.0 {
+                (cx.bounds.size.height.0 / row_h.0).ceil() as usize
+            } else {
+                0
+            };
+            let text_cache_max_entries = viewport_rows
+                .saturating_add(overscan.saturating_mul(2))
+                .saturating_add(128)
+                .clamp(256, 8_192);
+
             let (
                 content_len,
                 boundary_mode,
@@ -1187,7 +1197,8 @@ impl CodeEditor {
                     st.active_text_boundary_mode = boundary_mode;
                 }
                 let boundary_override = st.text_boundary_mode_override;
-                let (value, selection, composition) = a11y_composed_text_window(&st);
+                let (value, selection, composition) =
+                    a11y_composed_text_window(&mut st, text_cache_max_entries);
                 (
                     content_len,
                     boundary_override,
@@ -1225,15 +1236,6 @@ impl CodeEditor {
             surface_props.row_height = row_h;
             surface_props.overscan = overscan;
             surface_props.scroll_handle = scroll_handle.clone();
-            let viewport_rows = if row_h.0 > 0.0 {
-                (cx.bounds.size.height.0 / row_h.0).ceil() as usize
-            } else {
-                0
-            };
-            let text_cache_max_entries = viewport_rows
-                .saturating_add(overscan.saturating_mul(2))
-                .saturating_add(128)
-                .clamp(256, 8_192);
             surface_props.canvas.cache_policy = CanvasCachePolicy {
                 text: CanvasCacheTuning {
                     keep_frames: 60,
@@ -1371,9 +1373,11 @@ impl CodeEditor {
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
                             rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
-                            background: overlay_bg,
+                            background: fret_core::Paint::Solid(overlay_bg),
+
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
                             corner_radii: Corners::all(Px(6.0)),
                         });
 
@@ -2053,33 +2057,42 @@ impl CodeEditor {
                         let caret = st
                             .buffer
                             .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
-                        let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
 
-                        let (new_anchor, new_focus) = if let Some(preedit) = st.preedit.as_ref() {
-                            let preedit_len = preedit.text.len();
-                            (
-                                map_a11y_offset_to_buffer_with_preedit(
-                                    &st.buffer,
-                                    start,
-                                    end,
-                                    caret,
-                                    preedit_len,
-                                    anchor,
-                                ),
-                                map_a11y_offset_to_buffer_with_preedit(
-                                    &st.buffer,
-                                    start,
-                                    end,
-                                    caret,
-                                    preedit_len,
-                                    focus,
-                                ),
+                        let (new_anchor, new_focus) = if st.compose_inline_preedit {
+                            map_a11y_offsets_to_buffer_composed(
+                                &mut st,
+                                text_cache_max_entries,
+                                anchor,
+                                focus,
                             )
                         } else {
-                            (
-                                map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
-                                map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
-                            )
+                            let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+                            if let Some(preedit) = st.preedit.as_ref() {
+                                let preedit_len = preedit.text.len();
+                                (
+                                    map_a11y_offset_to_buffer_with_preedit(
+                                        &st.buffer,
+                                        start,
+                                        end,
+                                        caret,
+                                        preedit_len,
+                                        anchor,
+                                    ),
+                                    map_a11y_offset_to_buffer_with_preedit(
+                                        &st.buffer,
+                                        start,
+                                        end,
+                                        caret,
+                                        preedit_len,
+                                        focus,
+                                    ),
+                                )
+                            } else {
+                                (
+                                    map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
+                                    map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
+                                )
+                            }
                         };
 
                         st.set_preedit(None);

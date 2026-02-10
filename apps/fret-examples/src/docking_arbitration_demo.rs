@@ -450,9 +450,10 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),
             rect: draw_rect,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::TRANSPARENT,
+
             border: Edges::all(Px(2.0)),
-            border_color,
+            border_paint: fret_core::Paint::Solid(border_color),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -1563,13 +1564,14 @@ impl WinitAppDriver for DockingArbitrationDriver {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(10_000),
                 rect,
-                background: if synth.pressed {
+                background: fret_core::Paint::Solid(if synth.pressed {
                     Color { a: 0.25, ..red }
                 } else {
                     Color::TRANSPARENT
-                },
+                }),
                 border: Edges::all(Px(2.0)),
-                border_color: red,
+                border_paint: fret_core::Paint::Solid(red),
+
                 corner_radii: Corners::all(Px(2.0)),
             });
         }

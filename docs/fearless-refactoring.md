@@ -70,6 +70,8 @@ If you want MVU-style clarity (like `iced`) while keeping a command system:
 
 - Use `fret-kit::mvu::Program` + `MessageRouter<M>` to build typed commands in `view`.
 - Let the driver clear the router once per frame.
+- Use `Program::on_command(...)` for framework-level `CommandId`s that are not produced by
+  `MessageRouter` (e.g. router navigation commands / keybindings).
 
 Avoid:
 

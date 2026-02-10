@@ -100,9 +100,12 @@ Per-window snapshot fields:
 
 - `viewport_bounds_logical: Rect` (or width/height only).
 - `scale_factor: f32` (DPI).
+- `color_scheme: Option<ColorScheme>` (preferred light/dark, runner-provided).
 - `pointer: { primary_kind, coarse, hover }` (capability summary).
 - `safe_area_insets_logical: Option<Edges<Px>>` (future mobile).
 - `prefers_reduced_motion: Option<bool>` (runner-provided or app-provided).
+- `prefers_contrast: Option<ContrastPreference>` (runner-provided; best-effort).
+- `forced_colors_mode: Option<ForcedColorsMode>` (runner-provided; best-effort).
 
 ## v1 Implementation Status (as of 2026-02-09)
 
@@ -111,13 +114,33 @@ The current implementation provides a small set of typed environment query keys 
 
 - `viewport_bounds_logical: Rect` (key: `ViewportSize`)
 - `scale_factor: f32` (key: `ScaleFactor`)
+- `color_scheme: Option<ColorScheme>` (key: `ColorScheme`)
+  - Best-effort: on web/wasm, the runner commits this preference via
+    `window.matchMedia("(prefers-color-scheme: dark)")` when supported. On native desktop, this is
+    currently `None` unless committed by a runner/app integration.
 - `prefers_reduced_motion: Option<bool>` (key: `PrefersReducedMotion`)
+  - Best-effort: on web/wasm, the runner commits this preference via
+    `window.matchMedia("(prefers-reduced-motion: reduce)")` when supported. On native desktop, this
+    is currently `None` unless committed by a runner/app integration.
+- `prefers_contrast: Option<ContrastPreference>` (key: `PrefersContrast`)
+  - Best-effort: on web/wasm, the runner commits this preference via `prefers-contrast` media
+    queries when supported. On native desktop, this is currently `None` unless committed by a
+    runner/app integration.
+- `forced_colors_mode: Option<ForcedColorsMode>` (key: `ForcedColorsMode`)
+  - Best-effort: on web/wasm, the runner commits this mode via
+    `window.matchMedia("(forced-colors: active)")` when supported. On native desktop, this is
+    currently `None` unless committed by a runner/app integration.
 - `primary_pointer_type: PointerType` (key: `PrimaryPointerType`)
   - Best-effort: `PointerType::Unknown` is returned until a pointer event is observed for the
     window (native and wasm).
 - `safe_area_insets_logical: Option<Edges>` (key: `SafeAreaInsets`)
-  - Best-effort: currently `None` unless a runner (future mobile) commits safe-area insets for the
-    window.
+  - Best-effort: on web/wasm, the runner commits safe-area insets derived from CSS
+    `env(safe-area-inset-*)` (when supported). On native desktop, this is currently `None` unless a
+    runner commits safe-area insets for the window (future mobile targets).
+- `occlusion_insets_logical: Option<Edges>` (key: `OcclusionInsets`)
+  - Best-effort: on web/wasm, the runner commits viewport occlusion insets derived from
+    `window.visualViewport` (e.g. virtual keyboard / browser UI changes). On native desktop, this is
+    currently `None` unless a runner commits viewport occlusion insets (future mobile targets).
 
 Policy remains in ecosystem crates. `ecosystem/fret-ui-kit` exposes small helpers that derive
 `primary_pointer_can_hover` and `primary_pointer_is_coarse` from `primary_pointer_type` so recipes

@@ -1,5 +1,5 @@
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
-use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
+use fret_core::scene::{Color, DrawOrder, Paint, Scene, SceneOp};
 use fret_render_wgpu::{
     ClearColor, RenderSceneParams, RenderTargetColorSpace, RenderTargetDescriptor, Renderer,
     WgpuContext,
@@ -165,19 +165,19 @@ fn gpu_offscreen_identity_blit_matches_direct() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(4.0), Px(6.0)), Size::new(Px(56.0), Px(52.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 0.2,
             g: 0.4,
             b: 0.8,
             a: 0.75,
-        },
+        }),
         border: Edges::all(Px(1.0)),
-        border_color: Color {
+        border_paint: Paint::Solid(Color {
             r: 1.0,
             g: 0.5,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         corner_radii: Corners::all(Px(8.0)),
     });
 
@@ -219,14 +219,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopClip);
@@ -260,14 +260,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopTransform);
@@ -300,14 +300,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopClip);
@@ -341,14 +341,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopClip);
@@ -383,14 +383,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopTransform);
@@ -436,14 +436,14 @@ fn gpu_affine_clip_conformance() {
         source_scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(16.0), Px(16.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -526,14 +526,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopClip);
@@ -573,14 +573,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopTransform);
@@ -618,14 +618,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -667,14 +667,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -720,14 +720,14 @@ fn gpu_affine_clip_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-            background: Color {
+            background: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopClip);

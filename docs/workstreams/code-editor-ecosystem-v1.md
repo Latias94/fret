@@ -712,22 +712,25 @@ Evidence anchors:
   - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
 - [~] Fold regions + placeholders without breaking caret/selection.
   - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
-    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+  - Done (staged): inline IME preedit can be composed with folds under a single view-owned mapping surface (ADR 0203).
+    - Status: the composed preedit path is an opt-in; paint + mapping + a11y export follow the composed path when enabled (default remains v1).
 - [~] Inlays (injected display fragments) without mutating the underlying buffer.
   - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
-    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+  - Done (staged): inline IME preedit can be composed with inlays under a single view-owned mapping surface (ADR 0203).
+    - Status: the composed preedit path is an opt-in; paint + mapping + a11y export follow the composed path when enabled (default remains v1).
 - [~] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
   - Implemented (staged): inline preedit can be modeled as a view-layer fragment source (opt-in composed path).
-  - In progress: make semantics export (a11y) consume the same composed mapping.
-  - Remaining DOD: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
+  - Implemented (staged): semantics export (a11y) consumes the same composed mapping when the composed preedit path is enabled.
+  - Done: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence under the composed mapping surface.
+    - Evidence: `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json` + `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed`).
+  - Done: broaden the composed baseline into explicit mapping-drift + a11y assertions (beyond “toggle stability”).
+    - Evidence: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed`).
 
 ### 9) Retained host / composable rows (only if required)
 
-- [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
-- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
-  - Default path: keep the code editor paint-driven (stable tree) unless we need row-level composability.
+- [x] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
+  - v1/v2 decision: **no** — keep the code editor paint-driven (stable tree) unless we need row-level composability.
+- [ ] If “yes”, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
   - If adopted: prioritize fixed/known-height first; variable-height row measurement is deferred.
 
 ---
