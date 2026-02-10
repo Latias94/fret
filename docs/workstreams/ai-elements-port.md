@@ -118,6 +118,10 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
   - `AI test results large (demo)` (`ai_test_results_large_demo`): long test list + scroll + activate seam gate:
     - `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
+  - `AI checkpoint (demo)` (`ai_checkpoint_demo`): tooltip trigger + activate seam gate:
+    - `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
+  - `AI confirmation (demo)` (`ai_confirmation_demo`): approval request/approve gate:
+    - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 

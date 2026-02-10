@@ -97,6 +97,13 @@ Acceptance criteria:
 
 Status: Done (gates passing).
 
+Notes:
+
+- `Checkpoint` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
+- `Confirmation` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+
 ### M3 — Code artifacts (developer-facing outputs)
 
 Scope:

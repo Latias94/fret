@@ -175,6 +175,14 @@ Existing gates (UI Gallery `ai_test_results_large_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
 
+Existing gates (UI Gallery `ai_checkpoint_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
+
+Existing gates (UI Gallery `ai_confirmation_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+
 Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
