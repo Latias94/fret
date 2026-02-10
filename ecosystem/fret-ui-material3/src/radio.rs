@@ -29,7 +29,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::interactive_size::{centered_fill, minimum_interactive_size};
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::radio as radio_tokens;
 use crate::tokens::radio::RadioSizeTokens;
@@ -654,8 +654,17 @@ impl Radio {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let size = radio_tokens::size_tokens(&theme);
+            let (size, min_touch_target, corner_radii, focus_ring) = {
+                let theme = Theme::global(&*cx.app);
+                let size = radio_tokens::size_tokens(theme);
+                let corner_radii = theme
+                    .corners_by_key("md.sys.shape.corner.full")
+                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                let focus_ring =
+                    material_focus_ring_for_component(theme, "md.comp.radio-button", corner_radii);
+                let min_touch_target = minimum_interactive_size(theme);
+                (size, min_touch_target, corner_radii, focus_ring)
+            };
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -713,9 +722,6 @@ impl Radio {
                         .is_some_and(|v| v.as_ref() == value.as_ref()),
                 };
 
-                let corner_radii = theme
-                    .corners_by_key("md.sys.shape.corner.full")
-                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
                 let focusable = match self.focus_policy {
                     RadioFocusPolicy::Default => enabled,
                     RadioFocusPolicy::Roving { tab_stop } => enabled && (tab_stop || st.focused),
@@ -735,14 +741,13 @@ impl Radio {
                     layout: {
                         let mut l = fret_ui::element::LayoutStyle::default();
                         l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
+                        if min_touch_target.0 > 0.0 {
+                            l.size.min_width = Some(min_touch_target);
+                            l.size.min_height = Some(min_touch_target);
+                        }
                         l
                     },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        "md.comp.radio-button",
-                        corner_radii,
-                    )),
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -793,31 +798,70 @@ impl Radio {
                             states |= WidgetStates::SELECTED;
                         }
 
-                        let state_layer_target = radio_tokens::state_layer_target_opacity(
-                            &theme,
-                            checked,
-                            enabled,
-                            tokens_interaction,
-                        );
-                        let state_layer_color =
-                            radio_tokens::state_layer_color(&theme, checked, tokens_interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
-                        let indication_config = material_pressable_indication_config(
-                            &theme,
-                            Some(Px(size.state_layer.0 * 0.5)),
-                        );
+                        let (
+                            state_layer_target,
+                            state_layer_color,
+                            indication_config,
+                            dot_duration_ms,
+                            dot_easing,
+                            ripple_base_opacity,
+                            icon_color,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let dot_duration_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.medium2")
-                            .unwrap_or(300);
-                        let dot_easing = theme
-                            .easing_by_key("md.sys.motion.easing.emphasized.decelerate")
-                            .unwrap_or(indication_config.easing);
+                            let state_layer_target = radio_tokens::state_layer_target_opacity(
+                                theme,
+                                checked,
+                                enabled,
+                                tokens_interaction,
+                            );
+                            let state_layer_color_tokens =
+                                radio_tokens::state_layer_color(theme, checked, tokens_interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color_tokens,
+                            );
+
+                            let indication_config = material_pressable_indication_config(
+                                theme,
+                                Some(Px(size.state_layer.0 * 0.5)),
+                            );
+
+                            let dot_duration_ms = theme
+                                .duration_ms_by_key("md.sys.motion.duration.medium2")
+                                .unwrap_or(300);
+                            let dot_easing = theme
+                                .easing_by_key("md.sys.motion.easing.emphasized.decelerate")
+                                .unwrap_or(indication_config.easing);
+
+                            let ripple_base_opacity =
+                                radio_tokens::pressed_state_layer_opacity(theme, checked);
+
+                            let icon_color_tokens = radio_tokens::icon_color(
+                                theme,
+                                checked,
+                                enabled,
+                                tokens_interaction,
+                            );
+                            let icon_color = resolve_override_slot_with(
+                                self.style.icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || icon_color_tokens,
+                            );
+
+                            (
+                                state_layer_target,
+                                state_layer_color,
+                                indication_config,
+                                dot_duration_ms,
+                                dot_easing,
+                                ripple_base_opacity,
+                                icon_color,
+                            )
+                        };
 
                         #[derive(Default)]
                         struct RadioDotRuntime {
@@ -841,8 +885,6 @@ impl Radio {
                                 (rt.dot.value(), rt.dot.is_active())
                             });
 
-                        let ripple_base_opacity =
-                            radio_tokens::pressed_state_layer_opacity(&theme, checked);
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -857,15 +899,7 @@ impl Radio {
                             dot_active,
                         );
 
-                        let icon_color =
-                            radio_tokens::icon_color(&theme, checked, enabled, tokens_interaction);
-                        let icon_color = resolve_override_slot_with(
-                            self.style.icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || icon_color,
-                        );
-                        let icon = radio_icon(cx, &theme, size, checked, icon_color, dot_scale);
+                        let icon = radio_icon(cx, size, checked, icon_color, dot_scale);
 
                         let chrome = material_radio_chrome(cx, size, vec![overlay, icon]);
                         vec![centered_fill(cx, chrome)]
@@ -893,7 +927,6 @@ fn material_radio_chrome<H: UiHost>(
 
 fn radio_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    _theme: &Theme,
     size: RadioSizeTokens,
     checked: bool,
     color: Color,
