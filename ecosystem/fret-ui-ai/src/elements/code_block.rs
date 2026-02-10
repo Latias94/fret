@@ -23,6 +23,7 @@ use fret_ui_kit::{ColorRef, LayoutRefinement};
 pub struct CodeBlock {
     code: Arc<str>,
     language: Option<Arc<str>>,
+    show_header: bool,
     show_line_numbers: bool,
     show_language: bool,
     max_height: Option<Px>,
@@ -37,6 +38,7 @@ impl std::fmt::Debug for CodeBlock {
         f.debug_struct("CodeBlock")
             .field("code_len", &self.code.len())
             .field("language", &self.language.as_deref())
+            .field("show_header", &self.show_header)
             .field("show_line_numbers", &self.show_line_numbers)
             .field("show_language", &self.show_language)
             .field("max_height", &self.max_height)
@@ -53,8 +55,9 @@ impl CodeBlock {
         Self {
             code: code.into(),
             language: None,
+            show_header: false,
             show_line_numbers: false,
-            show_language: true,
+            show_language: false,
             max_height: None,
             header_left: Vec::new(),
             header_right: Vec::new(),
@@ -65,6 +68,15 @@ impl CodeBlock {
 
     pub fn language(mut self, language: impl Into<Arc<str>>) -> Self {
         self.language = Some(language.into());
+        self
+    }
+
+    /// Shows a header row (language label + optional actions) above the code content.
+    ///
+    /// AI Elements' `CodeBlock` does not render a header by default unless the caller supplies
+    /// header children; we model this explicitly so wrappers like `ToolInput` match upstream.
+    pub fn show_header(mut self, show: bool) -> Self {
+        self.show_header = show;
         self
     }
 
@@ -118,8 +130,8 @@ impl CodeBlock {
         header.right = self.header_right;
 
         let options = fret_code_view::CodeBlockUiOptions {
-            show_header: true,
-            header_divider: true,
+            show_header: self.show_header,
+            header_divider: self.show_header,
             header_background: fret_code_view::CodeBlockHeaderBackground::Secondary,
             show_copy_button: false,
             copy_button_on_hover: true,
