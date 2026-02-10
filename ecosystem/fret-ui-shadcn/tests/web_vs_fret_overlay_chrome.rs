@@ -72,112 +72,6 @@ struct FixtureSuite<T> {
     cases: Vec<T>,
 }
 
-fn split_box_shadow_layers(s: &str) -> Vec<&str> {
-    let mut out = Vec::new();
-    let mut depth = 0_u32;
-    let mut start = 0_usize;
-    for (idx, ch) in s.char_indices() {
-        match ch {
-            '(' => depth = depth.saturating_add(1),
-            ')' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => {
-                out.push(s[start..idx].trim());
-                start = idx + 1;
-            }
-            _ => {}
-        }
-    }
-    if start < s.len() {
-        out.push(s[start..].trim());
-    }
-    out.into_iter().filter(|p| !p.is_empty()).collect()
-}
-
-fn parse_box_shadow_layer(layer: &str) -> Option<(String, f32, f32, f32, f32)> {
-    let layer = layer.trim();
-    if layer.is_empty() || layer == "none" {
-        return None;
-    }
-
-    let (color, rest) = if layer.starts_with('#') {
-        let mut it = layer.splitn(2, char::is_whitespace);
-        let color = it.next()?.trim().to_string();
-        (color, it.next().unwrap_or("").trim())
-    } else if let Some(paren) = layer.find('(') {
-        let mut depth = 0_u32;
-        let mut end = None;
-        for (idx, ch) in layer.char_indices().skip(paren) {
-            match ch {
-                '(' => depth = depth.saturating_add(1),
-                ')' => {
-                    depth = depth.saturating_sub(1);
-                    if depth == 0 {
-                        end = Some(idx);
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let end = end?;
-        let color = layer[..=end].trim().to_string();
-        (color, layer[end + 1..].trim())
-    } else {
-        let mut it = layer.splitn(2, char::is_whitespace);
-        let color = it.next()?.trim().to_string();
-        (color, it.next().unwrap_or("").trim())
-    };
-
-    let parts: Vec<&str> = rest.split_whitespace().filter(|p| !p.is_empty()).collect();
-    if parts.len() < 4 {
-        return None;
-    }
-    let x = parse_px(parts[0])?;
-    let y = parse_px(parts[1])?;
-    let blur = parse_px(parts[2])?;
-    let spread = parse_px(parts[3])?;
-    Some((color, x, y, blur, spread))
-}
-
-#[derive(Debug, Clone, Copy)]
-struct ShadowInsets {
-    left: f32,
-    top: f32,
-    right: f32,
-    bottom: f32,
-}
-
-fn shadow_insets_for_rect(panel: Rect, shadow: Rect) -> ShadowInsets {
-    let panel_right = panel.origin.x.0 + panel.size.width.0;
-    let panel_bottom = panel.origin.y.0 + panel.size.height.0;
-    let shadow_right = shadow.origin.x.0 + shadow.size.width.0;
-    let shadow_bottom = shadow.origin.y.0 + shadow.size.height.0;
-
-    ShadowInsets {
-        left: shadow.origin.x.0 - panel.origin.x.0,
-        top: shadow.origin.y.0 - panel.origin.y.0,
-        right: shadow_right - panel_right,
-        bottom: shadow_bottom - panel_bottom,
-    }
-}
-
-fn shadow_insets_for_box_shadow_layer(x: f32, y: f32, blur: f32, spread: f32) -> ShadowInsets {
-    let delta = spread + blur;
-    ShadowInsets {
-        left: x - delta,
-        top: y - delta,
-        right: x + delta,
-        bottom: y + delta,
-    }
-}
-
-fn shadow_insets_score(a: ShadowInsets, b: ShadowInsets) -> f32 {
-    (a.left - b.left).abs()
-        + (a.top - b.top).abs()
-        + (a.right - b.right).abs()
-        + (a.bottom - b.bottom).abs()
-}
-
 fn maybe_dump_shadow_candidates(
     label: &str,
     expected: &[ShadowInsets],
@@ -193,26 +87,6 @@ fn maybe_dump_shadow_candidates(
     for (idx, cand) in sorted.iter().take(16).enumerate() {
         eprintln!("cand[{idx}] {cand:?}");
     }
-}
-
-fn rect_intersection_area(a: Rect, b: Rect) -> f32 {
-    let ax0 = a.origin.x.0;
-    let ay0 = a.origin.y.0;
-    let ax1 = ax0 + a.size.width.0;
-    let ay1 = ay0 + a.size.height.0;
-    let bx0 = b.origin.x.0;
-    let by0 = b.origin.y.0;
-    let bx1 = bx0 + b.size.width.0;
-    let by1 = by0 + b.size.height.0;
-
-    let x0 = ax0.max(bx0);
-    let y0 = ay0.max(by0);
-    let x1 = ax1.min(bx1);
-    let y1 = ay1.min(by1);
-
-    let w = (x1 - x0).max(0.0);
-    let h = (y1 - y0).max(0.0);
-    w * h
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -232,20 +106,8 @@ fn paint_solid_color(paint: Paint) -> Color {
     }
 }
 
-fn rect_contains(outer: Rect, inner: Rect) -> bool {
-    let eps = 0.01;
-    inner.origin.x.0 + eps >= outer.origin.x.0
-        && inner.origin.y.0 + eps >= outer.origin.y.0
-        && inner.origin.x.0 + inner.size.width.0 <= outer.origin.x.0 + outer.size.width.0 + eps
-        && inner.origin.y.0 + inner.size.height.0 <= outer.origin.y.0 + outer.size.height.0 + eps
-}
-
 fn has_border(border: &[f32; 4]) -> bool {
     border.iter().any(|v| *v > 0.01)
-}
-
-fn rect_area(rect: Rect) -> f32 {
-    rect.size.width.0 * rect.size.height.0
 }
 
 fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
@@ -760,13 +622,6 @@ fn assert_rgba_close(label: &str, actual: css_color::Rgba, expected: css_color::
     assert_close(&format!("{label}.g"), actual.g, expected.g, tol);
     assert_close(&format!("{label}.b"), actual.b, expected.b, tol);
     assert_close(&format!("{label}.a"), actual.a, expected.a, tol);
-}
-
-fn bounds_center(r: Rect) -> Point {
-    Point::new(
-        Px(r.origin.x.0 + r.size.width.0 * 0.5),
-        Px(r.origin.y.0 + r.size.height.0 * 0.5),
-    )
 }
 
 fn right_click_center(
@@ -2910,17 +2765,6 @@ fn web_find_highlighted_listbox_option_chrome(
         .expect("web highlighted option color");
 
     WebHighlightedNodeChrome { bg, fg }
-}
-
-fn rect_contains_point_with_margin(rect: Rect, point: Point, margin_px: f32) -> bool {
-    let x0 = rect.origin.x.0;
-    let y0 = rect.origin.y.0;
-    let x1 = rect.origin.x.0 + rect.size.width.0;
-    let y1 = rect.origin.y.0 + rect.size.height.0;
-    point.x.0 >= x0 - margin_px
-        && point.x.0 <= x1 + margin_px
-        && point.y.0 >= y0 - margin_px
-        && point.y.0 <= y1 + margin_px
 }
 
 #[derive(Clone, Copy)]
