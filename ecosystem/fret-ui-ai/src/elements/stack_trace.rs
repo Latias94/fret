@@ -213,6 +213,9 @@ impl CopyFeedbackRef {
 #[derive(Clone)]
 pub struct StackTraceCopyButton {
     raw: Arc<str>,
+    on_copy: Option<
+        Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
+    >,
     timeout: Duration,
     test_id: Option<Arc<str>>,
     copied_marker_test_id: Option<Arc<str>>,
@@ -236,10 +239,25 @@ impl StackTraceCopyButton {
     pub fn new(raw: impl Into<Arc<str>>) -> Self {
         Self {
             raw: raw.into(),
+            on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
         }
+    }
+
+    /// Called after the copy intent is issued.
+    ///
+    /// Note: this callback does not currently model "copy failed" (platform effects are
+    /// best-effort).
+    pub fn on_copy(
+        mut self,
+        on_copy: Arc<
+            dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static,
+        >,
+    ) -> Self {
+        self.on_copy = Some(on_copy);
+        self
     }
 
     pub fn timeout(mut self, timeout: Duration) -> Self {
@@ -265,6 +283,7 @@ impl StackTraceCopyButton {
         let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
 
         let raw = self.raw;
+        let on_copy = self.on_copy;
         let timeout = self.timeout;
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
@@ -298,10 +317,14 @@ impl StackTraceCopyButton {
             cx.pressable_on_activate({
                 let raw = raw.clone();
                 let feedback = feedback.clone();
+                let on_copy = on_copy.clone();
                 Arc::new(move |host, action_cx, _reason| {
                     host.push_effect(Effect::ClipboardSetText {
                         text: raw.to_string(),
                     });
+                    if let Some(on_copy) = on_copy.as_ref() {
+                        on_copy(host, action_cx);
+                    }
 
                     let (prev, token) = {
                         let mut feedback = feedback.lock();
