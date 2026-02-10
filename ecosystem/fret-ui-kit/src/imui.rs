@@ -211,6 +211,11 @@ impl ImUiHoveredFlags {
     /// implemented).
     pub const NO_SHARED_DELAY: Self = Self(1 << 8);
 
+    /// Return true even when another item is active (e.g. while dragging an item).
+    ///
+    /// This is intended to model ImGui's `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`.
+    pub const ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM: Self = Self(1 << 9);
+
     pub fn contains(self, other: Self) -> bool {
         (self.0 & other.0) != 0
     }
@@ -259,6 +264,12 @@ pub struct ResponseExt {
     pub hover_delay_short_shared_met: bool,
     /// True once the normal hover delay has elapsed (shared window-scoped timer, best-effort).
     pub hover_delay_normal_shared_met: bool,
+    /// True when ImGui-style hover queries should be suppressed because another item is active.
+    ///
+    /// This is a facade-level policy knob intended to mirror `IsItemHovered()` behavior where
+    /// hovered queries are suppressed while dragging another item, unless explicitly overridden
+    /// with `ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`.
+    pub hover_blocked_by_active_item: bool,
     /// True when the item is focused and the window's focus-visible policy indicates keyboard
     /// navigation is active.
     ///
@@ -390,6 +401,7 @@ impl ResponseExt {
     /// Implemented flags:
     /// - `ALLOW_WHEN_DISABLED`
     /// - `ALLOW_WHEN_BLOCKED_BY_POPUP` (best-effort; supports popup pointer-occlusion and modal barriers)
+    /// - `ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM` (best-effort; suppress hover while another item is active)
     /// - `NO_NAV_OVERRIDE`
     /// - `FOR_TOOLTIP` (expands to `STATIONARY | DELAY_SHORT | ALLOW_WHEN_DISABLED`)
     /// - `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL` (best-effort; uses timers)
@@ -403,6 +415,8 @@ impl ResponseExt {
 
         let allow_disabled = flags.contains(ImUiHoveredFlags::ALLOW_WHEN_DISABLED);
         let allow_blocked_by_popup = flags.contains(ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP);
+        let allow_blocked_by_active_item =
+            flags.contains(ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM);
         let nav_override = !flags.contains(ImUiHoveredFlags::NO_NAV_OVERRIDE);
 
         if nav_override && self.nav_highlighted {
@@ -427,6 +441,10 @@ impl ResponseExt {
         }
 
         if !pointer_hovered {
+            return false;
+        }
+
+        if self.hover_blocked_by_active_item && !allow_blocked_by_active_item {
             return false;
         }
 
@@ -516,6 +534,16 @@ struct ImUiSharedHoverDelayStore {
     by_window: HashMap<AppWindowId, fret_runtime::Model<ImUiSharedHoverDelayState>>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct ImUiActiveItemState {
+    active: Option<GlobalElementId>,
+}
+
+#[derive(Default)]
+struct ImUiActiveItemStore {
+    by_window: HashMap<AppWindowId, fret_runtime::Model<ImUiActiveItemState>>,
+}
+
 #[derive(Default)]
 struct ImUiFloatWindowCollapsedStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<bool>>,
@@ -561,6 +589,35 @@ fn shared_hover_delay_model_for_window<H: UiHost>(
                 })
                 .clone()
         })
+}
+
+fn active_item_model_for_window<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> fret_runtime::Model<ImUiActiveItemState> {
+    let window = cx.window;
+    cx.app
+        .with_global_mut_untracked(ImUiActiveItemStore::default, |st, app| {
+            st.by_window
+                .entry(window)
+                .or_insert_with(|| app.models_mut().insert(ImUiActiveItemState::default()))
+                .clone()
+        })
+}
+
+fn hover_blocked_by_active_item_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    active_item_model: &fret_runtime::Model<ImUiActiveItemState>,
+) -> bool {
+    let active = cx
+        .read_model(
+            active_item_model,
+            fret_ui::Invalidation::Paint,
+            |_app, st| st.active,
+        )
+        .ok()
+        .flatten();
+    active.is_some() && active != Some(id)
 }
 
 fn float_window_collapsed_model_for<H: UiHost>(
@@ -3450,6 +3507,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     cx.pressable_clear_on_pointer_up();
                     cx.key_clear_on_key_down_for(id);
 
+                    let active_item_model = active_item_model_for_window(cx);
+                    let active_item_model_for_down = active_item_model.clone();
+                    let active_item_model_for_up = active_item_model.clone();
+
+                    cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                        if down.button == MouseButton::Left {
+                            let _ = host.update_model(&active_item_model_for_down, |st| {
+                                st.active = Some(acx.target);
+                            });
+                            host.notify(acx);
+                        }
+                        PressablePointerDownResult::Continue
+                    }));
+
+                    cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                        if up.button == MouseButton::Left {
+                            let _ = host.update_model(&active_item_model_for_up, |st| {
+                                if st.active == Some(acx.target) {
+                                    st.active = None;
+                                }
+                            });
+                            host.notify(acx);
+                        }
+                        PressablePointerUpResult::Continue
+                    }));
+
                     if enabled {
                         let close_popup = close_popup.clone();
                         cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -3534,6 +3617,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     response.hover_delay_normal_met = hover_delay.delay_normal_met;
                     response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
                     response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                    response.hover_blocked_by_active_item =
+                        hover_blocked_by_active_item_for(cx, id, &active_item_model);
                     sanitize_response_for_enabled(enabled, response);
 
                     Vec::<AnyElement>::new()
@@ -3598,6 +3683,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
 
+                let active_item_model = active_item_model_for_window(cx);
+                let active_item_model_for_down = active_item_model.clone();
+                let active_item_model_for_move = active_item_model.clone();
+                let active_item_model_for_up = active_item_model.clone();
+
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
                 let long_press_signal_model = long_press_signal_model_for(cx, id);
@@ -3632,6 +3722,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    let _ = host.update_model(&active_item_model_for_down, |st| {
+                        st.active = Some(acx.target);
+                    });
                     arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
 
                     if host.drag(down.pointer_id).is_none() {
@@ -3668,6 +3761,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
+                        let _ = host.update_model(&active_item_model_for_move, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
                         host.cancel_drag(mv.pointer_id);
                         if cancel_long_press {
                             cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
@@ -3694,6 +3792,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
                     if up.button == MouseButton::Left {
+                        let _ = host.update_model(&active_item_model_for_up, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
                         cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
                     }
 
@@ -3799,6 +3902,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.hover_delay_normal_met = hover_delay.delay_normal_met;
                 response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
                 response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                response.hover_blocked_by_active_item =
+                    hover_blocked_by_active_item_for(cx, id, &active_item_model);
                 sanitize_response_for_enabled(enabled, response);
 
                 vec![cx.text(label.clone())]
@@ -3842,6 +3947,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
 
+                let active_item_model = active_item_model_for_window(cx);
+                let active_item_model_for_down = active_item_model.clone();
+                let active_item_model_for_move = active_item_model.clone();
+                let active_item_model_for_up = active_item_model.clone();
+
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
                 let long_press_signal_model = long_press_signal_model_for(cx, id);
@@ -3878,6 +3988,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    let _ = host.update_model(&active_item_model_for_down, |st| {
+                        st.active = Some(acx.target);
+                    });
                     arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
 
                     if host.drag(down.pointer_id).is_none() {
@@ -3914,6 +4027,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
+                        let _ = host.update_model(&active_item_model_for_move, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
                         host.cancel_drag(mv.pointer_id);
                         if cancel_long_press {
                             cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
@@ -3940,6 +4058,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
                     if up.button == MouseButton::Left {
+                        let _ = host.update_model(&active_item_model_for_up, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
                         cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
                     }
 
@@ -4042,6 +4165,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.hover_delay_normal_met = hover_delay.delay_normal_met;
                 response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
                 response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                response.hover_blocked_by_active_item =
+                    hover_blocked_by_active_item_for(cx, id, &active_item_model);
                 sanitize_response_for_enabled(enabled, response);
 
                 let prefix: Arc<str> = if value {
@@ -4114,6 +4239,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
 
+                let active_item_model = active_item_model_for_window(cx);
+                let active_item_model_for_down = active_item_model.clone();
+                let active_item_model_for_up = active_item_model.clone();
+
+                cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                    if down.button == MouseButton::Left {
+                        let _ = host.update_model(&active_item_model_for_down, |st| {
+                            st.active = Some(acx.target);
+                        });
+                        host.notify(acx);
+                    }
+                    PressablePointerDownResult::Continue
+                }));
+
+                cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if up.button == MouseButton::Left {
+                        let _ = host.update_model(&active_item_model_for_up, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
+                        host.notify(acx);
+                    }
+                    PressablePointerUpResult::Continue
+                }));
+
                 let model_for_activate = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
@@ -4140,6 +4291,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.hover_delay_normal_met = hover_delay.delay_normal_met;
                 response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
                 response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                response.hover_blocked_by_active_item =
+                    hover_blocked_by_active_item_for(cx, id, &active_item_model);
                 sanitize_response_for_enabled(enabled, response);
 
                 let prefix: Arc<str> = if value {
@@ -4200,12 +4353,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
 
+                let active_item_model = active_item_model_for_window(cx);
+                let active_item_model_for_down = active_item_model.clone();
+                let active_item_model_for_move = active_item_model.clone();
+                let active_item_model_for_up = active_item_model.clone();
+
                 let model_for_down = model.clone();
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
                     if down.button != MouseButton::Left {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    let _ = host.update_model(&active_item_model_for_down, |st| {
+                        st.active = Some(acx.target);
+                    });
                     host.capture_pointer();
                     host.request_focus(acx.target);
 
@@ -4231,6 +4392,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                     if !mv.buttons.left {
                         host.release_pointer_capture();
+                        let _ = host.update_model(&active_item_model_for_move, |st| {
+                            if st.active == Some(acx.target) {
+                                st.active = None;
+                            }
+                        });
                         return false;
                     }
 
@@ -4254,6 +4420,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_on_pointer_up(Arc::new(move |host, _acx, up| {
                     if up.button == MouseButton::Left {
                         host.release_pointer_capture();
+                        let _ = host.update_model(&active_item_model_for_up, |st| {
+                            if st.active == Some(id) {
+                                st.active = None;
+                            }
+                        });
                     }
                     PressablePointerUpResult::Continue
                 }));
@@ -4325,6 +4496,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.hover_delay_normal_met = hover_delay.delay_normal_met;
                 response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
                 response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                response.hover_blocked_by_active_item =
+                    hover_blocked_by_active_item_for(cx, id, &active_item_model);
                 sanitize_response_for_enabled(enabled, response);
 
                 vec![cx.text(Arc::from(format!("{label_for_visuals}: {current:.2}")))]
