@@ -175,6 +175,19 @@ impl SvgService for FakeServices {
     }
 }
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn get_rating(app: &mut App, model: &Model<u8>) -> u8 {
     app.models_mut().get_cloned(model).unwrap_or(0)
 }

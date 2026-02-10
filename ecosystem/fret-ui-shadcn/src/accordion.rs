@@ -2244,6 +2244,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for MeasuredServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn accordion_content_remains_mounted_for_close_animation_when_measured() {
         fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
