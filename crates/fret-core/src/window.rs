@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{AppWindowId, Edges, Event, Point, Rect, Size};
+use crate::{AppWindowId, Color, Edges, Event, Point, Rect, Size};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorScheme {
@@ -52,6 +52,9 @@ pub struct WindowMetricsService {
     scale_factors: HashMap<AppWindowId, f32>,
     focused: HashMap<AppWindowId, bool>,
     prefers_reduced_motion: HashMap<AppWindowId, Option<bool>>,
+    text_scale_factor: HashMap<AppWindowId, Option<f32>>,
+    prefers_reduced_transparency: HashMap<AppWindowId, Option<bool>>,
+    accent_color: HashMap<AppWindowId, Option<Color>>,
     color_scheme: HashMap<AppWindowId, Option<ColorScheme>>,
     contrast_preference: HashMap<AppWindowId, Option<ContrastPreference>>,
     forced_colors_mode: HashMap<AppWindowId, Option<ForcedColorsMode>>,
@@ -102,6 +105,45 @@ impl WindowMetricsService {
 
     pub fn prefers_reduced_motion_is_known(&self, window: AppWindowId) -> bool {
         self.prefers_reduced_motion.contains_key(&window)
+    }
+
+    pub fn set_text_scale_factor(&mut self, window: AppWindowId, factor: Option<f32>) {
+        self.text_scale_factor.insert(window, factor);
+    }
+
+    pub fn text_scale_factor(&self, window: AppWindowId) -> Option<f32> {
+        self.text_scale_factor.get(&window).copied().flatten()
+    }
+
+    pub fn text_scale_factor_is_known(&self, window: AppWindowId) -> bool {
+        self.text_scale_factor.contains_key(&window)
+    }
+
+    pub fn set_prefers_reduced_transparency(&mut self, window: AppWindowId, prefers: Option<bool>) {
+        self.prefers_reduced_transparency.insert(window, prefers);
+    }
+
+    pub fn prefers_reduced_transparency(&self, window: AppWindowId) -> Option<bool> {
+        self.prefers_reduced_transparency
+            .get(&window)
+            .copied()
+            .flatten()
+    }
+
+    pub fn prefers_reduced_transparency_is_known(&self, window: AppWindowId) -> bool {
+        self.prefers_reduced_transparency.contains_key(&window)
+    }
+
+    pub fn set_accent_color(&mut self, window: AppWindowId, color: Option<Color>) {
+        self.accent_color.insert(window, color);
+    }
+
+    pub fn accent_color(&self, window: AppWindowId) -> Option<Color> {
+        self.accent_color.get(&window).copied().flatten()
+    }
+
+    pub fn accent_color_is_known(&self, window: AppWindowId) -> bool {
+        self.accent_color.contains_key(&window)
     }
 
     pub fn set_color_scheme(&mut self, window: AppWindowId, scheme: Option<ColorScheme>) {
@@ -197,6 +239,9 @@ impl WindowMetricsService {
         self.scale_factors.remove(&window);
         self.focused.remove(&window);
         self.prefers_reduced_motion.remove(&window);
+        self.text_scale_factor.remove(&window);
+        self.prefers_reduced_transparency.remove(&window);
+        self.accent_color.remove(&window);
         self.color_scheme.remove(&window);
         self.contrast_preference.remove(&window);
         self.forced_colors_mode.remove(&window);
@@ -253,6 +298,17 @@ mod tests {
         svc.set_scale_factor(window, 1.5);
         svc.set_focused(window, true);
         svc.set_prefers_reduced_motion(window, Some(true));
+        svc.set_text_scale_factor(window, Some(1.25));
+        svc.set_prefers_reduced_transparency(window, Some(true));
+        svc.set_accent_color(
+            window,
+            Some(crate::Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            }),
+        );
         svc.set_color_scheme(window, Some(ColorScheme::Dark));
         svc.set_contrast_preference(window, Some(ContrastPreference::More));
         svc.set_forced_colors_mode(window, Some(ForcedColorsMode::Active));
@@ -265,6 +321,9 @@ mod tests {
         assert_eq!(svc.scale_factor(window), None);
         assert_eq!(svc.focused(window), None);
         assert_eq!(svc.prefers_reduced_motion(window), None);
+        assert_eq!(svc.text_scale_factor(window), None);
+        assert_eq!(svc.prefers_reduced_transparency(window), None);
+        assert_eq!(svc.accent_color(window), None);
         assert_eq!(svc.color_scheme(window), None);
         assert_eq!(svc.contrast_preference(window), None);
         assert_eq!(svc.forced_colors_mode(window), None);
@@ -295,6 +354,39 @@ mod tests {
 
         assert_eq!(svc.prefers_reduced_motion(window), None);
         assert!(svc.prefers_reduced_motion_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_text_scale_factor_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(41));
+
+        svc.set_text_scale_factor(window, None);
+
+        assert_eq!(svc.text_scale_factor(window), None);
+        assert!(svc.text_scale_factor_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_prefers_reduced_transparency_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(42));
+
+        svc.set_prefers_reduced_transparency(window, None);
+
+        assert_eq!(svc.prefers_reduced_transparency(window), None);
+        assert!(svc.prefers_reduced_transparency_is_known(window));
+    }
+
+    #[test]
+    fn window_metrics_accent_color_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(43));
+
+        svc.set_accent_color(window, None);
+
+        assert_eq!(svc.accent_color(window), None);
+        assert!(svc.accent_color_is_known(window));
     }
 
     #[test]

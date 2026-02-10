@@ -23,11 +23,13 @@ struct WebEnvironmentPreferenceSnapshot {
     contrast_preference: Option<ContrastPreference>,
     forced_colors_mode: Option<ForcedColorsMode>,
     prefers_reduced_motion: Option<bool>,
+    prefers_reduced_transparency: Option<bool>,
 }
 
 pub(super) struct WebEnvironmentMediaQueries {
     dirty: Rc<Cell<bool>>,
     prefers_reduced_motion: Option<web_sys::MediaQueryList>,
+    prefers_reduced_transparency: Option<web_sys::MediaQueryList>,
     prefers_color_scheme_dark: Option<web_sys::MediaQueryList>,
     prefers_contrast_more: Option<web_sys::MediaQueryList>,
     prefers_contrast_less: Option<web_sys::MediaQueryList>,
@@ -45,6 +47,7 @@ impl WebEnvironmentMediaQueries {
         let mql = |q: &str| window.match_media(q).ok().flatten();
 
         let prefers_reduced_motion = mql("(prefers-reduced-motion: reduce)");
+        let prefers_reduced_transparency = mql("(prefers-reduced-transparency: reduce)");
         let prefers_color_scheme_dark = mql("(prefers-color-scheme: dark)");
 
         let prefers_contrast_more = mql("(prefers-contrast: more)");
@@ -75,6 +78,7 @@ impl WebEnvironmentMediaQueries {
         };
 
         attach(&prefers_reduced_motion);
+        attach(&prefers_reduced_transparency);
         attach(&prefers_color_scheme_dark);
         attach(&prefers_contrast_more);
         attach(&prefers_contrast_less);
@@ -85,6 +89,7 @@ impl WebEnvironmentMediaQueries {
         Self {
             dirty,
             prefers_reduced_motion,
+            prefers_reduced_transparency,
             prefers_color_scheme_dark,
             prefers_contrast_more,
             prefers_contrast_less,
@@ -101,6 +106,10 @@ impl WebEnvironmentMediaQueries {
 
     fn snapshot(&self) -> WebEnvironmentPreferenceSnapshot {
         let prefers_reduced_motion = self.prefers_reduced_motion.as_ref().map(|m| m.matches());
+        let prefers_reduced_transparency = self
+            .prefers_reduced_transparency
+            .as_ref()
+            .map(|m| m.matches());
 
         let color_scheme = self.prefers_color_scheme_dark.as_ref().map(|m| {
             if m.matches() {
@@ -159,6 +168,7 @@ impl WebEnvironmentMediaQueries {
             contrast_preference,
             forced_colors_mode,
             prefers_reduced_motion,
+            prefers_reduced_transparency,
         }
     }
 }
@@ -175,6 +185,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let pref_snapshot = media_queries.take_dirty().then(|| media_queries.snapshot());
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
+        let text_scale_factor = read_text_scale_factor(&web_window);
 
         let (
             prev_scheme_known,
@@ -185,6 +196,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             prev_forced,
             prev_motion_known,
             prev_motion,
+            prev_transparency_known,
+            prev_transparency,
+            prev_text_scale_known,
+            prev_text_scale,
             prev_safe_known,
             prev_safe_area_insets,
             prev_occlusion_known,
@@ -199,6 +214,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 svc.forced_colors_mode(self.app_window),
                 svc.prefers_reduced_motion_is_known(self.app_window),
                 svc.prefers_reduced_motion(self.app_window),
+                svc.prefers_reduced_transparency_is_known(self.app_window),
+                svc.prefers_reduced_transparency(self.app_window),
+                svc.text_scale_factor_is_known(self.app_window),
+                svc.text_scale_factor(self.app_window),
                 svc.safe_area_insets_is_known(self.app_window),
                 svc.safe_area_insets(self.app_window),
                 svc.occlusion_insets_is_known(self.app_window),
@@ -207,19 +226,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         } else {
             (
                 false, None, false, None, false, None, false, None, false, None, false, None,
+                false, None, false, None,
             )
         };
 
-        let (needs_scheme, needs_contrast, needs_forced, needs_motion) = pref_snapshot
-            .map(|pref_snapshot| {
-                (
-                    !prev_scheme_known || prev_scheme != pref_snapshot.color_scheme,
-                    !prev_contrast_known || prev_contrast != pref_snapshot.contrast_preference,
-                    !prev_forced_known || prev_forced != pref_snapshot.forced_colors_mode,
-                    !prev_motion_known || prev_motion != pref_snapshot.prefers_reduced_motion,
-                )
-            })
-            .unwrap_or((false, false, false, false));
+        let (needs_scheme, needs_contrast, needs_forced, needs_motion, needs_transparency) =
+            pref_snapshot
+                .map(|pref_snapshot| {
+                    (
+                        !prev_scheme_known || prev_scheme != pref_snapshot.color_scheme,
+                        !prev_contrast_known || prev_contrast != pref_snapshot.contrast_preference,
+                        !prev_forced_known || prev_forced != pref_snapshot.forced_colors_mode,
+                        !prev_motion_known || prev_motion != pref_snapshot.prefers_reduced_motion,
+                        !prev_transparency_known
+                            || prev_transparency != pref_snapshot.prefers_reduced_transparency,
+                    )
+                })
+                .unwrap_or((false, false, false, false, false));
+
+        let needs_text_scale = !prev_text_scale_known
+            || match (prev_text_scale, text_scale_factor) {
+                (Some(a), Some(b)) => (a - b).abs() > 0.0001,
+                (None, None) => false,
+                _ => true,
+            };
 
         let needs_safe = !prev_safe_known || prev_safe_area_insets != safe_area_insets;
         let needs_occlusion = !prev_occlusion_known || prev_occlusion_insets != occlusion_insets;
@@ -228,6 +258,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             || needs_contrast
             || needs_forced
             || needs_motion
+            || needs_transparency
+            || needs_text_scale
             || needs_safe
             || needs_occlusion
         {
@@ -255,6 +287,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 pref_snapshot.prefers_reduced_motion,
                             );
                         }
+                        if needs_transparency {
+                            svc.set_prefers_reduced_transparency(
+                                self.app_window,
+                                pref_snapshot.prefers_reduced_transparency,
+                            );
+                        }
+                    }
+
+                    if needs_text_scale {
+                        svc.set_text_scale_factor(self.app_window, text_scale_factor);
                     }
 
                     if needs_safe {
@@ -561,6 +603,20 @@ fn read_occlusion_insets(window: &web_sys::Window) -> Option<Edges> {
         bottom: Px(bottom as f32),
         left: Px(offset_left as f32),
     })
+}
+
+fn read_text_scale_factor(window: &web_sys::Window) -> Option<f32> {
+    const BASE_REM_PX: f32 = 16.0;
+
+    let document = window.document()?;
+    let root = document.document_element()?;
+    let style = window.get_computed_style(&root).ok()??;
+    let font_size = style.get_property_value("font-size").ok()?;
+    let px = parse_px(&font_size);
+    if px <= 0.0 {
+        return None;
+    }
+    Some(px / BASE_REM_PX)
 }
 
 fn parse_px(value: &str) -> f32 {

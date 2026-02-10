@@ -1212,10 +1212,13 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct DesktopEnvironmentSnapshot {
     color_scheme: Option<ColorScheme>,
     prefers_reduced_motion: Option<bool>,
+    text_scale_factor: Option<f32>,
+    prefers_reduced_transparency: Option<bool>,
+    accent_color: Option<fret_core::Color>,
     contrast_preference: Option<ContrastPreference>,
     forced_colors_mode: Option<ForcedColorsMode>,
 }
@@ -1324,6 +1327,9 @@ fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentS
     DesktopEnvironmentSnapshot {
         color_scheme: read_desktop_color_scheme(window),
         prefers_reduced_motion: read_desktop_prefers_reduced_motion(),
+        text_scale_factor: read_desktop_text_scale_factor(),
+        prefers_reduced_transparency: read_desktop_prefers_reduced_transparency(),
+        accent_color: read_desktop_accent_color(),
         contrast_preference: read_desktop_contrast_preference(),
         forced_colors_mode: read_desktop_forced_colors_mode(),
     }
@@ -1426,6 +1432,18 @@ fn read_desktop_prefers_reduced_motion() -> Option<bool> {
 
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    None
+}
+
+fn read_desktop_text_scale_factor() -> Option<f32> {
+    None
+}
+
+fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
+    None
+}
+
+fn read_desktop_accent_color() -> Option<fret_core::Color> {
     None
 }
 
@@ -3410,6 +3428,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let needs_motion = !metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(window))
             || metrics.and_then(|svc| svc.prefers_reduced_motion(window))
                 != snapshot.prefers_reduced_motion;
+        let needs_text_scale = !metrics.is_some_and(|svc| svc.text_scale_factor_is_known(window))
+            || metrics.and_then(|svc| svc.text_scale_factor(window)) != snapshot.text_scale_factor;
+        let needs_transparency = !metrics
+            .is_some_and(|svc| svc.prefers_reduced_transparency_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_transparency(window))
+                != snapshot.prefers_reduced_transparency;
+        let needs_accent = !metrics.is_some_and(|svc| svc.accent_color_is_known(window))
+            || metrics.and_then(|svc| svc.accent_color(window)) != snapshot.accent_color;
         let needs_contrast = !metrics.is_some_and(|svc| svc.contrast_preference_is_known(window))
             || metrics.and_then(|svc| svc.contrast_preference(window))
                 != snapshot.contrast_preference;
@@ -3417,7 +3443,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             || metrics.and_then(|svc| svc.forced_colors_mode(window))
                 != snapshot.forced_colors_mode;
 
-        if !(needs_scheme || needs_motion || needs_contrast || needs_forced) {
+        if !(needs_scheme
+            || needs_motion
+            || needs_text_scale
+            || needs_transparency
+            || needs_accent
+            || needs_contrast
+            || needs_forced)
+        {
             return false;
         }
 
@@ -3428,6 +3461,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
                 if needs_motion {
                     svc.set_prefers_reduced_motion(window, snapshot.prefers_reduced_motion);
+                }
+                if needs_text_scale {
+                    svc.set_text_scale_factor(window, snapshot.text_scale_factor);
+                }
+                if needs_transparency {
+                    svc.set_prefers_reduced_transparency(
+                        window,
+                        snapshot.prefers_reduced_transparency,
+                    );
+                }
+                if needs_accent {
+                    svc.set_accent_color(window, snapshot.accent_color);
                 }
                 if needs_contrast {
                     svc.set_contrast_preference(window, snapshot.contrast_preference);
