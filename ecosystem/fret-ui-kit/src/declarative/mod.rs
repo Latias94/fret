@@ -6,11 +6,14 @@ pub mod canvas_surface;
 pub mod chrome;
 pub mod collapsible_motion;
 pub mod collection_semantics;
+pub mod color_scheme_queries;
 pub mod container_queries;
+pub mod contrast_queries;
 pub mod controllable_state;
 pub mod dismissible;
 pub mod file_tree;
 pub mod focus_scope;
+pub mod forced_colors_queries;
 pub mod form;
 #[cfg(feature = "recipes")]
 pub mod glass;
@@ -18,6 +21,7 @@ pub mod global_watch;
 pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
+pub mod occlusion_queries;
 pub mod overlay_motion;
 #[cfg(feature = "recipes")]
 pub mod pixelate;
@@ -44,13 +48,17 @@ pub mod visually_hidden;
 pub mod windowed_rows_surface;
 
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
+pub use color_scheme_queries::{preferred_color_scheme, prefers_dark_color_scheme};
 pub use container_queries::tailwind;
 pub use container_queries::{
     ContainerQueryHysteresis, container_breakpoints, container_query_region,
     container_query_region_with_id, container_width_at_least,
 };
+pub use contrast_queries::{contrast_preference, prefers_more_contrast};
+pub use forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
+pub use occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };
@@ -60,7 +68,8 @@ pub use semantics::AnyElementSemanticsExt;
 pub use theme_access::ElementContextThemeExt;
 pub use viewport_queries::tailwind as viewport_tailwind;
 pub use viewport_queries::{
-    ViewportQueryHysteresis, viewport_breakpoints, viewport_width_at_least,
+    ViewportQueryHysteresis, viewport_breakpoints, viewport_height_at_least,
+    viewport_height_breakpoints, viewport_width_at_least,
 };
 
 #[cfg(test)]

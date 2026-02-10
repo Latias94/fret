@@ -10,6 +10,7 @@ scope: performance, profiling, data-structures, caching, input, layout, paint
 This file tracks milestones and concrete tasks for:
 
 - `docs/workstreams/ui-perf-zed-smoothness-v1.md`
+- GPUI/Zed gap reference (mechanism-first): `docs/workstreams/ui-perf-gpui-gap-v1.md`
 
 Conventions:
 
@@ -17,12 +18,48 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current priorities (updated 2026-02-07)
+## Current priorities (updated 2026-02-08)
+
+- [ ] Pause checkpoint (2026-02-10): consolidate and avoid new experiments unless a gate regresses.
+  - Summary + rollback switches: `docs/workstreams/ui-perf-zed-smoothness-v1.md` (“Checkpoint (2026-02-10)”).
+  - Evidence anchors:
+    - small-step max `dw` widening: perf log entry `2026-02-09 22:54:20` (commit `53aa6534a`)
+    - wrap-from-unwrapped allocation win: perf log entry `2026-02-09 22:12:02` (commit `7b9a98a8f`)
+    - non-landed experiment example: perf log entry `2026-02-10 00:18:40` (sticky small-step)
+  - Maintenance tasks (keep this workstream “ready to resume”):
+    - [ ] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
+      no-code-change evidence in the perf log.
+    - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
+
+- [ ] Keep the GPUI gap map current and milestone-linked:
+  - Reference: `docs/workstreams/ui-perf-gpui-gap-v1.md`
+  - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
+
+- [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
+  - Workstream: `docs/workstreams/perf-devtools-skills-v1.md`
+  - Deliverable (initial): expand `fret-perf-workflow` attribution recipes + add a single “worked example”.
+  - Latest:
+    - Added `fret-perf-attribution` skill (tail-hitch playbook): commit `7ea708d2f`.
+    - Added `click_stable` diag script step to reduce selector-driven flakiness: commit `75ac42db9`.
+
+- [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
+  bucketed/deferred/cached during live resize, and what must remain exact).
+  - Candidates: text wrap width bucketing, measure/shaping caching, released blob retention, and any LOD/deferral.
+  - Goal: make future “fearless refactors” safer by pinning what must remain stable.
+  - Companion note: `docs/workstreams/ui-perf-resize-path-v1.md`
 
 - [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - [ ] Explain why `top_layout_engine_solves` is typically > 1 in resize probes, and decide which roots should be
+    solved separately vs batched.
+    - Background: `docs/workstreams/ui-perf-resize-path-v1.md`
+  - [x] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
+    `Event::WindowResized` when unchanged.
+    - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.
+    - Reference: `docs/workstreams/ui-perf-resize-path-v1.md` (runner coalescing + GPUI note).
+    - Implementation: commit `d834481b3`.
   - [x] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
     strict majority pass (keeps the gate strict, but reduces single-run flake).
     - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
@@ -32,6 +69,9 @@ Conventions:
     - Candidate actions:
       - Cut a new baseline (v4) with more candidates/validation runs on an idle machine.
       - If it remains flaky, revisit the metric/seed/headroom contract for `drag-jitter` (keep “no hitch” intent).
+    - Latest: perf log entry `2026-02-08 13:32:06` shows attempts=3 PASS on the merged head (`828c945d4`).
+    - Latest: perf log entry `2026-02-09 19:15:00` shows attempts=3 PASS with a default-on small-step interactive-resize
+      wrap-width LRU for prepared text blobs (commit `58db05d7c`).
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
@@ -49,6 +89,54 @@ Conventions:
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
+  - [x] Reduce flow layout build allocations (avoid `UiTree::children(...).to_vec()` clones; avoid cloning the
+    previous children vec in `TaffyLayoutEngine::set_children`).
+    - Implementation: commit `10e30dac1`.
+    - Evidence: perf log entry `2026-02-09 09:10:11` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+- [x] **P0.5 Code editor resize drag smoothness**: close the remaining 2–3× gap to the editor resize threshold.
+  - Evidence snapshot: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`) showing the gate passing 3/3
+    with `top_total_time_us≈15.6–16.0ms` vs `16308us` target.
+  - Root cause (confirmed): per-frame syntax/rich cache resets caused by non-idempotent `CodeEditorHandle::set_language(...)`
+    being called during render.
+  - [x] Cache per-row rich syntax materialization (`AttributedText`) to reduce per-frame span merge churn.
+    - Implementation: `perf(fret-code-editor): cache syntax rich text` (commit `26ad57906`) + build fix (commit `a78a5fc76`).
+    - Evidence: perf log entry `2026-02-09 11:31:52` (commit `a78a5fc76`) showing a ~5ms reduction in Canvas time in the best attempt
+      but still far above threshold.
+  - [x] Add code-editor-Canvas internal attribution (no more “Canvas is 30ms”).
+    - Implementation: `feat(diag): add code editor paint perf breakdown` (commit `f664ead2d`).
+    - Output: `bundle.json` `app_snapshot.code_editor.torture.paint_perf` (opt-in via `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`).
+    - Evidence: perf log entry `2026-02-09 12:22:35` (commit `f664ead2d`).
+  - [x] Make `CodeEditorHandle::set_language(...)` idempotent (no per-frame cache reset).
+    - Implementation: `perf(fret-code-editor): make set_language idempotent` (commit `1778ba563`).
+    - Evidence: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`).
+  - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
+    - Candidate directions:
+      - record per-row display lists (ops) and replay with a transform/translation,
+      - reduce quads/text ops count (batching or fewer per-row background ops),
+      - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
+  - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
+    - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
+    - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).
+  - [ ] Add a smaller, editor-only perf suite to reduce noise while iterating.
+    - Goal: a probe that opens only the code editor torture view (or a minimal demo) and runs the same resize jitter steps.
+    - Deliverable: `tools/diag-scripts/*` + a `ui-code-editor-*` perf baseline/policy if needed.
+  - [ ] GPU side validation (only after CPU attribution is clear).
+    - Run RenderDoc/Tracy captures for the worst bundle and confirm whether the hitch is CPU-bound (scene build/text) or GPU-bound (uploads/compositing).
+- [ ] **P0.6 Declarative “setter idempotency” contract**: eliminate per-frame cache reset footguns.
+  - Motivation: declarative element trees will call `handle.set_*` during render; setters must be no-ops when values are unchanged.
+  - Evidence: editor resize drag fix (commit `1778ba563`) was a ~2.6× win by making `set_language` idempotent.
+  - [x] Audit + fix code-editor `CodeEditorHandle::set_*` methods that can be called from render and clear caches/epochs.
+    - Gate: `ui-code-editor-resize-probes` must remain PASS.
+    - Evidence: `set_language` idempotent (commit `1778ba563`), `set_line_folds`/`set_line_inlays` idempotent (commit `007006b28`).
+  - [ ] Audit other “handle-style” surfaces used from render (markdown editor, docking, viewport tooling) for the same pattern.
+    - Deliverable: list of audited setters + commit references in the perf log.
+  - [x] Add at least one regression test per high-risk surface.
+    - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`).
+  - [x] Add a short guidelines note describing the contract and common pitfalls.
+    - Deliverable: `docs/workstreams/ui-perf-setter-idempotency-v1.md` (commit `420845878`).
+  - [x] Extend the audit to retained text-input surfaces where render-time state re-application is likely.
+    - Evidence: `perf(fret-ui): make TextArea::set_text idempotent` (commit `fcd1ada2d`) + perf log entry
+      `2026-02-09 17:00:00`.
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
@@ -62,6 +150,16 @@ Conventions:
       - the window width delta is small (jitter-class, not stress-class).
     - Keep the old knob for global experiments:
       - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
+  - [x] Treat interactive-resize “small-step” detection as symmetric so back-and-forth drags keep the same
+    bucketing/caching policies enabled.
+    - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
+    - Evidence: perf log entry `2026-02-09 16:37:00` (both resize probe gates PASS; `ui-resize-probes` p95 total down
+      ~0.3ms on the worst jitter probe).
+  - [x] Widen the “small-step” `dw` threshold so bucketing applies under common drag deltas (not only <=16px).
+    - Implementation: `perf(fret-ui): widen resize small-step wrap bucketing` (commit `53aa6534a`).
+    - Knob: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`).
+    - Evidence: perf log entry `2026-02-09 22:54:20` (`ui-code-editor-resize-probes` gate passes 3/3; p95 total down
+      ~0.95ms vs the prior run).
   - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
     - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
     - Evidence: perf log entry `2026-02-08` (editor resize gate delta).
@@ -77,10 +175,50 @@ Conventions:
     - Implementation: `feat(fret-ui): add interactive-resize wrapped text width cache knob` (commit `2e479fc2f`).
     - Knob: `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES` (default: `0`/off; try `4`).
     - Evidence: perf log entries `2026-02-08` (A/B: off vs `ENTRIES=4`).
+  - [x] Add a renderer-owned, bounded “released blob” retention policy (LRU / time-based) to avoid thrashing
+    `Text::prepare` under interactive resize width jitter.
+    - Rationale: `TextSystem::release` currently eagerly evicts blobs when refcount hits zero, which amplifies churn
+      when the UI alternates between a small set of wrap widths.
+    - Expected impact: reduce `paint_text_prepare.us(time/calls)` spikes on resize frames even without per-widget
+      multi-width caches.
+    - Implementation: `perf(fret-render): retain released text blobs via LRU` (commit `abf7ce646`).
+    - Knob: `FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES` (default: `0`/off; A/B tested at `256`).
+    - Evidence: perf log entry `2026-02-08 15:51:15` (A/B gates + worst-frame attribution).
+  - [x] Add a width-independent “unwrapped layout” cache and reuse it for word wrap under width jitter (GPUI-style).
+    - Goal: prevent “shape again” work when only wrap widths change during interactive resize (especially in the
+      code editor jitter probe).
+    - Implementation:
+      - `perf(fret-render): reuse unwrapped layouts for word wrap` (commit `2fac17832`)
+      - `perf(fret-render): avoid fallback after unwrapped wrap` (commit `06a16f35b`)
+    - Knobs:
+      - `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES` (default: `0`/off; A/B tested at `2048`)
+      - `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES` (default: `4096`; A/B tested at `16384`)
+    - Evidence: perf log entry `2026-02-08 17:38:51` (A/B gates + worst-frame attribution; editor gate flips
+      from FAIL to PASS when enabled).
+  - [x] Avoid cloning per-line glyph/cluster vectors when wrapping from cached unwrapped layouts (word wrap, LTR).
+    - Implementation: `perf(fret-render-wgpu): avoid cloning glyphs during wrap` (commit `7b9a98a8f`).
+    - Evidence: perf log entry `2026-02-09 22:12:02` (`ui-resize-probes` gate attempts=3 PASS; commit-bound).
+  - [ ] Follow-up: validate memory bounds + eviction behavior on longer editor sessions (ensure the LRU remains
+    bounded and does not retain pathological blobs indefinitely).
+  - [ ] Follow-up: decide if `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES` should become a default-on policy for
+    native builds (with an opt-out env), and add explicit diagnostics counters for cache hit/miss rates so we can
+    validate “global optimum” across the acceptance suite.
   - [x] Bucket wrapped-text **measure** widths during interactive resize in the host-widget layout path to reduce
     measure churn and align layout/paint wrap widths.
     - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
     - Evidence: perf log entries `2026-02-08` (`ui-code-editor-resize-probes` and P0 `ui-resize-probes` sanity).
+  - [x] Stabilize `TextService::measure` shaping reuse working-set to reduce `layout_engine_solve` tail outliers
+    (avoid occasional “measure reshaping thrash” during interactive resize).
+    - Implementation: `perf(fret-render): stabilize measure shaping cache tail` (commit `f2c08b806`).
+    - Knobs:
+      - `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES` (default: `4096`; clamp: `64..=65536`)
+      - `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES` (default: `128`; cache only long paragraphs)
+    - Evidence: perf log entry `2026-02-08 23:44:01` (`ui-code-editor-resize-probes`, `ui-resize-probes`, `ui-gallery-steady`).
+  - [x] Attempt: reuse prepared text blobs across the host-widget layout/paint paths.
+    - Implementation: `perf(fret-ui): reuse prepared text across layout/paint` (commit `e337b4299`).
+    - Evidence: perf log entry `2026-02-09 21:14:30` (`ui-resize-probes` attempts=5 PASS).
+    - Known gap: most UI gallery nodes are sized via the layout engine’s measure callback; follow up by aligning
+      `TextService::measure`/`prepare` cache behavior so paint can reuse measurement work without re-shaping.
 - [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
   “paint-only” frames under small-step resize/scroll.
   - Primary probes:
@@ -163,6 +301,13 @@ Execution plan:
   - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`.
+- [x] Ensure `diag perf --json` still emits the JSON payload even when perf thresholds fail (so gate triage can
+  resolve worst bundles without rerunning).
+- [x] Fix `tools/perf/diag_resize_probes_gate.sh` to record non-zero attempt exit codes correctly (for trustworthy
+  gate summaries and downstream triage).
+- [x] Fix `fret-perf-workflow` gate triage helper:
+  - robust JSON payload extraction (skip leading logs without awk regex pitfalls),
+  - support absolute gate out-dirs (worktrees) by resolving attempt paths relative to the summary out-dir.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:
@@ -244,6 +389,14 @@ Primary targets (highest leverage):
 - [x] Avoid per-dispatch `HashMap<NodeId, u8>` churn when deduplicating invalidations during input dispatch.
   - Use the existing generation-stamped `InvalidationDedupTable` for dispatch-time invalidation dedup.
   - Implemented by `perf(fret-ui): reuse invalidation dedup in dispatch` (commit `bcb329e6`).
+- [x] Make the layout-engine request/build phase less hashing-heavy (dense tables).
+  - Convert `TaffyLayoutEngine::{node_to_layout,styles,children,parent}` to `slotmap::SecondaryMap`.
+  - Evidence: perf log entry `2026-02-09 16:10:00` for commit `e9ea4522a` in
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (`layout_request_build_roots_time_us` improved).
+- [x] Experiment: memoize wrapper-chain fill scan during request/build.
+  - Result: passes the resize gates, but regresses `layout_request_build_roots_time_us` on drag-jitter.
+  - Evidence: perf log entry for commit `96661c49c` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - Next: prefer the broader layout-engine M1 refactor (hashing → dense tables) instead of per-frame `HashMap` caches.
 - [ ] Ensure deterministic ordering is preserved where diagnostics rely on it (bundle stability).
 
 Perf acceptance:

@@ -91,8 +91,6 @@ impl DockedDatePicker {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let month = cx
                 .get_model_cloned(&self.month, Invalidation::Layout)
                 .unwrap_or_else(|| CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
@@ -108,12 +106,23 @@ impl DockedDatePicker {
                 DatePickerVariant::Modal => DatePickerTokenVariant::Modal,
             };
 
-            let width = date_tokens::container_width(&theme, token_variant);
-            let height = date_tokens::container_height(&theme, token_variant);
-            let background = date_tokens::container_color(&theme, token_variant);
-            let elevation = date_tokens::container_elevation(&theme, token_variant);
-            let corner_radii = date_tokens::container_shape(&theme, token_variant);
-            let surface = material_surface_style(&theme, background, elevation, None, corner_radii);
+            let (width, height, background, shadow, corner_radii) = {
+                let theme = Theme::global(&*cx.app);
+                let width = date_tokens::container_width(theme, token_variant);
+                let height = date_tokens::container_height(theme, token_variant);
+                let container_color = date_tokens::container_color(theme, token_variant);
+                let elevation = date_tokens::container_elevation(theme, token_variant);
+                let corner_radii = date_tokens::container_shape(theme, token_variant);
+                let surface =
+                    material_surface_style(theme, container_color, elevation, None, corner_radii);
+                (
+                    width,
+                    height,
+                    surface.background,
+                    surface.shadow,
+                    corner_radii,
+                )
+            };
 
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Px(width);
@@ -122,13 +131,12 @@ impl DockedDatePicker {
 
             let mut container = ContainerProps::default();
             container.layout = layout;
-            container.background = Some(surface.background);
-            container.shadow = surface.shadow;
+            container.background = Some(background);
+            container.shadow = shadow;
             container.corner_radii = corner_radii;
 
             let content = date_picker_body(
                 cx,
-                &theme,
                 token_variant,
                 month,
                 self.month.clone(),
@@ -256,8 +264,6 @@ impl DatePickerDialog {
         underlay: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
@@ -299,30 +305,36 @@ impl DatePickerDialog {
                     .update(&models.draft_selected, |m| *m = external_selected);
             }
 
-            let open_ms = self
-                .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
-
             let easing_key = self
                 .easing_key
                 .clone()
                 .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
+
+            let (theme_motion_ms, bezier) = {
+                let theme = Theme::global(&*cx.app);
+                let motion_ms = theme.duration_ms_by_key("md.sys.motion.duration.medium2");
+                let bezier =
+                    theme
+                        .easing_by_key(easing_key.as_ref())
+                        .unwrap_or(fret_ui::theme::CubicBezier {
+                            x1: 0.0,
+                            y1: 0.0,
+                            x2: 1.0,
+                            y2: 1.0,
+                        });
+                (motion_ms, bezier)
+            };
+
+            let open_ms = self
+                .open_duration_ms
+                .or(theme_motion_ms)
+                .unwrap_or(300);
+            let close_ms = self
+                .close_duration_ms
+                .or(theme_motion_ms)
+                .unwrap_or(300);
+            let open_ticks = motion::ms_to_frames(open_ms);
+            let close_ticks = motion::ms_to_frames(close_ms);
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -339,7 +351,10 @@ impl DatePickerDialog {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_base = theme.color_required("md.sys.color.scrim");
+                let scrim_base = {
+                    let theme = Theme::global(&*cx.app);
+                    theme.color_required("md.sys.color.scrim")
+                };
                 let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -475,7 +490,6 @@ impl DatePickerDialog {
 
                                 let picker = date_picker_modal_panel(
                                     cx,
-                                    &theme,
                                     models.draft_month.clone(),
                                     models.draft_selected.clone(),
                                     panel_test_id.clone(),
@@ -526,7 +540,6 @@ impl DatePickerDialog {
 
 fn date_picker_modal_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
     test_id: Option<Arc<str>>,
@@ -542,12 +555,26 @@ fn date_picker_modal_panel<H: UiHost>(
         .get_model_cloned(&selected, Invalidation::Layout)
         .unwrap_or(None);
 
-    let width = date_tokens::container_width(theme, token_variant);
-    let height = date_tokens::container_height(theme, token_variant);
-    let background = date_tokens::container_color(theme, token_variant);
-    let elevation = date_tokens::container_elevation(theme, token_variant);
-    let corner_radii = date_tokens::container_shape(theme, token_variant);
-    let surface = material_surface_style(theme, background, elevation, None, corner_radii);
+    let (width, height, background, shadow, corner_radii, headline_style, headline_color) = {
+        let theme = Theme::global(&*cx.app);
+        let width = date_tokens::container_width(theme, token_variant);
+        let height = date_tokens::container_height(theme, token_variant);
+        let container_color = date_tokens::container_color(theme, token_variant);
+        let elevation = date_tokens::container_elevation(theme, token_variant);
+        let corner_radii = date_tokens::container_shape(theme, token_variant);
+        let surface = material_surface_style(theme, container_color, elevation, None, corner_radii);
+        let headline_style = date_tokens::header_headline_style(theme);
+        let headline_color = date_tokens::header_headline_color(theme);
+        (
+            width,
+            height,
+            surface.background,
+            surface.shadow,
+            corner_radii,
+            headline_style,
+            headline_color,
+        )
+    };
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(width);
@@ -556,14 +583,14 @@ fn date_picker_modal_panel<H: UiHost>(
 
     let mut container = ContainerProps::default();
     container.layout = layout;
-    container.background = Some(surface.background);
-    container.shadow = surface.shadow;
+    container.background = Some(background);
+    container.shadow = shadow;
     container.corner_radii = corner_radii;
 
     let title = {
         let mut props = TextProps::new(Arc::<str>::from("Select date"));
-        props.style = Some(date_tokens::header_headline_style(theme));
-        props.color = Some(date_tokens::header_headline_color(theme));
+        props.style = Some(headline_style);
+        props.color = Some(headline_color);
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
@@ -590,7 +617,6 @@ fn date_picker_modal_panel<H: UiHost>(
                 title,
                 date_picker_body(
                     cx,
-                    theme,
                     token_variant,
                     month_value,
                     month.clone(),
@@ -646,7 +672,6 @@ fn date_picker_actions<H: UiHost>(
 
 fn date_picker_body<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -674,16 +699,14 @@ fn date_picker_body<H: UiHost>(
             vec![
                 month_nav_header(
                     cx,
-                    theme,
                     token_variant,
                     month,
                     month_model.clone(),
                     test_id.clone(),
                 ),
-                weekdays_row(cx, theme, token_variant, week_start),
+                weekdays_row(cx, token_variant, week_start),
                 dates_grid(
                     cx,
-                    theme,
                     token_variant,
                     month,
                     month_model,
@@ -700,7 +723,6 @@ fn date_picker_body<H: UiHost>(
 
 fn month_nav_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -717,11 +739,18 @@ fn month_nav_header<H: UiHost>(
     row.gap = Px(12.0);
 
     let title_el = {
+        let (style, color) = {
+            let theme = Theme::global(&*cx.app);
+            let style = theme
+                .text_style_by_key("md.sys.typescale.title-large")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
+            let color = theme.color_required("md.sys.color.on-surface");
+            (style, color)
+        };
+
         let mut props = TextProps::new(title);
-        props.style = theme
-            .text_style_by_key("md.sys.typescale.title-large")
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
-        props.color = Some(theme.color_required("md.sys.color.on-surface"));
+        props.style = style;
+        props.color = Some(color);
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
@@ -771,7 +800,6 @@ fn month_nav_header<H: UiHost>(
 
 fn weekdays_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     week_start: Weekday,
 ) -> AnyElement {
@@ -783,8 +811,12 @@ fn weekdays_row<H: UiHost>(
     row.layout.size.width = Length::Fill;
     row.gap = Px(0.0);
 
-    let style = date_tokens::weekdays_label_text_style(theme, token_variant);
-    let color = date_tokens::weekdays_label_text_color(theme, token_variant);
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = date_tokens::weekdays_label_text_style(theme, token_variant);
+        let color = date_tokens::weekdays_label_text_color(theme, token_variant);
+        (style, color)
+    };
 
     let weekdays = weekdays_from_start(week_start);
     cx.flex(row, move |cx| {
@@ -805,7 +837,6 @@ fn weekdays_row<H: UiHost>(
 
 fn dates_grid<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -816,16 +847,32 @@ fn dates_grid<H: UiHost>(
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let days = month_grid(month, week_start);
-    let cell_w = date_tokens::date_cell_width(theme, token_variant);
-    let cell_h = date_tokens::date_cell_height(theme, token_variant);
-    let cell_shape = date_tokens::date_cell_shape(theme, token_variant);
-    let label_style = date_tokens::date_label_text_style(theme, token_variant);
-    let unselected_color = date_tokens::date_unselected_label_text_color(theme, token_variant);
-    let selected_container = date_tokens::date_selected_container_color(theme, token_variant);
-    let selected_label = date_tokens::date_selected_label_text_color(theme, token_variant);
-    let today_outline_width = date_tokens::date_today_outline_width(theme, token_variant);
-    let today_outline_color = date_tokens::date_today_outline_color(theme, token_variant);
-    let outside_opacity = date_tokens::date_outside_month_opacity(theme, token_variant);
+    let (
+        cell_w,
+        cell_h,
+        cell_shape,
+        label_style,
+        unselected_color,
+        selected_container,
+        selected_label,
+        today_outline_width,
+        today_outline_color,
+        outside_opacity,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            date_tokens::date_cell_width(theme, token_variant),
+            date_tokens::date_cell_height(theme, token_variant),
+            date_tokens::date_cell_shape(theme, token_variant),
+            date_tokens::date_label_text_style(theme, token_variant),
+            date_tokens::date_unselected_label_text_color(theme, token_variant),
+            date_tokens::date_selected_container_color(theme, token_variant),
+            date_tokens::date_selected_label_text_color(theme, token_variant),
+            date_tokens::date_today_outline_width(theme, token_variant),
+            date_tokens::date_today_outline_color(theme, token_variant),
+            date_tokens::date_outside_month_opacity(theme, token_variant),
+        )
+    };
 
     let base_id = test_id
         .clone()

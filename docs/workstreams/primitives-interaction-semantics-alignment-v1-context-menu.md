@@ -18,6 +18,12 @@ Baseline: Radix Context Menu outcomes (right-click / keyboard menu key / Shift+F
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/context_menu.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 
+Shared menu substrate (dismiss + click-through semantics):
+
+- `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`:
+  - `dismissible_menu_request_with_modal*` (modal vs click-through)
+  - `menu_close_auto_focus_guard_hooks` (suppress close auto-focus for non-modal outside presses)
+
 Key implementation anchors (open reasons + anchoring):
 
 - Keyboard open (Shift+F10 / ContextMenu key):

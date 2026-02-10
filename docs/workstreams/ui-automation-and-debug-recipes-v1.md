@@ -57,7 +57,7 @@ Fret already has most of the primitives needed for a “test-engine-like” work
 - Scripted actions + selectors (semantics/test_id first): `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Inspect/picker overlay producing stable selectors: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Portable bundle export (`bundle.json`) + offline viewer: `crates/fret-diag/src/lib.rs` (`apps/fretboard/src/diag.rs` wrapper), `tools/fret-bundle-viewer`
-- Perf triage and matrix compare: `fretboard diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.ps1`
+- Perf triage and matrix compare: `fretboard diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.py`
 - Tracy integration via `tracing`: `docs/tracy.md`
 - RenderDoc scriptable inspection: `docs/renderdoc-inspection.md`, `apps/fret-renderdoc`
 - “Stale paint” detection based on semantics bounds vs scene fingerprint: `crates/fret-diag/src/stats.rs` (`--check-stale-paint`)

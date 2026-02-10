@@ -1234,7 +1234,8 @@ fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
         }
     }
 
-    let spacing = if theme.viewport.w >= 768.0 {
+    let md_min_width = fret_ui_kit::declarative::viewport_tailwind::MD.0;
+    let spacing = if theme.viewport.w >= md_min_width {
         md.or(base)
     } else {
         base
@@ -3638,15 +3639,25 @@ fn render_calendar_root_background_in_popover_scope(
             }
 
             let calendar = calendar.into_element(cx);
-            match &calendar.kind {
-                ElementKind::Container(props) => {
-                    let bg = props
-                        .background
-                        .expect("calendar root background (resolved)");
-                    calendar_bg.set(Some(bg));
+            let props = match &calendar.kind {
+                ElementKind::Container(props) => props,
+                ElementKind::LayoutQueryRegion(_) => {
+                    let child = calendar
+                        .children
+                        .first()
+                        .expect("calendar root LayoutQueryRegion child");
+                    match &child.kind {
+                        ElementKind::Container(props) => props,
+                        other => panic!("expected calendar root container, got {other:?}"),
+                    }
                 }
                 other => panic!("expected calendar root container, got {other:?}"),
-            }
+            };
+
+            let bg = props
+                .background
+                .expect("calendar root background (resolved)");
+            calendar_bg.set(Some(bg));
 
             fret_ui_shadcn::PopoverContent::new([calendar])
                 // shadcn/ui DatePicker demo uses `PopoverContent` with `w-auto p-0`.

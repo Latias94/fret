@@ -28,7 +28,7 @@ Related ADRs:
 
 - ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
 
 Implementation pointers (where the code lives today):
 
@@ -703,7 +703,7 @@ Notes:
 
 Recommended (CI/automation):
 
-- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+- `python3 tools/diag_matrix_ui_gallery.py --out-dir target/fret-diag --warmup-frames 5 --release --json`
 
 ### Bundle comparison (cached vs uncached)
 

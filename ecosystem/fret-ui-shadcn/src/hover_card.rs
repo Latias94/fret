@@ -671,7 +671,11 @@ impl HoverCard {
                     .or(last_content_size)
                     .unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    window_margin,
+                );
 
                 let align = match align {
                     HoverCardAlign::Start => Align::Start,

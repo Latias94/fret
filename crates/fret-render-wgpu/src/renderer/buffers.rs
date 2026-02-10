@@ -6,16 +6,28 @@ impl Renderer {
             return;
         }
         let new_capacity = needed.next_power_of_two().max(self.instance_capacity * 2);
-        self.instance_buffers = (0..self.instance_buffers.len())
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret quad instances (resized) #{i}")),
-                    size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
+        let mut new_buffers = Vec::with_capacity(self.instance_buffers.len());
+        let mut new_bind_groups = Vec::with_capacity(self.instance_buffers.len());
+        for i in 0..self.instance_buffers.len() {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("fret quad instances (resized) #{i}")),
+                size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(&format!("fret quad instances bind group (resized) #{i}")),
+                layout: &self.quad_instance_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            new_buffers.push(buffer);
+            new_bind_groups.push(bind_group);
+        }
+        self.instance_buffers = new_buffers;
+        self.quad_instance_bind_groups = new_bind_groups;
         self.instance_buffer_index = 0;
         self.instance_capacity = new_capacity;
     }

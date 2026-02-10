@@ -1,6 +1,6 @@
 use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
-    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
+    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Paint, Scene, SceneOp,
 };
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
@@ -140,28 +140,28 @@ fn gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content() {
     base.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     });
 
     let outside_marker = SceneOp::Quad {
         order: DrawOrder(1),
         rect: Rect::new(Point::new(Px(4.0), Px(0.0)), Size::new(Px(8.0), Px(64.0))),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     };
 
@@ -187,9 +187,9 @@ fn gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content() {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(10 + i),
                 rect: Rect::new(Point::new(Px(x), Px(0.0)), Size::new(Px(1.0), Px(64.0))),
-                background: bg,
+                background: Paint::Solid(bg),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Default::default(),
             });
         }
@@ -201,14 +201,14 @@ fn gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content() {
             Point::new(Px(26.0), Px(48.0)),
             Size::new(Px(12.0), Px(12.0)),
         ),
-        background: Color {
+        background: Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        },
+        }),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Default::default(),
     };
 

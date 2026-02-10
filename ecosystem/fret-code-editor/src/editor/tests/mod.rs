@@ -966,8 +966,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
         st.preedit = None;
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(composition, None);
     assert_eq!(value.as_str(), "hello 😀 world");
     assert_eq!(
@@ -1006,8 +1006,8 @@ fn a11y_window_includes_preedit_and_reports_composition_range() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "heabllo");
     assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
     assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
@@ -1028,8 +1028,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, _selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "ABhello");
     assert_eq!(composition, Some((0, 2)));
 
@@ -1055,6 +1055,43 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
     let clamped_end =
         map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
     assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_window_includes_decorations_when_composed() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_compose_inline_preedit(true);
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..3,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    handle.set_caret(1);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((2, 2)));
+
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
 }
 
 #[test]
@@ -1489,6 +1526,116 @@ fn rust_syntax_spans_are_materialized_for_rows() {
     assert!(
         any_highlight,
         "expected at least one highlighted span for rust"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn set_language_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        0,
+        "new handles should not reset syntax caches"
+    );
+
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let _ = paint::cached_row_syntax_spans(&mut st, 0, 256);
+        let _ = paint::cached_row_syntax_spans(&mut st, 1, 256);
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1"
+        );
+    }
+
+    let resets_before = handle.cache_stats().syntax_resets;
+
+    // The UI layer may call set_language during render; that must be a no-op when the language is
+    // unchanged to avoid per-frame cache resets and re-highlighting work.
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        resets_before,
+        "idempotent set_language must not reset syntax caches"
+    );
+
+    {
+        let st = handle.state.borrow();
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0 to survive idempotent set_language"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1 to survive idempotent set_language"
+        );
+    }
+}
+
+#[test]
+fn set_line_folds_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let placeholder = Arc::<str>::from("…");
+    let spans = vec![FoldSpan {
+        range: 1..3,
+        placeholder,
+    }];
+
+    handle.set_line_folds(0, spans.clone());
+
+    let (folds_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.folds_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_folds(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.folds_epoch, folds_epoch_before,
+        "idempotent set_line_folds must not bump folds_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_folds must not reset row text caches"
+    );
+}
+
+#[test]
+fn set_line_inlays_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let spans = vec![InlaySpan {
+        byte: 2,
+        text: Arc::<str>::from("<inlay>"),
+    }];
+
+    handle.set_line_inlays(0, spans.clone());
+
+    let (inlays_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.inlays_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_inlays(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.inlays_epoch, inlays_epoch_before,
+        "idempotent set_line_inlays must not bump inlays_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_inlays must not reset row text caches"
     );
 }
 

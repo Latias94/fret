@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use fret_core::{AppWindowId, Point, Px, TimerToken};
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::UiHost;
+use fret_ui::action::UiActionHostAdapter;
+use fret_ui::elements::GlobalElementId;
 
 pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
 pub(super) const TOAST_AUTO_CLOSE_TICK: Duration = Duration::from_millis(100);
@@ -12,6 +15,8 @@ pub const DEFAULT_MAX_TOASTS: usize = 3;
 pub const DEFAULT_SWIPE_THRESHOLD_PX: f32 = 50.0;
 pub const DEFAULT_SWIPE_MAX_DRAG_PX: f32 = 240.0;
 pub const DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX: f32 = 4.0;
+pub const DEFAULT_VISIBLE_TOASTS: usize = 3;
+pub const DEFAULT_TOAST_DURATION: Duration = Duration::from_millis(4000);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
@@ -74,6 +79,7 @@ pub struct ToastAction {
 #[derive(Debug, Clone)]
 pub struct ToastRequest {
     pub id: Option<ToastId>,
+    pub toaster_id: Option<Arc<str>>,
     pub title: Arc<str>,
     pub description: Option<Arc<str>>,
     pub duration: Option<Duration>,
@@ -81,19 +87,28 @@ pub struct ToastRequest {
     pub action: Option<ToastAction>,
     pub cancel: Option<ToastAction>,
     pub dismissible: bool,
+    pub position: Option<ToastPosition>,
+    pub rich_colors: Option<bool>,
+    pub invert: bool,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl ToastRequest {
     pub fn new(title: impl Into<Arc<str>>) -> Self {
         Self {
             id: None,
+            toaster_id: None,
             title: title.into(),
             description: None,
-            duration: Some(Duration::from_secs(3)),
+            duration: Some(DEFAULT_TOAST_DURATION),
             variant: ToastVariant::default(),
             action: None,
             cancel: None,
             dismissible: true,
+            position: None,
+            rich_colors: None,
+            invert: false,
+            test_id: None,
         }
     }
 
@@ -104,6 +119,16 @@ impl ToastRequest {
 
     pub fn id(mut self, id: ToastId) -> Self {
         self.id = Some(id);
+        self
+    }
+
+    pub fn toaster_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.toaster_id = Some(id.into());
+        self
+    }
+
+    pub fn toaster_id_opt(mut self, id: Option<Arc<str>>) -> Self {
+        self.toaster_id = id;
         self
     }
 
@@ -131,6 +156,26 @@ impl ToastRequest {
         self.dismissible = dismissible;
         self
     }
+
+    pub fn position(mut self, position: ToastPosition) -> Self {
+        self.position = Some(position);
+        self
+    }
+
+    pub fn rich_colors(mut self, rich_colors: bool) -> Self {
+        self.rich_colors = Some(rich_colors);
+        self
+    }
+
+    pub fn invert(mut self, invert: bool) -> Self {
+        self.invert = invert;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -152,6 +197,7 @@ struct ToastTimerRef {
 #[derive(Debug, Clone)]
 pub(super) struct ToastEntry {
     pub(super) id: ToastId,
+    pub(super) toaster_id: Option<Arc<str>>,
     pub(super) title: Arc<str>,
     pub(super) description: Option<Arc<str>>,
     pub(super) duration: Option<Duration>,
@@ -160,6 +206,11 @@ pub(super) struct ToastEntry {
     pub(super) action: Option<ToastAction>,
     pub(super) cancel: Option<ToastAction>,
     pub(super) dismissible: bool,
+    pub(super) position: Option<ToastPosition>,
+    pub(super) rich_colors: Option<bool>,
+    pub(super) invert: bool,
+    pub(super) test_id: Option<Arc<str>>,
+    pub(super) measured_height: Option<Px>,
     pub(super) open: bool,
     pub(super) auto_close_token: Option<TimerToken>,
     pub(super) remove_token: Option<TimerToken>,
@@ -184,6 +235,14 @@ pub struct ToastStore {
     by_token: HashMap<TimerToken, ToastTimerRef>,
     max_toasts_by_window: HashMap<AppWindowId, usize>,
     swipe_by_window: HashMap<AppWindowId, ToastSwipeConfig>,
+    toaster_state: HashMap<(AppWindowId, GlobalElementId), ToasterState>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ToasterState {
+    pub(crate) hovered: bool,
+    pub(crate) interacting: bool,
+    pub(crate) hotkey_expanded: bool,
 }
 
 impl ToastStore {
@@ -281,6 +340,7 @@ impl ToastStore {
 
         self.by_window.entry(window).or_default().push(ToastEntry {
             id,
+            toaster_id: request.toaster_id,
             title: request.title,
             description: request.description,
             duration: request.duration,
@@ -289,6 +349,11 @@ impl ToastStore {
             action: request.action,
             cancel: request.cancel,
             dismissible: request.dismissible,
+            position: request.position,
+            rich_colors: request.rich_colors,
+            invert: request.invert,
+            test_id: request.test_id,
+            measured_height: None,
             open: true,
             auto_close_token,
             remove_token: None,
@@ -328,10 +393,16 @@ impl ToastStore {
                     toast.action = request.action;
                     toast.cancel = request.cancel;
                     toast.dismissible = request.dismissible;
+                    toast.toaster_id = request.toaster_id;
+                    toast.position = request.position;
+                    toast.rich_colors = request.rich_colors;
+                    toast.invert = request.invert;
+                    toast.test_id = request.test_id;
                     toast.drag_start = None;
                     toast.drag_offset = Point::new(Px(0.0), Px(0.0));
                     toast.settle_from = None;
                     toast.dragging = false;
+                    toast.measured_height = None;
 
                     let schedule_auto = match (wants_timer, auto_close_token) {
                         (Some(after), Some(token)) => {
@@ -717,6 +788,78 @@ impl ToastStore {
             }
         }
     }
+
+    pub fn set_toaster_hovered(
+        &mut self,
+        window: AppWindowId,
+        toaster: GlobalElementId,
+        hovered: bool,
+    ) -> bool {
+        let st = self.toaster_state.entry((window, toaster)).or_default();
+        if st.hovered == hovered {
+            return false;
+        }
+        st.hovered = hovered;
+        true
+    }
+
+    pub fn set_toaster_interacting(
+        &mut self,
+        window: AppWindowId,
+        toaster: GlobalElementId,
+        interacting: bool,
+    ) -> bool {
+        let st = self.toaster_state.entry((window, toaster)).or_default();
+        if st.interacting == interacting {
+            return false;
+        }
+        st.interacting = interacting;
+        true
+    }
+
+    pub fn set_toaster_hotkey_expanded(
+        &mut self,
+        window: AppWindowId,
+        toaster: GlobalElementId,
+        expanded: bool,
+    ) -> bool {
+        let st = self.toaster_state.entry((window, toaster)).or_default();
+        if st.hotkey_expanded == expanded {
+            return false;
+        }
+        st.hotkey_expanded = expanded;
+        true
+    }
+
+    pub(crate) fn toaster_state(
+        &self,
+        window: AppWindowId,
+        toaster: GlobalElementId,
+    ) -> ToasterState {
+        self.toaster_state
+            .get(&(window, toaster))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    pub fn set_toast_measured_height(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        height: Px,
+    ) -> bool {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            return false;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == id) else {
+            return false;
+        };
+        if toast.measured_height == Some(height) {
+            return false;
+        }
+        toast.measured_height = Some(height);
+        true
+    }
 }
 
 fn auto_close_next_after(remaining: Duration) -> Duration {
@@ -862,6 +1005,79 @@ pub fn dismiss_toast_action(
 
     host.request_redraw(window);
     true
+}
+
+#[derive(Default)]
+struct ToastAsyncQueue {
+    inner: Arc<Mutex<Vec<ToastAsyncMsg>>>,
+}
+
+/// Thread-safe handle for scheduling toast upserts/dismissals from background work.
+///
+/// Messages are applied on the UI thread during the window overlays render pass.
+#[derive(Clone, Debug)]
+pub struct ToastAsyncQueueHandle {
+    inner: Arc<Mutex<Vec<ToastAsyncMsg>>>,
+}
+
+#[derive(Clone, Debug)]
+pub enum ToastAsyncMsg {
+    Upsert {
+        window: AppWindowId,
+        request: ToastRequest,
+    },
+    Dismiss {
+        window: AppWindowId,
+        id: ToastId,
+    },
+}
+
+impl ToastAsyncQueueHandle {
+    pub fn push(&self, msg: ToastAsyncMsg) {
+        let mut lock = self.inner.lock().unwrap_or_else(|p| p.into_inner());
+        lock.push(msg);
+    }
+
+    pub fn upsert(&self, window: AppWindowId, request: ToastRequest) {
+        self.push(ToastAsyncMsg::Upsert { window, request });
+    }
+
+    pub fn dismiss(&self, window: AppWindowId, id: ToastId) {
+        self.push(ToastAsyncMsg::Dismiss { window, id });
+    }
+}
+
+pub fn toast_async_queue<H: UiHost>(app: &mut H) -> ToastAsyncQueueHandle {
+    app.with_global_mut_untracked(ToastAsyncQueue::default, |queue, _app| {
+        ToastAsyncQueueHandle {
+            inner: queue.inner.clone(),
+        }
+    })
+}
+
+pub(super) fn drain_toast_async_queue<H: UiHost>(app: &mut H) {
+    let msgs = app.with_global_mut_untracked(ToastAsyncQueue::default, |queue, _app| {
+        let mut lock = queue.inner.lock().unwrap_or_else(|p| p.into_inner());
+        std::mem::take(&mut *lock)
+    });
+
+    if msgs.is_empty() {
+        return;
+    }
+
+    let store = toast_store(app);
+    let mut host = UiActionHostAdapter { app };
+
+    for msg in msgs {
+        match msg {
+            ToastAsyncMsg::Upsert { window, request } => {
+                let _ = toast_action(&mut host, store.clone(), window, request);
+            }
+            ToastAsyncMsg::Dismiss { window, id } => {
+                let _ = dismiss_toast_action(&mut host, store.clone(), window, id);
+            }
+        }
+    }
 }
 
 #[cfg(test)]

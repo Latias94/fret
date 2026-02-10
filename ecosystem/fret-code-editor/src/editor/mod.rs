@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
@@ -43,7 +43,7 @@ mod tests;
 
 use a11y::{
     a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer,
-    map_a11y_offset_to_buffer_with_preedit,
+    map_a11y_offset_to_buffer_with_preedit, map_a11y_offsets_to_buffer_composed,
 };
 use geom::{
     RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
@@ -284,6 +284,17 @@ pub struct CodeEditorCacheStats {
     pub row_text_evictions: u64,
     pub row_text_resets: u64,
 
+    #[cfg(feature = "syntax")]
+    pub row_rich_get_calls: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_hits: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_misses: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_evictions: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_resets: u64,
+
     /// Number of pointer hit-tests that fell back to the monospace `cell_w` heuristic
     /// (caret stops unavailable).
     pub geom_pointer_hit_test_fallbacks: u64,
@@ -299,6 +310,99 @@ pub struct CodeEditorCacheStats {
     pub syntax_misses: u64,
     pub syntax_evictions: u64,
     pub syntax_resets: u64,
+}
+
+impl CodeEditorCacheStats {
+    pub fn row_rich_get_calls(&self) -> u64 {
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_get_calls
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            0
+        }
+    }
+
+    pub fn row_rich_hits(&self) -> u64 {
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_hits
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            0
+        }
+    }
+
+    pub fn row_rich_misses(&self) -> u64 {
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_misses
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            0
+        }
+    }
+
+    pub fn row_rich_evictions(&self) -> u64 {
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_evictions
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            0
+        }
+    }
+
+    pub fn row_rich_resets(&self) -> u64 {
+        #[cfg(feature = "syntax")]
+        {
+            self.row_rich_resets
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            0
+        }
+    }
+}
+
+/// Frame-local timing counters for the code editor's Canvas paint path.
+///
+/// This is diagnostics-only and intended for perf triage (not for strict perf gates).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorPaintPerfFrame {
+    pub frame_seq: u64,
+    pub visible_start: u64,
+    pub visible_end: u64,
+    pub visible_rows: u64,
+
+    pub rows_painted: u64,
+    pub rows_drew_rich: u64,
+    pub quads_background: u64,
+    pub quads_selection: u64,
+    pub quads_caret: u64,
+
+    pub us_total: u64,
+    pub us_row_text: u64,
+    pub us_baseline_measure: u64,
+    pub us_syntax_spans: u64,
+    pub us_rich_materialize: u64,
+    pub us_text_draw: u64,
+    pub us_selection_rects: u64,
+    pub us_caret_x: u64,
+    pub us_caret_stops: u64,
+    pub us_caret_rect: u64,
+}
+
+fn paint_perf_enabled_from_env() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_CODE_EDITOR_DIAG_PAINT_PERF")
+            .is_some_and(|v| !v.is_empty() && v != "0")
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -343,6 +447,9 @@ struct CodeEditorState {
     row_geom_cache_queue: VecDeque<(usize, u64)>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
+    paint_perf_enabled: bool,
+    paint_perf_frame_seq: u64,
+    paint_perf_frame: CodeEditorPaintPerfFrame,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -355,6 +462,12 @@ struct CodeEditorState {
     syntax_row_cache: HashMap<usize, (Arc<[SyntaxSpan]>, u64)>,
     #[cfg(feature = "syntax")]
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_tick: u64,
+    #[cfg(feature = "syntax")]
+    row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_queue: VecDeque<(usize, u64)>,
 }
 
 #[derive(Debug, Clone)]
@@ -373,6 +486,16 @@ struct BaselineMeasureCache {
     text_style: TextStyle,
     metrics: fret_core::TextMetrics,
     measured_h: Px,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichCacheEntry {
+    row_range: Range<usize>,
+    line: Arc<str>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    theme_revision: u64,
+    rich: fret_core::AttributedText,
 }
 
 impl CodeEditorState {
@@ -429,6 +552,25 @@ impl CodeEditorState {
                 &self.line_folds,
                 &self.line_inlays,
             )
+        };
+    }
+
+    fn paint_perf_begin_frame(&mut self, frame: WindowedRowsPaintFrame) {
+        if !self.paint_perf_enabled {
+            return;
+        }
+
+        self.paint_perf_frame_seq = self.paint_perf_frame_seq.saturating_add(1);
+        let visible_rows = frame
+            .visible_end
+            .saturating_sub(frame.visible_start)
+            .saturating_add(1) as u64;
+        self.paint_perf_frame = CodeEditorPaintPerfFrame {
+            frame_seq: self.paint_perf_frame_seq,
+            visible_start: frame.visible_start as u64,
+            visible_end: frame.visible_end as u64,
+            visible_rows,
+            ..CodeEditorPaintPerfFrame::default()
         };
     }
 
@@ -533,6 +675,9 @@ impl CodeEditorHandle {
                 row_geom_cache_queue: VecDeque::new(),
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
+                paint_perf_enabled: paint_perf_enabled_from_env(),
+                paint_perf_frame_seq: 0,
+                paint_perf_frame: CodeEditorPaintPerfFrame::default(),
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]
@@ -545,6 +690,12 @@ impl CodeEditorHandle {
                 syntax_row_cache: HashMap::new(),
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                row_rich_cache_tick: 0,
+                #[cfg(feature = "syntax")]
+                row_rich_cache: HashMap::new(),
+                #[cfg(feature = "syntax")]
+                row_rich_cache_queue: VecDeque::new(),
             })),
         }
     }
@@ -553,12 +704,20 @@ impl CodeEditorHandle {
         #[cfg(feature = "syntax")]
         {
             let mut st = self.state.borrow_mut();
-            st.language = language.map(Into::into);
+            let next: Option<Arc<str>> = language.map(Into::into);
+            if st.language == next {
+                return;
+            }
+            st.language = next;
             st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
             st.syntax_row_cache_language = None;
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
+            st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
         #[cfg(not(feature = "syntax"))]
         {
@@ -649,6 +808,11 @@ impl CodeEditorHandle {
         self.state.borrow().cache_stats
     }
 
+    pub fn paint_perf_frame(&self) -> Option<CodeEditorPaintPerfFrame> {
+        let st = self.state.borrow();
+        st.paint_perf_enabled.then_some(st.paint_perf_frame)
+    }
+
     pub fn reset_cache_stats(&self) {
         self.state.borrow_mut().cache_stats = CodeEditorCacheStats::default();
     }
@@ -672,8 +836,18 @@ impl CodeEditorHandle {
     pub fn set_line_folds(&self, line: usize, spans: Vec<FoldSpan>) {
         let mut st = self.state.borrow_mut();
         if spans.is_empty() {
+            if !st.line_folds.contains_key(&line) {
+                return;
+            }
             st.line_folds.remove(&line);
         } else {
+            if st
+                .line_folds
+                .get(&line)
+                .is_some_and(|existing| existing.as_ref() == spans.as_slice())
+            {
+                return;
+            }
             st.line_folds.insert(line, Arc::from(spans));
         }
         st.folds_epoch = st.folds_epoch.saturating_add(1);
@@ -717,8 +891,18 @@ impl CodeEditorHandle {
     pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
         let mut st = self.state.borrow_mut();
         if spans.is_empty() {
+            if !st.line_inlays.contains_key(&line) {
+                return;
+            }
             st.line_inlays.remove(&line);
         } else {
+            if st
+                .line_inlays
+                .get(&line)
+                .is_some_and(|existing| existing.as_ref() == spans.as_slice())
+            {
+                return;
+            }
             st.line_inlays.insert(line, Arc::from(spans));
         }
         st.inlays_epoch = st.inlays_epoch.saturating_add(1);
@@ -783,6 +967,8 @@ impl CodeEditorHandle {
         st.drag_autoscroll_viewport_pos = None;
         st.last_bounds = None;
         st.cache_stats = CodeEditorCacheStats::default();
+        st.paint_perf_frame_seq = 0;
+        st.paint_perf_frame = CodeEditorPaintPerfFrame::default();
         st.line_folds.clear();
         st.folds_epoch = st.folds_epoch.saturating_add(1);
         st.line_inlays.clear();
@@ -808,6 +994,9 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
         }
     }
 
@@ -972,6 +1161,16 @@ impl CodeEditor {
                 ..Default::default()
             };
 
+            let viewport_rows = if row_h.0 > 0.0 {
+                (cx.bounds.size.height.0 / row_h.0).ceil() as usize
+            } else {
+                0
+            };
+            let text_cache_max_entries = viewport_rows
+                .saturating_add(overscan.saturating_mul(2))
+                .saturating_add(128)
+                .clamp(256, 8_192);
+
             let (
                 content_len,
                 boundary_mode,
@@ -998,7 +1197,8 @@ impl CodeEditor {
                     st.active_text_boundary_mode = boundary_mode;
                 }
                 let boundary_override = st.text_boundary_mode_override;
-                let (value, selection, composition) = a11y_composed_text_window(&st);
+                let (value, selection, composition) =
+                    a11y_composed_text_window(&mut st, text_cache_max_entries);
                 (
                     content_len,
                     boundary_override,
@@ -1036,15 +1236,6 @@ impl CodeEditor {
             surface_props.row_height = row_h;
             surface_props.overscan = overscan;
             surface_props.scroll_handle = scroll_handle.clone();
-            let viewport_rows = if row_h.0 > 0.0 {
-                (cx.bounds.size.height.0 / row_h.0).ceil() as usize
-            } else {
-                0
-            };
-            let text_cache_max_entries = viewport_rows
-                .saturating_add(overscan.saturating_mul(2))
-                .saturating_add(128)
-                .clamp(256, 8_192);
             surface_props.canvas.cache_policy = CanvasCachePolicy {
                 text: CanvasCacheTuning {
                     keep_frames: 60,
@@ -1054,7 +1245,15 @@ impl CodeEditor {
                 path: CanvasCacheTuning::transient(),
                 svg: CanvasCacheTuning::transient(),
             };
-            surface_props.on_paint_frame = torture.map(|torture| {
+            let paint_perf_hook = paint_perf_enabled_from_env().then(|| {
+                let editor_state = editor_state.clone();
+                let hook: OnWindowedRowsPaintFrame = Arc::new(move |_painter, frame| {
+                    editor_state.borrow_mut().paint_perf_begin_frame(frame);
+                });
+                hook
+            });
+
+            let torture_hook = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
                 let scroll_dir = scroll_dir.clone();
                 let text_style = text_style.clone();
@@ -1101,39 +1300,61 @@ impl CodeEditor {
 
                                 let prev = prev_stats.get();
                                 prev_stats.set(stats);
-                             let delta = CodeEditorCacheStats {
-                                 row_text_get_calls: stats
-                                     .row_text_get_calls
-                                     .saturating_sub(prev.row_text_get_calls),
-                                 row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
-                                 row_text_misses: stats
-                                     .row_text_misses
-                                     .saturating_sub(prev.row_text_misses),
-                                 row_text_evictions: stats
-                                     .row_text_evictions
-                                     .saturating_sub(prev.row_text_evictions),
-                                 row_text_resets: stats
-                                     .row_text_resets
-                                     .saturating_sub(prev.row_text_resets),
-                                 geom_pointer_hit_test_fallbacks: stats
-                                     .geom_pointer_hit_test_fallbacks
-                                     .saturating_sub(prev.geom_pointer_hit_test_fallbacks),
-                                 geom_caret_rect_fallbacks: stats
-                                     .geom_caret_rect_fallbacks
-                                     .saturating_sub(prev.geom_caret_rect_fallbacks),
-                                 geom_vertical_move_fallbacks: stats
-                                     .geom_vertical_move_fallbacks
-                                     .saturating_sub(prev.geom_vertical_move_fallbacks),
-                                 syntax_get_calls: stats
-                                     .syntax_get_calls
-                                     .saturating_sub(prev.syntax_get_calls),
-                                 syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
-                                 syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
-                                 syntax_evictions: stats
-                                     .syntax_evictions
-                                     .saturating_sub(prev.syntax_evictions),
-                                 syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
-                             };
+                                let delta = CodeEditorCacheStats {
+                                    row_text_get_calls: stats
+                                        .row_text_get_calls
+                                        .saturating_sub(prev.row_text_get_calls),
+                                    row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
+                                    row_text_misses: stats
+                                        .row_text_misses
+                                        .saturating_sub(prev.row_text_misses),
+                                    row_text_evictions: stats
+                                        .row_text_evictions
+                                        .saturating_sub(prev.row_text_evictions),
+                                    row_text_resets: stats
+                                        .row_text_resets
+                                        .saturating_sub(prev.row_text_resets),
+
+                                    #[cfg(feature = "syntax")]
+                                    row_rich_get_calls: stats
+                                        .row_rich_get_calls
+                                        .saturating_sub(prev.row_rich_get_calls),
+                                    #[cfg(feature = "syntax")]
+                                    row_rich_hits: stats.row_rich_hits.saturating_sub(prev.row_rich_hits),
+                                    #[cfg(feature = "syntax")]
+                                    row_rich_misses: stats
+                                        .row_rich_misses
+                                        .saturating_sub(prev.row_rich_misses),
+                                    #[cfg(feature = "syntax")]
+                                    row_rich_evictions: stats
+                                        .row_rich_evictions
+                                        .saturating_sub(prev.row_rich_evictions),
+                                    #[cfg(feature = "syntax")]
+                                    row_rich_resets: stats
+                                        .row_rich_resets
+                                        .saturating_sub(prev.row_rich_resets),
+
+                                    geom_pointer_hit_test_fallbacks: stats
+                                        .geom_pointer_hit_test_fallbacks
+                                        .saturating_sub(prev.geom_pointer_hit_test_fallbacks),
+                                    geom_caret_rect_fallbacks: stats
+                                        .geom_caret_rect_fallbacks
+                                        .saturating_sub(prev.geom_caret_rect_fallbacks),
+                                    geom_vertical_move_fallbacks: stats
+                                        .geom_vertical_move_fallbacks
+                                        .saturating_sub(prev.geom_vertical_move_fallbacks),
+                                    syntax_get_calls: stats
+                                        .syntax_get_calls
+                                        .saturating_sub(prev.syntax_get_calls),
+                                    syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
+                                    syntax_misses: stats
+                                        .syntax_misses
+                                        .saturating_sub(prev.syntax_misses),
+                                    syntax_evictions: stats
+                                        .syntax_evictions
+                                        .saturating_sub(prev.syntax_evictions),
+                                    syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
+                                };
                                 (
                                     stats,
                                     delta,
@@ -1152,9 +1373,11 @@ impl CodeEditor {
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
                             rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
-                            background: overlay_bg,
+                            background: fret_core::Paint::Solid(overlay_bg),
+
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
                             corner_radii: Corners::all(Px(6.0)),
                         });
 
@@ -1206,6 +1429,18 @@ impl CodeEditor {
                 );
                 hook
             });
+
+            surface_props.on_paint_frame = match (paint_perf_hook, torture_hook) {
+                (Some(a), Some(b)) => {
+                    let hook: OnWindowedRowsPaintFrame = Arc::new(move |painter, frame| {
+                        a(painter, frame);
+                        b(painter, frame);
+                    });
+                    Some(hook)
+                }
+                (Some(h), None) | (None, Some(h)) => Some(h),
+                (None, None) => None,
+            };
 
             cx.text_input_region(region_props, |cx| {
                 // `TextInputRegion` creates its own element id scope. All focus/key/command hooks
@@ -1822,33 +2057,42 @@ impl CodeEditor {
                         let caret = st
                             .buffer
                             .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
-                        let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
 
-                        let (new_anchor, new_focus) = if let Some(preedit) = st.preedit.as_ref() {
-                            let preedit_len = preedit.text.len();
-                            (
-                                map_a11y_offset_to_buffer_with_preedit(
-                                    &st.buffer,
-                                    start,
-                                    end,
-                                    caret,
-                                    preedit_len,
-                                    anchor,
-                                ),
-                                map_a11y_offset_to_buffer_with_preedit(
-                                    &st.buffer,
-                                    start,
-                                    end,
-                                    caret,
-                                    preedit_len,
-                                    focus,
-                                ),
+                        let (new_anchor, new_focus) = if st.compose_inline_preedit {
+                            map_a11y_offsets_to_buffer_composed(
+                                &mut st,
+                                text_cache_max_entries,
+                                anchor,
+                                focus,
                             )
                         } else {
-                            (
-                                map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
-                                map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
-                            )
+                            let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+                            if let Some(preedit) = st.preedit.as_ref() {
+                                let preedit_len = preedit.text.len();
+                                (
+                                    map_a11y_offset_to_buffer_with_preedit(
+                                        &st.buffer,
+                                        start,
+                                        end,
+                                        caret,
+                                        preedit_len,
+                                        anchor,
+                                    ),
+                                    map_a11y_offset_to_buffer_with_preedit(
+                                        &st.buffer,
+                                        start,
+                                        end,
+                                        caret,
+                                        preedit_len,
+                                        focus,
+                                    ),
+                                )
+                            } else {
+                                (
+                                    map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
+                                    map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
+                                )
+                            }
                         };
 
                         st.set_preedit(None);

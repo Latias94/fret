@@ -191,7 +191,6 @@ struct TooltipTriggerHoverEdgeState {
 
 fn tooltip_policy_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: Theme,
     base_trigger: AnyElement,
     trigger_id: fret_ui::elements::GlobalElementId,
     anchor_id: fret_ui::elements::GlobalElementId,
@@ -289,8 +288,11 @@ fn tooltip_policy_root<H: UiHost>(
             let estimated_size = Size::new(Px(240.0), Px(32.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
 
-            let outer =
-                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let align = match align {
                 TooltipAlign::Start => Align::Start,
@@ -421,7 +423,13 @@ fn tooltip_policy_root<H: UiHost>(
             vec![trigger]
         });
 
-        let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
+        let close_grace_frames = {
+            let close_ms = {
+                let theme = Theme::global(&*cx.app);
+                tooltip_tokens::close_duration_ms(theme)
+            };
+            Some(ms_to_frames(close_ms))
+        };
         let motion = drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
 
         let overlay_presence = OverlayPresence {
@@ -450,8 +458,11 @@ fn tooltip_policy_root<H: UiHost>(
             let estimated_size = Size::new(Px(240.0), Px(32.0));
             let content_size = last_content_size.unwrap_or(estimated_size);
 
-            let outer =
-                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let align = match align {
                 TooltipAlign::Start => Align::Start,
@@ -1345,10 +1356,8 @@ impl RichTooltip {
             )
         });
 
-        let theme = Theme::global(&*cx.app).clone();
         tooltip_policy_root(
             cx,
-            theme,
             base_trigger,
             trigger_id,
             anchor_id,

@@ -62,7 +62,7 @@ Status legend:
 
 - `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
 - `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
-- `[x]` Guardrails: add CI check that rejects raw `std::thread::{spawn,sleep}` and bespoke channels/timer crates in ecosystem/apps (`tools/check_execution_surface.ps1`)
+- `[x]` Guardrails: add CI check that rejects raw `std::thread::{spawn,sleep}` and bespoke channels/timer crates in ecosystem/apps (`tools/check_execution_surface.py`)
 
 ## Proposed public surface (API sketch, non-binding)
 
@@ -216,4 +216,3 @@ See `## Tracking (living TODOs)` at the top of this file for the authoritative p
 
 - What is the minimal timer vocabulary that avoids split-brain between effects and dispatcher scheduling?
 - What is the minimal "priority/backpressure" surface we want to reserve in v1?
-

@@ -66,9 +66,11 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: bounds,
-                        background: props.background.unwrap_or(Color::TRANSPARENT),
+                        background: Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT)),
                         border: props.border,
-                        border_color: props.border_color.unwrap_or(Color::TRANSPARENT),
+                        border_paint: Paint::Solid(
+                            props.border_color.unwrap_or(Color::TRANSPARENT),
+                        ),
                         corner_radii: props.corner_radii,
                     });
                 }
@@ -92,9 +94,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(1),
                             rect: bounds,
-                            background: Color::TRANSPARENT,
+                            background: Paint::Solid(Color::TRANSPARENT),
                             border: props.border,
-                            border_color,
+                            border_paint: Paint::Solid(border_color),
                             corner_radii: props.corner_radii,
                         });
                     }
@@ -341,6 +343,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {
@@ -522,6 +525,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {
@@ -704,6 +708,7 @@ impl ElementHostWidget {
                 let scale_bits = cx.scale_factor.to_bits();
                 let width_cache_entries = if cx.tree.interactive_resize_active()
                     && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
                 {
                     interactive_resize_text_width_cache_entries()
                 } else {
@@ -953,9 +958,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect,
-                            background: bg,
+                            background: Paint::Solid(bg),
                             border: fret_core::Edges::all(fret_core::Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: Paint::Solid(Color::TRANSPARENT),
                             corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
                         });
                     }
@@ -987,9 +992,9 @@ impl ElementHostWidget {
                             cx.scene.push(SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: sel_color,
+                                background: Paint::Solid(sel_color),
                                 border: fret_core::Edges::all(fret_core::Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: Paint::Solid(Color::TRANSPARENT),
                                 corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
                             });
                         }
@@ -1417,9 +1422,9 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: color,
+                        background: Paint::Solid(color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: Paint::Solid(Color::TRANSPARENT),
                         corner_radii: fret_core::Corners::all(r),
                     });
                 }
@@ -1635,9 +1640,9 @@ impl ElementHostWidget {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(20_000),
                     rect,
-                    background: bg,
+                    background: Paint::Solid(bg),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: Paint::Solid(Color::TRANSPARENT),
                     corner_radii: fret_core::Corners::all(Px(999.0)),
                 });
             }

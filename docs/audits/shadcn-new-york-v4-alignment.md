@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 - Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
 - Sidebar component-surface + Base UI semantics audit: `docs/audits/shadcn-sidebar.md`
 
-Coverage snapshot (update via `tools/golden_coverage.ps1`):
+Coverage snapshot (update via `tools/golden_coverage.py`):
 
 - shadcn-web `v4/new-york-v4`: `578/578` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-03
 

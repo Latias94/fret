@@ -63,9 +63,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: viewport_rect,
-            background: self.style.background,
+            background: fret_core::Paint::Solid(self.style.background),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(0.0)),
         });
 

@@ -90,10 +90,10 @@ impl Table {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
 
         // shadcn: `w-full caption-bottom text-sm`.
-        let mut props = decl_style::container_props(&theme, self.chrome, self.layout.w_full());
+        let mut props = decl_style::container_props(theme, self.chrome, self.layout.w_full());
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
@@ -119,9 +119,9 @@ impl TableHeader {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
         let props = decl_style::container_props(
-            &theme,
+            theme,
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
@@ -148,9 +148,9 @@ impl TableBody {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
         let props = decl_style::container_props(
-            &theme,
+            theme,
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
@@ -177,17 +177,17 @@ impl TableFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
 
-        let mut bg = muted_bg(&theme);
+        let mut bg = muted_bg(theme);
         bg.a *= 0.5;
-        let border = border_color(&theme);
+        let border = border_color(theme);
 
         let chrome = ChromeRefinement::default()
             .bg(ColorRef::Color(bg))
             .border_1()
             .border_color(ColorRef::Color(border));
-        let mut props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+        let mut props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
         props.border = Edges {
             top: fret_core::Px(1.0),
             right: fret_core::Px(0.0),
@@ -297,34 +297,41 @@ impl TableRow {
                 cx.pressable_add_on_activate(on_activate);
             }
             cx.pressable_dispatch_command_if_enabled_opt(on_click);
-            let theme = Theme::global(&*cx.app).clone();
+            let (props, grid_layout) = {
+                let theme = Theme::global(&*cx.app);
 
-            let mut hover_bg = muted_bg(&theme);
-            hover_bg.a *= 0.5;
-            let selected_bg = muted_bg(&theme);
+                let mut hover_bg = muted_bg(theme);
+                hover_bg.a *= 0.5;
+                let selected_bg = muted_bg(theme);
 
-            let border = border_color(&theme);
-            let mut chrome = ChromeRefinement::default()
-                .border_1()
-                .border_color(ColorRef::Color(border));
-            if selected {
-                chrome = chrome.bg(ColorRef::Color(selected_bg));
-            } else if state.hovered {
-                chrome = chrome.bg(ColorRef::Color(hover_bg));
-            }
-
-            let layout = LayoutRefinement::default().w_full();
-            let mut props = decl_style::container_props(&theme, chrome, layout);
-            props.layout.overflow = Overflow::Visible;
-            props.border = if border_bottom {
-                Edges {
-                    top: fret_core::Px(0.0),
-                    right: fret_core::Px(0.0),
-                    bottom: fret_core::Px(1.0),
-                    left: fret_core::Px(0.0),
+                let border = border_color(theme);
+                let mut chrome = ChromeRefinement::default()
+                    .border_1()
+                    .border_color(ColorRef::Color(border));
+                if selected {
+                    chrome = chrome.bg(ColorRef::Color(selected_bg));
+                } else if state.hovered {
+                    chrome = chrome.bg(ColorRef::Color(hover_bg));
                 }
-            } else {
-                Edges::all(fret_core::Px(0.0))
+
+                let layout = LayoutRefinement::default().w_full();
+                let mut props = decl_style::container_props(theme, chrome, layout);
+                props.layout.overflow = Overflow::Visible;
+                props.border = if border_bottom {
+                    Edges {
+                        top: fret_core::Px(0.0),
+                        right: fret_core::Px(0.0),
+                        bottom: fret_core::Px(1.0),
+                        left: fret_core::Px(0.0),
+                    }
+                } else {
+                    Edges::all(fret_core::Px(0.0))
+                };
+
+                let grid_layout =
+                    decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+
+                (props, grid_layout)
             };
 
             let row_children = children.clone();
@@ -335,7 +342,7 @@ impl TableRow {
                     padding: fret_core::geometry::Edges::all(fret_core::Px(0.0)),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
-                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    layout: grid_layout,
                     ..Default::default()
                 };
 
@@ -420,33 +427,33 @@ impl TableHead {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
         let px = Space::N2;
         let py = Space::N0;
 
         let style = TextStyle {
             weight: FontWeight::MEDIUM,
-            ..table_text_style(&theme)
+            ..table_text_style(theme)
         };
-        let fg = foreground(&theme);
+        let fg = foreground(theme);
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
         let props = decl_style::container_props(
-            &theme,
+            theme,
             chrome,
             LayoutRefinement::default()
                 .w_full()
-                .min_h(row_min_h(&theme))
+                .min_h(row_min_h(theme))
                 .merge(self.layout),
         );
 
         let text = self.text;
+        let content_layout =
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full());
         cx.container(props, move |cx| {
-            let layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_full());
             vec![cx.flex(
                 FlexProps {
-                    layout,
+                    layout: content_layout,
                     direction: Axis::Horizontal,
                     gap: fret_core::Px(0.0),
                     padding: Edges::all(fret_core::Px(0.0)),
@@ -512,27 +519,27 @@ impl TableCell {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
         let px = Space::N2;
         let py = Space::N2;
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
         let layout = LayoutRefinement::default().w_full().merge(self.layout);
-        let mut props = decl_style::container_props(&theme, chrome, layout);
+        let mut props = decl_style::container_props(theme, chrome, layout);
         if let Some(span) = self.col_span {
             props.layout.grid.column.span = Some(span);
         }
+        let row_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+        let wrapper_props = decl_style::container_props(
+            theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().flex_1().min_w_0(),
+        );
         let child = self.child;
         cx.container(props, move |cx| {
-            let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-            let wrapper_props = decl_style::container_props(
-                &theme,
-                ChromeRefinement::default(),
-                LayoutRefinement::default().flex_1().min_w_0(),
-            );
             vec![cx.flex(
                 FlexProps {
-                    layout,
+                    layout: row_layout,
                     direction: Axis::Horizontal,
                     gap: fret_core::Px(0.0),
                     padding: Edges::all(fret_core::Px(0.0)),
@@ -540,7 +547,7 @@ impl TableCell {
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| vec![cx.container(wrapper_props, move |_cx| vec![child.clone()])],
+                move |cx| vec![cx.container(wrapper_props.clone(), move |_cx| vec![child.clone()])],
             )]
         })
     }
@@ -558,16 +565,16 @@ impl TableCaption {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
 
         let props = decl_style::container_props(
-            &theme,
+            theme,
             ChromeRefinement::default(),
             LayoutRefinement::default().mt(Space::N4),
         );
 
-        let style = table_text_style(&theme);
-        let fg = muted_fg(&theme);
+        let style = table_text_style(theme);
+        let fg = muted_fg(theme);
         let text = self.text;
 
         cx.container(props, move |cx| {

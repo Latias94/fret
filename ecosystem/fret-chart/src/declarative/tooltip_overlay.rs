@@ -138,9 +138,11 @@ pub(crate) fn tooltip_overlay_tool(
                     painter.scene().push(fret_core::SceneOp::Quad {
                         order: label_order,
                         rect,
-                        background: style.tooltip_background,
+                        background: fret_core::Paint::Solid(style.tooltip_background),
+
                         border: Edges::all(style.tooltip_border_width),
-                        border_color: style.tooltip_border_color,
+                        border_paint: fret_core::Paint::Solid(style.tooltip_border_color),
+
                         corner_radii: Corners::all(Px(4.0)),
                     });
                     let _ = painter.text(
@@ -372,9 +374,11 @@ pub(crate) fn tooltip_overlay_tool(
             painter.scene().push(fret_core::SceneOp::Quad {
                 order: tooltip_order,
                 rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                background: style.tooltip_background,
+                background: fret_core::Paint::Solid(style.tooltip_background),
+
                 border: Edges::all(style.tooltip_border_width),
-                border_color: style.tooltip_border_color,
+                border_paint: fret_core::Paint::Solid(style.tooltip_border_color),
+
                 corner_radii: Corners::all(style.tooltip_corner_radius),
             });
 
@@ -424,9 +428,11 @@ pub(crate) fn tooltip_overlay_tool(
                             Point::new(Px(swatch_x), Px(marker_y)),
                             Size::new(Px(side), Px(side)),
                         ),
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px((side * 0.25).max(0.0))),
                     });
                 }
