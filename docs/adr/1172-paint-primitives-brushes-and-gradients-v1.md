@@ -138,6 +138,8 @@ fingerprints meaningful.
 - Arbitrary user-provided WGSL or plugin-authored paints (see ADR 0125 trust model).
 - General CSS-like masking and blend modes.
 - Unbounded stop counts, conic gradients, or gradient mesh primitives.
+  - If a “conic sweep highlight” is required for shimmers, prefer a controlled Tier B material kind
+    (e.g. `ConicSweep`) rather than expanding the `Paint` v1 gradient set.
 - A full material graph system. V1 provides a minimal paint vocabulary; richer procedural looks
   should layer through a future `MaterialId` registry (ADR 0125) or Tier A external pipelines.
 
