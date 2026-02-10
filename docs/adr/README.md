@@ -48,6 +48,21 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Proposed: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
   - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
 
+- **Pointer coordinate spaces (window-local vs element-local, transform-aware)**
+  - Proposed: `docs/adr/1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`
+  - Decide: the canonical coordinate spaces exposed to widgets, capture semantics, and a minimal
+    mechanism helper surface to avoid ad-hoc `position - bounds.origin` math across the ecosystem.
+
+- **Mask layers (alpha masks beyond rect/rrect clipping)**
+  - Proposed: `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
+  - Decide: v1 mask stack shape, gradient-only portable sources, hit-testing semantics (mask is
+    paint-only), and deterministic degradation under budgets.
+
+- **Frame clock and reduced-motion gates (animation time base)**
+  - Proposed: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
+  - Decide: monotonic per-frame clock exposure without poisoning view-cache keys, and the canonical
+    reduced-motion response pattern for ecosystem components.
+
 - **User-facing effect recipes and tier selection (Tier A vs Tier B)**
   - Proposed: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
   - Decide: recommended user story for postprocessing, and the stable recipe authoring pattern for `fret-ui-kit`.

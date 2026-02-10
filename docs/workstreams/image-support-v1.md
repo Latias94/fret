@@ -18,7 +18,7 @@ Related ADRs (existing):
 
 Related ADRs (planned / in progress):
 
-- Image `object-fit` for `SceneOp::Image`: `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
+- Image `object-fit` for `SceneOp::Image`: `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
 
 Tracking:
 
