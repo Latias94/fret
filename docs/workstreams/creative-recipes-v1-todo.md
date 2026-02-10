@@ -17,14 +17,14 @@ See:
 
 ## P0 — Kernel primitives (scene + renderer)
 
-- [ ] Paint v1 (ADR 1172):
-  - [ ] Add `Paint` types and wire to `SceneOp::Quad`.
-  - [ ] Add conformance tests for gradient mapping + sanitization.
-- [ ] Materials v1 (ADR 1174):
-  - [ ] Add `MaterialId` and registry API.
-  - [ ] Implement baseline kinds: `DotGrid`, `Grid`, `Checkerboard`, `Stripe`, `Noise`, `Beam`,
+- [x] Paint v1 (ADR 1172):
+  - [x] Add `Paint` types and wire to `SceneOp::Quad`.
+  - [x] Add conformance tests for gradient mapping + sanitization.
+- [x] Materials v1 (ADR 1174):
+  - [x] Add `MaterialId` and registry API.
+  - [x] Implement baseline kinds: `DotGrid`, `Grid`, `Checkerboard`, `Stripe`, `Noise`, `Beam`,
         `Sparkle`, `ConicSweep`.
-  - [ ] Add deterministic sanitization + seed/time rules (ADR 1183).
+  - [x] Add deterministic sanitization + seed/time rules (ADR 1183).
 - [ ] Masks v1 (ADR 1178):
   - [ ] Add `PushMask/PopMask` ops and gradient mask evaluation.
   - [ ] Add conformance tests for edge coverage and effect/clip interaction.
@@ -52,3 +52,14 @@ See:
 - [ ] Implement `ColorMatrix` + `AlphaThreshold` steps (ADR 1175).
 - [ ] Add a “bloom-like” recipe example (threshold -> blur -> add) once blend groups exist.
 
+## P1 — Sampled materials (v2a, catalog textures)
+
+This is the recommended first step for ADR 1181: sampled materials bind a renderer-owned catalog
+texture selected at registration time (no per-instance `ImageId` yet).
+
+- [ ] Define `BindingShape::ParamsPlusCatalogTexture` in the renderer material registry and
+      capability-gate it (ADR 0124).
+- [ ] Add a small catalog texture set (blue-noise/dither) and wire upload + lifetime to the renderer.
+- [ ] Implement at least one sampled baseline material kind (e.g. a higher quality noise/dither
+      overlay) that uses the catalog texture in the shader.
+- [ ] Add a conformance test for sampled material rendering and deterministic fallbacks.

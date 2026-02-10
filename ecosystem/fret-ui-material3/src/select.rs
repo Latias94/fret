@@ -9,6 +9,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
@@ -33,6 +34,7 @@ use fret_ui_kit::{
     resolve_override_slot_opt_with, resolve_override_slot_with,
 };
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -45,6 +47,12 @@ use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
+
+fn default_select_listbox_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-select-listbox"))
+        .clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectVariant {
@@ -481,7 +489,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         let value_text = selected_label
             .map(select_item_display_text)
             .or_else(|| selected.clone())
-            .unwrap_or_else(|| Arc::<str>::from(""));
+            .unwrap_or_else(empty_arc_str);
 
         let trigger = select_trigger_element(
             cx,
@@ -987,9 +995,9 @@ fn select_trigger_element<H: UiHost>(
                 let display_text = if populated {
                     value_text.clone()
                 } else if show_placeholder {
-                    placeholder.clone().unwrap_or_else(|| Arc::<str>::from(""))
+                    placeholder.clone().unwrap_or_else(empty_arc_str)
                 } else {
-                    Arc::<str>::from("")
+                    empty_arc_str()
                 };
                 let is_placeholder = !populated && show_placeholder;
 
@@ -1603,30 +1611,71 @@ fn select_listbox_panel<H: UiHost>(
     typeahead_delay_ms: u32,
     style: Arc<SelectStyle>,
 ) -> AnyElement {
-    let listbox_test_id = test_id.as_ref().map(|id| {
-        let id = id.as_ref();
-        Arc::<str>::from(format!("{id}-listbox"))
+    #[derive(Default)]
+    struct DerivedTestIds {
+        base: Option<Arc<str>>,
+        listbox: Option<Arc<str>>,
+    }
+
+    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+        if st.base.as_deref() != test_id.as_deref() {
+            st.base = test_id.clone();
+            st.listbox = st
+                .base
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
+        }
+        st.listbox.clone()
     });
 
     let sem = SemanticsProps {
         role: SemanticsRole::ListBox,
         label: a11y_label.clone(),
-        test_id: listbox_test_id.or_else(|| Some(Arc::<str>::from("material3-select-listbox"))),
+        test_id: listbox_test_id.or_else(|| Some(default_select_listbox_test_id())),
         labelled_by_element,
         ..Default::default()
     };
 
-    let disabled: Arc<[bool]> = Arc::from(items.iter().map(|it| it.disabled).collect::<Vec<_>>());
     let count = items.len();
-    let typeahead_items: Arc<[Arc<str>]> = Arc::from(
-        items
-            .iter()
-            .map(select_item_typeahead_text)
-            .collect::<Vec<_>>(),
-    );
-    let two_line = items
-        .iter()
-        .any(|it| it.supporting_text.is_some() || it.trailing_supporting_text.is_some());
+
+    #[derive(Default)]
+    struct DerivedItems {
+        ptr: usize,
+        len: usize,
+        disabled: Option<Arc<[bool]>>,
+        typeahead_items: Option<Arc<[Arc<str>]>>,
+        two_line: bool,
+    }
+
+    let (disabled, typeahead_items, two_line) = cx.with_state(DerivedItems::default, |st| {
+        let ptr = Arc::as_ptr(&items) as *const SelectItem as usize;
+        let len = items.len();
+        if st.disabled.is_none() || st.ptr != ptr || st.len != len {
+            st.ptr = ptr;
+            st.len = len;
+            st.disabled = Some(Arc::from(
+                items.iter().map(|it| it.disabled).collect::<Vec<_>>(),
+            ));
+            st.typeahead_items = Some(Arc::from(
+                items
+                    .iter()
+                    .map(select_item_typeahead_text)
+                    .collect::<Vec<_>>(),
+            ));
+            st.two_line = items
+                .iter()
+                .any(|it| it.supporting_text.is_some() || it.trailing_supporting_text.is_some());
+        }
+
+        (
+            st.disabled.as_ref().expect("disabled").clone(),
+            st.typeahead_items
+                .as_ref()
+                .expect("typeahead_items")
+                .clone(),
+            st.two_line,
+        )
+    });
 
     let tab_stop_idx = selected
         .as_ref()

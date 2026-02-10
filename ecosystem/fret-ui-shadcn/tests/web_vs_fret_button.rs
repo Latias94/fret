@@ -371,10 +371,18 @@ fn find_button_quad_style(
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 corner_radii,
                 ..
             } if rect == button_bounds => {
+                let background = match background {
+                    fret_core::Paint::Solid(c) => c,
+                    _ => fret_core::Color::TRANSPARENT,
+                };
+                let border_color = match border_paint {
+                    fret_core::Paint::Solid(c) => c,
+                    _ => fret_core::Color::TRANSPARENT,
+                };
                 return (
                     rect,
                     background,
