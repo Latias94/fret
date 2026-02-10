@@ -91,7 +91,8 @@ pub use elements::{
     PromptInputActionAddAttachmentsButton, PromptInputActionMenu, PromptInputActionMenuContent,
     PromptInputActionMenuItem, PromptInputActionMenuTrigger, PromptInputAttachmentsRow,
     PromptInputButton, PromptInputConfig, PromptInputController, PromptInputFooter,
-    PromptInputHeader, PromptInputProvider, PromptInputRoot, PromptInputSlots, PromptInputSubmit,
+    PromptInputHeader, PromptInputProvider, PromptInputReferencedSourcesController,
+    PromptInputReferencedSourcesRow, PromptInputRoot, PromptInputSlots, PromptInputSubmit,
     PromptInputTextarea, PromptInputTools, Queue, QueueItem, QueueItemAction, QueueItemActions,
     QueueItemAttachment, QueueItemContent, QueueItemDescription, QueueItemFile, QueueItemImage,
     QueueItemIndicator, QueueItemState, QueueList, QueueSection, QueueSectionContent,
@@ -106,7 +107,7 @@ pub use elements::{
     TestResultsHeader, TestResultsProgress, TestResultsSummary, TestResultsSummaryData,
     TestStatusKind, TestSuite, TestSuiteContent, TestSuiteName, Tool, ToolCallBlock, ToolContent,
     ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus, parse_stack_trace,
-    use_prompt_input_config, use_prompt_input_controller,
+    use_prompt_input_config, use_prompt_input_controller, use_prompt_input_referenced_sources,
 };
 pub use export::messages_to_markdown;
 pub use model::{

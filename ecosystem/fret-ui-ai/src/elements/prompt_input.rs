@@ -17,7 +17,8 @@ use fret_ui_shadcn::{
 };
 
 use crate::elements::attachments::{
-    Attachment, AttachmentData, AttachmentFileData, AttachmentVariant, Attachments,
+    Attachment, AttachmentData, AttachmentFileData, AttachmentSourceDocumentData,
+    AttachmentVariant, Attachments,
 };
 use crate::model::item_key_from_external_id;
 
@@ -51,6 +52,7 @@ pub struct PromptInputConfig {
     pub test_id_send: Option<Arc<str>>,
     pub test_id_stop: Option<Arc<str>>,
     pub test_id_attachments: Option<Arc<str>>,
+    pub test_id_referenced_sources: Option<Arc<str>>,
     pub test_id_add_attachments: Option<Arc<str>>,
 }
 
@@ -62,6 +64,23 @@ struct PromptInputConfigState {
 pub fn use_prompt_input_config<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<PromptInputConfig> {
     cx.inherited_state::<PromptInputConfigState>()
         .and_then(|st| st.config.clone())
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputReferencedSourcesController {
+    pub sources: Model<Vec<AttachmentSourceDocumentData>>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct PromptInputReferencedSourcesState {
+    controller: Option<PromptInputReferencedSourcesController>,
+}
+
+pub fn use_prompt_input_referenced_sources<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<PromptInputReferencedSourcesController> {
+    cx.inherited_state::<PromptInputReferencedSourcesState>()
+        .and_then(|st| st.controller.clone())
 }
 
 /// Returns the nearest prompt input controller in scope.
@@ -260,6 +279,46 @@ pub struct PromptInputSlots {
     pub block_end: Vec<AnyElement>,
 }
 
+fn prompt_input_referenced_sources_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Vec<AttachmentSourceDocumentData>>>,
+) -> Model<Vec<AttachmentSourceDocumentData>> {
+    if let Some(model) = controlled {
+        cx.with_state(PromptInputReferencedSourcesState::default, |st| {
+            st.controller = Some(PromptInputReferencedSourcesController {
+                sources: model.clone(),
+            });
+        });
+        return model;
+    }
+
+    #[derive(Default)]
+    struct LocalState {
+        model: Option<Model<Vec<AttachmentSourceDocumentData>>>,
+    }
+
+    let existing = cx.with_state(LocalState::default, |st| st.model.clone());
+    let model = match existing {
+        Some(m) => m,
+        None => {
+            let m = cx
+                .app
+                .models_mut()
+                .insert(Vec::<AttachmentSourceDocumentData>::new());
+            cx.with_state(LocalState::default, |st| st.model = Some(m.clone()));
+            m
+        }
+    };
+
+    cx.with_state(PromptInputReferencedSourcesState::default, |st| {
+        st.controller = Some(PromptInputReferencedSourcesController {
+            sources: model.clone(),
+        });
+    });
+
+    model
+}
+
 #[derive(Clone)]
 /// Parts-first prompt input root aligned with AI Elements `PromptInput` composition.
 ///
@@ -283,11 +342,13 @@ pub struct PromptInputRoot {
     on_stop: Option<OnActivate>,
     on_add_attachments: Option<OnActivate>,
     attachments: Option<Model<Vec<AttachmentData>>>,
+    referenced_sources: Option<Model<Vec<AttachmentSourceDocumentData>>>,
     test_id_root: Option<Arc<str>>,
     test_id_textarea: Option<Arc<str>>,
     test_id_send: Option<Arc<str>>,
     test_id_stop: Option<Arc<str>>,
     test_id_attachments: Option<Arc<str>>,
+    test_id_referenced_sources: Option<Arc<str>>,
     test_id_add_attachments: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -306,11 +367,13 @@ impl PromptInputRoot {
             on_stop: None,
             on_add_attachments: None,
             attachments: None,
+            referenced_sources: None,
             test_id_root: None,
             test_id_textarea: None,
             test_id_send: None,
             test_id_stop: None,
             test_id_attachments: None,
+            test_id_referenced_sources: None,
             test_id_add_attachments: None,
             layout: LayoutRefinement::default(),
         }
@@ -329,11 +392,13 @@ impl PromptInputRoot {
             on_stop: None,
             on_add_attachments: None,
             attachments: None,
+            referenced_sources: None,
             test_id_root: None,
             test_id_textarea: None,
             test_id_send: None,
             test_id_stop: None,
             test_id_attachments: None,
+            test_id_referenced_sources: None,
             test_id_add_attachments: None,
             layout: LayoutRefinement::default(),
         }
@@ -389,6 +454,14 @@ impl PromptInputRoot {
         self
     }
 
+    pub fn referenced_sources_model(
+        mut self,
+        model: Model<Vec<AttachmentSourceDocumentData>>,
+    ) -> Self {
+        self.referenced_sources = Some(model);
+        self
+    }
+
     pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_root = Some(id.into());
         self
@@ -411,6 +484,11 @@ impl PromptInputRoot {
 
     pub fn test_id_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_attachments = Some(id.into());
+        self
+    }
+
+    pub fn test_id_referenced_sources(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_referenced_sources = Some(id.into());
         self
     }
 
@@ -446,6 +524,9 @@ impl PromptInputRoot {
             .clone()
             .or_else(|| provider.as_ref().and_then(|c| c.attachments.clone()));
 
+        let _referenced_sources_model =
+            prompt_input_referenced_sources_model(cx, self.referenced_sources.clone());
+
         cx.with_state(PromptInputLocalState::default, |st| {
             st.controller = Some(PromptInputController {
                 text: text_model.clone(),
@@ -467,6 +548,7 @@ impl PromptInputRoot {
                 test_id_send: self.test_id_send.clone(),
                 test_id_stop: self.test_id_stop.clone(),
                 test_id_attachments: self.test_id_attachments.clone(),
+                test_id_referenced_sources: self.test_id_referenced_sources.clone(),
                 test_id_add_attachments: self.test_id_add_attachments.clone(),
             });
         });
@@ -1836,6 +1918,96 @@ impl PromptInputAttachmentsRow {
             let variant = self.variant;
             let el = cx.keyed(key, move |cx| {
                 let mut chip = Attachment::new(item.clone()).variant(variant);
+                chip = chip.on_remove(on_remove);
+                if let Some(id) = item_test_id.clone() {
+                    chip = chip.test_id(id);
+                }
+                if let Some(id) = remove_test_id.clone() {
+                    chip = chip.remove_test_id(id);
+                }
+                chip.into_element(cx)
+            });
+            children.push(el);
+        }
+
+        let mut row = Attachments::new(children).variant(self.variant);
+        if let Some(id) = row_test_id {
+            row = row.test_id(id);
+        }
+        row.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Referenced sources chips row aligned with upstream prompt input referenced sources outcomes.
+///
+/// Upstream reference: `prompt-input.tsx` (`ReferencedSourcesContext`, local to `PromptInput`).
+pub struct PromptInputReferencedSourcesRow {
+    variant: AttachmentVariant,
+}
+
+impl PromptInputReferencedSourcesRow {
+    pub fn new() -> Self {
+        Self {
+            variant: AttachmentVariant::Inline,
+        }
+    }
+
+    pub fn variant(mut self, variant: AttachmentVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(controller) = use_prompt_input_referenced_sources(cx) else {
+            return cx.text("");
+        };
+
+        let items = cx
+            .get_model_cloned(&controller.sources, Invalidation::Layout)
+            .unwrap_or_default();
+        if items.is_empty() {
+            return cx.text("");
+        }
+
+        let cfg = use_prompt_input_config(cx);
+        let row_test_id = cfg
+            .as_ref()
+            .and_then(|c| c.test_id_referenced_sources.clone())
+            .or_else(|| {
+                cfg.as_ref().and_then(|c| {
+                    c.test_id_root
+                        .clone()
+                        .map(|id| Arc::<str>::from(format!("{id}-referenced-sources")))
+                })
+            });
+
+        let on_remove: crate::elements::attachments::OnAttachmentRemove = {
+            let model = controller.sources.clone();
+            Arc::new(move |host, _action_cx, id| {
+                let _ = host.models_mut().update(&model, |v| {
+                    v.retain(|item| item.id.as_ref() != id.as_ref());
+                });
+            })
+        };
+
+        let mut children = Vec::new();
+        for item in items {
+            let item_id = item.id.clone();
+            let key = item_key_from_external_id(item_id.as_ref());
+
+            let item_test_id = row_test_id
+                .as_deref()
+                .map(|root| Arc::<str>::from(format!("{root}-item-{item_id}")));
+            let remove_test_id = item_test_id
+                .as_deref()
+                .map(|root| Arc::<str>::from(format!("{root}-remove")));
+
+            let on_remove = on_remove.clone();
+            let variant = self.variant;
+            let el = cx.keyed(key, move |cx| {
+                let data = AttachmentData::SourceDocument(item.clone());
+                let mut chip = Attachment::new(data).variant(variant);
                 chip = chip.on_remove(on_remove);
                 if let Some(id) = item_test_id.clone() {
                     chip = chip.test_id(id);
