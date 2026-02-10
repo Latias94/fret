@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "window": "focused",
+  "window": "lowest_id",
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 10 },
@@ -8,7 +8,15 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "imui-editor-proof-dock" }
+        "target": { "kind": "test_id", "id": "imui-editor-proof.main.dock" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_any_window",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.aux.dock" }
       },
       "timeout_frames": 240
     },
@@ -16,16 +24,21 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "imui-editor-proof.tab-drag-anchor" }
+        "target": { "kind": "test_id", "id": "imui-editor-proof.main.tab-drag-anchor" }
       },
       "timeout_frames": 240
     },
     {
       "type": "drag_pointer_path",
-      "target": { "kind": "test_id", "id": "imui-editor-proof.tab-drag-anchor" },
+      "target": { "kind": "test_id", "id": "imui-editor-proof.main.tab-drag-anchor" },
       "segments": [
         { "delta_x": 240.0, "delta_y": 0.0, "steps": 24 },
-        { "delta_x": 0.0, "delta_y": 240.0, "steps": 24 }
+        {
+          "delta_x": 0.0,
+          "delta_y": 240.0,
+          "steps": 24,
+          "internal_drag_target": { "kind": "test_id", "id": "imui-editor-proof.aux.dock" }
+        }
       ]
     },
     { "type": "wait_frames", "n": 10 },

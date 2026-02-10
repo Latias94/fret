@@ -191,6 +191,7 @@ pub struct UiDiagnosticsService {
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
+    pending_script_injected_events: HashMap<AppWindowId, Vec<Event>>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
@@ -632,12 +633,11 @@ impl UiDiagnosticsService {
 
     pub fn drive_script_for_window(
         &mut self,
-        app: &App,
+        app: &mut App,
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-        element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
         if !self.is_enabled() {
             return UiScriptFrameOutput::default();
@@ -645,6 +645,18 @@ impl UiDiagnosticsService {
 
         self.ensure_ready_file();
         self.poll_script_trigger();
+
+        if let Some(events) = self.pending_script_injected_events.remove(&window) {
+            let output = UiScriptFrameOutput {
+                events,
+                effects: Vec::new(),
+                request_redraw: true,
+            };
+            for event in &output.events {
+                self.record_script_event(app, window, event);
+            }
+            return output;
+        }
 
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
@@ -656,6 +668,11 @@ impl UiDiagnosticsService {
             let should_attach = match script.window {
                 UiScriptWindowTargetV1::Any => true,
                 UiScriptWindowTargetV1::Focused => focused,
+                UiScriptWindowTargetV1::LowestId => {
+                    let mut windows: Vec<AppWindowId> = self.per_window.keys().copied().collect();
+                    windows.sort_by_key(|w| w.data().as_ffi());
+                    windows.first().copied() == Some(window)
+                }
             };
             if !should_attach {
                 return UiScriptFrameOutput::default();
@@ -1006,7 +1023,12 @@ impl UiDiagnosticsService {
                 predicate,
                 timeout_frames,
             } => {
-                if let Some(snapshot) = semantics_snapshot {
+                let eval_any_window = matches!(
+                    predicate,
+                    UiPredicateV1::ExistsAnyWindow { .. }
+                        | UiPredicateV1::NotExistsAnyWindow { .. }
+                );
+                if eval_any_window || semantics_snapshot.is_some() {
                     active.screenshot_wait = None;
                     let state = match active.wait_until.take() {
                         Some(mut state) if state.step_index == step_index => {
@@ -1019,8 +1041,21 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    let pred_ok = if eval_any_window {
+                        self.eval_predicate_any_window(&predicate)
+                    } else if let Some(snapshot) = semantics_snapshot {
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &predicate,
+                        )
+                    } else {
+                        false
+                    };
+
+                    if pred_ok {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -1052,9 +1087,27 @@ impl UiDiagnosticsService {
             UiActionStepV2::Assert { predicate } => {
                 active.wait_until = None;
                 active.screenshot_wait = None;
-                if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                let eval_any_window = matches!(
+                    predicate,
+                    UiPredicateV1::ExistsAnyWindow { .. }
+                        | UiPredicateV1::NotExistsAnyWindow { .. }
+                );
+                if eval_any_window || semantics_snapshot.is_some() {
+                    let pred_ok = if eval_any_window {
+                        self.eval_predicate_any_window(&predicate)
+                    } else if let Some(snapshot) = semantics_snapshot {
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &predicate,
+                        )
+                    } else {
+                        false
+                    };
+
+                    if pred_ok {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -1094,8 +1147,12 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node(
+                    snapshot,
+                    window,
+                    app.global::<fret_ui::elements::ElementRuntime>(),
+                    &target,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1150,8 +1207,12 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node(
+                    snapshot,
+                    window,
+                    app.global::<fret_ui::elements::ElementRuntime>(),
+                    &target,
+                ) else {
                     output.request_redraw = true;
                     let label =
                         format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
@@ -1223,9 +1284,12 @@ impl UiDiagnosticsService {
                             });
                             return output;
                         };
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &target,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-drag_pointer-no-semantics-match"
@@ -1314,9 +1378,12 @@ impl UiDiagnosticsService {
                             });
                             return output;
                         };
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &target,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-drag_pointer_path-no-semantics-match"
@@ -1342,37 +1409,68 @@ impl UiDiagnosticsService {
 
                         let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         let mut current = start;
-                        let mut points: Vec<(Point, u32)> = Vec::new();
+                        let mut segments_state: Vec<V2DragPointerPathSegment> = Vec::new();
                         for seg in segments {
                             current = Point::new(
                                 fret_core::Px(current.x.0 + seg.delta_x),
                                 fret_core::Px(current.y.0 + seg.delta_y),
                             );
-                            points.push((current, seg.steps.max(1)));
+                            segments_state.push(V2DragPointerPathSegment {
+                                end: current,
+                                steps: seg.steps.max(1),
+                                internal_drag_target: seg.internal_drag_target,
+                            });
                         }
 
                         V2DragPointerPathState {
                             step_index,
                             button,
                             start,
-                            points,
+                            segments: segments_state,
                             segment_ix: 0,
                             frame_in_segment: 0,
                             phase: 0,
+                            last_internal_drag_target: None,
                         }
                     }
                 };
 
                 let done = push_drag_pointer_path_playback_frame(&mut state, &mut output.events);
+
+                if let Some(sel) = state.last_internal_drag_target.as_ref()
+                    && let Some(route) = self.resolve_internal_drag_route_for_selector(sel)
+                    && route.window != window
+                    && let Some(event) = output.events.pop()
+                {
+                    match event {
+                        Event::InternalDrag(mut e) => {
+                            e.position = route.position;
+                            if let Some(drag) = app.drag_mut(e.pointer_id)
+                                && drag.cross_window_hover
+                            {
+                                drag.current_window = route.window;
+                                drag.position = route.position;
+                            }
+                            self.enqueue_script_injected_event(
+                                app,
+                                route.window,
+                                Event::InternalDrag(e),
+                            );
+                        }
+                        other => output.events.push(other),
+                    }
+                }
                 if done {
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
                     if self.cfg.script_auto_dump {
                         force_dump_label =
                             Some(format!("script-step-{step_index:04}-drag_pointer_path"));
                     }
                 } else {
                     active.v2_step_state = Some(V2StepState::DragPointerPath(state));
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::MovePointerSweep {
@@ -1415,9 +1513,12 @@ impl UiDiagnosticsService {
                         state
                     }
                     _ => {
-                        let Some(node) =
-                            select_semantics_node(snapshot, window, element_runtime, &target)
-                        else {
+                        let Some(node) = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &target,
+                        ) else {
                             output.request_redraw = true;
                             let label = format!(
                                 "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
@@ -1509,8 +1610,12 @@ impl UiDiagnosticsService {
                     });
                     return output;
                 };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
+                let Some(node) = select_semantics_node(
+                    snapshot,
+                    window,
+                    app.global::<fret_ui::elements::ElementRuntime>(),
+                    &target,
+                ) else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
                     if self.cfg.script_auto_dump {
@@ -1576,8 +1681,13 @@ impl UiDiagnosticsService {
                         UiPredicateV1::VisibleInWindow { target }
                     };
 
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        app.global::<fret_ui::elements::ElementRuntime>(),
+                        &predicate,
+                    ) {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -1649,7 +1759,7 @@ impl UiDiagnosticsService {
                         snapshot,
                         window_bounds,
                         window,
-                        element_runtime,
+                        app.global::<fret_ui::elements::ElementRuntime>(),
                         &target_predicate,
                     ) {
                         active.v2_step_state = None;
@@ -1668,8 +1778,12 @@ impl UiDiagnosticsService {
                         active.v2_step_state = None;
                         output.request_redraw = true;
                     } else {
-                        let container_node =
-                            select_semantics_node(snapshot, window, element_runtime, &container);
+                        let container_node = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &container,
+                        );
                         if let Some(container_node) = container_node {
                             let pos = center_of_rect_clamped_to_rect(
                                 container_node.bounds,
@@ -1717,8 +1831,13 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &target)
-                                .is_some()
+                            if select_semantics_node(
+                                snapshot,
+                                window,
+                                app.global::<fret_ui::elements::ElementRuntime>(),
+                                &target,
+                            )
+                            .is_some()
                             {
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::TypeTextInto(state));
@@ -1738,9 +1857,12 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &target)
-                            {
+                            if let Some(node) = select_semantics_node(
+                                snapshot,
+                                window,
+                                app.global::<fret_ui::elements::ElementRuntime>(),
+                                &target,
+                            ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
@@ -1822,7 +1944,7 @@ impl UiDiagnosticsService {
                     } else if let Some(node) = select_semantics_node(
                         snapshot,
                         window,
-                        element_runtime,
+                        app.global::<fret_ui::elements::ElementRuntime>(),
                         &path[state.next_index],
                     ) {
                         let pos = center_of_rect(node.bounds);
@@ -1890,9 +2012,12 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &menu)
-                            {
+                            if let Some(node) = select_semantics_node(
+                                snapshot,
+                                window,
+                                app.global::<fret_ui::elements::ElementRuntime>(),
+                                &menu,
+                            ) {
                                 let pos =
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
@@ -1916,9 +2041,12 @@ impl UiDiagnosticsService {
                             }
                         }
                         1 => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &item)
-                            {
+                            if let Some(node) = select_semantics_node(
+                                snapshot,
+                                window,
+                                app.global::<fret_ui::elements::ElementRuntime>(),
+                                &item,
+                            ) {
                                 let pos = center_of_rect(node.bounds);
                                 output
                                     .events
@@ -1982,9 +2110,18 @@ impl UiDiagnosticsService {
                     let mut playback = if let Some(playback) = state.playback.take() {
                         playback
                     } else {
-                        let from_node =
-                            select_semantics_node(snapshot, window, element_runtime, &from);
-                        let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
+                        let from_node = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &from,
+                        );
+                        let to_node = select_semantics_node(
+                            snapshot,
+                            window,
+                            app.global::<fret_ui::elements::ElementRuntime>(),
+                            &to,
+                        );
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
                             let start =
                                 center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
@@ -2074,7 +2211,12 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    let node = select_semantics_node(snapshot, window, element_runtime, &target);
+                    let node = select_semantics_node(
+                        snapshot,
+                        window,
+                        app.global::<fret_ui::elements::ElementRuntime>(),
+                        &target,
+                    );
                     if let Some(node) = node {
                         if node.flags.disabled {
                             force_dump_label = Some(format!(
@@ -2412,6 +2554,77 @@ impl UiDiagnosticsService {
         let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
+    }
+
+    fn eval_predicate_any_window(&self, pred: &UiPredicateV1) -> bool {
+        match pred {
+            UiPredicateV1::ExistsAnyWindow { target } => {
+                self.resolve_selector_any_window(target).is_some()
+            }
+            UiPredicateV1::NotExistsAnyWindow { target } => {
+                self.resolve_selector_any_window(target).is_none()
+            }
+            _ => false,
+        }
+    }
+
+    fn resolve_selector_any_window(
+        &self,
+        selector: &UiSelectorV1,
+    ) -> Option<(AppWindowId, Rect, Rect)> {
+        let mut windows: Vec<AppWindowId> = self.per_window.keys().copied().collect();
+        windows.sort_by_key(|w| w.data().as_ffi());
+
+        for window in windows {
+            let Some(ring) = self.per_window.get(&window) else {
+                continue;
+            };
+            let Some(snap) = ring.snapshots.back() else {
+                continue;
+            };
+            let Some(sem) = snap.debug.semantics.as_ref() else {
+                continue;
+            };
+
+            let node = match selector {
+                UiSelectorV1::TestId { id } => sem
+                    .nodes
+                    .iter()
+                    .find(|n| n.test_id.as_deref() == Some(id.as_str())),
+                UiSelectorV1::NodeId { node } => sem.nodes.iter().find(|n| n.id == *node),
+                UiSelectorV1::RoleAndName { .. }
+                | UiSelectorV1::RoleAndPath { .. }
+                | UiSelectorV1::GlobalElementId { .. } => None,
+            };
+
+            if let Some(node) = node {
+                let window_bounds = rect_from_v1(snap.window_bounds);
+                let node_bounds = rect_from_v1(node.bounds);
+                return Some((window, node_bounds, window_bounds));
+            }
+        }
+
+        None
+    }
+
+    fn resolve_internal_drag_route_for_selector(
+        &self,
+        selector: &UiSelectorV1,
+    ) -> Option<InternalDragRoute> {
+        let (window, node_bounds, window_bounds) = self.resolve_selector_any_window(selector)?;
+        Some(InternalDragRoute {
+            window,
+            position: center_of_rect_clamped_to_rect(node_bounds, window_bounds),
+        })
+    }
+
+    fn enqueue_script_injected_event(&mut self, app: &mut App, window: AppWindowId, event: Event) {
+        self.pending_script_injected_events
+            .entry(window)
+            .or_default()
+            .push(event);
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
     }
 
     fn ensure_ready_file(&mut self) {
@@ -3925,6 +4138,11 @@ pub enum UiScriptWindowTargetV1 {
     Any,
     /// Run the script for the first focused window that observes the script trigger.
     Focused,
+    /// Run the script for the lowest observed window id.
+    ///
+    /// This is intended for multi-window demos where focus can be stolen by an auxiliary window
+    /// during startup, but scripts should still attach to the "main" window deterministically.
+    LowestId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3999,6 +4217,8 @@ pub struct UiDragPointerPathSegmentV1 {
     pub delta_y: f32,
     #[serde(default = "default_drag_steps")]
     pub steps: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub internal_drag_target: Option<UiSelectorV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4310,6 +4530,17 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
     },
     NotExists {
+        target: UiSelectorV1,
+    },
+    /// True when the target exists in any window's latest captured semantics snapshot.
+    ///
+    /// This is intended for multi-window scripted diagnostics, where a script is attached to a
+    /// single window but needs to wait for auxiliary windows to appear.
+    ExistsAnyWindow {
+        target: UiSelectorV1,
+    },
+    /// True when the target does not exist in any window's latest captured semantics snapshot.
+    NotExistsAnyWindow {
         target: UiSelectorV1,
     },
     FocusIs {
@@ -4653,12 +4884,26 @@ struct V2DragPointerPathState {
     step_index: usize,
     button: UiMouseButtonV1,
     start: Point,
-    points: Vec<(Point, u32)>,
+    segments: Vec<V2DragPointerPathSegment>,
     segment_ix: usize,
     frame_in_segment: u32,
     /// - `0`: emit `move+down` at `start`
     /// - `1`: emit pressed `move` frames across segments
     phase: u32,
+    last_internal_drag_target: Option<UiSelectorV1>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct InternalDragRoute {
+    window: AppWindowId,
+    position: Point,
+}
+
+#[derive(Debug, Clone)]
+struct V2DragPointerPathSegment {
+    end: Point,
+    steps: u32,
+    internal_drag_target: Option<UiSelectorV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -8887,6 +9132,13 @@ impl From<Rect> for RectV1 {
     }
 }
 
+fn rect_from_v1(value: RectV1) -> Rect {
+    Rect {
+        origin: Point::new(fret_core::Px(value.x), fret_core::Px(value.y)),
+        size: fret_core::Size::new(fret_core::Px(value.w), fret_core::Px(value.h)),
+    }
+}
+
 fn invalidation_label(inv: Invalidation) -> &'static str {
     match inv {
         Invalidation::Paint => "paint",
@@ -9484,6 +9736,12 @@ fn eval_predicate(
             select_semantics_node(snapshot, window, element_runtime, target).is_some()
         }
         UiPredicateV1::NotExists { target } => {
+            select_semantics_node(snapshot, window, element_runtime, target).is_none()
+        }
+        UiPredicateV1::ExistsAnyWindow { target } => {
+            select_semantics_node(snapshot, window, element_runtime, target).is_some()
+        }
+        UiPredicateV1::NotExistsAnyWindow { target } => {
             select_semantics_node(snapshot, window, element_runtime, target).is_none()
         }
         UiPredicateV1::FocusIs { target } => {
@@ -10235,6 +10493,8 @@ fn push_drag_pointer_path_playback_frame(
         ),
     };
 
+    state.last_internal_drag_target = None;
+
     if state.phase == 0 {
         events.push(Event::Pointer(PointerEvent::Move {
             pointer_id,
@@ -10255,7 +10515,7 @@ fn push_drag_pointer_path_playback_frame(
         return false;
     }
 
-    if state.points.is_empty() {
+    if state.segments.is_empty() {
         events.push(Event::Pointer(PointerEvent::Up {
             pointer_id,
             position: state.start,
@@ -10274,8 +10534,12 @@ fn push_drag_pointer_path_playback_frame(
         return true;
     }
 
-    if state.segment_ix >= state.points.len() {
-        let end = state.points.last().map(|(p, _)| *p).unwrap_or(state.start);
+    if state.segment_ix >= state.segments.len() {
+        let end = state.segments.last().map(|s| s.end).unwrap_or(state.start);
+        state.last_internal_drag_target = state
+            .segments
+            .last()
+            .and_then(|s| s.internal_drag_target.clone());
         events.push(Event::Pointer(PointerEvent::Up {
             pointer_id,
             position: end,
@@ -10294,12 +10558,14 @@ fn push_drag_pointer_path_playback_frame(
         return true;
     }
 
-    let (seg_end, seg_steps) = state.points[state.segment_ix];
-    let seg_steps = seg_steps.max(1);
+    let seg = &state.segments[state.segment_ix];
+    state.last_internal_drag_target = seg.internal_drag_target.clone();
+    let seg_end = seg.end;
+    let seg_steps = seg.steps.max(1);
     let seg_start = if state.segment_ix == 0 {
         state.start
     } else {
-        state.points[state.segment_ix.saturating_sub(1)].0
+        state.segments[state.segment_ix.saturating_sub(1)].end
     };
 
     let next_frame = state.frame_in_segment.saturating_add(1);
@@ -11825,9 +12091,8 @@ mod tests {
         );
         svc.pending_script_run_id = Some(1);
 
-        let app = App::new();
-        let _ =
-            svc.drive_script_for_window(&app, window, window_bounds, 1.0, Some(&snapshot), None);
+        let mut app = App::new();
+        let _ = svc.drive_script_for_window(&mut app, window, window_bounds, 1.0, Some(&snapshot));
 
         let bytes =
             std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");
@@ -11836,6 +12101,47 @@ mod tests {
         assert!(
             matches!(result.stage, UiScriptStageV1::Passed),
             "expected drive_script to persist the passed result"
+        );
+    }
+
+    #[test]
+    fn scripts_can_parse_drag_pointer_path_internal_drag_target() {
+        let script: UiActionScriptV2 = serde_json::from_str(
+            r#"{
+                "schema_version": 2,
+                "steps": [
+                    {
+                        "type": "drag_pointer_path",
+                        "target": { "kind": "test_id", "id": "main-anchor" },
+                        "segments": [
+                            { "delta_x": 10.0, "delta_y": 0.0, "steps": 2 },
+                            {
+                                "delta_x": 0.0,
+                                "delta_y": 10.0,
+                                "steps": 3,
+                                "internal_drag_target": { "kind": "test_id", "id": "aux-dock" }
+                            }
+                        ]
+                    }
+                ]
+            }"#,
+        )
+        .expect("parse script");
+
+        assert_eq!(script.schema_version, 2);
+        assert_eq!(script.steps.len(), 1);
+
+        let UiActionStepV2::DragPointerPath { segments, .. } = &script.steps[0] else {
+            panic!("expected drag_pointer_path step");
+        };
+        assert_eq!(segments.len(), 2);
+        assert!(segments[0].internal_drag_target.is_none());
+        assert!(
+            matches!(
+                segments[1].internal_drag_target.as_ref(),
+                Some(UiSelectorV1::TestId { id }) if id == "aux-dock"
+            ),
+            "expected internal_drag_target to parse as a test_id selector"
         );
     }
 

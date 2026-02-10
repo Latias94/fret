@@ -13,9 +13,10 @@ param(
     [int] $TimeoutMs = 180000,
     [int] $PollMs = 50,
     [switch] $Release,
-    # Optional: strengthen the M3 repro by requiring that a dock drag hovered across OS windows.
-    # This can be flaky until the multi-window overlap choreography is fully deterministic.
-    [switch] $StrongDockHover
+    # Deprecated: the M3 repro now enforces the strong hover gate by default.
+    # Use `-WeakDockHover` to skip it while iterating locally.
+    [switch] $StrongDockHover,
+    [switch] $WeakDockHover
 )
 
 Set-StrictMode -Version Latest
@@ -108,7 +109,7 @@ try {
     }
 
     $m3Extra = @()
-    if ($StrongDockHover) {
+    if (-not $WeakDockHover) {
         $m3Extra += @("--check-dock-drag-current-windows-min", "2")
     }
 

@@ -1943,15 +1943,7 @@ fn ui_app_render<S>(
         #[cfg(feature = "tracing")]
         let _diag_guard = diag_span.enter();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                semantics_snapshot,
-                element_runtime,
-            )
+            svc.drive_script_for_window(app, window, bounds, scale_factor, semantics_snapshot)
         });
         for effect in drive.effects {
             app.push_effect(effect);
@@ -1967,6 +1959,14 @@ fn ui_app_render<S>(
         let mut injected_any = false;
         for event in drive.events {
             injected_any = true;
+
+            if let Event::InternalDrag(e) = &event
+                && let Some(drag) = app.drag_mut(e.pointer_id)
+                && drag.cross_window_hover
+            {
+                drag.current_window = window;
+                drag.position = e.position;
+            }
             ui_app_handle_event(
                 driver,
                 WinitEventContext {

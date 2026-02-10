@@ -11,7 +11,8 @@ use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
-    FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality, WindowRole,
+    ActivationPolicy, FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
+    WindowRole, WindowStyleRequest,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
@@ -130,6 +131,19 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
         .global::<fret_core::WindowMetricsService>()
         .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
+    let logical_window_id = cx
+        .app
+        .global::<WindowBootstrapService>()
+        .and_then(|svc| svc.logical_by_window.get(&window).cloned());
+    let dock_test_id = if logical_window_id.as_deref() == Some("main") {
+        Some("imui-editor-proof.main.dock")
+    } else if logical_window_id.as_deref() == Some(AUX_LOGICAL_WINDOW_ID) {
+        Some("imui-editor-proof.aux.dock")
+    } else {
+        None
+    };
+    let tab_drag_anchor_test_id = (diag_enabled() && logical_window_id.as_deref() == Some("main"))
+        .then_some("imui-editor-proof.main.tab-drag-anchor");
 
     fret_imui::imui(cx, |ui| {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
@@ -192,9 +206,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 fret_docking::imui::dock_space_with(
                     ui,
                     fret_docking::imui::DockSpaceImUiOptions {
-                        test_id: Some("imui-editor-proof-dock"),
-                        tab_drag_anchor_test_id: diag_enabled()
-                            .then_some("imui-editor-proof.tab-drag-anchor"),
+                        test_id: dock_test_id,
+                        tab_drag_anchor_test_id,
                         ..Default::default()
                     },
                     move |app, window| ensure_dock_graph(app, window),
@@ -392,11 +405,6 @@ fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
             svc.main_window = Some(window);
             svc.logical_by_window.insert(window, "main".to_string());
         }
-        if svc.main_window != Some(window) {
-            svc.logical_by_window
-                .entry(window)
-                .or_insert_with(|| AUX_LOGICAL_WINDOW_ID.to_string());
-        }
         if svc.aux_requested {
             return;
         }
@@ -415,7 +423,10 @@ fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
             },
             anchor,
             role: WindowRole::Auxiliary,
-            style: Default::default(),
+            style: WindowStyleRequest {
+                activation: diag_enabled().then_some(ActivationPolicy::NonActivating),
+                ..Default::default()
+            },
         })));
     });
 }
