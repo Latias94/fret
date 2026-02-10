@@ -50,6 +50,7 @@ Landed behavior gates (in-tree):
 Landed perf gates (in-tree):
 
 - `tools/diag-scripts/extras-marquee-steady.json`
+- `tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json`
 - `tools/perf/diag_extras_marquee_gate.sh`
 - `tools/perf/diag_extras_marquee_gate.ps1`
 - `tools/perf/diag_extras_marquee_gate.py`
