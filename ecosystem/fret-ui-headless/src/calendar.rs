@@ -911,10 +911,22 @@ mod tests {
             disabled[idx] = false;
         }
 
-        assert_eq!(day_grid_step_target_skipping_disabled(6, len, 1, &disabled), 8);
-        assert_eq!(day_grid_step_target_skipping_disabled(8, len, -1, &disabled), 6);
-        assert_eq!(day_grid_step_target_skipping_disabled(1, len, 7, &disabled), 8);
-        assert_eq!(day_grid_step_target_skipping_disabled(13, len, -7, &disabled), 6);
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(6, len, 1, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(8, len, -1, &disabled),
+            6
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(1, len, 7, &disabled),
+            8
+        );
+        assert_eq!(
+            day_grid_step_target_skipping_disabled(13, len, -7, &disabled),
+            6
+        );
 
         let current = 10;
         let row_start = (current / 7) * 7;

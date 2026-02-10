@@ -23,9 +23,9 @@ use crate::select::{Select, SelectItem, SelectPosition};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
-    CalendarMonth, DayMatcher, DayPickerModifiers, SelectionUpdate, day_grid_row_edge_target_skipping_disabled,
-    day_grid_step_target_skipping_disabled, day_picker_cell_state, day_picker_select_single,
-    month_grid, month_grid_compact, week_number,
+    CalendarMonth, DayMatcher, DayPickerModifiers, SelectionUpdate,
+    day_grid_row_edge_target_skipping_disabled, day_grid_step_target_skipping_disabled,
+    day_picker_cell_state, day_picker_select_single, month_grid, month_grid_compact, week_number,
 };
 use time::Month;
 
@@ -1736,9 +1736,7 @@ fn calendar_month_view<H: UiHost>(
                     target,
                     disabled_for_nav.as_ref(),
                 );
-                return RovingNavigateResult::Handled {
-                    target: Some(next),
-                };
+                return RovingNavigateResult::Handled { target: Some(next) };
             }
 
             match it.key {
@@ -2364,5 +2362,4 @@ mod tests {
             Some(7)
         );
     }
-
 }

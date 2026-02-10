@@ -1268,9 +1268,7 @@ fn calendar_range_month_view<H: UiHost>(
                     target,
                     disabled_for_nav.as_ref(),
                 );
-                return RovingNavigateResult::Handled {
-                    target: Some(next),
-                };
+                return RovingNavigateResult::Handled { target: Some(next) };
             }
 
             match it.key {
