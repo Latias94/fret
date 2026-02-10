@@ -17,7 +17,7 @@ pub type MessageId = fret_ui::ItemKey;
 /// - Hash collisions are possible (as with any hash). If you cannot tolerate collisions, keep a
 ///   per-conversation `HashMap<ExternalId, MessageId>` and assign monotonic IDs.
 pub fn message_id_from_external_id(external_id: &str) -> MessageId {
-    message_id_from_salted_external_id(0, external_id)
+    item_key_from_external_id(external_id)
 }
 
 /// Derive a deterministic `MessageId` from a stable external ID with an extra salt.
@@ -25,6 +25,23 @@ pub fn message_id_from_external_id(external_id: &str) -> MessageId {
 /// The salt can be a conversation/session ID hash to further reduce collision risk across merged
 /// transcripts.
 pub fn message_id_from_salted_external_id(salt: u64, external_id: &str) -> MessageId {
+    item_key_from_salted_external_id(salt, external_id)
+}
+
+/// Derive a deterministic `ItemKey` (`u64`) from a stable external identifier.
+///
+/// This is a small, stable hash intended for bridging string IDs (UUID/nanoid/etc) into Fret’s
+/// keyed identity surfaces (`ItemKey = u64`).
+///
+/// Notes:
+/// - Hash collisions are possible (as with any hash). If you cannot tolerate collisions, keep a
+///   per-surface mapping table and assign monotonic `ItemKey`s.
+pub fn item_key_from_external_id(external_id: &str) -> fret_ui::ItemKey {
+    item_key_from_salted_external_id(0, external_id)
+}
+
+/// Derive a deterministic `ItemKey` (`u64`) from a stable external ID with an extra salt.
+pub fn item_key_from_salted_external_id(salt: u64, external_id: &str) -> fret_ui::ItemKey {
     fnv1a64_u64_and_bytes(salt, external_id.as_bytes())
 }
 

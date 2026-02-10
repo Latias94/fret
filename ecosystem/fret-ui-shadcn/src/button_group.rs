@@ -12,12 +12,11 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
-    TextProps,
+    AnyElement, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, InputGroup, Separator};
 
@@ -33,8 +32,10 @@ struct BorderWidthOverride {
 pub struct ButtonGroupText {
     text: Arc<str>,
     layout: LayoutRefinement,
+    chrome: ChromeRefinement,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
+    test_id: Option<Arc<str>>,
 }
 
 impl ButtonGroupText {
@@ -42,13 +43,20 @@ impl ButtonGroupText {
         Self {
             text: text.into(),
             layout: LayoutRefinement::default(),
+            chrome: ChromeRefinement::default(),
             border_width_override: BorderWidthOverride::default(),
             corner_radii_override: None,
+            test_id: None,
         }
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
         self
     }
 
@@ -77,6 +85,11 @@ impl ButtonGroupText {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -85,87 +98,101 @@ impl ButtonGroupText {
         let border_color = theme.color_required("border");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
 
-        let mut border = Edges::all(Px(1.0));
-        if let Some(w) = self.border_width_override.top {
-            border.top = w;
-        }
-        if let Some(w) = self.border_width_override.right {
-            border.right = w;
-        }
-        if let Some(w) = self.border_width_override.bottom {
-            border.bottom = w;
-        }
-        if let Some(w) = self.border_width_override.left {
-            border.left = w;
-        }
+        let base_chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .border_1()
+            .border_color(ColorRef::Color(border_color))
+            .shadow_xs()
+            .radius(MetricRef::radius(Radius::Md))
+            .text_color(ColorRef::Color(fg));
+        let chrome = base_chrome.merge(self.chrome);
+        let text_color = chrome
+            .text_color
+            .clone()
+            .unwrap_or_else(|| ColorRef::Color(theme.color_required("foreground")))
+            .resolve(&theme);
 
         let corner_radii = self
             .corner_radii_override
             .unwrap_or_else(|| Corners::all(radius));
 
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let text = self.text;
+        let test_id = self.test_id;
+
+        let mut props = decl_style::container_props(&theme, chrome, self.layout);
+        props.corner_radii = corner_radii;
+        props.snap_to_device_pixels = true;
+
+        if let Some(w) = self.border_width_override.top {
+            props.border.top = w;
+        }
+        if let Some(w) = self.border_width_override.right {
+            props.border.right = w;
+        }
+        if let Some(w) = self.border_width_override.bottom {
+            props.border.bottom = w;
+        }
+        if let Some(w) = self.border_width_override.left {
+            props.border.left = w;
+        }
+
         let px_4 = MetricRef::space(Space::N4).resolve(&theme);
         let text_px = theme.metric_required("metric.font.size");
         let line_height = theme.metric_required("metric.font.line_height");
-        let text = self.text;
 
-        cx.container(
-            ContainerProps {
-                layout,
-                background: Some(bg),
-                shadow: Some(decl_style::shadow_xs(&theme, radius)),
-                border,
-                border_color: Some(border_color),
-                focus_ring: None,
-                focus_border_color: None,
-                focus_within: false,
-                corner_radii,
-                ..Default::default()
-            },
-            move |cx| {
-                let content = cx.flex(
-                    FlexProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
+        let mut el = cx.container(props, move |cx| {
+            let content = cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
                             ..Default::default()
                         },
-                        direction: Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges {
-                            top: Px(0.0),
-                            right: px_4,
-                            bottom: Px(0.0),
-                            left: px_4,
-                        },
-                        justify: fret_ui::element::MainAlign::Start,
-                        align: fret_ui::element::CrossAlign::Center,
-                        wrap: false,
+                        ..Default::default()
                     },
-                    move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: text.clone(),
-                            style: Some(TextStyle {
-                                font: FontId::default(),
-                                size: text_px,
-                                weight: FontWeight::MEDIUM,
-                                slant: Default::default(),
-                                line_height: Some(line_height),
-                                letter_spacing_em: None,
-                            }),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        })]
+                    direction: Axis::Horizontal,
+                    gap: Px(8.0),
+                    padding: Edges {
+                        top: Px(0.0),
+                        right: px_4,
+                        bottom: Px(0.0),
+                        left: px_4,
                     },
-                );
-                vec![content]
-            },
-        )
+                    justify: fret_ui::element::MainAlign::Start,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: text.clone(),
+                        style: Some(TextStyle {
+                            font: FontId::default(),
+                            size: text_px,
+                            weight: FontWeight::MEDIUM,
+                            slant: Default::default(),
+                            line_height: Some(line_height),
+                            letter_spacing_em: None,
+                        }),
+                        color: Some(text_color),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    })]
+                },
+            );
+            vec![content]
+        });
+
+        if let Some(test_id) = test_id {
+            el = el.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id(test_id),
+            );
+        }
+
+        el
     }
 }
 

@@ -9,6 +9,7 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Space};
 
+use crate::elements::attachments::AttachmentData;
 use crate::elements::{
     AiConversationTranscript, ConversationDownload, ConversationEmptyState,
     ConversationScrollButton, PromptInput,
@@ -61,6 +62,8 @@ pub struct AiChat {
     prompt_textarea_test_id: Option<Arc<str>>,
     prompt_send_test_id: Option<Arc<str>>,
     prompt_stop_test_id: Option<Arc<str>>,
+    prompt_attachments_model: Option<Model<Vec<AttachmentData>>>,
+    prompt_attachments_test_id: Option<Arc<str>>,
     root_test_id: Option<Arc<str>>,
     scroll_handle: Option<VirtualListScrollHandle>,
     root_layout: LayoutRefinement,
@@ -108,6 +111,14 @@ impl std::fmt::Debug for AiChat {
             )
             .field("prompt_send_test_id", &self.prompt_send_test_id.as_deref())
             .field("prompt_stop_test_id", &self.prompt_stop_test_id.as_deref())
+            .field(
+                "has_prompt_attachments_model",
+                &self.prompt_attachments_model.is_some(),
+            )
+            .field(
+                "prompt_attachments_test_id",
+                &self.prompt_attachments_test_id.as_deref(),
+            )
             .field("root_test_id", &self.root_test_id.as_deref())
             .field("has_scroll_handle", &self.scroll_handle.is_some())
             .field("root_layout", &self.root_layout)
@@ -142,6 +153,8 @@ impl AiChat {
             prompt_textarea_test_id: None,
             prompt_send_test_id: None,
             prompt_stop_test_id: None,
+            prompt_attachments_model: None,
+            prompt_attachments_test_id: None,
             root_test_id: None,
             scroll_handle: None,
             root_layout: LayoutRefinement::default(),
@@ -241,6 +254,16 @@ impl AiChat {
 
     pub fn prompt_stop_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.prompt_stop_test_id = Some(id.into());
+        self
+    }
+
+    pub fn prompt_attachments_model(mut self, model: Model<Vec<AttachmentData>>) -> Self {
+        self.prompt_attachments_model = Some(model);
+        self
+    }
+
+    pub fn prompt_attachments_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.prompt_attachments_test_id = Some(id.into());
         self
     }
 
@@ -410,6 +433,12 @@ impl AiChat {
         }
         if let Some(id) = self.prompt_stop_test_id.clone() {
             prompt = prompt.test_id_stop(id);
+        }
+        if let Some(model) = self.prompt_attachments_model.clone() {
+            prompt = prompt.attachments(model);
+        }
+        if let Some(id) = self.prompt_attachments_test_id.clone() {
+            prompt = prompt.test_id_attachments(id);
         }
 
         let prompt = prompt.into_element(cx);

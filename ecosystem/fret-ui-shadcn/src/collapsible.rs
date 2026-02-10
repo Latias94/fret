@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps,
-    SemanticsDecoration, StackProps,
+    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, OpacityProps,
+    PressableProps, SemanticsDecoration, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -159,22 +159,35 @@ impl Collapsible {
                                 wrapper_refinement,
                             );
 
-                            let children = vec![cx.opacity_props(
+                            let wrapper_child = cx.opacity_props(
                                 OpacityProps {
                                     layout: LayoutStyle::default(),
                                     opacity: motion_for_wrapper.wrapper_opacity,
                                 },
                                 move |_cx| vec![content],
-                            )];
-
-                            let wrapper_el = AnyElement::new(
-                                content_id,
-                                ElementKind::Container(ContainerProps {
-                                    layout: wrapper_layout,
-                                    ..Default::default()
-                                }),
-                                children,
                             );
+                            let children = vec![wrapper_child];
+
+                            let wrapper_el = if motion_for_wrapper.wants_measurement {
+                                AnyElement::new(
+                                    content_id,
+                                    ElementKind::InteractivityGate(InteractivityGateProps {
+                                        layout: wrapper_layout,
+                                        present: true,
+                                        interactive: false,
+                                    }),
+                                    children,
+                                )
+                            } else {
+                                AnyElement::new(
+                                    content_id,
+                                    ElementKind::Container(ContainerProps {
+                                        layout: wrapper_layout,
+                                        ..Default::default()
+                                    }),
+                                    children,
+                                )
+                            };
 
                             (content_id, Some(wrapper_el))
                         })
