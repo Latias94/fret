@@ -56,7 +56,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -180,7 +180,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,

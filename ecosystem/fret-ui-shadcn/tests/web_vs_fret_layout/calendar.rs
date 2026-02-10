@@ -2006,7 +2006,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_headless::calendar::CalendarMonth;
@@ -2254,7 +2254,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_headless::calendar::CalendarMonth;
@@ -3065,7 +3065,7 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
     for frame in 1..=2 {
         app.set_frame_id(FrameId(frame));
         let root = fret_ui::declarative::render_root(
@@ -3147,7 +3147,7 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,

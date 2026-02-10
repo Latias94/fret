@@ -1633,7 +1633,7 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -1721,7 +1721,7 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -1873,7 +1873,7 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -2040,7 +2040,7 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -2247,7 +2247,7 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -2555,7 +2555,7 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -2769,7 +2769,7 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -3024,7 +3024,7 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -3463,7 +3463,7 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -3623,7 +3623,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -3839,7 +3839,7 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -4019,7 +4019,7 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -4196,7 +4196,7 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -4418,7 +4418,7 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,

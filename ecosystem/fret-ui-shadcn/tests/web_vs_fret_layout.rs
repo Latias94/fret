@@ -24,6 +24,7 @@ use fret_ui_shadcn::empty::{
 };
 use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 use serde::Deserialize;
+use slotmap::SlotMap;
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -702,6 +703,7 @@ fn paint_representative_color(paint: fret_core::Paint) -> fret_core::Color {
             }
             best
         }
+        fret_core::Paint::Material { .. } => fret_core::Color::TRANSPARENT,
     }
 }
 
@@ -728,6 +730,7 @@ fn paint_max_alpha(paint: fret_core::Paint) -> f32 {
                 .map(|s| s.color.a)
                 .fold(0.0f32, f32::max)
         }
+        fret_core::Paint::Material { .. } => 1.0,
     }
 }
 
@@ -1346,7 +1349,9 @@ fn debug_dump_scene_quads_near_expected(
 }
 
 #[derive(Default)]
-struct FakeServices;
+struct FakeServices {
+    materials: SlotMap<fret_core::MaterialId, fret_core::MaterialDescriptor>,
+}
 
 impl fret_core::TextService for FakeServices {
     fn prepare(
@@ -1392,6 +1397,19 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(self.materials.insert(desc))
+    }
+
+    fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
+        self.materials.remove(id).is_some()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct RecordedTextPrepare {
     text: String,
@@ -1402,6 +1420,7 @@ struct RecordedTextPrepare {
 #[derive(Default)]
 struct StyleAwareServices {
     prepared: Vec<RecordedTextPrepare>,
+    materials: SlotMap<fret_core::MaterialId, fret_core::MaterialDescriptor>,
 }
 
 impl fret_core::TextService for StyleAwareServices {
@@ -1486,6 +1505,19 @@ impl fret_core::SvgService for StyleAwareServices {
     }
 }
 
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(self.materials.insert(desc))
+    }
+
+    fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
+        self.materials.remove(id).is_some()
+    }
+}
+
 fn run_fret_root(
     bounds: Rect,
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
@@ -1501,7 +1533,7 @@ fn run_fret_root(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -1539,7 +1571,7 @@ fn run_fret_root_frames(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let mut root: Option<NodeId> = None;
     let mut snapshot: Option<fret_core::SemanticsSnapshot> = None;
@@ -1685,7 +1717,7 @@ fn run_fret_root_with_ui(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -7741,7 +7773,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_headless::calendar::CalendarMonth;
@@ -7989,7 +8021,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
         use fret_ui_headless::calendar::CalendarMonth;
@@ -8800,7 +8832,7 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
     for frame in 1..=2 {
         app.set_frame_id(FrameId(frame));
         let root = fret_ui::declarative::render_root(
@@ -8882,7 +8914,7 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,

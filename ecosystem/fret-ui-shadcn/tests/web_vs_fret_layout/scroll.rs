@@ -421,7 +421,7 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -633,7 +633,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -836,7 +836,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -1035,7 +1035,7 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
     let content_h = web_content.rect.h;
@@ -1334,7 +1334,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -1533,7 +1533,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -1748,7 +1748,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -1956,7 +1956,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 
@@ -2162,7 +2162,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
     let content_w = web_content.rect.w;
@@ -2455,7 +2455,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolle
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let handle = ScrollHandle::default();
 

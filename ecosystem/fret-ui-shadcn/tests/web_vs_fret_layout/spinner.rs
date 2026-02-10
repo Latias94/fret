@@ -76,7 +76,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
