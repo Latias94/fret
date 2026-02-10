@@ -59,6 +59,8 @@ pub(super) struct PaintGpu {
     pub(super) stop_count: u32,
     pub(super) params0: [f32; 4],
     pub(super) params1: [f32; 4],
+    pub(super) params2: [f32; 4],
+    pub(super) params3: [f32; 4],
     pub(super) stop_colors: [[f32; 4]; MAX_STOPS],
     pub(super) stop_offsets0: [f32; 4],
     pub(super) stop_offsets1: [f32; 4],
@@ -528,6 +530,11 @@ pub(super) struct SceneEncoding {
     pub(super) uniforms: Vec<ViewportUniform>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
+
+    pub(super) material_quad_ops: u64,
+    pub(super) material_distinct: u64,
+    pub(super) material_unknown_ids: u64,
+    pub(super) material_degraded_due_to_budget: u64,
 }
 
 impl SceneEncoding {
@@ -540,6 +547,10 @@ impl SceneEncoding {
         self.uniforms.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();
+        self.material_quad_ops = 0;
+        self.material_distinct = 0;
+        self.material_unknown_ids = 0;
+        self.material_degraded_due_to_budget = 0;
     }
 }
 

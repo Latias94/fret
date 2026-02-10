@@ -142,6 +142,19 @@ impl fret_core::SvgService for FingerprintingServices {
     }
 }
 
+impl fret_core::MaterialService for FingerprintingServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 #[test]
 fn theme_color_change_does_not_change_text_input_fingerprints() {
     let mut app = TestHost::new();

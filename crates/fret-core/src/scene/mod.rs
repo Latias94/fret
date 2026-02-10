@@ -15,7 +15,8 @@ mod validate;
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
 pub use paint::{
-    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Paint, RadialGradient, TileMode,
+    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
+    TileMode,
 };
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 

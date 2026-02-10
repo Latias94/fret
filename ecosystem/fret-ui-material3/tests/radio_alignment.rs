@@ -315,6 +315,19 @@ impl fret_core::SvgService for FakeUiServices {
     }
 }
 
+impl fret_core::MaterialService for FakeUiServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 fn find_first_bounds_with_size(
     ui: &UiTree<TestHost>,
     root: fret_core::NodeId,
