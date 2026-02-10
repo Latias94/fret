@@ -706,6 +706,9 @@ fn page_preview(
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
+            preview_ai_prompt_input_action_menu_demo(cx, theme)
+        }
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
@@ -1207,6 +1210,152 @@ fn preview_ai_prompt_input_provider_demo(
             .gap(Space::N4)
             .layout(LayoutRefinement::default().w_full()),
         move |_cx| vec![external_add, prompt_el, sent_marker, note],
+    )]
+}
+
+fn preview_ai_prompt_input_action_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct Models {
+        prompt: Option<Model<String>>,
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+        next_attachment_id: Option<Model<u64>>,
+    }
+
+    let prompt = cx.with_state(Models::default, |st| st.prompt.clone());
+    let prompt = match prompt {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let attachments = cx.with_state(Models::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Vec::<ui_ai::AttachmentData>::new());
+            cx.with_state(Models::default, |st| st.attachments = Some(model.clone()));
+            model
+        }
+    };
+
+    let next_attachment_id = cx.with_state(Models::default, |st| st.next_attachment_id.clone());
+    let next_attachment_id = match next_attachment_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(Models::default, |st| {
+                st.next_attachment_id = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let on_add_attachments: OnActivate = {
+        let attachments = attachments.clone();
+        let next_id = next_attachment_id.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let out = *v;
+                    *v = v.saturating_add(1);
+                    out
+                })
+                .unwrap_or(0);
+
+            let item_id = Arc::<str>::from(format!("att-{id}"));
+            let item = ui_ai::AttachmentData::File(
+                ui_ai::AttachmentFileData::new(item_id).filename(Arc::<str>::from("menu.txt")),
+            );
+
+            let _ = host.models_mut().update(&attachments, |v| v.push(item));
+            host.notify(action_cx);
+        })
+    };
+
+    let prompt_el = ui_ai::PromptInputProvider::new()
+        .text_model(prompt.clone())
+        .attachments_model(attachments.clone())
+        .into_element_with_children(cx, move |cx, _controller| {
+            let root = ui_ai::PromptInputRoot::new_uncontrolled()
+                .on_add_attachments(on_add_attachments.clone())
+                .test_id_root("ui-gallery-ai-prompt-input-action-menu-root")
+                .test_id_textarea("ui-gallery-ai-prompt-input-action-menu-textarea")
+                .test_id_attachments("ui-gallery-ai-prompt-input-action-menu-attachments")
+                .refine_layout(LayoutRefinement::default().w_full());
+
+            let input =
+                root.into_element_with_slots(cx, |slot_cx: &mut ElementContext<'_, App>| {
+                    let mut out = ui_ai::PromptInputSlots::default();
+
+                    let attachments_len = ui_ai::use_prompt_input_controller(slot_cx)
+                        .and_then(|c| c.attachments)
+                        .and_then(|m| slot_cx.get_model_cloned(&m, fret_ui::Invalidation::Layout))
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+
+                    if attachments_len > 0 {
+                        out.block_start.push(
+                            ui_ai::PromptInputHeader::new([ui_ai::PromptInputAttachmentsRow::new(
+                            )
+                            .into_element(slot_cx)])
+                            .into_element(slot_cx),
+                        );
+                    }
+
+                    let menu = ui_ai::PromptInputActionMenu::new(
+                        ui_ai::PromptInputActionMenuContent::new([
+                            ui_ai::PromptInputActionAddAttachmentsMenuItem::new()
+                                .test_id(
+                                    "ui-gallery-ai-prompt-input-action-menu-add-attachments-item",
+                                )
+                                .into_entry(slot_cx),
+                        ]),
+                    )
+                    .trigger(
+                        ui_ai::PromptInputActionMenuTrigger::new()
+                            .test_id("ui-gallery-ai-prompt-input-action-menu-trigger"),
+                    )
+                    .into_element(slot_cx);
+
+                    out.block_end.push(
+                        ui_ai::PromptInputFooter::new(
+                            [ui_ai::PromptInputTools::new([menu]).into_element(slot_cx)],
+                            Vec::<AnyElement>::new(),
+                        )
+                        .into_element(slot_cx),
+                    );
+
+                    out
+                });
+
+            vec![input]
+        });
+
+    let note =
+        cx.text("This page demonstrates PromptInputActionMenu composed into PromptInputRoot.");
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full()),
+        move |_cx| vec![prompt_el, note],
     )]
 }
 

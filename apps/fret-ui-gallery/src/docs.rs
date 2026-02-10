@@ -615,6 +615,28 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = r#"
+## AI prompt input action menu (demo)
+
+This page demonstrates `PromptInputActionMenu` (shadcn `DropdownMenu`) composed into a
+parts-first `PromptInputRoot`.
+
+It exists to validate:
+
+- action menu trigger + content wiring in the prompt footer,
+- intent-driven menu items (via `OnActivate`, not direct side effects),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    PromptInputActionAddAttachmentsMenuItem, PromptInputActionMenu, PromptInputActionMenuContent,
+    PromptInputActionMenuTrigger,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_ARTIFACT_DEMO: &str = r#"
 ## AI artifact (demo)
 
