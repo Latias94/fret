@@ -588,6 +588,33 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
+## AI prompt input provider (demo)
+
+This page demonstrates `PromptInputProvider` + a parts-first `PromptInputRoot` composition:
+
+- provider mode lifts `text` + `attachments` models outside the prompt input surface,
+- an external button mutates the attachments model (simulating an app-owned file picker effect),
+- `PromptInputRoot::into_element_with_slots` composes block-start and block-end content using parts:
+  - `PromptInputHeader` + `PromptInputAttachmentsRow`
+  - `PromptInputFooter` + `PromptInputTools` + `PromptInputActionAddAttachments` + `PromptInputSubmit`
+
+It exists to validate:
+
+- provider-mode integration for apps (models are app-owned),
+- parts-first composition seams for prompt chrome,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    PromptInputProvider, PromptInputRoot, PromptInputSlots, PromptInputHeader, PromptInputFooter,
+    PromptInputTools, PromptInputSubmit, PromptInputActionAddAttachments, PromptInputAttachmentsRow,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_ARTIFACT_DEMO: &str = r#"
 ## AI artifact (demo)
 

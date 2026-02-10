@@ -111,6 +111,7 @@ pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
 pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
@@ -250,6 +251,8 @@ pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
 pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
@@ -822,6 +825,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_CHAT_DEMO,
                 docs::USAGE_AI_CHAT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                "AI PromptInput Provider (Demo)",
+                "PromptInputProvider + PromptInputRoot (parts) Demo",
+                "fret-ui-ai (prompt input parts)",
+                CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                &["ai", "prompt", "input", "provider", "parts", "demo"],
+                docs::DOC_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                docs::USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_ARTIFACT_DEMO,

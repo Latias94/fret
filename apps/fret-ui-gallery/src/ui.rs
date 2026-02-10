@@ -705,6 +705,7 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
@@ -1005,6 +1006,208 @@ where
 
     out.extend(body);
     out
+}
+
+fn preview_ai_prompt_input_provider_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct Models {
+        prompt: Option<Model<String>>,
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+        next_attachment_id: Option<Model<u64>>,
+        sent_count: Option<Model<u64>>,
+    }
+
+    let prompt = cx.with_state(Models::default, |st| st.prompt.clone());
+    let prompt = match prompt {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let attachments = cx.with_state(Models::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Vec::<ui_ai::AttachmentData>::new());
+            cx.with_state(Models::default, |st| st.attachments = Some(model.clone()));
+            model
+        }
+    };
+
+    let next_attachment_id = cx.with_state(Models::default, |st| st.next_attachment_id.clone());
+    let next_attachment_id = match next_attachment_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(Models::default, |st| {
+                st.next_attachment_id = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let sent_count = cx.with_state(Models::default, |st| st.sent_count.clone());
+    let sent_count = match sent_count {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(Models::default, |st| st.sent_count = Some(model.clone()));
+            model
+        }
+    };
+
+    let on_add_attachments: OnActivate = {
+        let attachments = attachments.clone();
+        let next_id = next_attachment_id.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let out = *v;
+                    *v = v.saturating_add(1);
+                    out
+                })
+                .unwrap_or(0);
+
+            let item_id = Arc::<str>::from(format!("ext-att-{id}"));
+            let item = ui_ai::AttachmentData::File(
+                ui_ai::AttachmentFileData::new(item_id).filename(Arc::<str>::from("demo.txt")),
+            );
+
+            let _ = host.models_mut().update(&attachments, |v| {
+                v.push(item);
+            });
+            host.notify(action_cx);
+        })
+    };
+
+    let on_send: OnActivate = {
+        let sent_count = sent_count.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&sent_count, |v| *v = v.saturating_add(1));
+            host.notify(action_cx);
+        })
+    };
+
+    let sent_marker = {
+        let n = cx
+            .get_model_copied(&sent_count, Invalidation::Layout)
+            .unwrap_or(0);
+        let id = Arc::<str>::from(format!(
+            "ui-gallery-ai-prompt-input-provider-sent-count-{n}"
+        ));
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(id),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Px(fret_core::Px(0.0)),
+                                height: fret_ui::element::Length::Px(fret_core::Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            },
+        )
+    };
+
+    let external_add = shadcn::Button::new("External add attachment")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .on_activate(on_add_attachments.clone())
+        .test_id("ui-gallery-ai-prompt-input-provider-external-add")
+        .into_element(cx);
+
+    let prompt_el = ui_ai::PromptInputProvider::new()
+        .text_model(prompt.clone())
+        .attachments_model(attachments.clone())
+        .into_element_with_children(cx, move |cx, _controller| {
+            let root = ui_ai::PromptInputRoot::new_uncontrolled()
+                .on_send(on_send.clone())
+                .on_add_attachments(on_add_attachments.clone())
+                .test_id_root("ui-gallery-ai-prompt-input-provider-root")
+                .test_id_textarea("ui-gallery-ai-prompt-input-provider-textarea")
+                .test_id_send("ui-gallery-ai-prompt-input-provider-send")
+                .test_id_stop("ui-gallery-ai-prompt-input-provider-stop")
+                .test_id_attachments("ui-gallery-ai-prompt-input-provider-attachments")
+                .test_id_add_attachments("ui-gallery-ai-prompt-input-provider-add-attachments")
+                .refine_layout(LayoutRefinement::default().w_full());
+
+            let input =
+                root.into_element_with_slots(cx, |slot_cx: &mut ElementContext<'_, App>| {
+                    let mut out = ui_ai::PromptInputSlots::default();
+
+                    let attachments_len = ui_ai::use_prompt_input_controller(slot_cx)
+                        .and_then(|c| c.attachments)
+                        .and_then(|m| slot_cx.get_model_cloned(&m, Invalidation::Layout))
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+
+                    if attachments_len > 0 {
+                        out.block_start.push(
+                            ui_ai::PromptInputHeader::new([ui_ai::PromptInputAttachmentsRow::new(
+                            )
+                            .into_element(slot_cx)])
+                            .into_element(slot_cx),
+                        );
+                    }
+
+                    out.block_end.push(
+                        ui_ai::PromptInputFooter::new(
+                            [ui_ai::PromptInputTools::new([
+                                ui_ai::PromptInputActionAddAttachments::new().into_element(slot_cx),
+                            ])
+                            .into_element(slot_cx)],
+                            [ui_ai::PromptInputSubmit::new().into_element(slot_cx)],
+                        )
+                        .into_element(slot_cx),
+                    );
+
+                    out
+                });
+
+            vec![input]
+        });
+
+    let note =
+        cx.text("This page demonstrates PromptInputProvider + PromptInputRoot parts composition.");
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full()),
+        move |_cx| vec![external_add, prompt_el, sent_marker, note],
+    )]
 }
 
 fn material3_variant_toggle_row(
