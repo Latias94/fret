@@ -31,6 +31,9 @@ ADR anchor:
   - [x] invalidation on viewport bounds change,
   - [x] view-cache key participation via deps fingerprint,
   - [x] revision tracking for pointer capability keys,
+  - [x] color scheme revision + invalidation,
+  - [x] contrast preference revision + invalidation,
+  - [x] forced-colors mode revision + invalidation,
   - [x] safe-area insets revision + invalidation,
   - [x] occlusion insets revision + invalidation,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).

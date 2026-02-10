@@ -2012,6 +2012,126 @@ mod tests {
     }
 
     #[test]
+    fn color_scheme_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ColorScheme)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ColorScheme)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_color_scheme(Some(ColorScheme::Dark));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn prefers_contrast_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::PrefersContrast)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::PrefersContrast)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_contrast_preference(Some(ContrastPreference::More));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn forced_colors_mode_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ForcedColorsMode)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ForcedColorsMode)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::Active));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
     fn safe_area_insets_is_none_until_committed() {
         let state = WindowElementState::default();
         assert_eq!(state.committed_safe_area_insets(), None);
