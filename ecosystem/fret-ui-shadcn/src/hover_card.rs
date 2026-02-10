@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
-use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
+use fret_ui_kit::primitives::hover_intent::{HoverIntentConfig, HoverIntentUpdate};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -91,6 +91,7 @@ pub enum HoverCardSide {
 #[derive(Debug, Default, Clone, Copy)]
 struct HoverCardSharedState {
     overlay_hovered: bool,
+    had_text_selection: bool,
 }
 
 /// shadcn/ui `HoverCard` root (v4).
@@ -388,22 +389,39 @@ impl HoverCard {
             let focused = cx.is_focused_element(trigger_id);
             let keyboard_focused =
                 focused && fret_ui::input_modality::is_keyboard(&mut *cx.app, Some(cx.window));
+            let trigger_hovered = hovered;
             let hovered =
                 radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused);
 
             let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
             let overlay_root_id = fret_ui::elements::global_root(cx.window, &overlay_root_name);
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
+            let text_selection_just_cleared =
+                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                    let prev = st.had_text_selection;
+                    st.had_text_selection = has_text_selection;
+                    prev && !has_text_selection
+                });
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
-            let update = radix_hover_card::hover_card_update_interaction(
-                cx,
-                open_now,
-                hovered,
-                pointer_down_on_content_now || interaction_lease_active,
-                has_text_selection,
-                cfg,
-            );
+            let pointer_down_for_policy =
+                pointer_down_on_content_now && !text_selection_just_cleared;
+            let force_close_after_selection_clear = text_selection_just_cleared && !hovered;
+            let update = if force_close_after_selection_clear {
+                HoverIntentUpdate {
+                    open: false,
+                    wants_continuous_ticks: false,
+                }
+            } else {
+                radix_hover_card::hover_card_update_interaction(
+                    cx,
+                    open_now,
+                    hovered,
+                    pointer_down_for_policy,
+                    has_text_selection,
+                    cfg,
+                )
+            };
 
             scheduling::set_continuous_frames(
                 cx,
@@ -416,6 +434,16 @@ impl HoverCard {
                     .app
                     .models_mut()
                     .update(&interaction_lease, |v| *v = next);
+            }
+
+            if text_selection_just_cleared && pointer_down_on_content_now {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&pointer_down_on_content, |v| *v = false);
+                if force_close_after_selection_clear {
+                    let _ = cx.app.models_mut().update(&interaction_lease, |v| *v = 0);
+                }
             }
 
             if update.open != open_now {
@@ -436,17 +464,25 @@ impl HoverCard {
             let scale = motion.scale;
             let overlay_presence = OverlayPresence {
                 present: motion.present,
-                // Keep the hover card interactive for the full duration it is mounted. Otherwise
-                // the card can remain visible during close transitions but become click-through,
-                // which breaks “interactive hover card” outcomes (pager buttons, links, etc.).
-                interactive: motion.present,
+                // Keep the content mounted during close transitions, but allow click-through.
+                // This matches Radix-style outcomes (and our regression tests).
+                interactive: opening,
             };
 
             let out = vec![trigger];
             if debug_trace {
                 eprintln!(
-                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={}",
-                    cx.frame_id.0, open_now, update.open, motion.present, hovered
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} trigger_hovered={} overlay_hovered={} hovered={} text_selection={} pointer_down={} lease={}",
+                    cx.frame_id.0,
+                    open_now,
+                    update.open,
+                    motion.present,
+                    trigger_hovered,
+                    overlay_hovered,
+                    hovered,
+                    has_text_selection,
+                    pointer_down_on_content_now,
+                    interaction_lease_now
                 );
             }
             if !motion.present {
