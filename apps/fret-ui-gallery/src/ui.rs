@@ -732,6 +732,7 @@ fn page_preview(
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
         PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
+        PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20811,6 +20812,101 @@ fn preview_ai_model_selector_demo(
                 selected_marker,
             ]
         },
+    )]
+}
+
+fn preview_ai_chain_of_thought_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui::Invalidation;
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct DemoState {
+        open: Option<Model<bool>>,
+    }
+
+    let needs_init = cx.with_state(DemoState::default, |st| st.open.is_none());
+    if needs_init {
+        let open = cx.app.models_mut().insert(false);
+        cx.with_state(DemoState::default, move |st| {
+            st.open = Some(open.clone());
+        });
+    }
+    let open = cx.with_state(DemoState::default, |st| {
+        st.open.clone().expect("open model")
+    });
+
+    let is_open = cx
+        .get_model_copied(&open, Invalidation::Layout)
+        .unwrap_or(false);
+    let state_marker = cx.text(format!("open={is_open}")).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if is_open {
+                "ui-ai-chain-of-thought-open-true"
+            } else {
+                "ui-ai-chain-of-thought-open-false"
+            }),
+    );
+
+    let cot = ui_ai::ChainOfThought::new()
+        .open_model(open.clone())
+        .test_id_root("ui-ai-chain-of-thought-root")
+        .into_element_with_children(cx, move |cx| {
+            let header = ui_ai::ChainOfThoughtHeader::new()
+                .test_id("ui-ai-chain-of-thought-header")
+                .into_element(cx);
+
+            let step1 = ui_ai::ChainOfThoughtStep::new("Search for relevant docs")
+                .description("Query shadcn + Radix sources for contracts")
+                .status(ui_ai::ChainOfThoughtStepStatus::Complete)
+                .test_id("ui-ai-chain-of-thought-step-1")
+                .into_element(cx);
+
+            let results = ui_ai::ChainOfThoughtSearchResults::new([
+                ui_ai::ChainOfThoughtSearchResult::new("ui.shadcn.com").into_element(cx),
+                ui_ai::ChainOfThoughtSearchResult::new("radix-ui.com").into_element(cx),
+                ui_ai::ChainOfThoughtSearchResult::new("repo-ref/ui").into_element(cx),
+            ])
+            .test_id("ui-ai-chain-of-thought-search-results")
+            .into_element(cx);
+
+            let step2 = ui_ai::ChainOfThoughtStep::new("Filter candidate results")
+                .description("Keep only stable, actionable references")
+                .status(ui_ai::ChainOfThoughtStepStatus::Active)
+                .children([results])
+                .test_id("ui-ai-chain-of-thought-step-2")
+                .into_element(cx);
+
+            let step3 = ui_ai::ChainOfThoughtStep::new("Implement + gate")
+                .description("Add a UI Gallery demo + diag script")
+                .status(ui_ai::ChainOfThoughtStepStatus::Pending)
+                .test_id("ui-ai-chain-of-thought-step-3")
+                .into_element(cx);
+
+            let content_marker = cx.text("").attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id("ui-ai-chain-of-thought-content-marker"),
+            );
+
+            let content = ui_ai::ChainOfThoughtContent::new([step1, step2, step3, content_marker])
+                .test_id("ui-ai-chain-of-thought-content")
+                .into_element(cx);
+
+            vec![header, content, state_marker]
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Chain of Thought (AI Elements)"), cot],
     )]
 }
 

@@ -136,6 +136,7 @@ pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
 pub(crate) const PAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = "ai_environment_variables_demo";
 pub(crate) const PAGE_AI_PLAN_DEMO: &str = "ai_plan_demo";
 pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
+pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -295,6 +296,8 @@ pub(crate) const CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO: &str =
 pub(crate) const CMD_NAV_AI_PLAN_DEMO: &str = "ui_gallery.nav.select.ai_plan_demo";
 pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
     "ui_gallery.nav.select.ai_model_selector_demo";
+pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
+    "ui_gallery.nav.select.ai_chain_of_thought_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -1115,6 +1118,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "model", "selector", "command", "dialog", "demo"],
                 docs::DOC_AI_MODEL_SELECTOR_DEMO,
                 docs::USAGE_AI_MODEL_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CHAIN_OF_THOUGHT_DEMO,
+                "AI Chain of Thought (Demo)",
+                "AI Elements ChainOfThought / Collapsible Steps Demo",
+                "fret-ui-ai (chatbot)",
+                CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO,
+                &["ai", "chain", "thought", "steps", "collapsible", "demo"],
+                docs::DOC_AI_CHAIN_OF_THOUGHT_DEMO,
+                docs::USAGE_AI_CHAIN_OF_THOUGHT_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SCHEMA_DISPLAY_DEMO,

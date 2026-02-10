@@ -1084,6 +1084,27 @@ use fret_ui_shadcn::{CommandPalette, CommandItem};
 ```
 "#;
 
+pub(crate) const DOC_AI_CHAIN_OF_THOUGHT_DEMO: &str = r#"
+## AI chain of thought (demo)
+
+This page is a small demo for the AI Elements-aligned `ChainOfThought` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- controlled/uncontrolled open behavior (`defaultOpen` and `open`),
+- collapsible content motion for step lists,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    ChainOfThought, ChainOfThoughtContent, ChainOfThoughtHeader, ChainOfThoughtSearchResult,
+    ChainOfThoughtSearchResults, ChainOfThoughtStep, ChainOfThoughtStepStatus,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 
