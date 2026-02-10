@@ -114,6 +114,7 @@ Current posture highlight:
 
 - M3 append-only behavior under `WorkBudget` is now regression-gated (multi-series, unfinished-step continuity).
 - M3 update semantics are explicit (no silent column mutation) via `DataTable` update APIs and an engine-level invalidation gate.
+- M4 interactive domain-window linking is gated via `fretboard diag` pixels-changed checks (`tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`).
 
 ## 5) Reference posture (what we borrow, not what we copy)
 

@@ -231,6 +231,16 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
+    /// Returns the index of the next script step to execute for `window`, if a script is active.
+    ///
+    /// This is intended for diag-only app logic that wants to run after a particular scripted
+    /// step has completed (e.g. "after the baseline screenshot").
+    pub fn active_script_next_step_index(&self, window: AppWindowId) -> Option<u32> {
+        self.active_scripts
+            .get(&window)
+            .map(|active| active.next_step.min(u32::MAX as usize) as u32)
+    }
+
     pub fn set_app_snapshot_provider(
         &mut self,
         provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,

@@ -9058,6 +9058,9 @@ pub(super) fn run_script_and_wait(
 ) -> Result<ScriptResultSummary, String> {
     let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
     let mut target_run_id: Option<u64> = None;
+    let start = Instant::now();
+    let mut next_retrigger_at = start + Duration::from_millis(2_000);
+    let mut retrigger_interval_ms: u64 = 2_000;
 
     write_script(src, script_path)?;
     touch(script_trigger_path)?;
@@ -9070,6 +9073,17 @@ pub(super) fn run_script_and_wait(
                 script_result_path.display(),
                 script_result_trigger_path.display()
             ));
+        }
+
+        if target_run_id.is_none() && Instant::now() >= next_retrigger_at {
+            // In `--launch` mode the demo process may start significantly later than the driver
+            // touches the trigger (e.g. due to compilation). The in-app contract intentionally
+            // treats the first observed stamp as a baseline. Periodic retriggering ensures at
+            // least one trigger lands after the app has observed its baseline value, without
+            // requiring any changes to the in-app polling contract.
+            touch(script_trigger_path)?;
+            retrigger_interval_ms = (retrigger_interval_ms.saturating_mul(2)).min(10_000);
+            next_retrigger_at = Instant::now() + Duration::from_millis(retrigger_interval_ms);
         }
 
         if let Some(result) = read_script_result(script_result_path) {
