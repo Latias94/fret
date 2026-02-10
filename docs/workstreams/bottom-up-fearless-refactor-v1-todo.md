@@ -54,8 +54,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/services.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/geometry.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/harness.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/assertions.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/input.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/shadow.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/scene.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/viewport.rs`
   - Evidence (overlay chrome web query helpers):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/web.rs` (`web_find_active_element_chrome`, `web_find_menu_item_chrome_by_slot_variant_and_text`, `web_find_open_menu_subtrigger_chrome`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs`
