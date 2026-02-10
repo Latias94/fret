@@ -349,10 +349,10 @@ Keep this list in sync with the pinned upstream commit recorded in
   - Upstream reference: `prompt-input.tsx` (`accept`, `multiple`, `maxFiles`, `maxFileSize`, `onError`).
   - Policy: keep effects app-owned; validate inputs/drops and emit an error intent (do not read bytes in-component).
   - Gate: add a targeted `fretboard diag` script that drops N+1 files and asserts the error surface (or a unit test if the error is purely model-level).
-- [ ] AIEL-MVP1-chat-094 PromptInput referenced sources parity: local referenced sources model + chips row.
+- [x] AIEL-MVP1-chat-094 PromptInput referenced sources parity: local referenced sources model + chips row.
   - Upstream reference: `prompt-input.tsx` (`ReferencedSourcesContext` local to PromptInput).
   - Note: keep this local even in provider mode (matches upstream: attachments can be provider-owned, referenced sources remain local).
-  - Gate: add a UI Gallery demo page + diag gate (add/remove referenced source chips).
+  - Gate: `tools/diag-scripts/ui-gallery-ai-prompt-input-referenced-sources-demo.json`.
 - [ ] AIEL-MVP1-chat-095 PromptInput hidden input sync parity (`syncHiddenInput`).
   - Upstream reference: `prompt-input.tsx` (`syncHiddenInput`).
   - Note: implement only if we have a concrete app need; otherwise defer (native form posts are not a primary Fret flow).

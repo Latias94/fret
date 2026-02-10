@@ -70,6 +70,8 @@ Notes:
   - Verified PASS: 2026-02-10 (local).
 - `PromptInput` action menu parts are implemented and gated:
   - `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`
+- `PromptInput` referenced sources (local to prompt input) are implemented and gated:
+  - `tools/diag-scripts/ui-gallery-ai-prompt-input-referenced-sources-demo.json`
 - Next parity focus inside M1 is PromptInput “parts-first” decomposition so apps can compose prompt chrome without forking:
   - Target: `PromptInputBody` / `PromptInputTextarea` / `PromptInputHeader` / `PromptInputFooter` / `PromptInputTools` /
     `PromptInputButton` / `PromptInputSubmit` / `PromptInputActionMenu*` / `PromptInputActionAddAttachments`.
