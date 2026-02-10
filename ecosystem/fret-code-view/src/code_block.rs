@@ -320,6 +320,7 @@ impl CodeBlock {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,

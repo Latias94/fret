@@ -545,6 +545,7 @@ where
         self
     }
 
+    #[track_caller]
     pub fn into_element(
         self,
         cx: &mut ElementContext<'_, App>,
@@ -557,6 +558,7 @@ where
         }
     }
 
+    #[track_caller]
     pub fn into_element_by_leaf(
         self,
         cx: &mut ElementContext<'_, App>,
@@ -576,6 +578,7 @@ where
         })
     }
 
+    #[track_caller]
     pub fn into_element_by_leaf_with_status(
         self,
         cx: &mut ElementContext<'_, App>,

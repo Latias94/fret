@@ -480,6 +480,7 @@ impl TopAppBar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let (expanded_height, collapsed_height) = {

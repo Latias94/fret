@@ -642,6 +642,7 @@ impl PlainTooltip {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let align = self.align;
         let side = self.side;
@@ -1224,6 +1225,7 @@ impl RichTooltip {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let align = self.align;
         let side = self.side;

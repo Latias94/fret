@@ -153,6 +153,7 @@ impl RadioGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model.clone();
@@ -652,6 +653,7 @@ impl Radio {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let (size, min_touch_target, corner_radii, focus_ring) = {

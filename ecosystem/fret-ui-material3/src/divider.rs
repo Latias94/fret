@@ -52,6 +52,7 @@ impl Divider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (thickness, color) = cx.with_theme(|theme| {
             let thickness = self

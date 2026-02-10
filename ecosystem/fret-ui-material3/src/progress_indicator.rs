@@ -108,6 +108,7 @@ impl LinearProgressIndicator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (h, track_thickness, active_thickness) = cx.with_theme(|theme| {
             let h = progress_tokens::linear_height(theme);
@@ -524,6 +525,7 @@ impl CircularProgressIndicator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (size, track_thickness, active_thickness) = cx.with_theme(|theme| {
             (

@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
 };
+use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -51,6 +52,19 @@ impl SvgService for FakeServices {
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
         true
+    }
+}
+
+impl MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: MaterialDescriptor,
+    ) -> Result<MaterialId, MaterialRegistrationError> {
+        Err(MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: MaterialId) -> bool {
+        false
     }
 }
 

@@ -369,6 +369,7 @@ impl WorkspaceTabStrip {
         out
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tabs = self.tabs;
         let set_size = tabs.len() as u32;

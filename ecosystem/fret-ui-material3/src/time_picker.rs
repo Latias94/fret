@@ -167,6 +167,7 @@ impl DockedTimePicker {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let selection_model = ensure_selection_model(cx, DockedRuntime::default);
@@ -345,6 +346,7 @@ impl TimePickerDialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,

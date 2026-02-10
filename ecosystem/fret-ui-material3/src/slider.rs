@@ -308,6 +308,7 @@ impl Slider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         slider(
             cx,
@@ -383,6 +384,7 @@ impl RangeSlider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         range_slider(
             cx,

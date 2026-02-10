@@ -201,6 +201,7 @@ impl Menu {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_initial_focus_id(cx, Rc::new(std::cell::Cell::new(None)))
     }

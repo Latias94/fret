@@ -246,6 +246,7 @@ impl Autocomplete {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         autocomplete_into_element(cx, self)
     }

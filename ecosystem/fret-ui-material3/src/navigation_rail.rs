@@ -150,6 +150,7 @@ impl NavigationRail {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         navigation_rail_impl(cx, self)
     }

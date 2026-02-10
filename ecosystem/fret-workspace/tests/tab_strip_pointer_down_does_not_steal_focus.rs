@@ -3,6 +3,7 @@ use fret_core::{
     AppWindowId, Event, FrameId, Modifiers, MouseButton, Point, PointerEvent, PointerId,
     PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
 };
+use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId};
 use fret_core::{SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -52,6 +53,19 @@ impl SvgService for FakeServices {
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
         true
+    }
+}
+
+impl MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: MaterialDescriptor,
+    ) -> Result<MaterialId, MaterialRegistrationError> {
+        Err(MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: MaterialId) -> bool {
+        false
     }
 }
 

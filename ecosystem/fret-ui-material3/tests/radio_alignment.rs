@@ -4859,6 +4859,30 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
 
+    fn render_tooltip_root(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) -> NodeId {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with_elements(cx, |cx| {
+                    let trigger = Button::new("Trigger")
+                        .test_id("tooltip-trigger")
+                        .into_element(cx);
+                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tooltip)]
+                })
+        })
+    }
+
     let cases = [
         (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
         (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
@@ -4896,23 +4920,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
             window,
             bounds,
             true,
-            |ui, app, services| {
-                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    TooltipProvider::new()
-                        .delay_duration_frames(0)
-                        .skip_delay_duration_frames(0)
-                        .with_elements(cx, |cx| {
-                            let trigger = Button::new("Trigger")
-                                .test_id("tooltip-trigger")
-                                .into_element(cx);
-                            let tooltip = PlainTooltip::new(trigger, "Tip")
-                                .open_delay_frames(Some(0))
-                                .close_delay_frames(Some(0))
-                                .into_element(cx);
-                            vec![with_padding(cx, Px(24.0), tooltip)]
-                        })
-                })
-            },
+            |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
         );
 
         let trigger_node: NodeId = ui
@@ -4950,31 +4958,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
                 window,
                 bounds,
                 false,
-                |ui, app, services| {
-                    fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "root",
-                        |cx| {
-                            TooltipProvider::new()
-                                .delay_duration_frames(0)
-                                .skip_delay_duration_frames(0)
-                                .with_elements(cx, |cx| {
-                                    let trigger = Button::new("Trigger")
-                                        .test_id("tooltip-trigger")
-                                        .into_element(cx);
-                                    let tooltip = PlainTooltip::new(trigger, "Tip")
-                                        .open_delay_frames(Some(0))
-                                        .close_delay_frames(Some(0))
-                                        .into_element(cx);
-                                    vec![with_padding(cx, Px(24.0), tooltip)]
-                                })
-                        },
-                    )
-                },
+                |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
             );
 
             let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
@@ -5003,31 +4987,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
                 window,
                 bounds,
                 false,
-                |ui, app, services| {
-                    fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "root",
-                        |cx| {
-                            TooltipProvider::new()
-                                .delay_duration_frames(0)
-                                .skip_delay_duration_frames(0)
-                                .with_elements(cx, |cx| {
-                                    let trigger = Button::new("Trigger")
-                                        .test_id("tooltip-trigger")
-                                        .into_element(cx);
-                                    let tooltip = PlainTooltip::new(trigger, "Tip")
-                                        .open_delay_frames(Some(0))
-                                        .close_delay_frames(Some(0))
-                                        .into_element(cx);
-                                    vec![with_padding(cx, Px(24.0), tooltip)]
-                                })
-                        },
-                    )
-                },
+                |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
             );
 
             let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
