@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{AppWindowId, Edges, EffectChain, EffectMode, NodeId, PointerType, Px, Rect};
+use fret_core::{
+    AppWindowId, ColorScheme, Edges, EffectChain, EffectMode, NodeId, PointerType, Px, Rect,
+};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -105,6 +107,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             if metrics.prefers_reduced_motion_is_known(window) {
                 window_state
                     .set_committed_prefers_reduced_motion(metrics.prefers_reduced_motion(window));
+            }
+            if metrics.color_scheme_is_known(window) {
+                window_state.set_committed_color_scheme(metrics.color_scheme(window));
             }
             if metrics.safe_area_insets_is_known(window) {
                 window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
@@ -562,6 +567,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn environment_scale_factor(&mut self, invalidation: Invalidation) -> f32 {
         self.observe_environment_query(EnvironmentQueryKey::ScaleFactor, invalidation);
         self.window_state.committed_scale_factor()
+    }
+
+    pub fn environment_color_scheme(&mut self, invalidation: Invalidation) -> Option<ColorScheme> {
+        self.observe_environment_query(EnvironmentQueryKey::ColorScheme, invalidation);
+        self.window_state.committed_color_scheme()
     }
 
     pub fn environment_prefers_reduced_motion(
@@ -3355,6 +3365,7 @@ mod tests {
 
         app.with_global_mut(WindowMetricsService::default, |svc, _app| {
             svc.set_prefers_reduced_motion(window, Some(true));
+            svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
             svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
             svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
             svc.set_scale_factor(window, 2.0);
@@ -3368,6 +3379,10 @@ mod tests {
 
         let state = runtime.for_window_mut(window);
         assert_eq!(state.committed_prefers_reduced_motion(), Some(true));
+        assert_eq!(
+            state.committed_color_scheme(),
+            Some(fret_core::ColorScheme::Dark)
+        );
         assert_eq!(
             state.committed_safe_area_insets(),
             Some(Edges::symmetric(Px(8.0), Px(4.0)))

@@ -46,6 +46,12 @@ ADR anchor:
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits insets from `WindowMetricsService`)
   - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional insets + preferences)
 
+- [x] Web/wasm runner commits prefers-color-scheme (`window.matchMedia("(prefers-color-scheme: dark)")`)
+  into the per-window environment snapshot seam (best-effort; `None` when unsupported).
+  - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits from `WindowMetricsService`)
+  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional preferences)
+
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
 - [x] Add environment query helper surface:

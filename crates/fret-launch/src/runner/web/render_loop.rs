@@ -1,4 +1,4 @@
-use fret_core::{AppWindowId, Edges, Point, Px, Rect, Size, WindowMetricsService};
+use fret_core::{AppWindowId, ColorScheme, Edges, Point, Px, Rect, Size, WindowMetricsService};
 use fret_render::RenderSceneParams;
 use fret_runtime::apply_window_metrics_event;
 use wasm_bindgen::JsCast;
@@ -16,11 +16,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         };
 
+        let color_scheme = read_color_scheme(&web_window);
         let prefers_reduced_motion = read_prefers_reduced_motion(&web_window);
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
 
         let metrics = self.app.global::<WindowMetricsService>();
+
+        let prev_scheme_known =
+            metrics.is_some_and(|svc| svc.color_scheme_is_known(self.app_window));
+        let prev_scheme = metrics.and_then(|svc| svc.color_scheme(self.app_window));
+        if !prev_scheme_known || prev_scheme != color_scheme {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_color_scheme(self.app_window, color_scheme);
+                });
+        }
 
         let prev_motion_known =
             metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(self.app_window));
@@ -354,6 +365,15 @@ fn read_prefers_reduced_motion(window: &web_sys::Window) -> Option<bool> {
         .match_media("(prefers-reduced-motion: reduce)")
         .ok()??;
     Some(list.matches())
+}
+
+fn read_color_scheme(window: &web_sys::Window) -> Option<ColorScheme> {
+    let list = window.match_media("(prefers-color-scheme: dark)").ok()??;
+    if list.matches() {
+        Some(ColorScheme::Dark)
+    } else {
+        Some(ColorScheme::Light)
+    }
 }
 
 fn parse_px(value: &str) -> f32 {

@@ -1,5 +1,6 @@
 pub use super::action_hooks::ActionHooksExt;
 pub use super::collection_semantics::CollectionSemanticsExt;
+pub use super::color_scheme_queries::{preferred_color_scheme, prefers_dark_color_scheme};
 pub use super::container_queries::tailwind;
 pub use super::container_queries::{
     ContainerQueryHysteresis, container_breakpoints, container_query_region,

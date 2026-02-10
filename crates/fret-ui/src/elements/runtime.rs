@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, Edges, NodeId, PointerType, Rect};
+use fret_core::{AppWindowId, ColorScheme, Edges, NodeId, PointerType, Rect};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -22,6 +22,7 @@ use super::hash::stable_hash;
 pub(crate) enum EnvironmentQueryKey {
     ViewportSize,
     ScaleFactor,
+    ColorScheme,
     PrefersReducedMotion,
     PrimaryPointerType,
     SafeAreaInsets,
@@ -101,6 +102,7 @@ pub struct ObservedLayoutQueryRegionDiagnosticsSnapshot {
 pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub viewport_bounds: Rect,
     pub scale_factor: f32,
+    pub color_scheme: Option<ColorScheme>,
     pub prefers_reduced_motion: Option<bool>,
     pub primary_pointer_type: PointerType,
     pub safe_area_insets: Option<Edges>,
@@ -163,6 +165,11 @@ impl ElementRuntime {
     ) {
         self.for_window_mut(window)
             .set_committed_prefers_reduced_motion(prefers_reduced_motion);
+    }
+
+    pub fn set_window_color_scheme(&mut self, window: AppWindowId, scheme: Option<ColorScheme>) {
+        self.for_window_mut(window)
+            .set_committed_color_scheme(scheme);
     }
 
     pub fn set_window_primary_pointer_type(
@@ -291,6 +298,7 @@ pub struct WindowElementState {
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
     committed_viewport_bounds: Rect,
     committed_scale_factor: f32,
+    committed_color_scheme: Option<ColorScheme>,
     committed_prefers_reduced_motion: Option<bool>,
     committed_primary_pointer_type: Option<PointerType>,
     committed_safe_area_insets: Option<Edges>,
@@ -654,10 +662,11 @@ impl WindowElementState {
         let key_id = |k: EnvironmentQueryKey| match k {
             EnvironmentQueryKey::ViewportSize => 0u8,
             EnvironmentQueryKey::ScaleFactor => 1u8,
-            EnvironmentQueryKey::PrefersReducedMotion => 2u8,
-            EnvironmentQueryKey::PrimaryPointerType => 3u8,
-            EnvironmentQueryKey::SafeAreaInsets => 4u8,
-            EnvironmentQueryKey::OcclusionInsets => 5u8,
+            EnvironmentQueryKey::ColorScheme => 2u8,
+            EnvironmentQueryKey::PrefersReducedMotion => 3u8,
+            EnvironmentQueryKey::PrimaryPointerType => 4u8,
+            EnvironmentQueryKey::SafeAreaInsets => 5u8,
+            EnvironmentQueryKey::OcclusionInsets => 6u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1230,6 +1239,10 @@ impl WindowElementState {
         self.committed_scale_factor
     }
 
+    pub(crate) fn committed_color_scheme(&self) -> Option<ColorScheme> {
+        self.committed_color_scheme
+    }
+
     pub(crate) fn committed_prefers_reduced_motion(&self) -> Option<bool> {
         self.committed_prefers_reduced_motion
     }
@@ -1258,6 +1271,19 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn set_committed_color_scheme(&mut self, value: Option<ColorScheme>) {
+        if self.committed_color_scheme == value {
+            return;
+        }
+        self.committed_color_scheme = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ColorScheme)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ColorScheme);
     }
 
     pub(crate) fn record_committed_primary_pointer_type(&mut self, pointer_type: PointerType) {
@@ -1357,6 +1383,7 @@ impl WindowElementState {
         let env_key_label = |key: EnvironmentQueryKey| match key {
             EnvironmentQueryKey::ViewportSize => "viewport_size",
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
+            EnvironmentQueryKey::ColorScheme => "color_scheme",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
             EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
@@ -1487,6 +1514,7 @@ impl WindowElementState {
         let environment = EnvironmentQueryDiagnosticsSnapshot {
             viewport_bounds: self.committed_viewport_bounds,
             scale_factor: self.committed_scale_factor,
+            color_scheme: self.committed_color_scheme,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
             primary_pointer_type: self.committed_primary_pointer_type(),
             safe_area_insets: self.committed_safe_area_insets,

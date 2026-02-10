@@ -100,6 +100,7 @@ Per-window snapshot fields:
 
 - `viewport_bounds_logical: Rect` (or width/height only).
 - `scale_factor: f32` (DPI).
+- `color_scheme: Option<ColorScheme>` (preferred light/dark, runner-provided).
 - `pointer: { primary_kind, coarse, hover }` (capability summary).
 - `safe_area_insets_logical: Option<Edges<Px>>` (future mobile).
 - `prefers_reduced_motion: Option<bool>` (runner-provided or app-provided).
@@ -111,6 +112,10 @@ The current implementation provides a small set of typed environment query keys 
 
 - `viewport_bounds_logical: Rect` (key: `ViewportSize`)
 - `scale_factor: f32` (key: `ScaleFactor`)
+- `color_scheme: Option<ColorScheme>` (key: `ColorScheme`)
+  - Best-effort: on web/wasm, the runner commits this preference via
+    `window.matchMedia("(prefers-color-scheme: dark)")` when supported. On native desktop, this is
+    currently `None` unless committed by a runner/app integration.
 - `prefers_reduced_motion: Option<bool>` (key: `PrefersReducedMotion`)
   - Best-effort: on web/wasm, the runner commits this preference via
     `window.matchMedia("(prefers-reduced-motion: reduce)")` when supported. On native desktop, this
