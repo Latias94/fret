@@ -257,35 +257,25 @@ impl Menu {
                 ..Default::default()
             };
 
-            let mut items: Vec<MenuEntry> = Vec::new();
-            items.extend(entries.into_iter());
+            let items = entries;
 
-            let mut disabled: Vec<bool> = Vec::new();
-            for it in items.iter() {
-                match it {
-                    MenuEntry::Item(item) => {
-                        disabled.push(item.disabled);
-                    }
-                    MenuEntry::Separator => {}
+            let mut disabled: Vec<bool> = Vec::with_capacity(items.len());
+            let mut typeahead_items: Vec<Arc<str>> = Vec::with_capacity(items.len());
+            for entry in items.iter() {
+                if let MenuEntry::Item(item) = entry {
+                    disabled.push(item.disabled);
+                    typeahead_items.push(
+                        item.a11y_label
+                            .clone()
+                            .unwrap_or_else(|| item.label.clone()),
+                    );
                 }
             }
 
             let first_enabled_idx = disabled.iter().position(|&d| !d).unwrap_or(0);
             let disabled: Arc<[bool]> = Arc::from(disabled);
             let count = disabled.len();
-            let typeahead_items: Arc<[Arc<str>]> = Arc::from(
-                items
-                    .iter()
-                    .filter_map(|it| match it {
-                        MenuEntry::Item(item) => Some(
-                            item.a11y_label
-                                .clone()
-                                .unwrap_or_else(|| item.label.clone()),
-                        ),
-                        MenuEntry::Separator => None,
-                    })
-                    .collect::<Vec<_>>(),
-            );
+            let typeahead_items: Arc<[Arc<str>]> = Arc::from(typeahead_items);
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
