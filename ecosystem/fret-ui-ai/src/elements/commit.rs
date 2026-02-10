@@ -20,6 +20,10 @@ use fret_ui_kit::{
 };
 use fret_ui_shadcn::{Collapsible, CollapsibleContent};
 
+pub type OnCommitFilePathClick = Arc<
+    dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>) + 'static,
+>;
+
 fn alpha(color: Color, a: f32) -> Color {
     Color {
         r: color.r,
@@ -847,22 +851,38 @@ impl CommitCopyButton {
 #[derive(Debug, Clone)]
 pub struct CommitFiles {
     children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
 }
 
 impl CommitFiles {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            test_id: None,
         }
     }
 
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::vstack(
+        let el = stack::vstack(
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1),
             move |_cx| self.children,
+        );
+
+        let Some(test_id) = self.test_id else {
+            return el;
+        };
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
         )
     }
 }
@@ -871,13 +891,20 @@ impl CommitFiles {
 #[derive(Debug, Clone)]
 pub struct CommitFile {
     children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
 }
 
 impl CommitFile {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            test_id: None,
         }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -888,7 +915,8 @@ impl CommitFile {
             .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
 
         let children = self.children;
-        cx.hover_region(
+        let test_id = self.test_id;
+        let el = cx.hover_region(
             fret_ui::element::HoverRegionProps::default(),
             move |cx, hovered| {
                 let bg = hovered.then_some(hover_bg);
@@ -915,6 +943,15 @@ impl CommitFile {
                 );
                 vec![cx.container(props, move |_cx| vec![row])]
             },
+        );
+
+        let Some(test_id) = test_id else {
+            return el;
+        };
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Group)
+                .test_id(test_id),
         )
     }
 }
@@ -1001,19 +1038,50 @@ impl CommitFileIcon {
 }
 
 /// Monospace path label aligned with AI Elements `CommitFilePath`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CommitFilePath {
     path: Arc<str>,
+    on_click: Option<OnCommitFilePathClick>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for CommitFilePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommitFilePath")
+            .field("path_len", &self.path.len())
+            .field("has_on_click", &self.on_click.is_some())
+            .field("test_id", &self.test_id.as_deref())
+            .finish()
+    }
 }
 
 impl CommitFilePath {
     pub fn new(path: impl Into<Arc<str>>) -> Self {
-        Self { path: path.into() }
+        Self {
+            path: path.into(),
+            on_click: None,
+            test_id: None,
+        }
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn on_click(mut self, on_click: OnCommitFilePathClick) -> Self {
+        self.on_click = Some(on_click);
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        cx.text_props(TextProps {
+        let fg_primary = theme
+            .color_by_key("primary")
+            .unwrap_or_else(|| theme.color_required("foreground"));
+
+        let path = self.path;
+        let base_props = TextProps {
             layout: LayoutStyle {
                 size: SizeStyle {
                     width: Length::Fill,
@@ -1023,12 +1091,50 @@ impl CommitFilePath {
                 },
                 ..Default::default()
             },
-            text: self.path,
+            text: path.clone(),
             style: Some(monospace_text_style(&theme, Px(12.0), FontWeight::NORMAL)),
             color: Some(theme.color_required("foreground")),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
-        })
+        };
+
+        let Some(on_click) = self.on_click else {
+            let text = cx.text_props(base_props);
+            let Some(test_id) = self.test_id else {
+                return text;
+            };
+            return text.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Generic)
+                    .test_id(test_id),
+            );
+        };
+
+        let mut pressable = PressableProps::default();
+        pressable.enabled = true;
+        pressable.focusable = true;
+        pressable.a11y.role = Some(SemanticsRole::Button);
+        pressable.a11y.label = Some(Arc::<str>::from("Open commit file"));
+        pressable.a11y.test_id = self.test_id.clone();
+
+        let payload = path;
+        let text_props = TextProps {
+            color: Some(fg_primary),
+            ..base_props
+        };
+        let button = cx.pressable(pressable, move |cx, _st| {
+            cx.pressable_on_activate({
+                let on_click = on_click.clone();
+                let payload = payload.clone();
+                Arc::new(move |host, action_cx, _| {
+                    on_click(host, action_cx, payload.clone());
+                })
+            });
+
+            vec![cx.text_props(text_props.clone())]
+        });
+
+        button
     }
 }
 
