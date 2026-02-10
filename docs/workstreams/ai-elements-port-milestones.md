@@ -103,6 +103,8 @@ Notes:
   - `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
 - `Confirmation` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+- `EnvironmentVariables` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 

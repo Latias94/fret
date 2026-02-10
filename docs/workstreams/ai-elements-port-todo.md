@@ -56,8 +56,8 @@ Status legend:
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
-| `checkpoint` | Not started | `fret-ui-ai` | Likely a styling recipe. |
-| `confirmation` | Not started | `fret-ui-ai` | Likely maps to shadcn alert/dialog. |
+| `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
+| `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
 | `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
 | `plan` | Not started | `fret-ui-ai` | Optional; depends on product needs. |
 | `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
@@ -78,7 +78,10 @@ Status legend:
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
 | `web-preview` | Not started | n/a | Needs embedded webview; out of scope unless there is a host. |
-| `agent` / `sandbox` / `package-info` / `environment-variables` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `package-info` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `environment-variables` | Prototype | `fret-ui-ai` | Ported as `EnvironmentVariables*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`). |
 
 ### Utilities
 
@@ -182,6 +185,10 @@ Existing gates (UI Gallery `ai_checkpoint_demo`):
 Existing gates (UI Gallery `ai_confirmation_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+
+Existing gates (UI Gallery `ai_environment_variables_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
 
 Existing gates (UI Gallery `ai_transcript_torture`):
 
