@@ -443,6 +443,7 @@ pub struct StackTraceFrames {
     show_internal_frames: bool,
     on_file_path_click: Option<OnStackTraceFilePathClick>,
     test_id: Option<Arc<str>>,
+    frame_test_id_prefix: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
@@ -454,6 +455,10 @@ impl std::fmt::Debug for StackTraceFrames {
             .field("show_internal_frames", &self.show_internal_frames)
             .field("has_on_file_path_click", &self.on_file_path_click.is_some())
             .field("test_id", &self.test_id.as_deref())
+            .field(
+                "frame_test_id_prefix",
+                &self.frame_test_id_prefix.as_deref(),
+            )
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
             .finish()
@@ -467,6 +472,7 @@ impl StackTraceFrames {
             show_internal_frames: true,
             on_file_path_click: None,
             test_id: None,
+            frame_test_id_prefix: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default().p(Space::N3),
         }
@@ -484,6 +490,14 @@ impl StackTraceFrames {
 
     pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(test_id.into());
+        self
+    }
+
+    /// Optional prefix for stable per-frame `test_id` anchors.
+    ///
+    /// This is intended for `fretboard diag` scripts that need to target deep frames.
+    pub fn frame_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.frame_test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -511,6 +525,7 @@ impl StackTraceFrames {
         };
 
         let on_file_path_click = self.on_file_path_click;
+        let frame_test_id_prefix = self.frame_test_id_prefix;
         let text_px = theme
             .metric_by_key("fret.ai.stack_trace.frames.text_px")
             .or_else(|| theme.metric_by_key("component.code_block.text_px"))
@@ -540,6 +555,7 @@ impl StackTraceFrames {
                     let style = style.clone();
                     let fg_primary = fg_primary;
                     let on_file_path_click = on_file_path_click.clone();
+                    let frame_test_id_prefix = frame_test_id_prefix.clone();
                     cx.keyed(format!("stack-frame-{index}"), move |cx| {
                         let fg = if frame.is_internal {
                             fg_internal
@@ -599,6 +615,9 @@ impl StackTraceFrames {
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(Arc::<str>::from("Open stack frame location")),
+                                test_id: frame_test_id_prefix.as_ref().map(|prefix| {
+                                    Arc::<str>::from(format!("{prefix}-{index:04}-file"))
+                                }),
                                 ..Default::default()
                             };
 
@@ -656,13 +675,22 @@ impl StackTraceFrames {
                             }));
                         }
 
-                        stack::hstack(
+                        let row = stack::hstack(
                             cx,
                             stack::HStackProps::default()
                                 .layout(LayoutRefinement::default().w_full().min_w_0())
                                 .gap(Space::N0)
                                 .items(Items::Center),
                             move |_cx| parts,
+                        );
+
+                        let Some(prefix) = frame_test_id_prefix.as_ref() else {
+                            return row;
+                        };
+                        row.attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .test_id(Arc::<str>::from(format!("{prefix}-{index:04}"))),
                         )
                     })
                 })
@@ -708,6 +736,8 @@ pub struct StackTrace {
     test_id_copy_button: Option<Arc<str>>,
     test_id_copy_copied_marker: Option<Arc<str>>,
     test_id_frames: Option<Arc<str>>,
+    frame_test_id_prefix: Option<Arc<str>>,
+    test_id_frames_viewport: Option<Arc<str>>,
     test_id_content: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -733,6 +763,14 @@ impl std::fmt::Debug for StackTrace {
                 &self.test_id_copy_copied_marker.as_deref(),
             )
             .field("test_id_frames", &self.test_id_frames.as_deref())
+            .field(
+                "frame_test_id_prefix",
+                &self.frame_test_id_prefix.as_deref(),
+            )
+            .field(
+                "test_id_frames_viewport",
+                &self.test_id_frames_viewport.as_deref(),
+            )
             .field("test_id_content", &self.test_id_content.as_deref())
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
@@ -754,6 +792,8 @@ impl StackTrace {
             test_id_copy_button: None,
             test_id_copy_copied_marker: None,
             test_id_frames: None,
+            frame_test_id_prefix: None,
+            test_id_frames_viewport: None,
             test_id_content: None,
             layout: LayoutRefinement::default()
                 .w_full()
@@ -815,6 +855,16 @@ impl StackTrace {
 
     pub fn test_id_frames(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.test_id_frames = Some(test_id.into());
+        self
+    }
+
+    pub fn frame_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.frame_test_id_prefix = Some(prefix.into());
+        self
+    }
+
+    pub fn test_id_frames_viewport(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id_frames_viewport = Some(test_id.into());
         self
     }
 
@@ -885,6 +935,8 @@ impl StackTrace {
         let test_id_copy_copied_marker = self.test_id_copy_copied_marker;
         let test_id_content = self.test_id_content;
         let test_id_frames = self.test_id_frames;
+        let test_id_frames_viewport = self.test_id_frames_viewport;
+        let frame_test_id_prefix = self.frame_test_id_prefix;
 
         let collapsible = if let Some(open) = self.open {
             Collapsible::new(open)
@@ -1025,16 +1077,21 @@ impl StackTrace {
                     if let Some(test_id) = test_id_frames.clone() {
                         frames = frames.test_id(test_id);
                     }
+                    if let Some(prefix) = frame_test_id_prefix.clone() {
+                        frames = frames.frame_test_id_prefix(prefix);
+                    }
                     let frames = frames.into_element(cx);
 
-                    let scroll = ScrollArea::new([frames])
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_full()
-                                .min_w_0()
-                                .max_h(MetricRef::Px(max_height)),
-                        )
-                        .into_element(cx);
+                    let mut scroll = ScrollArea::new([frames]).refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .max_h(MetricRef::Px(max_height)),
+                    );
+                    if let Some(test_id) = test_id_frames_viewport.clone() {
+                        scroll = scroll.viewport_test_id(test_id);
+                    }
+                    let scroll = scroll.into_element(cx);
 
                     let mut content_props = ContainerProps::default();
                     content_props.layout = decl_style::layout_style(
