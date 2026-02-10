@@ -167,6 +167,7 @@ struct ChartLayout {
 pub struct ChartCanvas {
     engine: ChartCanvasEngine,
     grid_override: Option<delinea::GridId>,
+    semantics_test_id: Option<String>,
     mode: ChartCanvasMode,
     style: ChartStyle,
     style_source: ChartStyleSource,
@@ -214,6 +215,7 @@ pub struct ChartCanvas {
     linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
     linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
     linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
+    linked_domain_windows_model_revision: Option<u64>,
     output_model: Option<Model<ChartCanvasOutput>>,
     output: ChartCanvasOutput,
 }
@@ -335,6 +337,14 @@ impl ChartCanvas {
         )))
     }
 
+    /// Creates a `ChartCanvas` that renders a shared `ChartEngine`.
+    ///
+    /// This is primarily intended for diagnostics harnesses and multi-surface adapters that need to
+    /// hold an engine handle outside the widget tree.
+    pub fn new_shared(engine: SharedChartEngine) -> Self {
+        Self::new_with_engine(ChartCanvasEngine::Shared(engine))
+    }
+
     pub fn new_grid_view(engine: SharedChartEngine, grid: delinea::GridId) -> Self {
         let mut out = Self::new_with_engine(ChartCanvasEngine::Shared(engine));
         out.grid_override = Some(grid);
@@ -352,6 +362,7 @@ impl ChartCanvas {
         Self {
             engine,
             grid_override: None,
+            semantics_test_id: None,
             mode: ChartCanvasMode::Full,
             style: ChartStyle::default(),
             style_source: ChartStyleSource::Theme,
@@ -399,6 +410,7 @@ impl ChartCanvas {
             linked_brush_model: None,
             linked_axis_pointer_model: None,
             linked_domain_windows_model: None,
+            linked_domain_windows_model_revision: None,
             output_model: None,
             output: ChartCanvasOutput::default(),
         }
@@ -487,6 +499,11 @@ impl ChartCanvas {
         self.input_map = map;
     }
 
+    pub fn test_id(mut self, id: impl Into<String>) -> Self {
+        self.semantics_test_id = Some(id.into());
+        self
+    }
+
     pub fn linked_brush(mut self, brush: Model<Option<BrushSelectionLink2D>>) -> Self {
         self.linked_brush_model = Some(brush);
         self
@@ -505,6 +522,7 @@ impl ChartCanvas {
         windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
     ) -> Self {
         self.linked_domain_windows_model = Some(windows);
+        self.linked_domain_windows_model_revision = None;
         self
     }
 
@@ -677,17 +695,26 @@ impl ChartCanvas {
             return;
         }
 
+        let mut changed = false;
         match anchor {
             Some(anchor) => {
                 if let Some(point) = self.hover_point_for_axis_pointer_anchor(anchor.clone()) {
                     self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+                    changed = true;
                 }
             }
             None => {
                 // No explicit "clear hover" action exists. Instead, hover far outside any plot viewport.
                 let point = Point::new(Px(1.0e9), Px(1.0e9));
                 self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+                changed = true;
             }
+        }
+
+        // Linking actions are applied during paint, but the engine is stepped during prepaint.
+        // Request a follow-up frame so linked changes become visible deterministically.
+        if changed {
+            cx.request_animation_frame();
         }
     }
 
@@ -697,11 +724,21 @@ impl ChartCanvas {
         };
         cx.observe_model(model, Invalidation::Paint);
 
+        // Only apply linked domain windows when the shared model has changed. This prevents stale
+        // shared state from overwriting locally-produced window changes before they can be
+        // published and routed by the linking layer.
+        let model_rev = model.revision(cx.app);
+        if model_rev == self.linked_domain_windows_model_revision {
+            return;
+        }
+        self.linked_domain_windows_model_revision = model_rev;
+
         let Ok(windows) = model.read(cx.app, |_, w| w.clone()) else {
             return;
         };
 
         let router = self.link_router().clone();
+        let mut changed = false;
         for (key, window) in windows {
             let Some(axis) = router.axis_for_key(key) else {
                 continue;
@@ -718,6 +755,7 @@ impl ChartCanvas {
                     self.with_engine_mut(|engine| {
                         engine.apply_action(Action::SetDataWindowX { axis, window });
                     });
+                    changed = true;
                 }
                 delinea::AxisKind::Y => {
                     let current =
@@ -728,25 +766,77 @@ impl ChartCanvas {
                     self.with_engine_mut(|engine| {
                         engine.apply_action(Action::SetDataWindowY { axis, window });
                     });
+                    changed = true;
                 }
             }
+        }
+
+        // Same rationale as `sync_linked_axis_pointer`: the engine steps in prepaint, so we need
+        // a follow-up frame after applying linked actions to make the visual update observable.
+        if changed {
+            cx.request_animation_frame();
         }
     }
 
     fn publish_output<H: UiHost>(&mut self, app: &mut H) {
-        let link_events = self.with_engine_mut(|engine| engine.drain_link_events());
+        let drained_link_events = self.with_engine_mut(|engine| engine.drain_link_events());
+        let (link_events_revision, link_events) = if drained_link_events.is_empty() {
+            (
+                self.output.link_events_revision,
+                self.output.snapshot.link_events.clone(),
+            )
+        } else {
+            (
+                self.output.link_events_revision.wrapping_add(1),
+                drained_link_events,
+            )
+        };
+
+        let router = self.link_router().clone();
+        let domain_windows_by_key = self.with_engine(|engine| {
+            let mut out = BTreeMap::new();
+
+            for (axis, st) in &engine.state().data_zoom_x {
+                let Some(window) = st.window else {
+                    continue;
+                };
+                let Some(key) = router.axis_key(*axis) else {
+                    continue;
+                };
+                if router.axis_for_key(key) != Some(*axis) {
+                    continue;
+                }
+                out.insert(key, Some(window));
+            }
+
+            for (axis, window) in &engine.state().data_window_y {
+                let Some(key) = router.axis_key(*axis) else {
+                    continue;
+                };
+                if router.axis_for_key(key) != Some(*axis) {
+                    continue;
+                }
+                out.insert(key, Some(*window));
+            }
+
+            out
+        });
         let snapshot = ChartCanvasOutputSnapshot {
             brush_selection_2d: self.with_engine(|engine| engine.state().brush_selection_2d),
             brush_x_row_ranges_by_series: self
                 .with_engine(|engine| engine.output().brush_x_row_ranges_by_series.clone()),
             link_events,
+            domain_windows_by_key,
         };
 
-        if self.output.snapshot == snapshot {
+        if self.output.snapshot == snapshot
+            && self.output.link_events_revision == link_events_revision
+        {
             return;
         }
 
         self.output.revision = self.output.revision.wrapping_add(1);
+        self.output.link_events_revision = link_events_revision;
         self.output.snapshot = snapshot;
 
         if let Some(model) = &self.output_model {
@@ -3607,6 +3697,26 @@ impl ChartCanvas {
 }
 
 impl<H: UiHost> Widget<H> for ChartCanvas {
+    fn semantics(&mut self, cx: &mut fret_ui::retained_bridge::SemanticsCx<'_, H>) {
+        cx.set_role(fret_core::SemanticsRole::Viewport);
+
+        if let Some(id) = self.semantics_test_id.as_deref() {
+            cx.set_test_id(id);
+            return;
+        }
+
+        match (self.mode, self.grid_override) {
+            (ChartCanvasMode::GridView, Some(grid)) => {
+                cx.set_test_id(format!("fret-chart-grid-{}", grid.0));
+            }
+            (ChartCanvasMode::GridView, None) => {}
+            (ChartCanvasMode::Overlay, _) => {
+                cx.set_test_id("fret-chart-overlay");
+            }
+            (ChartCanvasMode::Full, _) => {}
+        }
+    }
+
     fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
         self.force_uncached_paint.then_some(Transform2D::IDENTITY)
     }

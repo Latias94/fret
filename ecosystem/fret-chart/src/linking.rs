@@ -212,10 +212,12 @@ pub struct LinkedChartMember {
     pub output: Model<crate::retained::ChartCanvasOutput>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct LinkedChartMemberMemory {
-    last_output_revision: u64,
-    ignore_next_output_revision: bool,
+    last_link_events_revision: u64,
+    ignore_next_link_events_revision: bool,
+    last_domain_windows_by_key: BTreeMap<LinkAxisKey, Option<DataWindow>>,
+    ignore_next_domain_windows: bool,
 }
 
 #[derive(Debug)]
@@ -248,8 +250,10 @@ impl LinkedChartGroup {
     pub fn push(&mut self, member: LinkedChartMember) -> &mut Self {
         self.members.push(member);
         self.memory.push(LinkedChartMemberMemory {
-            last_output_revision: 0,
-            ignore_next_output_revision: false,
+            last_link_events_revision: 0,
+            ignore_next_link_events_revision: false,
+            last_domain_windows_by_key: BTreeMap::new(),
+            ignore_next_domain_windows: false,
         });
         self
     }
@@ -258,6 +262,10 @@ impl LinkedChartGroup {
         if self.members.len() <= 1 {
             return false;
         }
+
+        let Ok(shared_domain_windows) = self.domain_windows.read(app, |_app, w| w.clone()) else {
+            return false;
+        };
 
         let mut outputs: Vec<Option<crate::retained::ChartCanvasOutput>> =
             Vec::with_capacity(self.members.len());
@@ -272,9 +280,17 @@ impl LinkedChartGroup {
                 continue;
             };
             let mem = &mut self.memory[i];
-            if mem.ignore_next_output_revision && out.revision != mem.last_output_revision {
-                mem.last_output_revision = out.revision;
-                mem.ignore_next_output_revision = false;
+            if mem.ignore_next_link_events_revision
+                && out.link_events_revision != mem.last_link_events_revision
+            {
+                mem.last_link_events_revision = out.link_events_revision;
+                mem.ignore_next_link_events_revision = false;
+            }
+            if mem.ignore_next_domain_windows
+                && out.snapshot.domain_windows_by_key != mem.last_domain_windows_by_key
+            {
+                mem.last_domain_windows_by_key = out.snapshot.domain_windows_by_key.clone();
+                mem.ignore_next_domain_windows = false;
             }
         }
 
@@ -284,6 +300,7 @@ impl LinkedChartGroup {
         // the pointer moves between charts.
         let mut source_index: Option<usize> = None;
         let mut source_events: Option<Vec<LinkEvent>> = None;
+        let mut source_domain_window_updates: Vec<(LinkAxisKey, Option<DataWindow>)> = Vec::new();
         let mut source_score: i32 = -1;
 
         for i in 0..self.members.len() {
@@ -291,11 +308,47 @@ impl LinkedChartGroup {
                 continue;
             };
             let mem = &self.memory[i];
-            if out.revision == mem.last_output_revision || mem.ignore_next_output_revision {
+
+            let link_events_changed = !mem.ignore_next_link_events_revision
+                && out.link_events_revision != mem.last_link_events_revision;
+
+            let domain_windows_changed = self.policy.domain_windows
+                && !mem.ignore_next_domain_windows
+                && out.snapshot.domain_windows_by_key != mem.last_domain_windows_by_key;
+
+            if !link_events_changed && !domain_windows_changed {
                 continue;
             }
 
-            let events = out.snapshot.link_events.clone();
+            let events = if link_events_changed {
+                out.snapshot.link_events.clone()
+            } else {
+                Vec::new()
+            };
+
+            let mut domain_window_updates: Vec<(LinkAxisKey, Option<DataWindow>)> = Vec::new();
+            if domain_windows_changed {
+                let mut keys: BTreeSet<LinkAxisKey> = BTreeSet::new();
+                keys.extend(mem.last_domain_windows_by_key.keys().copied());
+                keys.extend(out.snapshot.domain_windows_by_key.keys().copied());
+                for key in keys {
+                    let prev = mem
+                        .last_domain_windows_by_key
+                        .get(&key)
+                        .copied()
+                        .unwrap_or(None);
+                    let next = out
+                        .snapshot
+                        .domain_windows_by_key
+                        .get(&key)
+                        .copied()
+                        .unwrap_or(None);
+                    if prev != next {
+                        domain_window_updates.push((key, next));
+                    }
+                }
+            }
+
             let mut score = 0i32;
             if events
                 .iter()
@@ -309,6 +362,10 @@ impl LinkedChartGroup {
             {
                 score += 5;
             }
+            if !domain_window_updates.is_empty() {
+                score += 4;
+                score += (domain_window_updates.len().min(8)) as i32;
+            }
             if events
                 .iter()
                 .any(|e| matches!(e, LinkEvent::BrushSelectionChanged { .. }))
@@ -319,7 +376,8 @@ impl LinkedChartGroup {
             if score > source_score {
                 source_score = score;
                 source_index = Some(i);
-                source_events = Some(events);
+                source_events = Some(events.clone());
+                source_domain_window_updates = domain_window_updates;
             }
         }
 
@@ -330,7 +388,9 @@ impl LinkedChartGroup {
 
         // Update last seen revision for the source immediately.
         if let Some(out) = outputs.get(source_index).and_then(|o| o.clone()) {
-            self.memory[source_index].last_output_revision = out.revision;
+            self.memory[source_index].last_link_events_revision = out.link_events_revision;
+            self.memory[source_index].last_domain_windows_by_key =
+                out.snapshot.domain_windows_by_key.clone();
         }
 
         let source_router = &self.members[source_index].router;
@@ -375,25 +435,27 @@ impl LinkedChartGroup {
         }
 
         if self.policy.domain_windows {
-            let updates: Vec<(LinkAxisKey, Option<DataWindow>)> = source_events
-                .iter()
-                .filter_map(|e| match e {
-                    LinkEvent::DomainWindowChanged { axis, window } => {
-                        source_router.axis_key(*axis).map(|key| (key, *window))
-                    }
-                    _ => None,
-                })
-                .collect();
+            let mut updates = source_domain_window_updates;
+
+            if updates.is_empty() {
+                updates = source_events
+                    .iter()
+                    .filter_map(|e| match e {
+                        LinkEvent::DomainWindowChanged { axis, window } => {
+                            source_router.axis_key(*axis).map(|key| (key, *window))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+            }
 
             if !updates.is_empty() {
-                let Ok(current) = self.domain_windows.read(app, |_app, w| w.clone()) else {
-                    return false;
-                };
+                let current = &shared_domain_windows;
                 let mut next = current.clone();
                 for (key, window) in updates {
                     next.insert(key, window);
                 }
-                if next != current {
+                if &next != current {
                     let _ = self.domain_windows.update(app, |w, _cx| {
                         *w = next;
                     });
@@ -439,7 +501,8 @@ impl LinkedChartGroup {
             if i == source_index {
                 continue;
             }
-            self.memory[i].ignore_next_output_revision = true;
+            self.memory[i].ignore_next_link_events_revision = true;
+            self.memory[i].ignore_next_domain_windows = true;
         }
 
         true
