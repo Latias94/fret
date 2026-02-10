@@ -34,6 +34,33 @@ struct PromptInputLocalState {
     controller: Option<PromptInputController>,
 }
 
+#[derive(Clone)]
+pub struct PromptInputConfig {
+    pub disabled: bool,
+    pub loading: bool,
+    pub clear_on_send: bool,
+    pub clear_attachments_on_send: bool,
+    pub on_send: Option<OnActivate>,
+    pub on_stop: Option<OnActivate>,
+    pub on_add_attachments: Option<OnActivate>,
+    pub test_id_root: Option<Arc<str>>,
+    pub test_id_textarea: Option<Arc<str>>,
+    pub test_id_send: Option<Arc<str>>,
+    pub test_id_stop: Option<Arc<str>>,
+    pub test_id_attachments: Option<Arc<str>>,
+    pub test_id_add_attachments: Option<Arc<str>>,
+}
+
+#[derive(Default, Clone)]
+struct PromptInputConfigState {
+    config: Option<PromptInputConfig>,
+}
+
+pub fn use_prompt_input_config<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<PromptInputConfig> {
+    cx.inherited_state::<PromptInputConfigState>()
+        .and_then(|st| st.config.clone())
+}
+
 /// Returns the nearest prompt input controller in scope.
 ///
 /// This mirrors AI Elements `PromptInputProvider` behavior: prefer a local controller (inside a
@@ -113,6 +140,507 @@ impl PromptInputProvider {
         })
     }
 }
+
+fn prompt_input_send_activate(
+    text: Model<String>,
+    attachments: Option<Model<Vec<AttachmentData>>>,
+    clear_on_send: bool,
+    clear_attachments_on_send: bool,
+    on_send: Option<OnActivate>,
+) -> OnActivate {
+    Arc::new(move |host, action_cx, reason| {
+        let text_value = host.models_mut().read(&text, Clone::clone).ok();
+        let is_empty = text_value
+            .as_deref()
+            .map(|v| v.trim().is_empty())
+            .unwrap_or(true);
+
+        let attachments_len = attachments
+            .as_ref()
+            .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
+            .unwrap_or(0);
+
+        if is_empty && attachments_len == 0 {
+            return;
+        }
+
+        let Some(on_send) = on_send.as_ref() else {
+            return;
+        };
+        on_send(host, action_cx, reason);
+
+        if clear_on_send {
+            let _ = host.models_mut().update(&text, |v| v.clear());
+        }
+        if clear_attachments_on_send {
+            if let Some(attachments) = attachments.as_ref() {
+                let _ = host.models_mut().update(attachments, |v| v.clear());
+            }
+        }
+    })
+}
+
+fn prompt_input_control_key_handler(
+    text: Model<String>,
+    attachments: Option<Model<Vec<AttachmentData>>>,
+    disabled: bool,
+    loading: bool,
+    send_activate: OnActivate,
+) -> OnKeyDown {
+    Arc::new(move |host, action_cx, down| {
+        if disabled {
+            return false;
+        }
+
+        match down.key {
+            fret_core::KeyCode::Enter => {
+                if loading || down.repeat {
+                    return false;
+                }
+                if down.modifiers.shift {
+                    return false;
+                }
+
+                let text_value = host.models_mut().read(&text, Clone::clone).ok();
+                let is_empty = text_value
+                    .as_deref()
+                    .map(|v| v.trim().is_empty())
+                    .unwrap_or(true);
+                let attachments_len = attachments
+                    .as_ref()
+                    .and_then(|m| host.models_mut().read(m, |v| v.len()).ok())
+                    .unwrap_or(0);
+                if is_empty && attachments_len == 0 {
+                    return false;
+                }
+
+                send_activate(host, action_cx, ActivateReason::Keyboard);
+                host.notify(action_cx);
+                true
+            }
+            fret_core::KeyCode::Backspace => {
+                let Some(attachments) = attachments.as_ref() else {
+                    return false;
+                };
+                let attachments_len = host
+                    .models_mut()
+                    .read(attachments, |v| v.len())
+                    .ok()
+                    .unwrap_or(0);
+                if attachments_len == 0 {
+                    return false;
+                }
+
+                let text_value = host.models_mut().read(&text, Clone::clone).ok();
+                let is_empty = text_value
+                    .as_deref()
+                    .map(|v| v.trim().is_empty())
+                    .unwrap_or(true);
+                if !is_empty {
+                    return false;
+                }
+
+                let _ = host.models_mut().update(attachments, |v| {
+                    let _ = v.pop();
+                });
+                host.notify(action_cx);
+                true
+            }
+            _ => false,
+        }
+    })
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PromptInputSlots {
+    pub block_start: Vec<AnyElement>,
+    pub block_end: Vec<AnyElement>,
+}
+
+#[derive(Clone)]
+/// Parts-first prompt input root aligned with AI Elements `PromptInput` composition.
+///
+/// This root provides:
+///
+/// - a `PromptInputController` in scope (see `use_prompt_input_controller`)
+/// - a prompt input config in scope (see `use_prompt_input_config`)
+/// - textarea keyboard behaviors (Enter submit, Backspace remove-attachment, IME-safe)
+/// - external file drop fallback (metadata-only attachments; bytes remain app-owned)
+///
+/// Use `PromptInputRoot::into_element_with_slots` to inject block-start/block-end content.
+pub struct PromptInputRoot {
+    model: Option<Model<String>>,
+    textarea_min_height: Px,
+    textarea_max_height: Option<Px>,
+    disabled: bool,
+    loading: bool,
+    clear_on_send: bool,
+    clear_attachments_on_send: bool,
+    on_send: Option<OnActivate>,
+    on_stop: Option<OnActivate>,
+    on_add_attachments: Option<OnActivate>,
+    attachments: Option<Model<Vec<AttachmentData>>>,
+    test_id_root: Option<Arc<str>>,
+    test_id_textarea: Option<Arc<str>>,
+    test_id_send: Option<Arc<str>>,
+    test_id_stop: Option<Arc<str>>,
+    test_id_attachments: Option<Arc<str>>,
+    test_id_add_attachments: Option<Arc<str>>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputRoot {
+    pub fn new(model: Model<String>) -> Self {
+        Self {
+            model: Some(model),
+            textarea_min_height: Px(96.0),
+            textarea_max_height: None,
+            disabled: false,
+            loading: false,
+            clear_on_send: true,
+            clear_attachments_on_send: true,
+            on_send: None,
+            on_stop: None,
+            on_add_attachments: None,
+            attachments: None,
+            test_id_root: None,
+            test_id_textarea: None,
+            test_id_send: None,
+            test_id_stop: None,
+            test_id_attachments: None,
+            test_id_add_attachments: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn new_uncontrolled() -> Self {
+        Self {
+            model: None,
+            textarea_min_height: Px(96.0),
+            textarea_max_height: None,
+            disabled: false,
+            loading: false,
+            clear_on_send: true,
+            clear_attachments_on_send: true,
+            on_send: None,
+            on_stop: None,
+            on_add_attachments: None,
+            attachments: None,
+            test_id_root: None,
+            test_id_textarea: None,
+            test_id_send: None,
+            test_id_stop: None,
+            test_id_attachments: None,
+            test_id_add_attachments: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn textarea_min_height(mut self, min_height: Px) -> Self {
+        self.textarea_min_height = min_height;
+        self
+    }
+
+    pub fn textarea_max_height(mut self, max_height: Px) -> Self {
+        self.textarea_max_height = Some(max_height);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn loading(mut self, loading: bool) -> Self {
+        self.loading = loading;
+        self
+    }
+
+    pub fn clear_on_send(mut self, clear_on_send: bool) -> Self {
+        self.clear_on_send = clear_on_send;
+        self
+    }
+
+    pub fn clear_attachments_on_send(mut self, clear_attachments_on_send: bool) -> Self {
+        self.clear_attachments_on_send = clear_attachments_on_send;
+        self
+    }
+
+    pub fn on_send(mut self, on_send: OnActivate) -> Self {
+        self.on_send = Some(on_send);
+        self
+    }
+
+    pub fn on_stop(mut self, on_stop: OnActivate) -> Self {
+        self.on_stop = Some(on_stop);
+        self
+    }
+
+    pub fn on_add_attachments(mut self, on_add_attachments: OnActivate) -> Self {
+        self.on_add_attachments = Some(on_add_attachments);
+        self
+    }
+
+    pub fn attachments(mut self, model: Model<Vec<AttachmentData>>) -> Self {
+        self.attachments = Some(model);
+        self
+    }
+
+    pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_root = Some(id.into());
+        self
+    }
+
+    pub fn test_id_textarea(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_textarea = Some(id.into());
+        self
+    }
+
+    pub fn test_id_send(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_send = Some(id.into());
+        self
+    }
+
+    pub fn test_id_stop(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_stop = Some(id.into());
+        self
+    }
+
+    pub fn test_id_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_attachments = Some(id.into());
+        self
+    }
+
+    pub fn test_id_add_attachments(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_add_attachments = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element_with_slots<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        slots: impl FnOnce(&mut ElementContext<'_, H>) -> PromptInputSlots,
+    ) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let provider = use_prompt_input_controller(cx);
+        let text_model = controllable_state::use_controllable_model(
+            cx,
+            self.model
+                .clone()
+                .or_else(|| provider.as_ref().map(|c| c.text.clone())),
+            String::new,
+        )
+        .model();
+
+        let attachments_model = self
+            .attachments
+            .clone()
+            .or_else(|| provider.as_ref().and_then(|c| c.attachments.clone()));
+
+        cx.with_state(PromptInputLocalState::default, |st| {
+            st.controller = Some(PromptInputController {
+                text: text_model.clone(),
+                attachments: attachments_model.clone(),
+            });
+        });
+
+        cx.with_state(PromptInputConfigState::default, |st| {
+            st.config = Some(PromptInputConfig {
+                disabled: self.disabled,
+                loading: self.loading,
+                clear_on_send: self.clear_on_send,
+                clear_attachments_on_send: self.clear_attachments_on_send,
+                on_send: self.on_send.clone(),
+                on_stop: self.on_stop.clone(),
+                on_add_attachments: self.on_add_attachments.clone(),
+                test_id_root: self.test_id_root.clone(),
+                test_id_textarea: self.test_id_textarea.clone(),
+                test_id_send: self.test_id_send.clone(),
+                test_id_stop: self.test_id_stop.clone(),
+                test_id_attachments: self.test_id_attachments.clone(),
+                test_id_add_attachments: self.test_id_add_attachments.clone(),
+            });
+        });
+
+        let textarea_min_height = if self.textarea_min_height == Px(96.0) {
+            theme
+                .metric_by_key("fret.ai.prompt_input.min_height")
+                .unwrap_or(self.textarea_min_height)
+        } else {
+            self.textarea_min_height
+        };
+
+        let textarea_max_height = self
+            .textarea_max_height
+            .or_else(|| theme.metric_by_key("fret.ai.prompt_input.max_height"));
+
+        let send_activate = prompt_input_send_activate(
+            text_model.clone(),
+            attachments_model.clone(),
+            self.clear_on_send,
+            self.clear_attachments_on_send,
+            self.on_send.clone(),
+        );
+
+        let control_key_handler = prompt_input_control_key_handler(
+            text_model.clone(),
+            attachments_model.clone(),
+            self.disabled,
+            self.loading,
+            send_activate,
+        );
+
+        let current = cx
+            .get_model_cloned(&text_model, Invalidation::Layout)
+            .unwrap_or_default();
+        let is_empty = current.trim().is_empty();
+
+        let prompt_empty_state_marker = self.test_id_root.clone().map(|root| {
+            let suffix = if is_empty {
+                "prompt-empty"
+            } else {
+                "prompt-nonempty"
+            };
+            let id = Arc::<str>::from(format!("{root}-{suffix}"));
+            cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Text,
+                    test_id: Some(id),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: fret_ui::element::LayoutStyle {
+                                size: fret_ui::element::SizeStyle {
+                                    width: fret_ui::element::Length::Px(Px(0.0)),
+                                    height: fret_ui::element::Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    )]
+                },
+            )
+        });
+
+        let mut slots = slots(cx);
+        if let Some(marker) = prompt_empty_state_marker {
+            slots.block_end.push(marker);
+        }
+
+        let mut group = InputGroup::new(text_model.clone())
+            .textarea()
+            .textarea_min_height(textarea_min_height)
+            .control_on_key_down(control_key_handler)
+            .refine_layout(self.layout.w_full());
+
+        if let Some(max_h) = textarea_max_height {
+            group = group.textarea_max_height(max_h);
+        }
+
+        if !slots.block_end.is_empty() {
+            group = group.block_end(slots.block_end).block_end_border_top(true);
+        }
+
+        if !slots.block_start.is_empty() {
+            group = group
+                .block_start(slots.block_start)
+                .block_start_border_bottom(true);
+        }
+
+        if let Some(id) = self.test_id_root {
+            group = group.test_id(id);
+        }
+        if let Some(id) = self.test_id_textarea {
+            group = group.control_test_id(id);
+        }
+
+        let content = group.into_element(cx);
+
+        let drop_handler: Option<OnExternalDrag> =
+            attachments_model
+                .clone()
+                .map(|attachments| -> OnExternalDrag {
+                    let disabled = self.disabled;
+                    let loading = self.loading;
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              action_cx: fret_ui::action::ActionCx,
+                              e: &fret_core::ExternalDragEvent| {
+                            if disabled || loading {
+                                return false;
+                            }
+
+                            let ExternalDragKind::DropFiles(files) = &e.kind else {
+                                return false;
+                            };
+                            if files.files.is_empty() {
+                                host.push_effect(Effect::ExternalDropRelease {
+                                    token: files.token,
+                                });
+                                return true;
+                            }
+
+                            let token_id = files.token.0;
+                            let dropped: Vec<AttachmentData> = files
+                                .files
+                                .iter()
+                                .enumerate()
+                                .map(|(i, f)| {
+                                    let id = Arc::<str>::from(format!("drop-{token_id}-{i}"));
+                                    AttachmentData::File(
+                                        AttachmentFileData::new(id).filename(f.name.clone()),
+                                    )
+                                })
+                                .collect();
+
+                            let _ = host.models_mut().update(&attachments, |v| {
+                                for item in &dropped {
+                                    let id = item.id();
+                                    if v.iter()
+                                        .any(|existing| existing.id().as_ref() == id.as_ref())
+                                    {
+                                        continue;
+                                    }
+                                    v.push(item.clone());
+                                }
+                            });
+
+                            host.push_effect(Effect::ExternalDropRelease { token: files.token });
+                            host.notify(action_cx);
+                            true
+                        },
+                    )
+                });
+
+        if let Some(on_drop) = drop_handler {
+            cx.external_drag_region(fret_ui::element::ExternalDragRegionProps::default(), |cx| {
+                cx.external_drag_region_on_external_drag(on_drop);
+                vec![content]
+            })
+        } else {
+            content
+        }
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with_slots(cx, |_cx| PromptInputSlots::default())
+    }
+}
+
+/// Alias for upstream naming parity: in AI Elements the textarea is a child part; in Fret the
+/// shadcn `InputGroup` owns the textarea control, so `PromptInputTextarea` maps to the root.
+pub type PromptInputTextarea = PromptInputRoot;
 
 #[derive(Clone)]
 pub struct PromptInput {
@@ -738,6 +1266,438 @@ impl PromptInput {
         } else {
             content
         }
+    }
+}
+
+#[derive(Clone)]
+/// Block-start header row aligned with AI Elements `PromptInputHeader`.
+pub struct PromptInputHeader {
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputHeader {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            layout: LayoutRefinement::default().w_full(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N1).resolve(&theme);
+
+        cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                direction: Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: true,
+            },
+            move |_cx| self.children,
+        )
+    }
+}
+
+#[derive(Clone)]
+/// Block-end footer row aligned with AI Elements `PromptInputFooter`.
+pub struct PromptInputFooter {
+    leading: Vec<AnyElement>,
+    trailing: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputFooter {
+    pub fn new(
+        leading: impl IntoIterator<Item = AnyElement>,
+        trailing: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
+        Self {
+            leading: leading.into_iter().collect(),
+            trailing: trailing.into_iter().collect(),
+            layout: LayoutRefinement::default().w_full(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N2).resolve(&theme);
+
+        let leading = self.leading;
+        let trailing = self.trailing;
+
+        cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                direction: Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                let mut out = Vec::new();
+                if !leading.is_empty() {
+                    out.push(cx.container(
+                        ContainerProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().mr_auto(),
+                            ),
+                            ..Default::default()
+                        },
+                        move |_cx| leading,
+                    ));
+                }
+                out.extend(trailing);
+                out
+            },
+        )
+    }
+}
+
+#[derive(Clone)]
+/// Left-aligned tools container aligned with AI Elements `PromptInputTools`.
+pub struct PromptInputTools {
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputTools {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            layout: LayoutRefinement::default().min_w_0(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N1).resolve(&theme);
+
+        cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                direction: Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| self.children,
+        )
+    }
+}
+
+#[derive(Clone)]
+/// Generic prompt input button aligned with AI Elements `PromptInputButton` (ghost by default).
+pub struct PromptInputButton {
+    label: Arc<str>,
+    children: Vec<AnyElement>,
+    disabled: bool,
+    on_activate: Option<OnActivate>,
+    test_id: Option<Arc<str>>,
+    layout: LayoutRefinement,
+}
+
+impl PromptInputButton {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            children: Vec::new(),
+            disabled: false,
+            on_activate: None,
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut btn = Button::new(self.label)
+            .variant(ButtonVariant::Ghost)
+            .size(ButtonSize::IconSm)
+            .disabled(self.disabled)
+            .children(self.children)
+            .refine_layout(self.layout);
+
+        if let Some(on_activate) = self.on_activate {
+            btn = btn.on_activate(on_activate);
+        }
+        if let Some(id) = self.test_id {
+            btn = btn.test_id(id);
+        }
+        btn.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Attachments chips row aligned with upstream prompt input attachment outcomes.
+pub struct PromptInputAttachmentsRow {
+    variant: AttachmentVariant,
+}
+
+impl PromptInputAttachmentsRow {
+    pub fn new() -> Self {
+        Self {
+            variant: AttachmentVariant::Inline,
+        }
+    }
+
+    pub fn variant(mut self, variant: AttachmentVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(controller) = use_prompt_input_controller(cx) else {
+            return cx.text("");
+        };
+        let Some(attachments_model) = controller.attachments else {
+            return cx.text("");
+        };
+
+        let items = cx
+            .get_model_cloned(&attachments_model, Invalidation::Layout)
+            .unwrap_or_default();
+        if items.is_empty() {
+            return cx.text("");
+        }
+
+        let cfg = use_prompt_input_config(cx);
+        let row_test_id = cfg
+            .as_ref()
+            .and_then(|c| c.test_id_attachments.clone())
+            .or_else(|| {
+                cfg.as_ref().and_then(|c| {
+                    c.test_id_root
+                        .clone()
+                        .map(|id| Arc::<str>::from(format!("{id}-attachments")))
+                })
+            });
+
+        let on_remove: crate::elements::attachments::OnAttachmentRemove = {
+            let model = attachments_model.clone();
+            Arc::new(move |host, _action_cx, id| {
+                let _ = host.models_mut().update(&model, |v| {
+                    v.retain(|item| item.id().as_ref() != id.as_ref());
+                });
+            })
+        };
+
+        let mut children = Vec::new();
+        for item in items {
+            let item_id = item.id().clone();
+            let key = item_key_from_external_id(item_id.as_ref());
+
+            let item_test_id = row_test_id
+                .as_deref()
+                .map(|root| Arc::<str>::from(format!("{root}-item-{item_id}")));
+            let remove_test_id = item_test_id
+                .as_deref()
+                .map(|root| Arc::<str>::from(format!("{root}-remove")));
+
+            let on_remove = on_remove.clone();
+            let variant = self.variant;
+            let el = cx.keyed(key, move |cx| {
+                let mut chip = Attachment::new(item.clone()).variant(variant);
+                chip = chip.on_remove(on_remove);
+                if let Some(id) = item_test_id.clone() {
+                    chip = chip.test_id(id);
+                }
+                if let Some(id) = remove_test_id.clone() {
+                    chip = chip.remove_test_id(id);
+                }
+                chip.into_element(cx)
+            });
+            children.push(el);
+        }
+
+        let mut row = Attachments::new(children).variant(self.variant);
+        if let Some(id) = row_test_id {
+            row = row.test_id(id);
+        }
+        row.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Intent-driven “add attachments” action aligned with AI Elements `PromptInputActionAddAttachments`.
+pub struct PromptInputActionAddAttachments {
+    layout: LayoutRefinement,
+}
+
+impl PromptInputActionAddAttachments {
+    pub fn new() -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let cfg = use_prompt_input_config(cx);
+        let on_add = cfg.as_ref().and_then(|c| c.on_add_attachments.clone());
+        let disabled = cfg.as_ref().map(|c| c.disabled).unwrap_or(true);
+        let loading = cfg.as_ref().map(|c| c.loading).unwrap_or(false);
+
+        let test_id = cfg
+            .as_ref()
+            .and_then(|c| c.test_id_add_attachments.clone())
+            .or_else(|| {
+                cfg.as_ref().and_then(|c| {
+                    c.test_id_root
+                        .clone()
+                        .map(|id| Arc::<str>::from(format!("{id}-add-attachments")))
+                })
+            });
+
+        let mut btn = PromptInputButton::new("Add attachments")
+            .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+            .disabled(disabled || loading)
+            .refine_layout(self.layout);
+
+        if let Some(on_add) = on_add {
+            btn = btn.on_activate(on_add);
+        }
+        if let Some(id) = test_id {
+            btn = btn.test_id(id);
+        }
+        btn.into_element(cx)
+    }
+}
+
+#[derive(Clone)]
+/// Send/stop button aligned with AI Elements `PromptInputSubmit` outcomes.
+pub struct PromptInputSubmit {
+    layout: LayoutRefinement,
+}
+
+impl PromptInputSubmit {
+    pub fn new() -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let cfg = use_prompt_input_config(cx);
+        let controller = use_prompt_input_controller(cx);
+
+        let disabled = cfg.as_ref().map(|c| c.disabled).unwrap_or(true);
+        let loading = cfg.as_ref().map(|c| c.loading).unwrap_or(false);
+        let on_send = cfg.as_ref().and_then(|c| c.on_send.clone());
+        let on_stop = cfg.as_ref().and_then(|c| c.on_stop.clone());
+
+        let text_model = controller.as_ref().map(|c| c.text.clone());
+        let attachments_model = controller.as_ref().and_then(|c| c.attachments.clone());
+
+        let is_empty = text_model
+            .as_ref()
+            .and_then(|m| cx.get_model_cloned(m, Invalidation::Layout))
+            .map(|v| v.trim().is_empty())
+            .unwrap_or(true);
+        let attachments_len = attachments_model
+            .as_ref()
+            .and_then(|m| cx.get_model_cloned(m, Invalidation::Layout))
+            .map(|v| v.len())
+            .unwrap_or(0);
+
+        if loading {
+            let mut btn = Button::new("Stop")
+                .variant(ButtonVariant::Secondary)
+                .size(ButtonSize::Sm)
+                .disabled(disabled || on_stop.is_none())
+                .refine_layout(self.layout);
+
+            if let Some(on_stop) = on_stop {
+                btn = btn.on_activate(on_stop);
+            }
+            if let Some(id) = cfg.as_ref().and_then(|c| c.test_id_stop.clone()) {
+                btn = btn.test_id(id);
+            }
+            return btn.into_element(cx);
+        }
+
+        let send_disabled = disabled || on_send.is_none() || (is_empty && attachments_len == 0);
+
+        let mut btn = Button::new("Send")
+            .variant(ButtonVariant::Default)
+            .size(ButtonSize::Sm)
+            .disabled(send_disabled)
+            .refine_layout(self.layout);
+
+        if let (Some(text_model), Some(on_send)) = (text_model, on_send) {
+            let send_activate = prompt_input_send_activate(
+                text_model,
+                attachments_model,
+                cfg.as_ref().map(|c| c.clear_on_send).unwrap_or(true),
+                cfg.as_ref()
+                    .map(|c| c.clear_attachments_on_send)
+                    .unwrap_or(true),
+                Some(on_send),
+            );
+            btn = btn.on_activate(send_activate);
+        }
+
+        if let Some(id) = cfg.as_ref().and_then(|c| c.test_id_send.clone()) {
+            btn = btn.test_id(id);
+        }
+        btn.into_element(cx)
     }
 }
 

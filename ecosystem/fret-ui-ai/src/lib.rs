@@ -87,7 +87,10 @@ pub use elements::{
     MessageBranchSelector, MessageContent, MessageParts, MessageResponse, MessageToolbar,
     OnAttachmentActivate, OnAttachmentRemove, OnFileTreeActionActivate, OnFileTreeExpandedChange,
     OnFileTreeSelect, OnMessageBranchChange, OnQueueItemActionActivate, OnStackTraceFilePathClick,
-    OnSuggestionClick, ParsedStackTrace, PromptInput, Queue, QueueItem, QueueItemAction,
+    OnSuggestionClick, ParsedStackTrace, PromptInput, PromptInputActionAddAttachments,
+    PromptInputAttachmentsRow, PromptInputButton, PromptInputConfig, PromptInputController,
+    PromptInputFooter, PromptInputHeader, PromptInputProvider, PromptInputRoot, PromptInputSlots,
+    PromptInputSubmit, PromptInputTextarea, PromptInputTools, Queue, QueueItem, QueueItemAction,
     QueueItemActions, QueueItemAttachment, QueueItemContent, QueueItemDescription, QueueItemFile,
     QueueItemImage, QueueItemIndicator, QueueItemState, QueueList, QueueSection,
     QueueSectionContent, QueueSectionLabel, QueueSectionState, QueueSectionTrigger, Reasoning,
@@ -101,7 +104,7 @@ pub use elements::{
     TestResultsDuration, TestResultsHeader, TestResultsProgress, TestResultsSummary,
     TestResultsSummaryData, TestStatusKind, TestSuite, TestSuiteContent, TestSuiteName, Tool,
     ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
-    parse_stack_trace,
+    parse_stack_trace, use_prompt_input_config, use_prompt_input_controller,
 };
 pub use export::messages_to_markdown;
 pub use model::{
