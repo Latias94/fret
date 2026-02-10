@@ -4,8 +4,8 @@
 
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Color, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
-    PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    AppWindowId, Color, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Paint,
+    Point, PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
     Transform2D,
 };
 use fret_runtime::Model;
@@ -17,13 +17,19 @@ use fret_ui_kit::OverlayController;
 use serde::Deserialize;
 use std::cell::Cell;
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
 mod css_color;
 use css_color::{color_to_rgba, parse_css_color};
+
+#[path = "web_vs_fret_overlay_chrome/web.rs"]
+mod web;
+use web::*;
+
+#[path = "web_vs_fret_overlay_chrome/support.rs"]
+mod support;
+use support::*;
 
 #[path = "web_vs_fret_overlay_chrome/alert_dialog.rs"]
 mod alert_dialog;
@@ -64,168 +70,6 @@ mod tooltip;
 struct FixtureSuite<T> {
     schema_version: u32,
     cases: Vec<T>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGolden {
-    themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGoldenTheme {
-    #[allow(dead_code)]
-    root: WebNode,
-    #[serde(default)]
-    portals: Vec<WebNode>,
-    #[serde(rename = "portalWrappers", default)]
-    portal_wrappers: Vec<WebNode>,
-    #[serde(default)]
-    viewport: Option<WebViewport>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebViewport {
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebRect {
-    #[allow(dead_code)]
-    x: f32,
-    #[allow(dead_code)]
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebNode {
-    #[allow(dead_code)]
-    tag: String,
-    #[serde(default)]
-    attrs: BTreeMap<String, String>,
-    #[serde(default)]
-    active: bool,
-    #[serde(rename = "activeDescendant", default)]
-    active_descendant: bool,
-    #[serde(default)]
-    text: Option<String>,
-    rect: WebRect,
-    #[serde(rename = "computedStyle", default)]
-    computed_style: BTreeMap<String, String>,
-    #[allow(dead_code)]
-    #[serde(default)]
-    children: Vec<WebNode>,
-}
-
-fn web_theme_named<'a>(golden: &'a WebGolden, name: &str) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get(name)
-        .unwrap_or_else(|| panic!("missing {name} theme in web golden"))
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-fn web_golden_path(file_name: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("shadcn-web")
-        .join("v4")
-        .join("new-york-v4")
-        .join(file_name)
-}
-
-fn read_web_golden_open(name: &str) -> WebGolden {
-    let path = web_golden_path(&format!("{name}.open.json"));
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing web open golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts {name} --modes=open --update --baseUrl=http://localhost:4020\n\nDocs:\n  docs/shadcn-web-goldens.md",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse web open golden: {}\nerror: {err}",
-            path.display()
-        )
-    })
-}
-
-fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get("light")
-        .or_else(|| golden.themes.get("dark"))
-        .expect("missing theme in web golden")
-}
-
-fn find_portal_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
-}
-
-fn find_portal_by_slot<'a>(theme: &'a WebGoldenTheme, slot: &str) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-}
-
-fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Option<&'a WebNode> {
-    if pred(node) {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_first(child, pred) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn find_by_data_slot_and_state<'a>(
-    root: &'a WebNode,
-    slot: &str,
-    state: &str,
-) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-    })
-}
-
-fn find_by_data_slot_and_state_and_text<'a>(
-    root: &'a WebNode,
-    slot: &str,
-    state: &str,
-    text: &str,
-) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-            && n.text.as_deref() == Some(text)
-    })
-}
-
-fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
 }
 
 fn split_box_shadow_layers(s: &str) -> Vec<&str> {
@@ -371,45 +215,6 @@ fn rect_intersection_area(a: Rect, b: Rect) -> f32 {
     w * h
 }
 
-fn web_border_widths_px(node: &WebNode) -> Option<[f32; 4]> {
-    Some([
-        node.computed_style
-            .get("borderTopWidth")
-            .map(String::as_str)
-            .and_then(parse_px)?,
-        node.computed_style
-            .get("borderRightWidth")
-            .map(String::as_str)
-            .and_then(parse_px)?,
-        node.computed_style
-            .get("borderBottomWidth")
-            .map(String::as_str)
-            .and_then(parse_px)?,
-        node.computed_style
-            .get("borderLeftWidth")
-            .map(String::as_str)
-            .and_then(parse_px)?,
-    ])
-}
-
-fn web_corner_radii_effective_px(node: &WebNode) -> Option<[f32; 4]> {
-    let max = node.rect.w.min(node.rect.h) * 0.5;
-    let radius = |key: &str| {
-        node.computed_style
-            .get(key)
-            .map(String::as_str)
-            .and_then(parse_px)
-            .map(|v| v.min(max))
-    };
-
-    Some([
-        radius("borderTopLeftRadius")?,
-        radius("borderTopRightRadius")?,
-        radius("borderBottomRightRadius")?,
-        radius("borderBottomLeftRadius")?,
-    ])
-}
-
 #[derive(Debug, Clone, Copy)]
 struct PaintedQuad {
     #[allow(dead_code)]
@@ -418,6 +223,13 @@ struct PaintedQuad {
     border: [f32; 4],
     border_color: fret_core::Color,
     corners: [f32; 4],
+}
+
+fn paint_solid_color(paint: Paint) -> Color {
+    match paint {
+        Paint::Solid(c) => c,
+        other => panic!("expected Paint::Solid in overlay-chrome test harness, got {other:?}"),
+    }
 }
 
 fn rect_contains(outer: Rect, inner: Rect) -> bool {
@@ -448,13 +260,15 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
         };
 
+        let background = paint_solid_color(background);
+        let border_color = paint_solid_color(border_paint);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let has_background = background.a > 0.01;
         if !has_background && !has_border(&border) {
@@ -507,13 +321,15 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
         };
 
+        let background = paint_solid_color(background);
+        let border_color = paint_solid_color(border_paint);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let has_background = background.a > 0.01;
         if !has_background && !has_border(&border) {
@@ -568,13 +384,15 @@ fn find_best_chrome_quad_indexed(scene: &Scene, target: Rect) -> Option<(usize, 
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
         };
 
+        let background = paint_solid_color(background);
+        let border_color = paint_solid_color(border_paint);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let has_background = background.a > 0.01;
         if !has_background && !has_border(&border) {
@@ -625,13 +443,15 @@ fn find_best_chrome_quad_indexed(scene: &Scene, target: Rect) -> Option<(usize, 
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
         };
 
+        let background = paint_solid_color(background);
+        let border_color = paint_solid_color(border_paint);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let has_background = background.a > 0.01;
         if !has_background && !has_border(&border) {
@@ -689,7 +509,7 @@ fn find_best_solid_quad_within_matching_bg(
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
@@ -697,7 +517,8 @@ fn find_best_solid_quad_within_matching_bg(
         };
 
         let rect = transform_rect_bounds(st.transform, rect);
-        let background = color_with_opacity(background, st.opacity);
+        let background = color_with_opacity(paint_solid_color(background), st.opacity);
+        let border_color = paint_solid_color(border_paint);
 
         if rect_intersection_area(rect, target) <= 0.01 {
             return;
@@ -768,7 +589,7 @@ fn find_best_quad_within_matching_bg(
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
@@ -776,7 +597,8 @@ fn find_best_quad_within_matching_bg(
         };
 
         let rect = transform_rect_bounds(st.transform, rect);
-        let background = color_with_opacity(background, st.opacity);
+        let background = color_with_opacity(paint_solid_color(background), st.opacity);
+        let border_color = paint_solid_color(border_paint);
 
         if rect_intersection_area(rect, target) <= 0.01 {
             return;
@@ -832,7 +654,7 @@ fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> 
         };
 
         let rect = transform_rect_bounds(st.transform, rect);
-        let background = color_with_opacity(background, st.opacity);
+        let background = color_with_opacity(paint_solid_color(background), st.opacity);
 
         if background.a < 0.5 {
             return;
@@ -853,107 +675,6 @@ fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> 
     });
 
     best_rect
-}
-
-#[derive(Default)]
-struct FakeServices;
-
-type StyleAwareServices = FakeServices;
-
-impl fret_core::TextService for FakeServices {
-    fn prepare(
-        &mut self,
-        input: &fret_core::TextInput,
-        constraints: fret_core::TextConstraints,
-    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
-        let (text, style) = match input {
-            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style.clone()),
-            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base.clone()),
-            _ => (input.text(), fret_core::TextStyle::default()),
-        };
-        let line_height = style
-            .line_height
-            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
-
-        fn estimate_width_px(text: &str, font_size: f32) -> Px {
-            let mut units = 0.0f32;
-            for ch in text.chars() {
-                units += match ch {
-                    ' ' => 0.28,
-                    '(' | ')' => 0.28,
-                    'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
-                    'm' | 'w' | 'M' | 'W' => 0.75,
-                    'o' | 'O' | 'p' | 'P' => 0.62,
-                    'A'..='Z' => 0.62,
-                    'a'..='z' => 0.56,
-                    _ => 0.56,
-                };
-            }
-            Px((units * font_size).max(1.0))
-        }
-
-        let est_w = estimate_width_px(text, style.size.0);
-
-        let max_w = constraints.max_width.unwrap_or(est_w);
-        let (lines, w) = match constraints.wrap {
-            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
-                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
-                (lines, Px(est_w.0.min(max_w.0)))
-            }
-            _ => (1, est_w),
-        };
-
-        let h = Px(line_height.0 * lines as f32);
-
-        (
-            fret_core::TextBlobId::default(),
-            fret_core::TextMetrics {
-                size: CoreSize::new(w, h),
-                baseline: Px(h.0 * 0.8),
-            },
-        )
-    }
-
-    fn release(&mut self, _blob: fret_core::TextBlobId) {}
-}
-
-impl fret_core::PathService for FakeServices {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for FakeServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        true
-    }
-}
-
-impl fret_core::MaterialService for FakeServices {
-    fn register_material(
-        &mut self,
-        _desc: fret_core::MaterialDescriptor,
-    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
-        Ok(fret_core::MaterialId::default())
-    }
-
-    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
-        true
-    }
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
@@ -2428,13 +2149,15 @@ fn find_best_chrome_quad_by_size(
             border,
             corner_radii,
             background,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
         };
 
+        let background = paint_solid_color(background);
+        let border_color = paint_solid_color(border_paint);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let has_background = background.a > 0.01;
         if !has_background && !has_border(&border) {
@@ -3327,6 +3050,7 @@ fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<Sh
             continue;
         };
 
+        let background = paint_solid_color(background);
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         if has_border(&border) {
             continue;
