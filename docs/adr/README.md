@@ -48,6 +48,26 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Proposed: `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
   - Decide: registry surface (`MaterialId`), fixed param payload, budgets/telemetry, and deterministic fallbacks.
 
+- **Compositing groups and blend modes (isolated saveLayer blends)**
+  - Proposed: `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`
+  - Decide: minimal blend vocabulary for UI-native looks and deterministic degradation under budgets.
+
+- **Sampled materials (v2; fixed binding shapes)**
+  - Proposed: `docs/adr/1181-sampled-materials-and-fixed-binding-shapes-v2.md`
+  - Decide: controlled “params + one image” expansion without opening arbitrary shader/resource graphs.
+
+- **Pointer motion snapshots (velocity + paint-time reads)**
+  - Proposed: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
+  - Decide: a non-reactive pointer snapshot seam that stays consistent under transforms and coalesced move delivery.
+
+- **Procedural determinism (explicit seeds + explicit time)**
+  - Proposed: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`
+  - Decide: no hidden time in Tier B materials; stable seeds; reduced-motion-friendly inputs.
+
+- **Creative authoring surface (ecosystem recipes)**
+  - Proposed: `docs/adr/1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`
+  - Decide: `fret-ui-kit` as the canonical recipe/catalog layer that resolves to mechanism with capability/budget fallbacks.
+
 - **Pointer coordinate spaces (window-local vs element-local, transform-aware)**
   - Proposed: `docs/adr/1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`
   - Decide: the canonical coordinate spaces exposed to widgets, capture semantics, and a minimal

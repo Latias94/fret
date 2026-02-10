@@ -14,14 +14,14 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-02-09
-- ADR count (numbered): 223
+- Last updated: 2026-02-10
+- ADR count (numbered): 228
 
 - Aligned: 88
 - Aligned (with known gaps): 73
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 11
+- Not implemented: 16
 - Partially aligned: 31
 
 ## Matrix
@@ -35,6 +35,11 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`](1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md) | Proposed | Not implemented | Defines canonical window-local vs element-local pointer coordinate spaces, and locks capture semantics + a small derived mapping helper surface for transform-aware pointer-follow components (lens/parallax/drag). Evidence (ADR only): `docs/adr/1177-pointer-coordinate-spaces-and-element-local-mapping-v1.md`. |
 | [`1178-mask-layers-and-alpha-masks-v1.md`](1178-mask-layers-and-alpha-masks-v1.md) | Proposed | Not implemented | Proposes a portable mask stack (`PushMask/PopMask`) with gradient-only v1 sources, coverage multiplication semantics, and “paint-only by default” hit-testing rules, with deterministic degradation under budgets. Evidence (ADR only): `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`. |
 | [`1179-frame-clock-and-reduced-motion-gates-v1.md`](1179-frame-clock-and-reduced-motion-gates-v1.md) | Proposed | Not implemented | Defines a runner-owned monotonic per-frame clock snapshot exposed as a non-reactive read in widget contexts, plus the canonical `prefers_reduced_motion` gating pattern (ADR 1171) without poisoning view-cache keys. Evidence (ADR only): `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`. |
+| [`1180-compositing-groups-and-blend-modes-v1.md`](1180-compositing-groups-and-blend-modes-v1.md) | Proposed | Not implemented | Adds an explicit isolated compositing group stack with a small `BlendMode` vocabulary (Over/Add/Multiply/Screen), budgeted intermediates, and deterministic degradation. Evidence (ADR only): `docs/adr/1180-compositing-groups-and-blend-modes-v1.md`. |
+| [`1181-sampled-materials-and-fixed-binding-shapes-v2.md`](1181-sampled-materials-and-fixed-binding-shapes-v2.md) | Proposed | Not implemented | Extends Tier B materials with a fixed “params + one image” binding shape while preserving capability gating, budgets, and deterministic fallbacks. Evidence (ADR only): `docs/adr/1181-sampled-materials-and-fixed-binding-shapes-v2.md`. |
+| [`1182-pointer-motion-snapshots-and-move-coalescing-v1.md`](1182-pointer-motion-snapshots-and-move-coalescing-v1.md) | Proposed | Not implemented | Defines a non-reactive pointer motion snapshot seam (position/velocity available during paint), consistent under transforms and tolerant of runner move coalescing. Evidence (ADR only): `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`. |
+| [`1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`](1183-procedural-material-determinism-seeds-and-time-inputs-v1.md) | Proposed | Not implemented | Locks determinism rules for procedural materials: explicit seeds, no hidden time dependencies, and reduced-motion-friendly explicit time inputs. Evidence (ADR only): `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`. |
+| [`1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`](1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md) | Proposed | Not implemented | Standardizes the `fret-ui-kit` recipe/catalog authoring pattern for composing paint/mask/effect/composite/motion into capability- and budget-aware, deterministically degradable visuals. Evidence (ADR only): `docs/adr/1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`. |
 | [`1170-container-queries-and-frame-lagged-layout-queries-v1.md`](1170-container-queries-and-frame-lagged-layout-queries-v1.md) | Accepted | Aligned (with known gaps) | Implements a mechanism-only, frame-lagged layout query surface: `LayoutQueryRegion` wrapper + `ElementContext::layout_query_bounds` over committed geometry, with query dependencies participating in view-cache reuse gating via per-region revisions. Evidence: `crates/fret-ui/src/{element.rs,elements/cx.rs,elements/runtime.rs,declarative/frame.rs,declarative/mount.rs,layout/engine/flow.rs}`, tests: `crates/fret-ui/src/declarative/tests/layout_queries.rs`. Gaps: ecosystem breakpoint/hysteresis helpers and broader shadcn adoption are tracked in `docs/workstreams/container-queries-v1.md`; diagnostics snapshots do not enumerate regions/observers yet (D3). |
 | [`1172-paint-primitives-brushes-and-gradients-v1.md`](1172-paint-primitives-brushes-and-gradients-v1.md) | Proposed | Not implemented | Defines a minimal `Paint`/brush vocabulary (solid + linear/radial gradients) to unblock modern ecosystem visuals (MagicUI-class components) without pushing “many-quads” approximations into component crates. Evidence (ADR only): `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`. |
 | [`1173-imported-render-targets-and-external-texture-imports-v1.md`](1173-imported-render-targets-and-external-texture-imports-v1.md) | Proposed | Not implemented | Stages end-to-end `RenderTargetId` + `ViewportSurface` validation (“contract path”), then defines capability-gated external texture import and per-frame keepalive semantics without leaking backend handles into UI/component code. Evidence (ADR only): `docs/adr/1173-imported-render-targets-and-external-texture-imports-v1.md`. |
