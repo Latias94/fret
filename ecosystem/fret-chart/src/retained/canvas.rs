@@ -14,7 +14,7 @@ use fret_canvas::cache::{PathCache, SceneOpCache};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton, Paint,
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
     Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
@@ -1142,9 +1142,9 @@ impl ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: shadow_order,
                         rect,
-                        background: color,
+                        background: Paint::Solid(color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: Paint::TRANSPARENT,
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1155,9 +1155,9 @@ impl ChartCanvas {
                         Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
                         Size::new(Px(crosshair_w), plot.size.height),
                     ),
-                    background: self.style.crosshair_color,
+                    background: Paint::Solid(self.style.crosshair_color),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: Paint::TRANSPARENT,
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1168,9 +1168,9 @@ impl ChartCanvas {
                         Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
                         Size::new(plot.size.width, Px(crosshair_w)),
                     ),
-                    background: self.style.crosshair_color,
+                    background: Paint::Solid(self.style.crosshair_color),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: Paint::TRANSPARENT,
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1292,9 +1292,9 @@ impl ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: label_order,
                         rect,
-                        background: self.style.tooltip_background,
+                        background: Paint::Solid(self.style.tooltip_background),
                         border: Edges::all(self.style.tooltip_border_width),
-                        border_color: self.style.tooltip_border_color,
+                        border_paint: Paint::Solid(self.style.tooltip_border_color),
                         corner_radii: Corners::all(Px(4.0)),
                     });
                     cx.scene.push(SceneOp::Text {
@@ -1333,9 +1333,9 @@ impl ChartCanvas {
                             Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
                             Size::new(Px(2.0 * r), Px(2.0 * r)),
                         ),
-                        background: self.style.hover_point_color,
+                        background: Paint::Solid(self.style.hover_point_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: Paint::TRANSPARENT,
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1505,9 +1505,9 @@ impl ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: tooltip_order,
                     rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                    background: self.style.tooltip_background,
+                    background: Paint::Solid(self.style.tooltip_background),
                     border: Edges::all(self.style.tooltip_border_width),
-                    border_color: self.style.tooltip_border_color,
+                    border_paint: Paint::Solid(self.style.tooltip_border_color),
                     corner_radii: Corners::all(self.style.tooltip_corner_radius),
                 });
 
@@ -1548,9 +1548,9 @@ impl ChartCanvas {
                                 Point::new(Px(swatch_x), Px(marker_y)),
                                 Size::new(Px(side), Px(side)),
                             ),
-                            background: self.series_color(series),
+                            background: Paint::Solid(self.series_color(series)),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: Paint::TRANSPARENT,
                             corner_radii: Corners::all(Px(side * 0.5)),
                         });
                     }
