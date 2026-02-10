@@ -394,19 +394,20 @@ impl<H: UiHost> UiTree<H> {
             .keymap
             .match_sequence(params.input_ctx, std::slice::from_ref(&chord));
         if matched.has_continuation {
+            let exact_command = matched.exact.and_then(|c| c);
             #[cfg(feature = "diagnostics")]
             self.record_shortcut_routing_decision(
                 app,
                 &params,
                 fret_runtime::ShortcutRoutingOutcome::SequenceContinuation,
                 1,
-                matched.exact.and_then(|c| c),
+                exact_command.clone(),
                 None,
             );
             self.pending_shortcut.keystrokes = vec![CapturedKeystroke { chord, text: None }];
             self.pending_shortcut.focus = self.focus;
             self.pending_shortcut.barrier_root = params.barrier_root;
-            self.pending_shortcut.fallback = matched.exact.and_then(|c| c);
+            self.pending_shortcut.fallback = exact_command;
             self.pending_shortcut.capture_next_text_input_key =
                 (params.focus_is_text_input && !params.modifiers.ctrl && !params.modifiers.meta)
                     .then_some(params.key);

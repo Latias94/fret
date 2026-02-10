@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Rect, Scene, SemanticsRole,
+    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
@@ -9631,25 +9631,6 @@ pub struct ElementLayoutQueryRegionV1 {
     pub current_bounds: Option<RectV1>,
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-pub struct UiEdgesV1 {
-    pub top: f32,
-    pub right: f32,
-    pub bottom: f32,
-    pub left: f32,
-}
-
-impl From<fret_core::Edges> for UiEdgesV1 {
-    fn from(value: fret_core::Edges) -> Self {
-        Self {
-            top: value.top.0,
-            right: value.right.0,
-            bottom: value.bottom.0,
-            left: value.left.0,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementEnvironmentSnapshotV1 {
     pub viewport_bounds: RectV1,
@@ -9680,6 +9661,12 @@ impl ElementEnvironmentSnapshotV1 {
     fn from_diagnostics_snapshot(
         snapshot: &fret_ui::elements::EnvironmentQueryDiagnosticsSnapshot,
     ) -> Self {
+        let edges_to_protocol = |value: fret_core::Edges| UiEdgesV1 {
+            top_px: value.top.0,
+            right_px: value.right.0,
+            bottom_px: value.bottom.0,
+            left_px: value.left.0,
+        };
         Self {
             viewport_bounds: RectV1::from(snapshot.viewport_bounds),
             scale_factor: snapshot.scale_factor,
@@ -9699,8 +9686,8 @@ impl ElementEnvironmentSnapshotV1 {
             primary_pointer_type: Some(
                 viewport_pointer_type_label(snapshot.primary_pointer_type).to_string(),
             ),
-            safe_area_insets: snapshot.safe_area_insets.map(UiEdgesV1::from),
-            occlusion_insets: snapshot.occlusion_insets.map(UiEdgesV1::from),
+            safe_area_insets: snapshot.safe_area_insets.map(edges_to_protocol),
+            occlusion_insets: snapshot.occlusion_insets.map(edges_to_protocol),
         }
     }
 }
@@ -12628,10 +12615,10 @@ mod tests {
         assert_eq!(exported.contrast_preference.as_deref(), Some("more"));
         assert_eq!(exported.forced_colors_mode.as_deref(), Some("active"));
         assert_eq!(exported.primary_pointer_type.as_deref(), Some("touch"));
-        assert_eq!(exported.safe_area_insets.map(|e| e.top), Some(1.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.right), Some(2.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.bottom), Some(3.0));
-        assert_eq!(exported.safe_area_insets.map(|e| e.left), Some(4.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.top_px), Some(1.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.right_px), Some(2.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.bottom_px), Some(3.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.left_px), Some(4.0));
     }
 
     fn node_id(id: u64) -> NodeId {
