@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
@@ -166,7 +167,7 @@ impl SegmentedButtonSet {
             SegmentedSelection::Single(model) => {
                 let selected = cx
                     .get_model_cloned(model, fret_ui::Invalidation::Layout)
-                    .unwrap_or_else(|| Arc::<str>::from(""));
+                    .unwrap_or_else(empty_arc_str);
 
                 items
                     .iter()
@@ -275,8 +276,8 @@ impl SegmentedButtonSet {
                 let selected_single = match &selection {
                     SegmentedSelection::Single(model) => cx
                         .get_model_cloned(model, fret_ui::Invalidation::Layout)
-                        .unwrap_or_else(|| Arc::<str>::from("")),
-                    SegmentedSelection::Multi(_) => Arc::<str>::from(""),
+                        .unwrap_or_else(empty_arc_str),
+                    SegmentedSelection::Multi(_) => empty_arc_str(),
                 };
                 let selected_multi = match &selection {
                     SegmentedSelection::Multi(model) => cx
