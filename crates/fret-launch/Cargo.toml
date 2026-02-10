@@ -51,7 +51,7 @@ fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
 fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }
 getrandom = { workspace = true, features = ["wasm_js"] }
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "HtmlCanvasElement", "HtmlElement", "Location", "Node", "VisualViewport", "Window", "console"] }
+web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "VisualViewport", "Window", "console"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
 cocoa.workspace = true
@@ -59,4 +59,4 @@ objc.workspace = true
 keyboard-types.workspace = true
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
-windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }

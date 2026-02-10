@@ -23,6 +23,9 @@ pub fn install_app(app: &mut fret_app::App) {
 
 pub fn install_app_with(app: &mut fret_app::App, config: ShadcnInstallConfig) {
     crate::shadcn_themes::apply_shadcn_new_york_v4(app, config.base_color, config.scheme);
+    app.with_global_mut_untracked(ShadcnInstallConfig::default, |stored, _app| {
+        *stored = config;
+    });
 }
 
 pub fn install_app_with_theme(
@@ -30,7 +33,7 @@ pub fn install_app_with_theme(
     base_color: ShadcnBaseColor,
     scheme: ShadcnColorScheme,
 ) {
-    crate::shadcn_themes::apply_shadcn_new_york_v4(app, base_color, scheme);
+    install_app_with(app, ShadcnInstallConfig { base_color, scheme });
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -59,13 +62,14 @@ pub fn sync_theme_from_environment(
         })
         .unwrap_or(default_scheme_when_unknown);
 
-    let should_apply = app.with_global_mut(ShadcnAutoThemeState::default, |state, _app| {
-        if state.last_applied == Some((base_color, desired)) {
-            return false;
-        }
-        state.last_applied = Some((base_color, desired));
-        true
-    });
+    let should_apply =
+        app.with_global_mut_untracked(ShadcnAutoThemeState::default, |state, _app| {
+            if state.last_applied == Some((base_color, desired)) {
+                return false;
+            }
+            state.last_applied = Some((base_color, desired));
+            true
+        });
 
     if should_apply {
         crate::shadcn_themes::apply_shadcn_new_york_v4(app, base_color, desired);

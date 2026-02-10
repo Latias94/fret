@@ -774,6 +774,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
                 let _redraw_guard = redraw_span.enter();
 
+                let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
+                if let Some(window_ref) = window_ref {
+                    let _ = self
+                        .update_window_environment_for_window_ref(app_window, window_ref.as_ref());
+                }
+
                 let hitch_config = redraw_hitch_config();
                 let hitch_total_started = hitch_config.map(|_| Instant::now());
                 let mut hitch_prepare_ms: Option<u64> = None;
@@ -1278,6 +1284,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
+        self.poll_window_environment_if_due(Instant::now());
 
         for (app_window, state) in self.windows.iter_mut() {
             let Some(a11y) = state.accessibility.as_mut() else {

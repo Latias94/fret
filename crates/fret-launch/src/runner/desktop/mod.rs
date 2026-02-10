@@ -17,8 +17,9 @@ mod hotpatch;
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
-    Rect, Scene, Size, UiServices, ViewportInputEvent, WindowMetricsService,
+    ColorScheme, ContrastPreference, Event, ExternalDragEvent, ExternalDragKind, ForcedColorsMode,
+    InternalDragEvent, InternalDragKind, Point, Px, Rect, Scene, Size, UiServices,
+    ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_native::clipboard::NativeClipboard;
 use fret_platform_native::external_drop::NativeExternalDrop;
@@ -1179,6 +1180,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     tick_id: TickId,
     frame_id: FrameId,
 
+    next_environment_poll_at: Instant,
+
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
@@ -1204,6 +1207,172 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     #[cfg(feature = "diag-screenshots")]
     diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DesktopEnvironmentSnapshot {
+    color_scheme: Option<ColorScheme>,
+    prefers_reduced_motion: Option<bool>,
+    contrast_preference: Option<ContrastPreference>,
+    forced_colors_mode: Option<ForcedColorsMode>,
+}
+
+fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentSnapshot {
+    DesktopEnvironmentSnapshot {
+        color_scheme: read_desktop_color_scheme(window),
+        prefers_reduced_motion: read_desktop_prefers_reduced_motion(),
+        contrast_preference: read_desktop_contrast_preference(),
+        forced_colors_mode: read_desktop_forced_colors_mode(),
+    }
+}
+
+fn read_desktop_color_scheme(window: &dyn Window) -> Option<ColorScheme> {
+    window.theme().map(|theme| match theme {
+        winit::window::Theme::Light => ColorScheme::Light,
+        winit::window::Theme::Dark => ColorScheme::Dark,
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SPI_GETCLIENTAREAANIMATION, SystemParametersInfoW,
+    };
+    use windows_sys::core::BOOL;
+
+    unsafe {
+        let mut enabled: BOOL = 0;
+        let ok = SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION,
+            0,
+            std::ptr::addr_of_mut!(enabled) as *mut _,
+            0,
+        );
+        (ok != 0).then_some(enabled == 0)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    use cocoa::base::id;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSWorkspace") else {
+            return None;
+        };
+        let workspace: id = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return None;
+        }
+        let selector = sel!(accessibilityDisplayShouldReduceMotion);
+        let responds: bool = msg_send![workspace, respondsToSelector: selector];
+        if !responds {
+            return None;
+        }
+        let value: bool = msg_send![workspace, accessibilityDisplayShouldReduceMotion];
+        Some(value)
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    use windows_sys::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SPI_GETHIGHCONTRAST, SystemParametersInfoW};
+
+    unsafe {
+        let mut hc = HIGHCONTRASTW {
+            cbSize: std::mem::size_of::<HIGHCONTRASTW>() as u32,
+            dwFlags: 0,
+            lpszDefaultScheme: std::ptr::null_mut(),
+        };
+        let ok = SystemParametersInfoW(
+            SPI_GETHIGHCONTRAST,
+            hc.cbSize,
+            std::ptr::addr_of_mut!(hc) as *mut _,
+            0,
+        );
+        if ok == 0 {
+            return None;
+        }
+        if (hc.dwFlags & HCF_HIGHCONTRASTON) != 0 {
+            Some(ContrastPreference::More)
+        } else {
+            Some(ContrastPreference::NoPreference)
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    use cocoa::base::id;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSWorkspace") else {
+            return None;
+        };
+        let workspace: id = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return None;
+        }
+        let selector = sel!(accessibilityDisplayShouldIncreaseContrast);
+        let responds: bool = msg_send![workspace, respondsToSelector: selector];
+        if !responds {
+            return None;
+        }
+        let value: bool = msg_send![workspace, accessibilityDisplayShouldIncreaseContrast];
+        Some(if value {
+            ContrastPreference::More
+        } else {
+            ContrastPreference::NoPreference
+        })
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    use windows_sys::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SPI_GETHIGHCONTRAST, SystemParametersInfoW};
+
+    unsafe {
+        let mut hc = HIGHCONTRASTW {
+            cbSize: std::mem::size_of::<HIGHCONTRASTW>() as u32,
+            dwFlags: 0,
+            lpszDefaultScheme: std::ptr::null_mut(),
+        };
+        let ok = SystemParametersInfoW(
+            SPI_GETHIGHCONTRAST,
+            hc.cbSize,
+            std::ptr::addr_of_mut!(hc) as *mut _,
+            0,
+        );
+        if ok == 0 {
+            return None;
+        }
+        Some(if (hc.dwFlags & HCF_HIGHCONTRASTON) != 0 {
+            ForcedColorsMode::Active
+        } else {
+            ForcedColorsMode::None
+        })
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    None
 }
 
 struct UploadedImageEntry {
@@ -2301,6 +2470,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
+        let now = Instant::now();
         let requested = match app.global::<PlatformCapabilities>().cloned() {
             Some(caps) => caps,
             None => {
@@ -2318,8 +2488,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let dispatcher = DesktopDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
-        #[cfg(feature = "hotpatch-subsecond")]
-        let now = Instant::now();
         Self {
             config,
             app,
@@ -2343,6 +2511,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             dock_tearoff_follow: None,
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
+            next_environment_poll_at: now,
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
@@ -2948,6 +3117,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 &Event::WindowScaleFactorChanged(state.window.scale_factor() as f32),
             );
         }
+        let window_ref = self.windows.get(id).map(|s| s.window.clone());
+        if let Some(window_ref) = window_ref {
+            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
+                self.app.request_redraw(id);
+            }
+        }
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
@@ -2978,6 +3153,67 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.raf_windows.insert(id);
         }
         Ok(id)
+    }
+
+    fn update_window_environment_for_window_ref(
+        &mut self,
+        window: fret_core::AppWindowId,
+        winit_window: &dyn Window,
+    ) -> bool {
+        let snapshot = read_desktop_environment_snapshot(winit_window);
+        let metrics = self.app.global::<WindowMetricsService>();
+
+        let needs_scheme = !metrics.is_some_and(|svc| svc.color_scheme_is_known(window))
+            || metrics.and_then(|svc| svc.color_scheme(window)) != snapshot.color_scheme;
+        let needs_motion = !metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_motion(window))
+                != snapshot.prefers_reduced_motion;
+        let needs_contrast = !metrics.is_some_and(|svc| svc.contrast_preference_is_known(window))
+            || metrics.and_then(|svc| svc.contrast_preference(window))
+                != snapshot.contrast_preference;
+        let needs_forced = !metrics.is_some_and(|svc| svc.forced_colors_mode_is_known(window))
+            || metrics.and_then(|svc| svc.forced_colors_mode(window))
+                != snapshot.forced_colors_mode;
+
+        if !(needs_scheme || needs_motion || needs_contrast || needs_forced) {
+            return false;
+        }
+
+        self.app
+            .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                if needs_scheme {
+                    svc.set_color_scheme(window, snapshot.color_scheme);
+                }
+                if needs_motion {
+                    svc.set_prefers_reduced_motion(window, snapshot.prefers_reduced_motion);
+                }
+                if needs_contrast {
+                    svc.set_contrast_preference(window, snapshot.contrast_preference);
+                }
+                if needs_forced {
+                    svc.set_forced_colors_mode(window, snapshot.forced_colors_mode);
+                }
+            });
+
+        true
+    }
+
+    fn poll_window_environment_if_due(&mut self, now: Instant) {
+        if now < self.next_environment_poll_at {
+            return;
+        }
+        self.next_environment_poll_at = now + Duration::from_millis(500);
+
+        let windows: Vec<(fret_core::AppWindowId, Arc<dyn Window>)> = self
+            .windows
+            .iter()
+            .map(|(id, state)| (id, state.window.clone()))
+            .collect();
+        for (id, window_ref) in windows {
+            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
+                self.app.request_redraw(id);
+            }
+        }
     }
 
     fn resize_surface(&mut self, window: fret_core::AppWindowId, width: u32, height: u32) {

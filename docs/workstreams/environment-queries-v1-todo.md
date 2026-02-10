@@ -67,6 +67,19 @@ ADR anchor:
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits from `WindowMetricsService`)
   - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional preferences)
 
+- [x] Desktop runner commits best-effort accessibility + appearance preferences:
+  - prefers-color-scheme (light/dark)
+  - prefers-reduced-motion (best-effort; `None` when unavailable)
+  - prefers-contrast (best-effort; `None` when unavailable)
+  - forced-colors mode (best-effort; `None` when unavailable)
+  - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs`
+  - Evidence: `crates/fret-launch/src/runner/desktop/app_handler.rs` (polling + per-frame refresh)
+
+- [x] Web/wasm runner uses `MediaQueryList` change listeners for environment preferences, writing to
+  `WindowMetricsService` only when the relevant media queries change (safe-area / occlusion remain
+  per-frame reads).
+  - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
+
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
 - [x] Add environment query helper surface:
@@ -102,6 +115,8 @@ ADR anchor:
 - [x] (Optional policy) Allow shadcn theme to follow the environment color scheme (light/dark) at
   app/runner integration boundaries, without pushing theme policy into the runtime.
   - Evidence: `ecosystem/fret-ui-shadcn/src/app_integration.rs` (`sync_theme_from_environment`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`on_global_changes_middleware`)
+  - Evidence: `ecosystem/fret-kit/src/lib.rs` (golden-path wiring)
 
 ## Sweep / hygiene
 

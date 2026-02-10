@@ -1,10 +1,14 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use fret_core::{
     AppWindowId, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, Point, Px, Rect, Size,
     WindowMetricsService,
 };
 use fret_render::RenderSceneParams;
 use fret_runtime::apply_window_metrics_event;
-use wasm_bindgen::JsCast;
+use web_sys::wasm_bindgen::JsCast;
+use web_sys::wasm_bindgen::closure::Closure;
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
 use winit::platform::web::WindowExtWeb;
@@ -13,78 +17,244 @@ use winit::window::Window;
 use super::super::{RenderTargetUpdate, WinitEventContext, WinitRenderContext, WinitWindowContext};
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct WebEnvironmentPreferenceSnapshot {
+    color_scheme: Option<ColorScheme>,
+    contrast_preference: Option<ContrastPreference>,
+    forced_colors_mode: Option<ForcedColorsMode>,
+    prefers_reduced_motion: Option<bool>,
+}
+
+pub(super) struct WebEnvironmentMediaQueries {
+    dirty: Rc<Cell<bool>>,
+    prefers_reduced_motion: Option<web_sys::MediaQueryList>,
+    prefers_color_scheme_dark: Option<web_sys::MediaQueryList>,
+    prefers_contrast_more: Option<web_sys::MediaQueryList>,
+    prefers_contrast_less: Option<web_sys::MediaQueryList>,
+    prefers_contrast_custom: Option<web_sys::MediaQueryList>,
+    prefers_contrast_no_preference: Option<web_sys::MediaQueryList>,
+    forced_colors_active: Option<web_sys::MediaQueryList>,
+    _listeners: Vec<Closure<dyn FnMut(web_sys::MediaQueryListEvent)>>,
+}
+
+impl WebEnvironmentMediaQueries {
+    fn new(window: &web_sys::Window) -> Self {
+        let dirty = Rc::new(Cell::new(true));
+        let mut listeners: Vec<Closure<dyn FnMut(web_sys::MediaQueryListEvent)>> = Vec::new();
+
+        let mql = |q: &str| window.match_media(q).ok().flatten();
+
+        let prefers_reduced_motion = mql("(prefers-reduced-motion: reduce)");
+        let prefers_color_scheme_dark = mql("(prefers-color-scheme: dark)");
+
+        let prefers_contrast_more = mql("(prefers-contrast: more)");
+        let prefers_contrast_less = mql("(prefers-contrast: less)");
+        let prefers_contrast_custom = mql("(prefers-contrast: custom)");
+        let prefers_contrast_no_preference = mql("(prefers-contrast: no-preference)");
+
+        let forced_colors_active = mql("(forced-colors: active)");
+
+        let mut attach = |list: &Option<web_sys::MediaQueryList>| {
+            let Some(list) = list.as_ref() else {
+                return;
+            };
+            let dirty = dirty.clone();
+            let cb = Closure::wrap(Box::new(move |_evt: web_sys::MediaQueryListEvent| {
+                dirty.set(true);
+            }) as Box<dyn FnMut(_)>);
+            let _ = list.add_event_listener_with_callback("change", cb.as_ref().unchecked_ref());
+            listeners.push(cb);
+        };
+
+        attach(&prefers_reduced_motion);
+        attach(&prefers_color_scheme_dark);
+        attach(&prefers_contrast_more);
+        attach(&prefers_contrast_less);
+        attach(&prefers_contrast_custom);
+        attach(&prefers_contrast_no_preference);
+        attach(&forced_colors_active);
+
+        Self {
+            dirty,
+            prefers_reduced_motion,
+            prefers_color_scheme_dark,
+            prefers_contrast_more,
+            prefers_contrast_less,
+            prefers_contrast_custom,
+            prefers_contrast_no_preference,
+            forced_colors_active,
+            _listeners: listeners,
+        }
+    }
+
+    fn take_dirty(&self) -> bool {
+        self.dirty.replace(false)
+    }
+
+    fn snapshot(&self) -> WebEnvironmentPreferenceSnapshot {
+        let prefers_reduced_motion = self.prefers_reduced_motion.as_ref().map(|m| m.matches());
+
+        let color_scheme = self.prefers_color_scheme_dark.as_ref().map(|m| {
+            if m.matches() {
+                ColorScheme::Dark
+            } else {
+                ColorScheme::Light
+            }
+        });
+
+        let contrast_preference = {
+            let any_supported = self.prefers_contrast_more.is_some()
+                || self.prefers_contrast_less.is_some()
+                || self.prefers_contrast_custom.is_some()
+                || self.prefers_contrast_no_preference.is_some();
+            if !any_supported {
+                None
+            } else if self
+                .prefers_contrast_more
+                .as_ref()
+                .is_some_and(|m| m.matches())
+            {
+                Some(ContrastPreference::More)
+            } else if self
+                .prefers_contrast_less
+                .as_ref()
+                .is_some_and(|m| m.matches())
+            {
+                Some(ContrastPreference::Less)
+            } else if self
+                .prefers_contrast_custom
+                .as_ref()
+                .is_some_and(|m| m.matches())
+            {
+                Some(ContrastPreference::Custom)
+            } else if self
+                .prefers_contrast_no_preference
+                .as_ref()
+                .is_some_and(|m| m.matches())
+            {
+                Some(ContrastPreference::NoPreference)
+            } else {
+                None
+            }
+        };
+
+        let forced_colors_mode = self.forced_colors_active.as_ref().map(|m| {
+            if m.matches() {
+                ForcedColorsMode::Active
+            } else {
+                ForcedColorsMode::None
+            }
+        });
+
+        WebEnvironmentPreferenceSnapshot {
+            color_scheme,
+            contrast_preference,
+            forced_colors_mode,
+            prefers_reduced_motion,
+        }
+    }
+}
+
 impl<D: WinitAppDriver> WinitRunner<D> {
     fn update_window_environment_for_frame(&mut self, window: &dyn Window) {
         let Some(web_window) = web_sys::window() else {
             return;
         };
 
-        let color_scheme = read_color_scheme(&web_window);
-        let contrast_preference = read_contrast_preference(&web_window);
-        let forced_colors_mode = read_forced_colors_mode(&web_window);
-        let prefers_reduced_motion = read_prefers_reduced_motion(&web_window);
+        let media_queries = self
+            .environment_media_queries
+            .get_or_insert_with(|| WebEnvironmentMediaQueries::new(&web_window));
+        let pref_snapshot = media_queries.take_dirty().then(|| media_queries.snapshot());
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
 
-        let metrics = self.app.global::<WindowMetricsService>();
+        let (
+            prev_scheme_known,
+            prev_scheme,
+            prev_contrast_known,
+            prev_contrast,
+            prev_forced_known,
+            prev_forced,
+            prev_motion_known,
+            prev_motion,
+            prev_safe_known,
+            prev_safe_area_insets,
+            prev_occlusion_known,
+            prev_occlusion_insets,
+        ) = if let Some(svc) = self.app.global::<WindowMetricsService>() {
+            (
+                svc.color_scheme_is_known(self.app_window),
+                svc.color_scheme(self.app_window),
+                svc.contrast_preference_is_known(self.app_window),
+                svc.contrast_preference(self.app_window),
+                svc.forced_colors_mode_is_known(self.app_window),
+                svc.forced_colors_mode(self.app_window),
+                svc.prefers_reduced_motion_is_known(self.app_window),
+                svc.prefers_reduced_motion(self.app_window),
+                svc.safe_area_insets_is_known(self.app_window),
+                svc.safe_area_insets(self.app_window),
+                svc.occlusion_insets_is_known(self.app_window),
+                svc.occlusion_insets(self.app_window),
+            )
+        } else {
+            (
+                false, None, false, None, false, None, false, None, false, None, false, None,
+            )
+        };
 
-        let prev_scheme_known =
-            metrics.is_some_and(|svc| svc.color_scheme_is_known(self.app_window));
-        let prev_scheme = metrics.and_then(|svc| svc.color_scheme(self.app_window));
-        if !prev_scheme_known || prev_scheme != color_scheme {
+        let (needs_scheme, needs_contrast, needs_forced, needs_motion) = pref_snapshot
+            .map(|pref_snapshot| {
+                (
+                    !prev_scheme_known || prev_scheme != pref_snapshot.color_scheme,
+                    !prev_contrast_known || prev_contrast != pref_snapshot.contrast_preference,
+                    !prev_forced_known || prev_forced != pref_snapshot.forced_colors_mode,
+                    !prev_motion_known || prev_motion != pref_snapshot.prefers_reduced_motion,
+                )
+            })
+            .unwrap_or((false, false, false, false));
+
+        let needs_safe = !prev_safe_known || prev_safe_area_insets != safe_area_insets;
+        let needs_occlusion = !prev_occlusion_known || prev_occlusion_insets != occlusion_insets;
+
+        if needs_scheme
+            || needs_contrast
+            || needs_forced
+            || needs_motion
+            || needs_safe
+            || needs_occlusion
+        {
             self.app
                 .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_color_scheme(self.app_window, color_scheme);
-                });
-        }
+                    if let Some(pref_snapshot) = pref_snapshot {
+                        if needs_scheme {
+                            svc.set_color_scheme(self.app_window, pref_snapshot.color_scheme);
+                        }
+                        if needs_contrast {
+                            svc.set_contrast_preference(
+                                self.app_window,
+                                pref_snapshot.contrast_preference,
+                            );
+                        }
+                        if needs_forced {
+                            svc.set_forced_colors_mode(
+                                self.app_window,
+                                pref_snapshot.forced_colors_mode,
+                            );
+                        }
+                        if needs_motion {
+                            svc.set_prefers_reduced_motion(
+                                self.app_window,
+                                pref_snapshot.prefers_reduced_motion,
+                            );
+                        }
+                    }
 
-        let prev_contrast_known =
-            metrics.is_some_and(|svc| svc.contrast_preference_is_known(self.app_window));
-        let prev_contrast = metrics.and_then(|svc| svc.contrast_preference(self.app_window));
-        if !prev_contrast_known || prev_contrast != contrast_preference {
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_contrast_preference(self.app_window, contrast_preference);
-                });
-        }
-
-        let prev_forced_known =
-            metrics.is_some_and(|svc| svc.forced_colors_mode_is_known(self.app_window));
-        let prev_forced = metrics.and_then(|svc| svc.forced_colors_mode(self.app_window));
-        if !prev_forced_known || prev_forced != forced_colors_mode {
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_forced_colors_mode(self.app_window, forced_colors_mode);
-                });
-        }
-
-        let prev_motion_known =
-            metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(self.app_window));
-        let prev_motion = metrics.and_then(|svc| svc.prefers_reduced_motion(self.app_window));
-        if !prev_motion_known || prev_motion != prefers_reduced_motion {
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_prefers_reduced_motion(self.app_window, prefers_reduced_motion);
-                });
-        }
-
-        let prev_safe_known =
-            metrics.is_some_and(|svc| svc.safe_area_insets_is_known(self.app_window));
-        let prev_safe_area_insets = metrics.and_then(|svc| svc.safe_area_insets(self.app_window));
-        if !prev_safe_known || prev_safe_area_insets != safe_area_insets {
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_safe_area_insets(self.app_window, safe_area_insets);
-                });
-        }
-
-        let prev_occlusion_known =
-            metrics.is_some_and(|svc| svc.occlusion_insets_is_known(self.app_window));
-        let prev_occlusion_insets = metrics.and_then(|svc| svc.occlusion_insets(self.app_window));
-        if !prev_occlusion_known || prev_occlusion_insets != occlusion_insets {
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_occlusion_insets(self.app_window, occlusion_insets);
+                    if needs_safe {
+                        svc.set_safe_area_insets(self.app_window, safe_area_insets);
+                    }
+                    if needs_occlusion {
+                        svc.set_occlusion_insets(self.app_window, occlusion_insets);
+                    }
                 });
         }
     }
@@ -383,52 +553,6 @@ fn read_occlusion_insets(window: &web_sys::Window) -> Option<Edges> {
         bottom: Px(bottom as f32),
         left: Px(offset_left as f32),
     })
-}
-
-fn read_prefers_reduced_motion(window: &web_sys::Window) -> Option<bool> {
-    let list = window
-        .match_media("(prefers-reduced-motion: reduce)")
-        .ok()??;
-    Some(list.matches())
-}
-
-fn read_color_scheme(window: &web_sys::Window) -> Option<ColorScheme> {
-    let list = window.match_media("(prefers-color-scheme: dark)").ok()??;
-    if list.matches() {
-        Some(ColorScheme::Dark)
-    } else {
-        Some(ColorScheme::Light)
-    }
-}
-
-fn read_contrast_preference(window: &web_sys::Window) -> Option<ContrastPreference> {
-    // Match in decreasing specificity. If the media query is supported, at least one of these
-    // should evaluate to true.
-    let matches = |q: &str| window.match_media(q).ok().flatten().map(|m| m.matches());
-
-    if matches("(prefers-contrast: more)")? {
-        return Some(ContrastPreference::More);
-    }
-    if matches("(prefers-contrast: less)")? {
-        return Some(ContrastPreference::Less);
-    }
-    if matches("(prefers-contrast: custom)")? {
-        return Some(ContrastPreference::Custom);
-    }
-    if matches("(prefers-contrast: no-preference)")? {
-        return Some(ContrastPreference::NoPreference);
-    }
-
-    None
-}
-
-fn read_forced_colors_mode(window: &web_sys::Window) -> Option<ForcedColorsMode> {
-    let list = window.match_media("(forced-colors: active)").ok()??;
-    if list.matches() {
-        Some(ForcedColorsMode::Active)
-    } else {
-        Some(ForcedColorsMode::None)
-    }
 }
 
 fn parse_px(value: &str) -> f32 {
