@@ -1,3 +1,4 @@
+pub(super) mod gallery;
 pub(super) mod material3;
 pub(super) mod pages;
 
