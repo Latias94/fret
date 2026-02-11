@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery: text fallback policy key bumps when settings change",
+    "tags": ["ui-gallery", "text", "fonts", "gate"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-fallback-policy-before"
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-settings-text-common-fallback-injection"
+      }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-settings-text-common-fallback-injection-common-fallback"
+      }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-fallback-policy-after"
+    }
+  ]
+}
