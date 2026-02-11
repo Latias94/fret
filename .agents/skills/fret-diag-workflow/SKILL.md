@@ -55,6 +55,7 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - `fretboard diag pack --include-screenshots` (bundle + screenshots)
    - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
    - `fretboard diag lint <bundle_dir|bundle.json> --json` (sanity checks: duplicate `test_id`, focused/active out-of-window, etc.)
+   - Note: `fretboard diag suite ...` runs lint for every captured bundle by default (use `--no-lint` to disable).
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
@@ -128,7 +129,12 @@ Start from these portable artifacts:
 Common `script.result.json` evidence fields (bounded ring buffers):
 
 - `evidence.selector_resolution_trace`: why a selector matched (or didn’t), with top-N candidates
-- `evidence.hit_test_trace`: injected pointer position vs hit chain, including barrier/capture/occlusion hints
+- `evidence.hit_test_trace`: injected pointer position vs hit chain, including:
+  - best-effort attribution (`blocking_reason` / `blocking_root` / `blocking_layer_id`),
+  - best-effort explanation string (`routing_explain`),
+  - capture/occlusion owners (semantics node/test_id/role/bounds; in-run references only),
+  - capture owner element path (`pointer_capture_element_path`; best-effort; in-run reference only).
+- `evidence.click_stable_trace`: stable-click decision trace (including hit-test mismatch probes)
 - `evidence.focus_trace`: focused element/node identity + barrier/capture hints; includes `text_input_snapshot`
 - `evidence.shortcut_routing_trace`: explains whether keydown went to IME/widget path or dispatched a command
 - `evidence.overlay_placement_trace`: overlay placement decisions (flip/shift/collision inputs + final rect), when available
@@ -138,7 +144,9 @@ Common `script.result.json` evidence fields (bounded ring buffers):
 Reason-code first triage:
 
 - `selector.not_found` ⇒ inspect `selector_resolution_trace` (wrong `test_id`, duplicated ids, hidden nodes)
-- `routing.*` / “click didn’t land” ⇒ inspect `hit_test_trace` (barrier/capture/occlusion)
+- `routing.*` / “click didn’t land” ⇒ inspect `hit_test_trace` first:
+  - start with `routing_explain` (fast hint),
+  - then inspect capture/occlusion owner fields (including `pointer_capture_element_path` when present).
 - `focus.*` / “type_text_into stalls” ⇒ inspect `focus_trace` + `text_input_snapshot`
 - “overlay jumped/flipped/clipped” ⇒ inspect `overlay_placement_trace` (outer/collision/anchor + chosen side + shift delta)
 - `timeout` ⇒ prefer adding an intermediate `capture_bundle` and shrinking the script

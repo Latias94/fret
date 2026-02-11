@@ -31,9 +31,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 - [x] Script metadata surface:
   - [x] define `meta` object shape (name/tags/required_capabilities/target_hints),
   - [x] rule: tooling ignores unknown `meta` keys.
-- [ ] Filesystem discovery:
+- [x] Filesystem discovery:
   - [x] runner writes deterministic `capabilities.json` under `FRET_DIAG_DIR`.
-- [ ] DevTools WS discovery:
+- [x] DevTools WS discovery:
   - [x] runner/session descriptors advertise `diag.*` capabilities.
 - [ ] Tooling gating:
   - [x] fail fast when required capabilities are missing,
@@ -49,7 +49,12 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 - [x] Add hit-test / routing evidence to `script.result.json` (`evidence.hit_test_trace`).
 - [ ] Expand the reason-code taxonomy as new evidence surfaces land (avoid premature over-taxonomy).
 - [ ] Add bounded trace evidence (ring buffer) dumped on failure:
-  - [ ] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability (hit path, occluder hints),
+  - [x] hit-test + routing evidence (capture/barriers/occlusion) with deeper explainability:
+    - hit node path (`hit_node_path`) for “hit the right region but got blocked” cases,
+    - best-effort attribution (`blocking_reason` / `blocking_root` / `blocking_layer_id`),
+    - best-effort explanation string (`routing_explain`),
+    - best-effort capture + occlusion owners (semantics node + bounds),
+    - best-effort capture owner element-path (`pointer_capture_element_path`),
   - [x] overlay placement evidence in `script.result.json` (`evidence.overlay_placement_trace`),
   - [x] focus + IME evidence snapshots in `script.result.json` (`evidence.focus_trace`, `evidence.web_ime_trace`),
   - [x] IME event summaries in `script.result.json` (`evidence.ime_event_trace`),
@@ -113,8 +118,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
   - [ ] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
     focus restore, wheel scroll stability, collision/placement sanity.
 - [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
-  - [ ] `tools/diag-scripts/run-ui-gallery-shadcn-conformance-suite.py`,
-  - [ ] consider `fretboard diag suite` integration as a follow-up (single entrypoint).
+  - [x] `fretboard diag suite` runs bundle lint by default (use `--no-lint` to disable).
 
 ## Scenario coverage (future-proofing)
 

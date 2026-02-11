@@ -57,7 +57,7 @@ Definition of done:
 
 - [x] Decide namespaces and initial stable vocabulary (`devtools.*` vs `diag.*`).
 - [x] Define `meta.required_capabilities` and “unknown meta ignored” rule.
-- [ ] Implement capability discovery:
+- [x] Implement capability discovery:
   - [x] filesystem-trigger transport (`capabilities.json`),
   - [x] devtools WS transport (session-advertised capabilities).
 - [ ] Make `fretboard diag run/repro/suite` fail fast when required capabilities are missing:
@@ -81,7 +81,7 @@ Definition of done:
   - [x] emit `evidence.overlay_placement_trace` (flip/shift/collision inputs + final rect; geometry-first overlay debugging),
   - [x] include input arbitration snapshot in hit-test trace (occlusion/capture/barrier roots),
   - [x] include best-effort `blocking_reason` attribution in hit-test trace,
-  - [ ] add deeper capture/barrier/occlusion *explainability* (hit path “why”, occluder hints, capture owner),
+  - [x] add deeper capture/barrier/occlusion *explainability* (hit node path, capture/occlusion owners, capture owner element path, routing explain string),
   - [x] add “chosen point” vs “hit-test path” mismatch evidence (via `evidence.click_stable_trace`).
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
@@ -106,8 +106,8 @@ Definition of done:
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).
 - [ ] Add a recommended “smoke” suite definition that is stable across platforms.
 - [ ] Make suites evidence-first by default:
-  - [ ] run `diag lint` for every captured bundle (fail on error-level findings),
-  - [ ] emit `check.lint.json` next to `bundle.json` (or include it in `diag pack` outputs).
+  - [x] run `diag lint` for every captured bundle (fail on error-level findings; use `--no-lint` to disable),
+  - [x] emit `check.lint.json` next to `bundle.json` (and include it in `diag pack` outputs).
 
 ### M6: Text & IME gates (self-drawn UI pain point)
 
