@@ -12,21 +12,22 @@ Workstream entry:
 
 ## Docs
 
-- [ ] Add this workstream to `docs/README.md` and `docs/workstreams/README.md`.
+- [x] Add this workstream to `docs/README.md` and `docs/workstreams/README.md`.
 - [ ] Add an explicit “Android-first MVP” note to `docs/roadmap.md` (if/when this becomes a priority).
 
-## Touch scroll (policy)
+## Touch scroll (baseline)
 
-- [ ] Add a touch pan-to-scroll helper in `ecosystem/fret-ui-kit`.
-  - Must not expand `crates/fret-ui` contract surface (ADR 0066).
-  - Must preserve tap behavior when the gesture does not exceed a drag threshold.
-- [ ] Adopt the helper in `ecosystem/fret-ui-shadcn::ScrollArea`.
-- [ ] Add a unit test proving touch drag updates `ScrollHandle` offset.
+- [x] Implement touch pan-to-scroll for `Scroll` and `VirtualList` in `crates/fret-ui`.
+  - Touch-only (no mouse drag scrolling).
+  - Threshold-based arming (avoid scrolling on tiny jitter).
+  - Preserve tap behavior when the gesture does not exceed click slop.
+- [x] Add a unit test proving touch drag updates `ScrollHandle` offset.
+- [ ] (Optional) Move richer policies (capture-steal, axis lock, inertia) into `ecosystem/fret-ui-kit`.
 
 ## Keyboard avoidance (policy)
 
 - [ ] Add a keyboard avoidance policy helper in `ecosystem/fret-ui-kit` (environment query driven).
-- [ ] Apply it in `apps/fret-ui-gallery` so focused inputs are not obscured by IME.
+- [x] Apply a minimal policy in `apps/fret-ui-gallery` so focused inputs are not obscured by IME.
   - Start with bottom “scroll slack” based on `occlusion_insets.bottom`.
 
 ## Android plumbing (runner/backend)
@@ -48,4 +49,3 @@ Notes:
 
 - [ ] iOS safe-area + keyboard occlusion commit (UIKit glue).
 - [ ] iOS lifecycle surface rebuild policy.
-
