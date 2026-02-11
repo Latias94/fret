@@ -185,7 +185,7 @@ Script tooling (no app required):
 
 Repeat-run triage (flake hunting):
 
-- Run the same script N times and write `repeat.summary.json` under `--dir`:
+- Run the same script N times and write `repeat.summary.json` under `--dir` (includes `highlights` aggregates for quick scanning):
   - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
 
 Script shrinking (automated minimal repro):

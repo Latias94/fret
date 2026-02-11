@@ -3103,6 +3103,184 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut lint_error_runs: Vec<usize> = Vec::new();
             let mut lint_counts_by_code: std::collections::BTreeMap<String, (u64, u64)> =
                 std::collections::BTreeMap::new();
+            let mut evidence_present_runs: Vec<usize> = Vec::new();
+            let mut focus_mismatch_runs: Vec<usize> = Vec::new();
+            let mut blocking_reason_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut overlay_chosen_side_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut ime_event_kind_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+
+            fn read_script_result_typed(path: &Path) -> Option<UiScriptResultV1> {
+                let bytes = std::fs::read(path).ok()?;
+                serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()
+            }
+
+            fn push_count(map: &mut std::collections::BTreeMap<String, u64>, key: &str) {
+                if key.trim().is_empty() {
+                    return;
+                }
+                *map.entry(key.to_string()).or_default() += 1;
+            }
+
+            fn overlay_side_as_str(side: fret_diag_protocol::UiOverlaySideV1) -> &'static str {
+                match side {
+                    fret_diag_protocol::UiOverlaySideV1::Top => "top",
+                    fret_diag_protocol::UiOverlaySideV1::Bottom => "bottom",
+                    fret_diag_protocol::UiOverlaySideV1::Left => "left",
+                    fret_diag_protocol::UiOverlaySideV1::Right => "right",
+                }
+            }
+
+            fn summarize_script_result_evidence(
+                result: &UiScriptResultV1,
+                blocking_reason_counts: &mut std::collections::BTreeMap<String, u64>,
+                overlay_chosen_side_counts: &mut std::collections::BTreeMap<String, u64>,
+                ime_event_kind_counts: &mut std::collections::BTreeMap<String, u64>,
+            ) -> (Option<serde_json::Value>, bool, bool) {
+                let Some(e) = result.evidence.as_ref() else {
+                    return (None, false, false);
+                };
+
+                let mut evidence_present = false;
+                let mut focus_mismatch = false;
+
+                let mut trace_counts = std::collections::BTreeMap::<&str, u64>::new();
+                trace_counts.insert(
+                    "selector_resolution_trace",
+                    e.selector_resolution_trace.len() as u64,
+                );
+                trace_counts.insert("hit_test_trace", e.hit_test_trace.len() as u64);
+                trace_counts.insert("click_stable_trace", e.click_stable_trace.len() as u64);
+                trace_counts.insert("bounds_stable_trace", e.bounds_stable_trace.len() as u64);
+                trace_counts.insert("focus_trace", e.focus_trace.len() as u64);
+                trace_counts.insert(
+                    "shortcut_routing_trace",
+                    e.shortcut_routing_trace.len() as u64,
+                );
+                trace_counts.insert(
+                    "overlay_placement_trace",
+                    e.overlay_placement_trace.len() as u64,
+                );
+                trace_counts.insert("web_ime_trace", e.web_ime_trace.len() as u64);
+                trace_counts.insert("ime_event_trace", e.ime_event_trace.len() as u64);
+
+                if trace_counts.values().any(|&n| n > 0) {
+                    evidence_present = true;
+                }
+
+                let mut hit_test_blocking = std::collections::BTreeMap::<String, u64>::new();
+                for entry in &e.hit_test_trace {
+                    if let Some(reason) = entry.blocking_reason.as_deref() {
+                        push_count(&mut hit_test_blocking, reason);
+                        push_count(blocking_reason_counts, reason);
+                    }
+                }
+
+                let mut focus = serde_json::json!({
+                    "mismatch_count": 0u64,
+                    "text_input_snapshots": 0u64,
+                    "composing_true": 0u64,
+                });
+                let mut mismatch_count: u64 = 0;
+                let mut text_input_snapshots: u64 = 0;
+                let mut composing_true: u64 = 0;
+                for entry in &e.focus_trace {
+                    if entry.matches_expected == Some(false) {
+                        mismatch_count += 1;
+                    }
+                    if let Some(snap) = entry.text_input_snapshot.as_ref() {
+                        text_input_snapshots += 1;
+                        if snap.is_composing {
+                            composing_true += 1;
+                        }
+                    }
+                }
+                if mismatch_count > 0 {
+                    focus_mismatch = true;
+                }
+                focus["mismatch_count"] = serde_json::Value::Number(mismatch_count.into());
+                focus["text_input_snapshots"] =
+                    serde_json::Value::Number(text_input_snapshots.into());
+                focus["composing_true"] = serde_json::Value::Number(composing_true.into());
+
+                let mut shortcut_outcomes = std::collections::BTreeMap::<String, u64>::new();
+                for entry in &e.shortcut_routing_trace {
+                    push_count(&mut shortcut_outcomes, &entry.outcome);
+                }
+
+                let mut overlay_kinds = std::collections::BTreeMap::<&str, u64>::new();
+                let mut overlay_chosen_sides = std::collections::BTreeMap::<String, u64>::new();
+                for entry in &e.overlay_placement_trace {
+                    match entry {
+                        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                            chosen_side,
+                            ..
+                        } => {
+                            *overlay_kinds.entry("anchored_panel").or_default() += 1;
+                            let side = overlay_side_as_str(*chosen_side);
+                            push_count(&mut overlay_chosen_sides, side);
+                            push_count(overlay_chosen_side_counts, side);
+                        }
+                        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::PlacedRect {
+                            ..
+                        } => {
+                            *overlay_kinds.entry("placed_rect").or_default() += 1;
+                        }
+                    }
+                }
+
+                let mut web_ime = serde_json::json!({
+                    "enabled_true": 0u64,
+                    "enabled_false": 0u64,
+                    "composing_true": 0u64,
+                });
+                let mut web_ime_enabled_true: u64 = 0;
+                let mut web_ime_enabled_false: u64 = 0;
+                let mut web_ime_composing_true: u64 = 0;
+                for entry in &e.web_ime_trace {
+                    if entry.enabled {
+                        web_ime_enabled_true += 1;
+                    } else {
+                        web_ime_enabled_false += 1;
+                    }
+                    if entry.composing {
+                        web_ime_composing_true += 1;
+                    }
+                }
+                web_ime["enabled_true"] = serde_json::Value::Number(web_ime_enabled_true.into());
+                web_ime["enabled_false"] = serde_json::Value::Number(web_ime_enabled_false.into());
+                web_ime["composing_true"] =
+                    serde_json::Value::Number(web_ime_composing_true.into());
+
+                let mut ime_kinds = std::collections::BTreeMap::<String, u64>::new();
+                for entry in &e.ime_event_trace {
+                    push_count(&mut ime_kinds, &entry.kind);
+                    push_count(ime_event_kind_counts, &entry.kind);
+                }
+
+                let summary = serde_json::json!({
+                    "trace_counts": trace_counts,
+                    "hit_test": {
+                        "blocking_reason_counts": hit_test_blocking,
+                    },
+                    "focus": focus,
+                    "shortcuts": {
+                        "outcome_counts": shortcut_outcomes,
+                    },
+                    "overlay": {
+                        "kind_counts": overlay_kinds,
+                        "chosen_side_counts": overlay_chosen_sides,
+                    },
+                    "web_ime": web_ime,
+                    "ime_events": {
+                        "kind_counts": ime_kinds,
+                    },
+                });
+
+                (Some(summary), evidence_present, focus_mismatch)
+            }
 
             for run_index in 0..repeat {
                 if !reuse_process {
@@ -3182,6 +3360,24 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         *stage_counts.entry(stage.clone()).or_default() += 1;
                         if let Some(code) = s.reason_code.as_deref().filter(|v| !v.is_empty()) {
                             *reason_code_counts.entry(code.to_string()).or_default() += 1;
+                        }
+
+                        let mut evidence: Option<serde_json::Value> = None;
+                        if let Some(full) = read_script_result_typed(&resolved_script_result_path) {
+                            let (summary, present, focus_mismatch) =
+                                summarize_script_result_evidence(
+                                    &full,
+                                    &mut blocking_reason_counts,
+                                    &mut overlay_chosen_side_counts,
+                                    &mut ime_event_kind_counts,
+                                );
+                            evidence = summary;
+                            if present {
+                                evidence_present_runs.push(run_index);
+                            }
+                            if focus_mismatch {
+                                focus_mismatch_runs.push(run_index);
+                            }
                         }
 
                         let mut perf: Option<serde_json::Value> = None;
@@ -3332,6 +3528,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
                             "perf": perf,
                             "lint": lint,
+                            "evidence": evidence,
                             "compare_to_baseline": compare_to_baseline,
                         })
                     }
@@ -3385,6 +3582,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })),
                 "lint_error_runs": lint_error_runs,
                 "lint_counts_by_code": lint_counts_by_code_json,
+                "evidence_present_runs": evidence_present_runs,
+                "focus_mismatch_runs": focus_mismatch_runs,
+                "blocking_reason_counts": blocking_reason_counts,
+                "overlay_chosen_side_counts": overlay_chosen_side_counts,
+                "ime_event_kind_counts": ime_event_kind_counts,
             });
             let payload = serde_json::json!({
                 "schema_version": 1,
