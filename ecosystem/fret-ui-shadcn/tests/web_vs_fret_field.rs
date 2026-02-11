@@ -10,10 +10,10 @@ use std::sync::Arc;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn contains_text(node: &WebNode, needle: &str) -> bool {
-    node.text.as_deref().is_some_and(|t| t.contains(needle))
-        || node.children.iter().any(|c| contains_text(c, needle))
-}
+#[path = "support/web_tree.rs"]
+mod web_tree;
+
+use web_tree::contains_text;
 
 fn web_find_by_tag_and_text<'a>(root: &'a WebNode, tag: &str, text: &str) -> Option<&'a WebNode> {
     find_first(root, &|n| n.tag == tag && contains_text(n, text))

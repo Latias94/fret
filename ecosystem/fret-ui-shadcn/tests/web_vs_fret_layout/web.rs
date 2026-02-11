@@ -7,6 +7,9 @@ pub(crate) use web_golden_shadcn::{
     find_first, read_web_golden, web_theme,
 };
 
+#[path = "../support/web_tree.rs"]
+mod web_tree;
+
 pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
     pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
@@ -26,22 +29,11 @@ pub(crate) fn find_all_in_theme<'a>(
 }
 
 pub(crate) fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
+    web_tree::contains_text(node, needle)
 }
 
 pub(crate) fn contains_id(node: &WebNode, needle: &str) -> bool {
-    if node
-        .id
-        .as_deref()
-        .or_else(|| node.attrs.get("id").map(String::as_str))
-        .is_some_and(|id| id == needle)
-    {
-        return true;
-    }
-    node.children.iter().any(|c| contains_id(c, needle))
+    web_tree::contains_id(node, needle)
 }
 
 pub(crate) fn web_find_by_tag_and_text<'a>(

@@ -8,12 +8,9 @@ use std::sync::Arc;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
-}
+#[path = "support/web_tree.rs"]
+mod web_tree;
+use web_tree::contains_text;
 
 #[derive(Default)]
 struct FakeServices;
