@@ -10,6 +10,9 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/docking-nary-split-graph-v1.md`
+- `docs/workstreams/docking-nary-split-graph-v1-todo.md`
+- `docs/workstreams/docking-nary-split-graph-v1-milestones.md`
 - `docs/workstreams/workspace-crate-boundaries-v1.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
@@ -129,6 +132,9 @@ Active workstreams:
 - `docs/workstreams/router-v1-todo.md`
 - `docs/workstreams/router-tanstack-parity-v1.md`
 - `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1.md`
+- `docs/workstreams/fret-interaction-kernel-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1-milestones.md`
 - `docs/workstreams/router-ui-v1.md`
 - `docs/workstreams/router-ui-v1-todo.md`
 - `docs/workstreams/image-support-v1.md`

@@ -77,7 +77,9 @@ impl Renderer {
                 | SceneOp::PushClipRRect { .. }
                 | SceneOp::PopClip
                 | SceneOp::PushEffect { .. }
-                | SceneOp::PopEffect => {}
+                | SceneOp::PopEffect
+                | SceneOp::PushCompositeGroup { .. }
+                | SceneOp::PopCompositeGroup => {}
                 SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
                     let s = current_transform_scale(
                         *transform_stack
@@ -120,6 +122,8 @@ impl Renderer {
                 | SceneOp::Image { .. }
                 | SceneOp::ImageRegion { .. }
                 | SceneOp::MaskImage { .. }
+                | SceneOp::PushMask { .. }
+                | SceneOp::PopMask
                 | SceneOp::Text { .. }
                 | SceneOp::Path { .. }
                 | SceneOp::ViewportSurface { .. } => {}

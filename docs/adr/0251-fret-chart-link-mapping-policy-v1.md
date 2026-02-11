@@ -4,7 +4,7 @@ Status: Proposed (P0)
 
 ## Context
 
-`delinea` emits link events for cross-chart coordination (ADRs 1146, 1172, 1173). These engine
+`delinea` emits link events for cross-chart coordination (ADRs 0207, 0249, 0250). These engine
 events are intentionally **chart-local** and use `AxisId` / `GridId` for unambiguous routing inside
 one chart model.
 

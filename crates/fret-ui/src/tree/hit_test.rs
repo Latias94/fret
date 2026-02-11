@@ -266,7 +266,8 @@ impl<H: UiHost> UiTree<H> {
             super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
             super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
                 let started = self.debug_enabled.then(fret_core::time::Instant::now);
-                let accepted = self.hit_test_node_self_only(candidate, position);
+                let accepted = self.hit_test_node_self_only(candidate, position)
+                    && self.hit_test_candidate_reachable_from_root(root, candidate, position);
                 if let Some(started) = started {
                     self.debug_stats.hit_test_candidate_self_only_time += started.elapsed();
                 }
@@ -288,6 +289,112 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+    }
+
+    fn hit_test_candidate_reachable_from_root(
+        &self,
+        root: NodeId,
+        candidate: NodeId,
+        position: Point,
+    ) -> bool {
+        // The bounds-tree fast path can return a deep descendant without proving that all
+        // ancestors would allow hit-test traversal (e.g. `HitTestGate(hit_test=false)`).
+        // Validate that the root->candidate chain is hit-test traversable in the current
+        // coordinate space.
+
+        let mut path_rev: Vec<NodeId> = Vec::new();
+        let mut current = Some(candidate);
+        while let Some(id) = current {
+            path_rev.push(id);
+            if id == root {
+                break;
+            }
+            current = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        if path_rev.last().copied() != Some(root) {
+            return false;
+        }
+        path_rev.reverse();
+
+        let mut position = position;
+        for (idx, &node) in path_rev.iter().enumerate() {
+            let Some(n) = self.nodes.get(node) else {
+                return false;
+            };
+            let widget = n.widget.as_ref();
+
+            let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+                .then_some(n.prepaint_hit_test)
+                .flatten();
+            let render_transform_inv = prepaint.as_ref().and_then(|p| p.render_transform_inv);
+            let children_render_transform_inv = prepaint
+                .as_ref()
+                .and_then(|p| p.children_render_transform_inv);
+            let clips_hit_test = prepaint
+                .as_ref()
+                .map(|p| p.clips_hit_test)
+                .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true));
+            let corner_radii = prepaint
+                .as_ref()
+                .and_then(|p| p.clip_hit_test_corner_radii)
+                .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
+
+            let position_local = if let Some(inv) = render_transform_inv {
+                inv.apply_point(position)
+            } else if let Some(w) = widget
+                && let Some(t) = w.render_transform(n.bounds)
+                && let Some(inv) = t.inverse()
+            {
+                inv.apply_point(position)
+            } else {
+                position
+            };
+
+            if clips_hit_test {
+                if !n.bounds.contains(position_local) {
+                    return false;
+                }
+                if let Some(radii) = corner_radii
+                    && !Self::point_in_rounded_rect(n.bounds, radii, position_local)
+                {
+                    return false;
+                }
+            }
+
+            let Some(next) = path_rev.get(idx + 1).copied() else {
+                return true;
+            };
+
+            let hit_test_children = widget
+                .map(|w| w.hit_test_children(n.bounds, position_local))
+                .unwrap_or(true);
+            if !hit_test_children {
+                return false;
+            }
+
+            let child_position = if let Some(inv) = children_render_transform_inv {
+                inv.apply_point(position_local)
+            } else if let Some(w) = widget
+                && let Some(t) = w.children_render_transform(n.bounds)
+                && let Some(inv) = t.inverse()
+            {
+                inv.apply_point(position_local)
+            } else {
+                position_local
+            };
+
+            // Only follow the declared parent chain; this validates traversal gates and clips,
+            // and does not attempt to prove sibling z-order correctness (the bounds tree already
+            // provides candidate ordering).
+            let next_parent_ok = self.nodes.get(next).and_then(|n| n.parent) == Some(node);
+            if !next_parent_ok {
+                return false;
+            }
+
+            position = child_position;
+        }
+
+        false
     }
 
     fn hit_test_node_self_only(&self, node: NodeId, position: Point) -> bool {

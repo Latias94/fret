@@ -130,6 +130,7 @@ struct Node<H: UiHost> {
     parent: Option<NodeId>,
     children: Vec<NodeId>,
     bounds: Rect,
+    bounds_written_paint_pass: u64,
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
@@ -208,6 +209,7 @@ impl<H: UiHost> Node<H> {
             parent: None,
             children: Vec::new(),
             bounds: Rect::default(),
+            bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             measure_cache: None,
             invalidation: InvalidationFlags {
@@ -1576,6 +1578,7 @@ pub struct UiTree<H: UiHost> {
     measure_stack: Vec<MeasureStackKey>,
     measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
     frame_arena: FrameArenaScratch,
+    paint_pass: u64,
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
@@ -2016,6 +2019,7 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_stack: Vec::new(),
             measure_cache_this_frame: HashMap::new(),
             frame_arena: FrameArenaScratch::default(),
+            paint_pass: 0,
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
@@ -3273,6 +3277,42 @@ impl<H: UiHost> UiTree<H> {
         }
         self.with_widget_mut(node, |w, _ui| {
             w.sync_interactivity_gate(present, interactive);
+        });
+    }
+
+    pub(crate) fn sync_hit_test_gate_widget(&mut self, node: NodeId, hit_test: bool) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_HIT_TEST_GATE_SYNC").is_some() {
+            eprintln!("sync_hit_test_gate_widget: node={node:?} hit_test={hit_test}");
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_hit_test_gate(hit_test);
+        });
+    }
+
+    pub(crate) fn sync_focus_traversal_gate_widget(&mut self, node: NodeId, traverse: bool) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_FOCUS_TRAVERSAL_GATE_SYNC").is_some() {
+            eprintln!("sync_focus_traversal_gate_widget: node={node:?} traverse={traverse}");
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_focus_traversal_gate(traverse);
         });
     }
 

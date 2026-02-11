@@ -2,22 +2,18 @@ use fret_core::Color;
 use fret_ui::Theme;
 
 pub(crate) fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
-    let mut key = String::with_capacity("color.syntax.".len() + highlight.len());
-    key.push_str("color.syntax.");
-    key.push_str(highlight);
-    if let Some(c) = theme.color_by_key(key.as_str()) {
-        return Some(c);
-    }
-
-    let fallback = highlight.split('.').next().unwrap_or(highlight);
-    if fallback != highlight {
-        let mut key = String::with_capacity("color.syntax.".len() + fallback.len());
+    let mut cur = Some(highlight);
+    while let Some(name) = cur {
+        let mut key = String::with_capacity("color.syntax.".len() + name.len());
         key.push_str("color.syntax.");
-        key.push_str(fallback);
+        key.push_str(name);
         if let Some(c) = theme.color_by_key(key.as_str()) {
             return Some(c);
         }
+        cur = name.rsplit_once('.').map(|(prefix, _)| prefix);
     }
+
+    let fallback = highlight.split('.').next().unwrap_or(highlight);
 
     match fallback {
         "comment" => Some(theme.color_required("muted-foreground")),

@@ -125,6 +125,20 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
             chain: format!("{chain:?}"),
         },
         EffectMarkerKind::Pop => JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix },
+        EffectMarkerKind::CompositeGroupPush {
+            scissor,
+            uniform_index,
+            mode,
+            quality,
+        } => JsonDumpEffectMarker::Push {
+            draw_ix: m.draw_ix,
+            scissor: scissor.into(),
+            uniform_index,
+            mode: format!("CompositeGroup({mode:?})"),
+            quality: format!("{quality:?}"),
+            chain: String::new(),
+        },
+        EffectMarkerKind::CompositeGroupPop => JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix },
     }
 }
 

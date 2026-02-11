@@ -1150,6 +1150,20 @@ pub trait Widget<H: UiHost> {
     /// this hook so the mount pipeline can keep semantics/hit-test traversal consistent even when
     /// layout is skipped.
     fn sync_interactivity_gate(&mut self, _present: bool, _interactive: bool) {}
+
+    /// Optional synchronization hook for declarative `HitTestGate` nodes.
+    ///
+    /// Declarative `HitTestGate` toggles whether pointer hit-testing should recurse into the
+    /// subtree. Host widgets can override this hook so the mount pipeline can update cached
+    /// hit-test traversal flags without requiring a full layout pass.
+    fn sync_hit_test_gate(&mut self, _hit_test: bool) {}
+
+    /// Optional synchronization hook for declarative `FocusTraversalGate` nodes.
+    ///
+    /// Declarative `FocusTraversalGate` toggles whether focus traversal should recurse into the
+    /// subtree. Host widgets can override this hook so the mount pipeline can update cached
+    /// traversal flags without requiring a full layout pass.
+    fn sync_focus_traversal_gate(&mut self, _traverse: bool) {}
     /// Whether focus traversal should recurse into this node's children.
     ///
     /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during

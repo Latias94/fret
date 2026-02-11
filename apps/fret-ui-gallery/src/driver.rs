@@ -10,19 +10,11 @@ use fret_core::{
     ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, SemanticsRole,
     TimerToken, UiServices,
 };
-use fret_kit::prelude::{
-    InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
-};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_query::{QueryPolicy, with_query_client};
-use fret_router::{
-    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
-    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
-    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
-};
+use fret_router::{NavigationAction, Router};
 use fret_runtime::{
     DefaultKeybinding, ImageUpdateToken, KeyChord, MenuItemToggle, MenuItemToggleKind,
     PlatformCapabilities, PlatformFilter, WindowCommandAvailabilityService,
@@ -30,18 +22,16 @@ use fret_runtime::{
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
+use fret_workspace::WorkspaceFrame;
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
-};
-use fret_workspace::{
-    WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -58,201 +48,19 @@ use crate::harness::{
 use crate::spec::*;
 use crate::ui;
 
-const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
-const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
-
-#[cfg(target_arch = "wasm32")]
-type UiGalleryHistory = fret_router::WebHistoryAdapter;
-
-#[cfg(not(target_arch = "wasm32"))]
-type UiGalleryHistory = fret_router::MemoryHistory;
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-enum UiGalleryRouteId {
-    Root,
-    Gallery,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-struct UiGalleryPagePrefetchSeed {
-    selected_page: Arc<str>,
-}
-
-fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
-    let location = RouteLocation::from_path("/gallery")
-        .with_query_value("page", Some(page.to_string()))
-        .with_query_value("source", Some("nav".to_string()));
-
-    if let Some(demo) = from.query_value("demo") {
-        location.with_query_value("demo", Some(demo.to_string()))
-    } else {
-        location
-    }
-}
-
-fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
-    let page = location.query_value("page")?;
-    page_spec(page).is_some().then_some(Arc::<str>::from(page))
-}
-
-fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
-    let tree = Arc::new(RouteTree::new(
-        RouteNode::new(UiGalleryRouteId::Root, "/")
-            .expect("root route should build")
-            .with_children(vec![
-                RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
-                    .expect("gallery route should build"),
-            ]),
-    ));
-
-    let search_table = Arc::new(RouteSearchTable::new());
-
-    #[cfg(target_arch = "wasm32")]
-    let history = UiGalleryHistory::new().expect("web history adapter should resolve a location");
-
-    #[cfg(not(target_arch = "wasm32"))]
-    let history = UiGalleryHistory::new(RouteLocation::parse("/"));
-
-    let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
-        .expect("ui gallery router should build");
-
-    router.route_hooks_mut().insert(
-        UiGalleryRouteId::Gallery,
-        RouteHooks {
-            before_load: None,
-            loader: Some(Arc::new(|ctx| {
-                vec![fret_router::RoutePrefetchIntent {
-                    route: ctx.matched.route,
-                    namespace: UI_GALLERY_PAGE_CONTENT_NS,
-                    location: ctx.to.clone(),
-                    extra: None,
-                }]
-            })),
-        },
-    );
-
-    router
-}
-
-fn apply_page_route_side_effects_via_router(
-    app: &mut App,
-    window: AppWindowId,
-    action: NavigationAction,
-    current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-) {
-    let current_route = route_location_for_page(&router.state().location, &current_page);
-    let update = router.navigate_with_prefetch_intents(action, Some(current_route.canonicalized()));
-    apply_page_router_update_side_effects(app, window, current_page, router, update);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn sync_gallery_page_history_command_enabled(
-    app: &mut App,
-    window: AppWindowId,
-    history: &UiGalleryHistory,
-) {
-    let can_back = history.can_back();
-    let can_forward = history.can_forward();
-
-    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
-    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
-
-    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-        if can_back {
-            svc.clear_command(window, &cmd_back);
-        } else {
-            svc.set_enabled(window, cmd_back.clone(), false);
-        }
-
-        if can_forward {
-            svc.clear_command(window, &cmd_forward);
-        } else {
-            svc.set_enabled(window, cmd_forward.clone(), false);
-        }
-    });
-}
-
-#[cfg(target_arch = "wasm32")]
-fn sync_gallery_page_history_command_enabled(
-    app: &mut App,
-    window: AppWindowId,
-    _history: &UiGalleryHistory,
-) {
-    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
-    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
-
-    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-        svc.clear_command(window, &cmd_back);
-        svc.clear_command(window, &cmd_forward);
-    });
-}
-
-fn apply_page_router_update_side_effects(
-    app: &mut App,
-    window: AppWindowId,
-    current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-    update: Result<
-        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
-        fret_router::RouteSearchValidationFailure,
-    >,
-) {
-    sync_gallery_page_history_command_enabled(app, window, router.history());
-
-    let Ok(update) = update else {
-        return;
-    };
-
-    let RouterUpdateWithPrefetchIntents { update, intents } = update;
-
-    let invalidated = if let RouterUpdate::Changed(transition) = &update {
-        collect_invalidated_namespaces(
-            &transition.from,
-            &transition.to,
-            &[
-                NamespaceInvalidationRule::new(
-                    UI_GALLERY_PAGE_CONTENT_NS,
-                    RouteChangePolicy::PathOrQueryChanged,
-                ),
-                NamespaceInvalidationRule::new(
-                    UI_GALLERY_NAV_INDEX_NS,
-                    RouteChangePolicy::QueryChanged,
-                ),
-            ],
-        )
-    } else {
-        Vec::new()
-    };
-
-    if invalidated.is_empty() && intents.is_empty() {
-        return;
-    }
-
-    let _ = with_query_client(app, |client, app| {
-        for namespace in invalidated {
-            client.invalidate_namespace(namespace);
-        }
-
-        for intent in intents {
-            if intent.namespace != UI_GALLERY_PAGE_CONTENT_NS {
-                continue;
-            }
-
-            let seed = UiGalleryPagePrefetchSeed {
-                selected_page: current_page.clone(),
-            };
-            let key = prefetch_intent_query_key::<String, _>(&intent);
-            let policy = QueryPolicy::default();
-            let _ = client.prefetch(app, window, key, policy, move |_token| {
-                Ok::<String, fret_query::QueryError>(format!(
-                    "ui_gallery.page_prefetch:{}",
-                    seed.selected_page
-                ))
-            });
-        }
-    });
-}
+mod chrome;
+mod debug_hud;
+mod inspector;
+mod menubar;
+mod router;
+mod settings_sheet;
+mod status_bar;
+mod toaster;
+use router::{
+    UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
+    apply_page_router_update_side_effects, build_ui_gallery_page_router,
+    page_from_gallery_location,
+};
 
 #[derive(Default)]
 struct DebugHudState {
@@ -432,6 +240,89 @@ struct UiGalleryWindowState {
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
     last_config_files_status_seq: u64,
+}
+
+impl UiGalleryWindowState {
+    fn content_models(&self) -> ui::UiGalleryModels {
+        ui::UiGalleryModels {
+            content_tab: self.content_tab.clone(),
+            theme_preset: self.theme_preset.clone(),
+            theme_preset_open: self.theme_preset_open.clone(),
+            view_cache_enabled: self.view_cache_enabled.clone(),
+            view_cache_cache_shell: self.view_cache_cache_shell.clone(),
+            view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
+            view_cache_popover_open: self.view_cache_popover_open.clone(),
+            view_cache_continuous: self.view_cache_continuous.clone(),
+            view_cache_counter: self.view_cache_counter.clone(),
+            popover_open: self.popover_open.clone(),
+            dialog_open: self.dialog_open.clone(),
+            alert_dialog_open: self.alert_dialog_open.clone(),
+            sheet_open: self.sheet_open.clone(),
+            portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
+            select_value: self.select_value.clone(),
+            select_open: self.select_open.clone(),
+            combobox_value: self.combobox_value.clone(),
+            combobox_open: self.combobox_open.clone(),
+            combobox_query: self.combobox_query.clone(),
+            date_picker_open: self.date_picker_open.clone(),
+            date_picker_month: self.date_picker_month.clone(),
+            date_picker_selected: self.date_picker_selected.clone(),
+            time_picker_open: self.time_picker_open.clone(),
+            time_picker_selected: self.time_picker_selected.clone(),
+            resizable_h_fractions: self.resizable_h_fractions.clone(),
+            resizable_v_fractions: self.resizable_v_fractions.clone(),
+            data_table_state: self.data_table_state.clone(),
+            data_grid_selected_row: self.data_grid_selected_row.clone(),
+            tabs_value: self.tabs_value.clone(),
+            accordion_value: self.accordion_value.clone(),
+            avatar_demo_image: self.avatar_demo_image.clone(),
+            image_fit_demo_wide_image: self.image_fit_demo_wide_image.clone(),
+            image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
+            image_fit_demo_streaming_image: self.image_fit_demo_streaming_image.clone(),
+            progress: self.progress.clone(),
+            checkbox: self.checkbox.clone(),
+            switch: self.switch.clone(),
+            material3_checkbox: self.material3_checkbox.clone(),
+            material3_switch: self.material3_switch.clone(),
+            material3_radio_value: self.material3_radio_value.clone(),
+            material3_tabs_value: self.material3_tabs_value.clone(),
+            material3_list_value: self.material3_list_value.clone(),
+            material3_expressive: self.material3_expressive.clone(),
+            material3_navigation_bar_value: self.material3_navigation_bar_value.clone(),
+            material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
+            material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
+            material3_modal_navigation_drawer_open: self
+                .material3_modal_navigation_drawer_open
+                .clone(),
+            material3_dialog_open: self.material3_dialog_open.clone(),
+            material3_text_field_value: self.material3_text_field_value.clone(),
+            material3_text_field_disabled: self.material3_text_field_disabled.clone(),
+            material3_text_field_error: self.material3_text_field_error.clone(),
+            material3_autocomplete_value: self.material3_autocomplete_value.clone(),
+            material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
+            material3_autocomplete_error: self.material3_autocomplete_error.clone(),
+            material3_autocomplete_dialog_open: self.material3_autocomplete_dialog_open.clone(),
+            material3_menu_open: self.material3_menu_open.clone(),
+            text_input: self.text_input.clone(),
+            text_area: self.text_area.clone(),
+            dropdown_open: self.dropdown_open.clone(),
+            context_menu_open: self.context_menu_open.clone(),
+            context_menu_edge_open: self.context_menu_edge_open.clone(),
+            cmdk_open: self.cmdk_open.clone(),
+            cmdk_query: self.cmdk_query.clone(),
+            last_action: self.last_action.clone(),
+            sonner_position: self.sonner_position.clone(),
+            virtual_list_torture_jump: self.virtual_list_torture_jump.clone(),
+            virtual_list_torture_edit_row: self.virtual_list_torture_edit_row.clone(),
+            virtual_list_torture_edit_text: self.virtual_list_torture_edit_text.clone(),
+            virtual_list_torture_scroll: self.virtual_list_torture_scroll.clone(),
+            code_editor_syntax_rust: self.code_editor_syntax_rust.clone(),
+            code_editor_boundary_identifier: self.code_editor_boundary_identifier.clone(),
+            code_editor_soft_wrap: self.code_editor_soft_wrap.clone(),
+            code_editor_folds: self.code_editor_folds.clone(),
+            code_editor_inlays: self.code_editor_inlays.clone(),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -2273,24 +2164,11 @@ impl UiGalleryDriver {
             }
         }
 
+        let content_models = Arc::new(state.content_models());
         let selected_page = state.selected_page.clone();
         let workspace_tabs = state.workspace_tabs.clone();
         let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
         let nav_query = state.nav_query.clone();
-        let content_tab = state.content_tab.clone();
-        let theme_preset = state.theme_preset.clone();
-        let theme_preset_open = state.theme_preset_open.clone();
-        let view_cache_enabled = state.view_cache_enabled.clone();
-        let view_cache_cache_shell = state.view_cache_cache_shell.clone();
-        let view_cache_inner_enabled = state.view_cache_inner_enabled.clone();
-        let view_cache_popover_open = state.view_cache_popover_open.clone();
-        let view_cache_continuous = state.view_cache_continuous.clone();
-        let view_cache_counter = state.view_cache_counter.clone();
-        let popover_open = state.popover_open.clone();
-        let dialog_open = state.dialog_open.clone();
-        let alert_dialog_open = state.alert_dialog_open.clone();
-        let sheet_open = state.sheet_open.clone();
-        let portal_geometry_popover_open = state.portal_geometry_popover_open.clone();
         let settings_open = state.settings_open.clone();
         let settings_menu_bar_os = state.settings_menu_bar_os.clone();
         let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
@@ -2298,68 +2176,7 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
         let settings_edit_can_undo = state.settings_edit_can_undo.clone();
         let settings_edit_can_redo = state.settings_edit_can_redo.clone();
-        let select_value = state.select_value.clone();
-        let select_open = state.select_open.clone();
-        let combobox_value = state.combobox_value.clone();
-        let combobox_open = state.combobox_open.clone();
-        let combobox_query = state.combobox_query.clone();
-        let date_picker_open = state.date_picker_open.clone();
-        let date_picker_month = state.date_picker_month.clone();
-        let date_picker_selected = state.date_picker_selected.clone();
-        let time_picker_open = state.time_picker_open.clone();
-        let time_picker_selected = state.time_picker_selected.clone();
-        let resizable_h_fractions = state.resizable_h_fractions.clone();
-        let resizable_v_fractions = state.resizable_v_fractions.clone();
-        let data_table_state = state.data_table_state.clone();
-        let data_grid_selected_row = state.data_grid_selected_row.clone();
-        let tabs_value = state.tabs_value.clone();
-        let accordion_value = state.accordion_value.clone();
-        let avatar_demo_image = state.avatar_demo_image.clone();
-        let image_fit_demo_wide_image = state.image_fit_demo_wide_image.clone();
-        let image_fit_demo_tall_image = state.image_fit_demo_tall_image.clone();
-        let image_fit_demo_streaming_image = state.image_fit_demo_streaming_image.clone();
-        let progress = state.progress.clone();
-        let checkbox = state.checkbox.clone();
-        let switch = state.switch.clone();
-        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
-        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
-        let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
-        let code_editor_folds = state.code_editor_folds.clone();
-        let code_editor_inlays = state.code_editor_inlays.clone();
-        let material3_checkbox = state.material3_checkbox.clone();
-        let material3_switch = state.material3_switch.clone();
-        let material3_radio_value = state.material3_radio_value.clone();
-        let material3_tabs_value = state.material3_tabs_value.clone();
-        let material3_list_value = state.material3_list_value.clone();
-        let material3_expressive = state.material3_expressive.clone();
-        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
-        let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
-        let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
-        let material3_modal_navigation_drawer_open =
-            state.material3_modal_navigation_drawer_open.clone();
-        let material3_dialog_open = state.material3_dialog_open.clone();
-        let material3_text_field_value = state.material3_text_field_value.clone();
-        let material3_text_field_disabled = state.material3_text_field_disabled.clone();
-        let material3_text_field_error = state.material3_text_field_error.clone();
-        let material3_autocomplete_value = state.material3_autocomplete_value.clone();
-        let material3_autocomplete_disabled = state.material3_autocomplete_disabled.clone();
-        let material3_autocomplete_error = state.material3_autocomplete_error.clone();
-        let material3_autocomplete_dialog_open = state.material3_autocomplete_dialog_open.clone();
-        let material3_menu_open = state.material3_menu_open.clone();
-        let text_input = state.text_input.clone();
-        let text_area = state.text_area.clone();
-        let dropdown_open = state.dropdown_open.clone();
-        let context_menu_open = state.context_menu_open.clone();
-        let context_menu_edge_open = state.context_menu_edge_open.clone();
-        let cmdk_open = state.cmdk_open.clone();
-        let cmdk_query = state.cmdk_query.clone();
-        let last_action = state.last_action.clone();
-        let sonner_position = state.sonner_position.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
-        let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
-        let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
-        let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
-        let virtual_list_torture_scroll = state.virtual_list_torture_scroll.clone();
         let inspector_enabled = state.inspector_enabled.clone();
         let inspector_last_pointer = state.inspector_last_pointer.clone();
 
@@ -2595,9 +2412,7 @@ impl UiGalleryDriver {
                                             ChromeRefinement::default()
                                                 .bg(ColorRef::Color(theme.color_required("muted")))
                                                 .p(Space::N4),
-                                            LayoutRefinement::default()
-                                                .w_px(Px(280.0))
-                                                .h_full(),
+                                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                                         ),
                                         |cx| vec![cx.text("Sidebar (disabled)")],
                                     )
@@ -2630,9 +2445,7 @@ impl UiGalleryDriver {
                                         ChromeRefinement::default()
                                             .bg(ColorRef::Color(theme.color_required("muted")))
                                             .p(Space::N4),
-                                        LayoutRefinement::default()
-                                            .w_px(Px(280.0))
-                                            .h_full(),
+                                        LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                                     ),
                                     |cx| vec![cx.text("Sidebar (disabled)")],
                                 )
@@ -2686,80 +2499,7 @@ impl UiGalleryDriver {
                                             cx,
                                             &theme,
                                             selected.as_ref(),
-                                            content_tab.clone(),
-                                            theme_preset.clone(),
-                                            theme_preset_open.clone(),
-                                            view_cache_enabled.clone(),
-                                            view_cache_cache_shell.clone(),
-                                            view_cache_inner_enabled.clone(),
-                                            view_cache_popover_open.clone(),
-                                            view_cache_continuous.clone(),
-                                            view_cache_counter.clone(),
-                                            popover_open.clone(),
-                                            dialog_open.clone(),
-                                            alert_dialog_open.clone(),
-                                            sheet_open.clone(),
-                                            portal_geometry_popover_open.clone(),
-                                            select_value.clone(),
-                                            select_open.clone(),
-                                            combobox_value.clone(),
-                                            combobox_open.clone(),
-                                            combobox_query.clone(),
-                                            date_picker_open.clone(),
-                                            date_picker_month.clone(),
-                                            date_picker_selected.clone(),
-                                            time_picker_open.clone(),
-                                            time_picker_selected.clone(),
-                                            resizable_h_fractions.clone(),
-                                            resizable_v_fractions.clone(),
-                                            data_table_state.clone(),
-                                            data_grid_selected_row.clone(),
-                                            tabs_value.clone(),
-                                            accordion_value.clone(),
-                                            avatar_demo_image.clone(),
-                                            image_fit_demo_wide_image.clone(),
-                                            image_fit_demo_tall_image.clone(),
-                                            image_fit_demo_streaming_image.clone(),
-                                            progress.clone(),
-                                            checkbox.clone(),
-                                            switch.clone(),
-                                            material3_checkbox.clone(),
-                                            material3_switch.clone(),
-                                            material3_radio_value.clone(),
-                                            material3_tabs_value.clone(),
-                                            material3_list_value.clone(),
-                                            material3_expressive.clone(),
-                                            material3_navigation_bar_value.clone(),
-                                            material3_navigation_rail_value.clone(),
-                                            material3_navigation_drawer_value.clone(),
-                                            material3_modal_navigation_drawer_open.clone(),
-                                            material3_dialog_open.clone(),
-                                            material3_text_field_value.clone(),
-                                            material3_text_field_disabled.clone(),
-                                            material3_text_field_error.clone(),
-                                            material3_autocomplete_value.clone(),
-                                            material3_autocomplete_disabled.clone(),
-                                            material3_autocomplete_error.clone(),
-                                            material3_autocomplete_dialog_open.clone(),
-                                            material3_menu_open.clone(),
-                                            text_input.clone(),
-                                            text_area.clone(),
-                                            dropdown_open.clone(),
-                                            context_menu_open.clone(),
-                                            context_menu_edge_open.clone(),
-                                            cmdk_open.clone(),
-                                            cmdk_query.clone(),
-                                            last_action.clone(),
-                                            sonner_position.clone(),
-                                            virtual_list_torture_jump.clone(),
-                                            virtual_list_torture_edit_row.clone(),
-                                            virtual_list_torture_edit_text.clone(),
-                                            virtual_list_torture_scroll.clone(),
-                                            code_editor_syntax_rust.clone(),
-                                            code_editor_boundary_identifier.clone(),
-                                            code_editor_soft_wrap.clone(),
-                                            code_editor_folds.clone(),
-                                            code_editor_inlays.clone(),
+                                            content_models.as_ref(),
                                         )
                                     }
                                 })]
@@ -2790,223 +2530,34 @@ impl UiGalleryDriver {
                                         cx,
                                         &theme,
                                         selected.as_ref(),
-                                        content_tab.clone(),
-                                        theme_preset.clone(),
-                                        theme_preset_open.clone(),
-                                        view_cache_enabled.clone(),
-                                        view_cache_cache_shell.clone(),
-                                        view_cache_inner_enabled.clone(),
-                                        view_cache_popover_open.clone(),
-                                        view_cache_continuous.clone(),
-                                        view_cache_counter.clone(),
-                                        popover_open.clone(),
-                                        dialog_open.clone(),
-                                        alert_dialog_open.clone(),
-                                        sheet_open.clone(),
-                                        portal_geometry_popover_open.clone(),
-                                        select_value.clone(),
-                                        select_open.clone(),
-                                        combobox_value.clone(),
-                                        combobox_open.clone(),
-                                        combobox_query.clone(),
-                                        date_picker_open.clone(),
-                                        date_picker_month.clone(),
-                                        date_picker_selected.clone(),
-                                        time_picker_open.clone(),
-                                        time_picker_selected.clone(),
-                                        resizable_h_fractions.clone(),
-                                        resizable_v_fractions.clone(),
-                                        data_table_state.clone(),
-                                        data_grid_selected_row.clone(),
-                                        tabs_value.clone(),
-                                        accordion_value.clone(),
-                                        avatar_demo_image.clone(),
-                                        image_fit_demo_wide_image.clone(),
-                                        image_fit_demo_tall_image.clone(),
-                                        image_fit_demo_streaming_image.clone(),
-                                        progress.clone(),
-                                        checkbox.clone(),
-                                        switch.clone(),
-                                        material3_checkbox.clone(),
-                                        material3_switch.clone(),
-                                        material3_radio_value.clone(),
-                                        material3_tabs_value.clone(),
-                                        material3_list_value.clone(),
-                                        material3_expressive.clone(),
-                                        material3_navigation_bar_value.clone(),
-                                        material3_navigation_rail_value.clone(),
-                                        material3_navigation_drawer_value.clone(),
-                                        material3_modal_navigation_drawer_open.clone(),
-                                        material3_dialog_open.clone(),
-                                        material3_text_field_value.clone(),
-                                        material3_text_field_disabled.clone(),
-                                        material3_text_field_error.clone(),
-                                        material3_autocomplete_value.clone(),
-                                        material3_autocomplete_disabled.clone(),
-                                        material3_autocomplete_error.clone(),
-                                        material3_autocomplete_dialog_open.clone(),
-                                        material3_menu_open.clone(),
-                                        text_input.clone(),
-                                        text_area.clone(),
-                                        dropdown_open.clone(),
-                                        context_menu_open.clone(),
-                                        context_menu_edge_open.clone(),
-                                        cmdk_open.clone(),
-                                        cmdk_query.clone(),
-                                        last_action.clone(),
-                                        sonner_position.clone(),
-                                        virtual_list_torture_jump.clone(),
-                                        virtual_list_torture_edit_row.clone(),
-                                        virtual_list_torture_edit_text.clone(),
-                                        virtual_list_torture_scroll.clone(),
-                                        code_editor_syntax_rust.clone(),
-                                        code_editor_boundary_identifier.clone(),
-                                        code_editor_soft_wrap.clone(),
-                                        code_editor_folds.clone(),
-                                        code_editor_inlays.clone(),
+                                        content_models.as_ref(),
                                     )
                                 }
                             })
                         })
                     };
 
-                    let tab_strip = cx.keyed("ui_gallery.tab_strip", |cx| {
-                        if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
-                            return cx.text("Tabs (disabled)");
-                        }
-
-                        let selected = cx
-                            .get_model_cloned(&selected_page, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                        let workspace_tab_ids = cx
-                            .get_model_cloned(&workspace_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-                        let workspace_dirty_ids = cx
-                            .get_model_cloned(&workspace_dirty_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-
-                        WorkspaceTabStrip::new(selected.clone())
-                            .tabs(workspace_tab_ids.iter().map(|tab_id| {
-                                let (title, _origin, _docs, _usage) =
-                                    crate::spec::page_meta(tab_id.as_ref());
-                                let dirty = workspace_dirty_ids
-                                    .iter()
-                                    .any(|d| d.as_ref() == tab_id.as_ref());
-                                WorkspaceTab::new(
-                                    tab_id.clone(),
-                                    title,
-                                    page_spec(tab_id.as_ref())
-                                        .map(|spec| CommandId::from(spec.command))
-                                        .unwrap_or_else(|| {
-                                            CommandId::new(format!(
-                                                "ui_gallery.nav.select.{}",
-                                                tab_id.as_ref()
-                                            ))
-                                        }),
-                                )
-                                .close_command(CommandId::new(format!(
-                                    "{}{}",
-                                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                                    tab_id.as_ref()
-                                )))
-                                .dirty(dirty)
-                            }))
-                            .into_element(cx)
-                    });
-
-                    let menu_bar_seq_value = cx
-                        .get_model_copied(&menu_bar_seq, Invalidation::Layout)
-                        .unwrap_or(0);
-                    let menu_bar = fret_app::effective_menu_bar(cx.app);
-                    let show_in_window_menu_bar = fret_app::should_render_in_window_menu_bar(
-                        cx.app,
-                        fret_app::Platform::current(),
+                    let tab_strip = chrome::tab_strip_view(
+                        cx,
+                        (bisect & BISECT_DISABLE_TAB_STRIP) != 0,
+                        &selected_page,
+                        &workspace_tabs,
+                        &workspace_dirty_tabs,
                     );
-                    cx.app.with_global_mut(
-                        fret_runtime::WindowMenuBarFocusService::default,
-                        |svc, _app| {
-                            svc.set_present(cx.window, show_in_window_menu_bar && menu_bar.is_some());
-                        },
+
+                    let menubar_handle = std::cell::RefCell::new(None);
+                    let in_window_menu_bar =
+                        menubar::build_in_window_menu_bar(cx, &menu_bar_seq, &menubar_handle);
+
+                    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
+
+                    let status_bar = status_bar::status_bar_view(
+                        cx,
+                        content_models.as_ref(),
+                        inspector_status.as_ref(),
+                        last_debug_stats.layout_time.as_micros(),
+                        last_debug_stats.paint_time.as_micros(),
                     );
-                    let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
-                        std::cell::RefCell::new(None);
-                    let in_window_menu_bar = if show_in_window_menu_bar {
-                        menu_bar.as_ref().map(|menu_bar| {
-                            cx.keyed(format!("ui_gallery.menubar.{menu_bar_seq_value}"), |cx| {
-                                let (menu, handle) = menubar_from_runtime_with_focus_handle(
-                                    cx,
-                                    menu_bar,
-                                    MenubarFromRuntimeOptions::default(),
-                                );
-                                *menubar_handle.borrow_mut() = Some(handle);
-                                menu
-                            })
-                        })
-                    } else {
-                        None
-                    };
-
-                    let top_bar = WorkspaceTopBar::new()
-                        .left(in_window_menu_bar.into_iter().collect::<Vec<_>>())
-                        .center(vec![tab_strip])
-                        .right(vec![
-                            shadcn::Button::new("Command palette")
-                                .test_id("ui-gallery-command-palette")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(fret_app::core_commands::COMMAND_PALETTE)
-                                .into_element(cx),
-                        ])
-                        .into_element(cx);
-
-                    let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
-                        let status_last_action = cx
-                            .get_model_cloned(&last_action, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from("<none>"));
-                        let status_theme = cx
-                            .get_model_cloned(&theme_preset, Invalidation::Layout)
-                            .flatten()
-                            .unwrap_or_else(|| Arc::<str>::from("<default>"));
-                        let status_view_cache = cx
-                            .get_model_copied(&view_cache_enabled, Invalidation::Layout)
-                            .unwrap_or(false);
-                        let status_cache_shell = cx
-                            .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
-                            .unwrap_or(false);
-
-                        let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
-                            "theme: {} view_cache={} shell_cache={} layout_us={} paint_us={}",
-                            status_theme.as_ref(),
-                            status_view_cache as u8,
-                            status_cache_shell as u8,
-                            last_debug_stats.layout_time.as_micros(),
-                            last_debug_stats.paint_time.as_micros()
-                        ))];
-                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
-                            right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
-                        }
-
-                        let status_last_action_label =
-                            Arc::<str>::from(format!("last action: {}", status_last_action.as_ref()));
-                        let status_last_action_text = status_last_action_label.clone();
-                        let status_last_action_item = cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Text,
-                                label: Some(status_last_action_label),
-                                test_id: Some(Arc::from("ui-gallery-status-last-action")),
-                                ..Default::default()
-                            },
-                            move |cx| vec![cx.text(status_last_action_text.as_ref())],
-                        );
-
-                        WorkspaceStatusBar::new()
-                            .left(vec![status_last_action_item])
-                            .right(right_items)
-                            .into_element(cx)
-                    });
 
                     let mut center_layout = fret_ui::element::LayoutStyle::default();
                     center_layout.size.width = fret_ui::element::Length::Fill;
@@ -3032,376 +2583,43 @@ impl UiGalleryDriver {
                             .role(SemanticsRole::Panel)
                             .label("fret-ui-gallery"),
                     );
-                    if let Some(handle) = menubar_handle.borrow().clone() {
-                        let group_active = handle.group_active.clone();
-                        let trigger_registry = handle.trigger_registry.clone();
-                        let last_focus_before_menubar = handle.last_focus_before_menubar.clone();
-                        let focus_is_trigger = handle.focus_is_trigger.clone();
-                        let group_active_for_command = group_active.clone();
-                        let trigger_registry_for_command = trigger_registry.clone();
-                        let last_focus_for_command = last_focus_before_menubar.clone();
-                        cx.command_add_on_command_for(
-                            panel.id,
-                            Arc::new(move |host, acx, command| {
-                                if command.as_str() != fret_app::core_commands::FOCUS_MENU_BAR {
-                                    return false;
-                                }
-
-                                let active = host
-                                    .models_mut()
-                                    .get_cloned(&group_active_for_command)
-                                    .flatten();
-                                if let Some(active) = active {
-                                    let _ = host.models_mut().update(&active.open, |v| *v = false);
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&group_active_for_command, |v| *v = None);
-                                    let restore =
-                                        host.models_mut().get_cloned(&last_focus_for_command).flatten();
-                                    host.request_focus(restore.unwrap_or(active.trigger));
-                                    host.request_redraw(acx.window);
-                                    return true;
-                                }
-
-                                let entries = host
-                                    .models_mut()
-                                    .get_cloned(&trigger_registry_for_command)
-                                    .unwrap_or_default();
-                                let target = entries.iter().find(|e| e.enabled).cloned();
-                                let Some(target) = target else {
-                                    return false;
-                                };
-
-                                let open_for_state = target.open.clone();
-                                let _ = host
-                                    .models_mut()
-                                    .update(&group_active_for_command, |v| {
-                                        *v = Some(
-                                            fret_ui_kit::primitives::menubar::trigger_row::MenubarActiveTrigger {
-                                                trigger: target.trigger,
-                                                open: open_for_state,
-                                            },
-                                        );
-                                    });
-
-                                host.request_focus(target.trigger);
-                                host.request_redraw(acx.window);
-                                true
-                            }),
-                        );
-
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::open_on_alt_mnemonic(
-                                group_active.clone(),
-                                trigger_registry.clone(),
-                            ),
-                        );
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::open_on_mnemonic_when_active(
-                                group_active.clone(),
-                                trigger_registry.clone(),
-                                focus_is_trigger.clone(),
-                            ),
-                        );
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::exit_active_on_escape_when_closed(
-                                group_active.clone(),
-                                last_focus_before_menubar.clone(),
-                                focus_is_trigger.clone(),
-                            ),
-                        );
-                    }
+                    menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
 
                     let mut content: Vec<AnyElement> = vec![
                         panel,
-                        if (bisect & BISECT_DISABLE_TOASTER) != 0 {
-                            cx.text("")
-                        } else {
-                            {
-                                let position = cx
-                                    .get_model_copied(&sonner_position, Invalidation::Layout)
-                                    .unwrap_or(shadcn::ToastPosition::TopCenter);
-                                shadcn::Toaster::new().position(position).into_element(cx)
-                            }
-                        },
+                        toaster::toaster_view(
+                            cx,
+                            content_models.as_ref(),
+                            (bisect & BISECT_DISABLE_TOASTER) != 0,
+                        ),
                     ];
 
-                    content.push(cx.keyed("ui_gallery.settings_sheet", |cx| {
-                        shadcn::Sheet::new(settings_open.clone())
-                            .side(shadcn::SheetSide::Right)
-                            .size(Px(420.0))
-                            .into_element(
-                                cx,
-                                |cx| {
-                                    let mut layout = fret_ui::element::LayoutStyle::default();
-                                    layout.size.width = fret_ui::element::Length::Px(Px(0.0));
-                                    layout.size.height = fret_ui::element::Length::Px(Px(0.0));
-                                    cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            layout,
-                                            ..Default::default()
-                                        },
-                                        |_cx| Vec::new(),
-                                    )
-                                },
-                                |cx| {
-                                    let os_select = shadcn::Select::new(
-                                        settings_menu_bar_os.clone(),
-                                        settings_menu_bar_os_open.clone(),
-                                    )
-                                    .placeholder("OS menubar")
-                                    .trigger_test_id("ui-gallery-settings-os-menubar")
-                                    .items([
-                                        shadcn::SelectItem::new(
-                                            "auto",
-                                            "Auto (Windows/macOS on; Linux/Web off)",
-                                        )
-                                        .test_id("ui-gallery-settings-os-menubar-auto"),
-                                        shadcn::SelectItem::new("on", "On")
-                                            .test_id("ui-gallery-settings-os-menubar-on"),
-                                        shadcn::SelectItem::new("off", "Off")
-                                            .test_id("ui-gallery-settings-os-menubar-off"),
-                                    ])
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx);
+                    settings_sheet::push_settings_sheet(
+                        cx,
+                        settings_open.clone(),
+                        settings_menu_bar_os.clone(),
+                        settings_menu_bar_os_open.clone(),
+                        settings_menu_bar_in_window.clone(),
+                        settings_menu_bar_in_window_open.clone(),
+                        settings_edit_can_undo.clone(),
+                        settings_edit_can_redo.clone(),
+                        &mut content,
+                    );
 
-                                    let in_window_select = shadcn::Select::new(
-                                        settings_menu_bar_in_window.clone(),
-                                        settings_menu_bar_in_window_open.clone(),
-                                    )
-                                    .placeholder("In-window menubar")
-                                    .trigger_test_id("ui-gallery-settings-in-window-menubar")
-                                    .items([
-                                        shadcn::SelectItem::new(
-                                            "auto",
-                                            "Auto (Linux/Web on; Windows/macOS off)",
-                                        )
-                                        .test_id("ui-gallery-settings-in-window-menubar-auto"),
-                                        shadcn::SelectItem::new("on", "On")
-                                            .test_id("ui-gallery-settings-in-window-menubar-on"),
-                                        shadcn::SelectItem::new("off", "Off")
-                                            .test_id("ui-gallery-settings-in-window-menubar-off"),
-                                    ])
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx);
+                    debug_hud::maybe_push_debug_hud(
+                        cx,
+                        theme.clone(),
+                        show_debug_hud,
+                        debug_hud_lines.clone(),
+                        &mut content,
+                    );
 
-                                    let body = stack::vstack(
-                                        cx,
-                                        stack::VStackProps::default()
-                                            .layout(LayoutRefinement::default().w_full())
-                                            .gap(Space::N4),
-                                        |cx| {
-                                            vec![
-                                                stack::vstack(
-                                                    cx,
-                                                    stack::VStackProps::default()
-                                                        .layout(LayoutRefinement::default().w_full())
-                                                        .gap(Space::N2),
-                                                    |cx| {
-                                                        vec![
-                                                            shadcn::SheetHeader::new(vec![
-                                                                shadcn::SheetTitle::new("Settings")
-                                                                    .into_element(cx),
-                                                                shadcn::SheetDescription::new(
-                                                                    "Menu bar presentation (OS vs in-window).",
-                                                                )
-                                                                .into_element(cx),
-                                                            ])
-                                                            .into_element(cx),
-                                                            shadcn::Separator::new().into_element(cx),
-                                                            cx.text("Menu bar surfaces"),
-                                                            os_select,
-                                                            in_window_select,
-                                                            cx.text("Command availability (debug)"),
-                                                            stack::hstack(
-                                                                cx,
-                                                                stack::HStackProps::default()
-                                                                    .gap(Space::N2)
-                                                                    .items_center(),
-                                                                |cx| {
-                                                                    vec![
-                                                                        shadcn::Switch::new(
-                                                                            settings_edit_can_undo
-                                                                                .clone(),
-                                                                        )
-                                                                        .a11y_label("Can Undo")
-                                                                        .disabled(true)
-                                                                        .into_element(cx),
-                                                                        cx.text(
-                                                                            "edit.can_undo (enables OS/in-window Undo)",
-                                                                        ),
-                                                                    ]
-                                                                },
-                                                            ),
-                                                            stack::hstack(
-                                                                cx,
-                                                                stack::HStackProps::default()
-                                                                    .gap(Space::N2)
-                                                                    .items_center(),
-                                                                |cx| {
-                                                                    vec![
-                                                                        shadcn::Switch::new(
-                                                                            settings_edit_can_redo
-                                                                                .clone(),
-                                                                        )
-                                                                        .a11y_label("Can Redo")
-                                                                        .disabled(true)
-                                                                        .into_element(cx),
-                                                                        cx.text(
-                                                                            "edit.can_redo (enables OS/in-window Redo)",
-                                                                        ),
-                                                                    ]
-                                                                },
-                                                            ),
-                                                        ]
-                                                    },
-                                                ),
-                                                shadcn::SheetFooter::new(vec![
-                                                    shadcn::Button::new("Apply (in memory)")
-                                                        .variant(shadcn::ButtonVariant::Secondary)
-                                                        .test_id("ui-gallery-settings-apply")
-                                                        .on_click(CMD_APP_SETTINGS_APPLY)
-                                                        .into_element(cx),
-                                                    shadcn::Button::new(
-                                                        "Write project .fret/settings.json",
-                                                    )
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
-                                                    .into_element(cx),
-                                                    shadcn::Button::new("Close")
-                                                        .variant(shadcn::ButtonVariant::Ghost)
-                                                        .toggle_model(settings_open.clone())
-                                                        .into_element(cx),
-                                                ])
-                                                .into_element(cx),
-                                            ]
-                                        },
-                                    );
-
-                                    shadcn::SheetContent::new(vec![body]).into_element(cx)
-                                },
-                            )
-                    }));
-
-                    if show_debug_hud {
-                        let debug_hud_lines = debug_hud_lines.clone();
-                        content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
-                            let hud_layout = fret_ui::element::LayoutStyle {
-                                position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    top: Some(Px(8.0)),
-                                    right: Some(Px(8.0)),
-                                    ..Default::default()
-                                },
-                                size: fret_ui::element::SizeStyle {
-                                    width: fret_ui::element::Length::Px(Px(520.0)),
-                                    height: fret_ui::element::Length::Px(Px(220.0)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            };
-
-                            let gate = fret_ui::element::InteractivityGateProps {
-                                layout: hud_layout,
-                                present: true,
-                                interactive: false,
-                            };
-
-                            cx.interactivity_gate_props(gate, |cx| {
-                                let mut container_props = decl_style::container_props(
-                                    &theme,
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(theme.color_required("background")))
-                                        .border_1()
-                                        .rounded(Radius::Md)
-                                        .p(Space::N3),
-                                    LayoutRefinement::default().w_full().h_full(),
-                                );
-                                container_props.layout.size.width = fret_ui::element::Length::Fill;
-                                container_props.layout.size.height = fret_ui::element::Length::Fill;
-                                container_props.layout.overflow = fret_ui::element::Overflow::Clip;
-
-                                let body = stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .gap(Space::N1),
-                                    |cx| {
-                                        debug_hud_lines
-                                            .iter()
-                                            .map(|line| {
-                                                cx.text_props(TextProps {
-                                                    layout: Default::default(),
-                                                    text: line.clone(),
-                                                    style: None,
-                                                    color: Some(theme.color_required("foreground")),
-                                                    wrap: TextWrap::Word,
-                                                    overflow: TextOverflow::Clip,
-                                                })
-                                            })
-                                            .collect::<Vec<_>>()
-                                    },
-                                );
-
-                                [cx.container(container_props, |cx| {
-                                    [shadcn::ScrollArea::new([body])
-                                        .refine_layout(LayoutRefinement::default().w_full().h_full())
-                                        .into_element(cx)]
-                                })]
-                            })
-                        }));
-                    }
-
-                    if cx
-                        .get_model_copied(&inspector_enabled, Invalidation::Layout)
-                        .unwrap_or(false)
-                    {
-                        cx.observe_model(&inspector_last_pointer, Invalidation::Paint);
-
-                        let mut props = fret_ui::element::PointerRegionProps::default();
-                        props.layout.size.width = fret_ui::element::Length::Fill;
-                        props.layout.size.height = fret_ui::element::Length::Fill;
-
-                        let on_pointer_move = {
-                            let inspector_last_pointer = inspector_last_pointer.clone();
-                            Arc::new(
-                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                                      cx: fret_ui::action::ActionCx,
-                                      mv: fret_ui::action::PointerMoveCx| {
-                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
-                                        *v = Some(mv.position);
-                                    });
-                                    host.request_redraw(cx.window);
-                                    false
-                                },
-                            )
-                        };
-                        let on_pointer_down = {
-                            let inspector_last_pointer = inspector_last_pointer.clone();
-                            Arc::new(
-                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                                      cx: fret_ui::action::ActionCx,
-                                      down: fret_ui::action::PointerDownCx| {
-                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
-                                        *v = Some(down.position);
-                                    });
-                                    host.request_redraw(cx.window);
-                                    false
-                                },
-                            )
-                        };
-
-                        vec![cx.pointer_region(props, |cx| {
-                            cx.pointer_region_on_pointer_move(on_pointer_move);
-                            cx.pointer_region_on_pointer_down(on_pointer_down);
-                            content
-                        })]
-                    } else {
-                        content
-                    }
+                    inspector::wrap_content_if_enabled(
+                        cx,
+                        &inspector_enabled,
+                        &inspector_last_pointer,
+                        content,
+                    )
                 });
 
         state.ui.set_root(root);

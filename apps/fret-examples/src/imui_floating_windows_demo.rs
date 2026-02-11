@@ -26,7 +26,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiFloatingWindowsState 
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> ViewElements {
-    fret_imui::imui(cx, |ui| {
+    // Use a column root to avoid the "all children overlap at (0,0)" footgun when emitting multiple
+    // immediate-mode elements at the top level.
+    fret_imui::imui_vstack(cx, |ui| {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 

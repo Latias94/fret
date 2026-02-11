@@ -22,6 +22,7 @@ fn run() -> Result<(), String> {
         "init" => crate::scaffold::init_cmd(args.collect()),
         "new" => crate::scaffold::new_cmd(args.collect()),
         "config" => crate::config::config_cmd(args.collect()),
+        "theme" => crate::theme::theme_cmd(args.collect()),
         "hotpatch" => crate::hotpatch::hotpatch_cmd(args.collect()),
         "diag" => crate::diag::diag_cmd(args.collect()),
         "list" => match args.next().as_deref() {
@@ -53,6 +54,7 @@ Usage:
   fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
   fretboard config menubar [--path <path>] [--force]
+  fretboard theme import-vscode <theme.json> [--out <path>] [--base <path>] [--all-tags] [--map <path>] [--set <key=value>...] [--report <path>] [--force]
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]

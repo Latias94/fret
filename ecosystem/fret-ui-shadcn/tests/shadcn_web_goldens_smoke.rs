@@ -1,51 +1,9 @@
-use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-#[derive(Debug, Clone, Deserialize)]
-struct WebGolden {
-    themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGoldenTheme {
-    viewport: WebViewport,
-    root: WebNode,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebViewport {
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebRect {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebNode {
-    tag: String,
-    rect: WebRect,
-    #[serde(default)]
-    active: bool,
-    #[serde(default)]
-    children: Vec<WebNode>,
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
+#[path = "support/web_golden_shadcn.rs"]
+mod web_golden_shadcn;
+use web_golden_shadcn::*;
 
 fn shadcn_web_dir() -> PathBuf {
     repo_root()

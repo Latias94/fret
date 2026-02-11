@@ -11,12 +11,17 @@ use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
-    FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality, WindowRole,
+    ActivationPolicy, FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality,
+    WindowRole, WindowStyleRequest,
 };
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
 const ENV_SINGLE_WINDOW: &str = "FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW";
+
+fn diag_enabled() -> bool {
+    std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
+}
 
 struct ImUiEditorProofState {
     embedded: embedded::EmbeddedViewportSurface,
@@ -126,6 +131,19 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
         .global::<fret_core::WindowMetricsService>()
         .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
+    let logical_window_id = cx
+        .app
+        .global::<WindowBootstrapService>()
+        .and_then(|svc| svc.logical_by_window.get(&window).cloned());
+    let dock_test_id = if logical_window_id.as_deref() == Some("main") {
+        Some("imui-editor-proof.main.dock")
+    } else if logical_window_id.as_deref() == Some(AUX_LOGICAL_WINDOW_ID) {
+        Some("imui-editor-proof.aux.dock")
+    } else {
+        None
+    };
+    let tab_drag_anchor_test_id = (diag_enabled() && logical_window_id.as_deref() == Some("main"))
+        .then_some("imui-editor-proof.main.tab-drag-anchor");
 
     fret_imui::imui(cx, |ui| {
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
@@ -188,7 +206,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 fret_docking::imui::dock_space_with(
                     ui,
                     fret_docking::imui::DockSpaceImUiOptions {
-                        test_id: Some("imui-editor-proof-dock"),
+                        test_id: dock_test_id,
+                        tab_drag_anchor_test_id,
                         ..Default::default()
                     },
                     move |app, window| ensure_dock_graph(app, window),
@@ -386,11 +405,6 @@ fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
             svc.main_window = Some(window);
             svc.logical_by_window.insert(window, "main".to_string());
         }
-        if svc.main_window != Some(window) {
-            svc.logical_by_window
-                .entry(window)
-                .or_insert_with(|| AUX_LOGICAL_WINDOW_ID.to_string());
-        }
         if svc.aux_requested {
             return;
         }
@@ -399,13 +413,20 @@ fn ensure_aux_window_requested(app: &mut App, window: AppWindowId) {
         }
 
         svc.aux_requested = true;
+        let anchor = diag_enabled().then_some(fret_core::WindowAnchor {
+            window,
+            position: fret_core::Point::new(fret_core::Px(120.0), fret_core::Px(24.0)),
+        });
         app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
             kind: CreateWindowKind::DockRestore {
                 logical_window_id: AUX_LOGICAL_WINDOW_ID.to_string(),
             },
-            anchor: None,
+            anchor,
             role: WindowRole::Auxiliary,
-            style: Default::default(),
+            style: WindowStyleRequest {
+                activation: diag_enabled().then_some(ActivationPolicy::NonActivating),
+                ..Default::default()
+            },
         })));
     });
 }
@@ -438,6 +459,19 @@ fn window_created(app: &mut App, request: &fret_app::CreateWindowRequest, new_wi
             svc.logical_by_window
                 .insert(new_window, logical_window_id.clone());
         });
+        if diag_enabled() && logical_window_id == AUX_LOGICAL_WINDOW_ID {
+            let sender = app
+                .global::<WindowBootstrapService>()
+                .and_then(|svc| svc.main_window);
+            app.push_effect(Effect::Window(WindowRequest::Raise {
+                window: new_window,
+                sender,
+            }));
+        }
+        if diag_enabled() {
+            app.request_redraw(new_window);
+            app.push_effect(Effect::RequestAnimationFrame(new_window));
+        }
     }
     let _ = dock_runtime::handle_dock_window_created(app, request, new_window);
 }

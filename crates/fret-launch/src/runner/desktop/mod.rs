@@ -5401,6 +5401,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         true
     }
 
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        let Some(state) = self.windows.get(window) else {
+            return;
+        };
+        let _ = bring_window_to_front(state.window.as_ref(), None);
+    }
+
     fn enqueue_window_front(
         &mut self,
         window: fret_core::AppWindowId,
