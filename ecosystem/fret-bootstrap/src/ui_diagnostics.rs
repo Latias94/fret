@@ -4960,8 +4960,37 @@ pub struct UiDiagnosticsBundleV1 {
     pub schema_version: u32,
     pub exported_unix_ms: u64,
     pub out_dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<UiDiagnosticsEnvFingerprintV1>,
     pub config: UiDiagnosticsBundleConfigV1,
     pub windows: Vec<UiDiagnosticsWindowBundleV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDiagnosticsEnvFingerprintV1 {
+    pub schema_version: u32,
+    pub runner_kind: String,
+    pub target_os: String,
+    pub target_family: String,
+    pub target_arch: String,
+    pub debug_assertions: bool,
+    pub diagnostics: UiDiagnosticsEnvDiagnosticsV1,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scale_factors_seen: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDiagnosticsEnvDiagnosticsV1 {
+    pub enabled: bool,
+    pub capture_semantics: bool,
+    pub redact_text: bool,
+    pub screenshots_enabled: bool,
+    pub screenshot_on_dump: bool,
+    pub max_events: usize,
+    pub max_snapshots: usize,
+    pub devtools_ws_configured: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -5000,6 +5029,7 @@ impl UiDiagnosticsBundleV1 {
             schema_version: 1,
             exported_unix_ms,
             out_dir: sanitize_path_for_bundle(&svc.cfg.out_dir, out_dir),
+            env: Some(UiDiagnosticsEnvFingerprintV1::from_service(svc)),
             config: UiDiagnosticsBundleConfigV1 {
                 trigger_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.trigger_path),
                 max_events: svc.cfg.max_events,
@@ -5049,6 +5079,62 @@ impl UiDiagnosticsBundleV1 {
                     snapshots: ring.snapshots.iter().cloned().collect(),
                 })
                 .collect(),
+        }
+    }
+}
+
+impl UiDiagnosticsEnvFingerprintV1 {
+    fn from_service(svc: &UiDiagnosticsService) -> Self {
+        let runner_kind = if cfg!(target_arch = "wasm32") {
+            "web".to_string()
+        } else {
+            "native".to_string()
+        };
+
+        let mut capabilities: Vec<String> = vec!["diag.script_v2".to_string()];
+        if svc.cfg.screenshots_enabled {
+            capabilities.push("diag.screenshot_png".to_string());
+        }
+        capabilities.push("diag.text_ime_trace".to_string());
+        capabilities.push("diag.text_input_snapshot".to_string());
+        capabilities.push("diag.shortcut_routing_trace".to_string());
+        capabilities.push("diag.overlay_placement_trace".to_string());
+        capabilities.sort();
+        capabilities.dedup();
+
+        let mut scale_factors_seen: Vec<f32> = Vec::new();
+        for (_window, ring) in svc.per_window.iter() {
+            if let Some(last) = ring.snapshots.back() {
+                let sf = last.scale_factor;
+                if !scale_factors_seen
+                    .iter()
+                    .any(|v| (*v - sf).abs() < f32::EPSILON)
+                {
+                    scale_factors_seen.push(sf);
+                }
+            }
+        }
+        scale_factors_seen.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        Self {
+            schema_version: 1,
+            runner_kind,
+            target_os: std::env::consts::OS.to_string(),
+            target_family: std::env::consts::FAMILY.to_string(),
+            target_arch: std::env::consts::ARCH.to_string(),
+            debug_assertions: cfg!(debug_assertions),
+            diagnostics: UiDiagnosticsEnvDiagnosticsV1 {
+                enabled: svc.cfg.enabled,
+                capture_semantics: svc.cfg.capture_semantics,
+                redact_text: svc.cfg.redact_text,
+                screenshots_enabled: svc.cfg.screenshots_enabled,
+                screenshot_on_dump: svc.cfg.screenshot_on_dump,
+                max_events: svc.cfg.max_events,
+                max_snapshots: svc.cfg.max_snapshots,
+                devtools_ws_configured: svc.ws_is_configured(),
+            },
+            capabilities,
+            scale_factors_seen,
         }
     }
 }
