@@ -560,6 +560,23 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
+            let occlusion = fret_ui_kit::declarative::occlusion_insets_or_zero(
+                cx,
+                fret_ui::Invalidation::Layout,
+            );
+            let mut slack = fret_ui::element::SpacerProps::default();
+            slack.layout.flex.grow = 0.0;
+            slack.layout.flex.shrink = 0.0;
+            slack.min = occlusion.bottom;
+
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N0),
+                |cx| [body, cx.spacer(slack)],
+            );
+
             let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
@@ -4755,6 +4772,14 @@ fn preview_text_bidi_rtl_conformance(
             text: "The quick brown fox (123) jumps.",
         },
         BidiSample {
+            label: "CJK (Han)",
+            text: "中文测试 (123) 你好世界.",
+        },
+        BidiSample {
+            label: "Mixed LTR + CJK",
+            text: "abc 中文 DEF 123",
+        },
+        BidiSample {
             label: "Hebrew (RTL)",
             text: "עברית (123) אבגדה",
         },
@@ -4871,6 +4896,7 @@ fn preview_text_bidi_rtl_conformance(
                     .size(shadcn::ButtonSize::Sm)
                     .on_activate(on_activate)
                     .into_element(cx)
+                    .test_id(format!("ui-gallery-text-bidi-sample-btn-{i}"))
             }));
         }
 

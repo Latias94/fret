@@ -76,6 +76,8 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
      enabled via settings (`TextFontFamilyConfig.common_fallback_injection`).
    - Remaining work: define and test the exact composition rules (requested stack + script/locale fallback + overrides)
      with a focused mixed-script conformance suite.
+   - Initial conformance evidence (UI Gallery script + screenshots/bundles):
+     - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json`
 
 3) Font enumeration is still uncached and metadata is best-effort.
    - `all_font_names()` and `all_font_catalog_entries()` are best-effort snapshots (platform-dependent).
