@@ -58,6 +58,7 @@ pub(crate) use content::content_view;
 pub(crate) use models::UiGalleryModels;
 pub(crate) use nav::sidebar_view;
 use previews::material3::*;
+use previews::pages::*;
 
 fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
