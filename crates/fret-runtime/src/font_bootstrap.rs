@@ -29,38 +29,22 @@ pub struct FontCatalogUpdate {
     pub config_changed: bool,
 }
 
-pub fn apply_font_catalog_update(
-    app: &mut impl GlobalsHost,
-    families: Vec<String>,
+fn apply_family_defaults_policy(
+    mut config: TextFontFamilyConfig,
+    families: &[String],
     policy: FontFamilyDefaultsPolicy,
-) -> FontCatalogUpdate {
-    let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
-    let revision = prev_rev.saturating_add(1);
-
-    let cache = FontCatalogCache::from_families(revision, &families);
-    app.set_global::<FontCatalog>(FontCatalog {
-        families: families.clone(),
-        revision,
-    });
-    app.set_global::<FontCatalogCache>(cache.clone());
-
-    let prev_config = app
-        .global::<TextFontFamilyConfig>()
-        .cloned()
-        .unwrap_or_default();
-    let mut config = prev_config.clone();
-
+) -> TextFontFamilyConfig {
     match policy {
         FontFamilyDefaultsPolicy::None => {}
         FontFamilyDefaultsPolicy::FillIfEmpty => {
             if config.ui_sans.is_empty() {
-                config.ui_sans = families.clone();
+                config.ui_sans = families.to_vec();
             }
             if config.ui_serif.is_empty() {
-                config.ui_serif = families.clone();
+                config.ui_serif = families.to_vec();
             }
             if config.ui_mono.is_empty() {
-                config.ui_mono = families.clone();
+                config.ui_mono = families.to_vec();
             }
         }
         FontFamilyDefaultsPolicy::FillIfEmptyFromCatalogPrefix { max } => {
@@ -128,6 +112,30 @@ pub fn apply_font_catalog_update(
         }
     }
 
+    config
+}
+
+pub fn apply_font_catalog_update(
+    app: &mut impl GlobalsHost,
+    families: Vec<String>,
+    policy: FontFamilyDefaultsPolicy,
+) -> FontCatalogUpdate {
+    let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
+    let revision = prev_rev.saturating_add(1);
+
+    let cache = FontCatalogCache::from_families(revision, &families);
+    app.set_global::<FontCatalog>(FontCatalog {
+        families: families.clone(),
+        revision,
+    });
+    app.set_global::<FontCatalogCache>(cache.clone());
+
+    let prev_config = app
+        .global::<TextFontFamilyConfig>()
+        .cloned()
+        .unwrap_or_default();
+    let config = apply_family_defaults_policy(prev_config.clone(), &families, policy);
+
     let config_changed = config != prev_config;
     // Always re-set the config global so renderers can react even if the value is unchanged.
     app.set_global::<TextFontFamilyConfig>(config.clone());
@@ -147,12 +155,53 @@ pub fn apply_font_catalog_update_with_metadata(
     policy: FontFamilyDefaultsPolicy,
 ) -> FontCatalogUpdate {
     let families = entries.iter().map(|e| e.family.clone()).collect::<Vec<_>>();
-    let update = apply_font_catalog_update(app, families, policy);
-    app.set_global::<FontCatalogMetadata>(FontCatalogMetadata {
-        entries,
-        revision: update.revision,
-    });
-    update
+
+    let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
+    let catalog_changed = app
+        .global::<FontCatalog>()
+        .map(|c| c.families.as_slice() != families.as_slice())
+        .unwrap_or(true);
+    let metadata_changed = app
+        .global::<FontCatalogMetadata>()
+        .map(|m| m.entries.as_slice() != entries.as_slice())
+        .unwrap_or(true);
+
+    let revision = if catalog_changed || metadata_changed {
+        prev_rev.saturating_add(1)
+    } else {
+        prev_rev
+    };
+
+    let prev_config = app
+        .global::<TextFontFamilyConfig>()
+        .cloned()
+        .unwrap_or_default();
+    let config = apply_family_defaults_policy(prev_config.clone(), &families, policy);
+    let config_changed = config != prev_config;
+    app.set_global::<TextFontFamilyConfig>(config.clone());
+
+    let cache = if catalog_changed || metadata_changed {
+        let cache = FontCatalogCache::from_families(revision, &families);
+        app.set_global::<FontCatalog>(FontCatalog {
+            families: families.clone(),
+            revision,
+        });
+        app.set_global::<FontCatalogCache>(cache.clone());
+        app.set_global::<FontCatalogMetadata>(FontCatalogMetadata { entries, revision });
+        cache
+    } else {
+        app.global::<FontCatalogCache>()
+            .cloned()
+            .unwrap_or_else(|| FontCatalogCache::from_families(revision, &families))
+    };
+
+    FontCatalogUpdate {
+        revision,
+        families,
+        cache,
+        config,
+        config_changed,
+    }
 }
 
 #[cfg(test)]
@@ -265,6 +314,45 @@ mod tests {
             .global::<FontCatalogMetadata>()
             .expect("font catalog metadata");
         assert_eq!(meta.revision, update.revision);
+        assert_eq!(meta.entries, entries);
+    }
+
+    #[test]
+    fn apply_update_with_metadata_does_not_bump_revision_when_entries_unchanged() {
+        let mut app = TestApp::default();
+        let entries = vec![
+            FontCatalogEntry {
+                family: "Inter".to_string(),
+                has_variable_axes: false,
+                known_variable_axes: vec![],
+                is_monospace_candidate: false,
+            },
+            FontCatalogEntry {
+                family: "Roboto Flex".to_string(),
+                has_variable_axes: true,
+                known_variable_axes: vec!["wght".to_string(), "wdth".to_string()],
+                is_monospace_candidate: false,
+            },
+        ];
+
+        let update0 = apply_font_catalog_update_with_metadata(
+            &mut app,
+            entries.clone(),
+            FontFamilyDefaultsPolicy::None,
+        );
+        let update1 = apply_font_catalog_update_with_metadata(
+            &mut app,
+            entries.clone(),
+            FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+        );
+
+        assert_eq!(update0.revision, update1.revision);
+        let catalog = app.global::<FontCatalog>().expect("font catalog");
+        assert_eq!(catalog.revision, update0.revision);
+        let meta = app
+            .global::<FontCatalogMetadata>()
+            .expect("font catalog metadata");
+        assert_eq!(meta.revision, update0.revision);
         assert_eq!(meta.entries, entries);
     }
 }

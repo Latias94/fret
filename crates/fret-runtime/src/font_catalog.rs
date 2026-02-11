@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct FontCatalog {
     pub families: Vec<String>,
-    /// Monotonic revision that increments when the catalog is refreshed.
+    /// Monotonic revision that increments when the effective catalog contents change.
+    ///
+    /// Refresh attempts that yield the same catalog should not bump this revision, to avoid
+    /// spurious invalidation and UI churn.
     pub revision: u64,
 }
 
@@ -37,6 +40,7 @@ pub struct FontCatalogEntry {
 #[serde(default)]
 pub struct FontCatalogMetadata {
     pub entries: Vec<FontCatalogEntry>,
+    /// Monotonic revision that increments when the effective entry list changes.
     pub revision: u64,
 }
 
