@@ -3672,6 +3672,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
+                                                let allow_tear_off = allow_tear_off
+                                                    && docking_policy.as_deref().is_none_or(
+                                                        |policy| {
+                                                            policy.allow_tear_off(
+                                                                drag.source_window,
+                                                                &drag.panel,
+                                                                dock.panels.get(&drag.panel),
+                                                            )
+                                                        },
+                                                    );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,
@@ -3840,6 +3850,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     && drag
                                                         .tear_off_oob_start_frame
                                                         .is_some_and(|f| f != now_frame);
+                                                let allow_tear_off = allow_tear_off
+                                                    && docking_policy.as_deref().is_none_or(
+                                                        |policy| {
+                                                            policy.allow_tear_off(
+                                                                drag.source_window,
+                                                                &drag.panel,
+                                                                dock.panels.get(&drag.panel),
+                                                            )
+                                                        },
+                                                    );
                                                 let requested_tear_off = allow_tear_off
                                                     && drag.source_window == self.window
                                                     && stable_oob
@@ -4040,6 +4060,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
+                                                let allow_tear_off = allow_tear_off
+                                                    && docking_policy.as_deref().is_none_or(
+                                                        |policy| {
+                                                            policy.allow_tear_off(
+                                                                drag.source_window,
+                                                                &drag.panel,
+                                                                dock.panels.get(&drag.panel),
+                                                            )
+                                                        },
+                                                    );
                                                 resolve_dock_drop_intent_panel(
                                                     target,
                                                     drag,

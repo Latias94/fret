@@ -1139,6 +1139,119 @@ fn dock_drag_only_requests_tear_off_after_stable_oob_frame() {
         "expected tear-off request after stable OOB, got: {effects:?}"
     );
 }
+
+#[test]
+fn dock_drag_tear_off_request_respects_policy() {
+    struct NoTearOff;
+
+    impl DockingPolicy for NoTearOff {
+        fn allow_tear_off(
+            &self,
+            _source_window: AppWindowId,
+            _panel: &PanelKey,
+            _info: Option<&DockPanel>,
+        ) -> bool {
+            false
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
+        svc.set(Arc::new(NoTearOff));
+    });
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    // Frame N: first OOB hover should not request a tear-off yet (debounce).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected no tear-off request on first OOB over, got: {effects:?}"
+    );
+
+    // Frame N+1: stable OOB, but policy disallows tear-off -> still no request.
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected tear-off request to be blocked by policy, got: {effects:?}"
+    );
+}
 #[test]
 fn dock_drag_over_floating_title_bar_resolves_center_dock_target() {
     let window = AppWindowId::default();

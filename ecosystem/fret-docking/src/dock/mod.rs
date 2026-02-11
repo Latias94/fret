@@ -71,6 +71,22 @@ pub trait DockingPolicy: Send + Sync + 'static {
     ) -> bool {
         true
     }
+
+    /// Whether a dock drag is allowed to request an OS-window tear-off when leaving window bounds.
+    ///
+    /// Docking has two tear-off paths:
+    /// - Debounced "stable OOB" request while hovering outside the window.
+    /// - Drop-time resolution when the pointer is outside window bounds.
+    ///
+    /// This hook gates both.
+    fn allow_tear_off(
+        &self,
+        _source_window: AppWindowId,
+        _panel: &PanelKey,
+        _info: Option<&DockPanel>,
+    ) -> bool {
+        true
+    }
 }
 
 pub(crate) fn default_viewport_min_content_size() -> Size {
