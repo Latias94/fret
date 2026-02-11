@@ -40,7 +40,14 @@
       "type": "assert",
       "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false }
     },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_node_count_le", "max": 16 }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_max_split_depth_le", "max": 4 }
+    },
     { "type": "capture_bundle", "label": "docking-arbitration-demo-nary-preview-insert-into-existing-split" }
   ]
 }
-

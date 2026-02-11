@@ -624,6 +624,18 @@ pub enum UiPredicateV1 {
     DockGraphHasNestedSameAxisSplitsIs {
         has_nested: bool,
     },
+    /// True when the latest dock graph stats snapshot reports `node_count <= max`.
+    ///
+    /// This is intended for scripted regression gates that want to ensure repeated dock operations
+    /// do not accidentally allocate unbounded structure (e.g. legacy "wrap" behavior that deepens
+    /// the split tree).
+    DockGraphNodeCountLe {
+        max: u32,
+    },
+    /// True when the latest dock graph stats snapshot reports `max_split_depth <= max`.
+    DockGraphMaxSplitDepthLe {
+        max: u32,
+    },
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]

@@ -114,12 +114,21 @@ Each TODO is labeled:
 
 ## P1 — Diagnostics (`fretboard diag`) gates
 
-- [ ] DN-P1-diag-001 Add a diag suite for N-ary split docking invariants.
+- [~] DN-P1-diag-001 Add a diag suite for N-ary split docking invariants.
   - Scripts target: `docking_arbitration_demo`.
   - Must assert: no stuck capture, correct active tab, drop target matches expectation.
+  - Status: initial script + predicates landed; expand into a multi-script suite.
+  - Evidence:
+    - `tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json`
+    - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1` docking predicates)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation)
 
-- [ ] DN-P1-diag-002 Add a scripted “repeated edge-dock does not deepen tree” gate.
+- [~] DN-P1-diag-002 Add a scripted “repeated edge-dock does not deepen tree” gate.
   - Evidence: bundle includes dock graph stats or a simplified “depth” counter.
+  - Status: cheap dock graph stats + `*_le` predicates exist; still need a multi-step script that performs repeated edge docks.
+  - Evidence:
+    - `crates/fret-diag-protocol/src/lib.rs` (`dock_graph_node_count_le`, `dock_graph_max_split_depth_le`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + tests)
 
 - [ ] DN-P1-diag-003 Add a scripted splitter drag gate.
   - Evidence: content rects update monotonically; no oscillation.

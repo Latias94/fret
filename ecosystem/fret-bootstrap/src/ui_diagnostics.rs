@@ -12100,6 +12100,12 @@ fn eval_predicate(
         UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.has_nested_same_axis_splits == *has_nested),
+        UiPredicateV1::DockGraphNodeCountLe { max } => docking
+            .and_then(|d| d.dock_graph_stats)
+            .is_some_and(|s| s.node_count <= *max),
+        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => docking
+            .and_then(|d| d.dock_graph_stats)
+            .is_some_and(|s| s.max_split_depth <= *max),
     }
 }
 
@@ -13582,6 +13588,50 @@ mod tests {
             Some(&docking),
             &pred
         ));
+
+        let pred = UiPredicateV1::DockGraphNodeCountLe { max: 10 };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+        let pred = UiPredicateV1::DockGraphNodeCountLe { max: 9 };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                Some(&docking),
+                &pred
+            ),
+            "expected node_count <= 9 to fail when snapshot reports node_count=10"
+        );
+
+        let pred = UiPredicateV1::DockGraphMaxSplitDepthLe { max: 3 };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+        let pred = UiPredicateV1::DockGraphMaxSplitDepthLe { max: 2 };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                Some(&docking),
+                &pred
+            ),
+            "expected max_split_depth <= 2 to fail when snapshot reports max_split_depth=3"
+        );
 
         let pred = UiPredicateV1::DockGraphCanonicalIs { canonical: false };
         assert!(

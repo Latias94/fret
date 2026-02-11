@@ -479,6 +479,7 @@ Recent additions:
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
+- `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
 
 Notes:
 
@@ -574,6 +575,8 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
+- `{"kind":"dock_graph_node_count_le","max":32}`
+- `{"kind":"dock_graph_max_split_depth_le","max":8}`
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
