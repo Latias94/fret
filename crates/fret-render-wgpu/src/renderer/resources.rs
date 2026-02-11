@@ -146,13 +146,43 @@ impl Renderer {
 
         const FRAMES_IN_FLIGHT: usize = 3;
         let instance_capacity = 1024;
-        let instance_buffers = (0..FRAMES_IN_FLIGHT)
+        let instance_buffers: Vec<wgpu::Buffer> = (0..FRAMES_IN_FLIGHT)
             .map(|i| {
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some(&format!("fret quad instances #{i}")),
                     size: (instance_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
+                })
+            })
+            .collect();
+
+        let quad_instance_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret quad instances bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let quad_instance_bind_groups: Vec<wgpu::BindGroup> = instance_buffers
+            .iter()
+            .enumerate()
+            .map(|(i, buffer)| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("fret quad instances bind group #{i}")),
+                    layout: &quad_instance_bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer.as_entire_binding(),
+                    }],
                 })
             })
             .collect();
@@ -234,6 +264,8 @@ impl Renderer {
             viewport_bind_group_layout,
             viewport_sampler,
             instance_buffers,
+            quad_instance_bind_group_layout,
+            quad_instance_bind_groups,
             instance_buffer_index: 0,
             instance_capacity,
             viewport_vertex_buffers,
@@ -343,6 +375,11 @@ impl Renderer {
             scene_encoding_cache_key: None,
             scene_encoding_cache: SceneEncoding::default(),
             scene_encoding_scratch: SceneEncoding::default(),
+
+            materials: SlotMap::with_key(),
+            materials_by_desc: HashMap::new(),
+            material_paint_budget_per_frame: 50_000,
+            material_distinct_budget_per_frame: 256,
         }
     }
 

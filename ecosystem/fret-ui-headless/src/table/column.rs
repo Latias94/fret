@@ -10,6 +10,7 @@ pub type ColumnId = Arc<str>;
 pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
 pub type SortIsUndefinedFn<TData> = Arc<dyn Fn(&TData) -> bool>;
 pub type SortValueFn<TData> = Arc<dyn Fn(&TData) -> TanStackValue>;
+pub type UniqueValuesFn<TData> = Arc<dyn Fn(&TData, usize) -> Vec<TanStackValue>>;
 pub type FilterFn<TData> = Arc<dyn Fn(&TData, &Value) -> bool>;
 pub type FilterFnWithMeta<TData> = Arc<dyn Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool>;
 pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
@@ -31,6 +32,78 @@ pub enum TanStackValue {
     Array(Vec<TanStackValue>),
     /// Stored as milliseconds since epoch (JS `Date.valueOf()`).
     DateTime(f64),
+}
+
+impl From<bool> for TanStackValue {
+    fn from(value: bool) -> Self {
+        TanStackValue::Bool(value)
+    }
+}
+
+impl From<f32> for TanStackValue {
+    fn from(value: f32) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<f64> for TanStackValue {
+    fn from(value: f64) -> Self {
+        TanStackValue::Number(value)
+    }
+}
+
+impl From<i32> for TanStackValue {
+    fn from(value: i32) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<i64> for TanStackValue {
+    fn from(value: i64) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<u32> for TanStackValue {
+    fn from(value: u32) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<u64> for TanStackValue {
+    fn from(value: u64) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<usize> for TanStackValue {
+    fn from(value: usize) -> Self {
+        TanStackValue::Number(value as f64)
+    }
+}
+
+impl From<String> for TanStackValue {
+    fn from(value: String) -> Self {
+        TanStackValue::String(Arc::<str>::from(value))
+    }
+}
+
+impl From<Arc<str>> for TanStackValue {
+    fn from(value: Arc<str>) -> Self {
+        TanStackValue::String(value)
+    }
+}
+
+impl From<&str> for TanStackValue {
+    fn from(value: &str) -> Self {
+        TanStackValue::String(Arc::<str>::from(value))
+    }
+}
+
+impl From<Vec<TanStackValue>> for TanStackValue {
+    fn from(value: Vec<TanStackValue>) -> Self {
+        TanStackValue::Array(value)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -103,6 +176,7 @@ pub struct ColumnDef<TData> {
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
     pub value_u64_fn: Option<ValueU64Fn<TData>>,
+    pub unique_values_fn: Option<UniqueValuesFn<TData>>,
     pub invert_sorting: bool,
     pub sort_desc_first: Option<bool>,
     pub enable_sorting: bool,
@@ -137,6 +211,7 @@ impl<TData> Clone for ColumnDef<TData> {
             facet_key_fn: self.facet_key_fn.clone(),
             facet_str_fn: self.facet_str_fn.clone(),
             value_u64_fn: self.value_u64_fn.clone(),
+            unique_values_fn: self.unique_values_fn.clone(),
             invert_sorting: self.invert_sorting,
             sort_desc_first: self.sort_desc_first,
             enable_sorting: self.enable_sorting,
@@ -181,6 +256,7 @@ impl<TData> ColumnDef<TData> {
             facet_key_fn: None,
             facet_str_fn: None,
             value_u64_fn: None,
+            unique_values_fn: None,
             invert_sorting: false,
             sort_desc_first: None,
             enable_sorting: true,
@@ -214,6 +290,15 @@ impl<TData> ColumnDef<TData> {
     /// Provide a TanStack-like `getValue(columnId)` accessor for built-in sortingFn behaviors.
     pub fn sort_value_by(mut self, get_value: impl Fn(&TData) -> TanStackValue + 'static) -> Self {
         self.sort_value = Some(Arc::new(get_value));
+        self
+    }
+
+    /// TanStack-aligned: configure `columnDef.getUniqueValues` for `row.getUniqueValues(columnId)`.
+    pub fn unique_values_by(
+        mut self,
+        get_unique_values: impl Fn(&TData, usize) -> Vec<TanStackValue> + 'static,
+    ) -> Self {
+        self.unique_values_fn = Some(Arc::new(get_unique_values));
         self
     }
 
@@ -448,10 +533,14 @@ impl<TData> ColumnHelper<TData> {
         accessor: impl Fn(&TData) -> V + 'static,
     ) -> ColumnDef<TData>
     where
-        V: Ord,
+        V: Ord + Into<TanStackValue>,
     {
         let accessor = Arc::new(accessor);
-        ColumnDef::new(id).sort_by(move |a, b| accessor(a).cmp(&accessor(b)))
+        let sort_accessor = accessor.clone();
+        let value_accessor = accessor.clone();
+        ColumnDef::new(id)
+            .sort_by(move |a, b| sort_accessor(a).cmp(&sort_accessor(b)))
+            .sort_value_by(move |row| value_accessor(row).into())
     }
 
     pub fn accessor_str(
@@ -465,8 +554,10 @@ impl<TData> ColumnHelper<TData> {
         let accessor: Arc<dyn for<'r> Fn(&'r TData) -> &'r str> = Arc::new(accessor);
         let sort_accessor = accessor.clone();
         let facet_accessor = accessor.clone();
+        let value_accessor = accessor.clone();
         ColumnDef::new(id)
             .sort_by(move |a, b| sort_accessor(a).cmp(sort_accessor(b)))
+            .sort_value_by(move |row| TanStackValue::String(Arc::<str>::from(value_accessor(row))))
             .facet_str_by(move |row| facet_accessor(row))
     }
 }

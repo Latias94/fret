@@ -74,8 +74,10 @@ pub struct WinitRunner<D: WinitAppDriver> {
     nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
 
     platform: fret_runner_winit::WinitPlatform,
-    web_cursor: Option<fret_runner_winit::WebCursorListener>,
+    web_cursor: Option<fret_runner_web::WebCursorListener>,
     web_services: WebPlatformServices,
+
+    environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
 }
 
 #[derive(Clone)]
@@ -178,6 +180,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
+            environment_media_queries: None,
         }
     }
 

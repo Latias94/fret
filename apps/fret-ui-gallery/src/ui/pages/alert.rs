@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(720.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -59,7 +57,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .variant(variant)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        .test_id(test_id)
     };
 
     let demo_content = stack::vstack(
@@ -89,7 +87,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-alert-demo"));
+    .test_id("ui-gallery-alert-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = build_alert(
@@ -139,7 +137,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-alert-action"))
+        .test_id("ui-gallery-alert-action")
     };
     let action = section_card(cx, "Action", action_content);
 
@@ -168,7 +166,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     )
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-alert-colors"));
+    .test_id("ui-gallery-alert-colors");
     let custom_colors = section_card(cx, "Custom Colors", custom_colors_content);
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
@@ -215,8 +213,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-alert-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-alert-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

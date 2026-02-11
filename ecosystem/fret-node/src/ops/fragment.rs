@@ -10,8 +10,9 @@ use serde_json as json;
 use uuid::Uuid;
 
 use crate::core::{
-    CanvasPoint, Edge, EdgeId, Graph, Group, GroupId, Node, NodeId, Port, PortId, StickyNote,
-    StickyNoteId, Symbol, SymbolId, symbol_ref_target_symbol_id,
+    CanvasPoint, Edge, EdgeId, Graph, GraphImport, Group, GroupId, Node, NodeId, Port, PortId,
+    StickyNote, StickyNoteId, Symbol, SymbolId, subgraph_target_graph_id, symbol_ref_node_data,
+    symbol_ref_target_symbol_id,
 };
 use crate::ops::{GraphOp, GraphTransaction};
 
@@ -29,6 +30,8 @@ pub struct GraphFragment {
     pub ports: BTreeMap<PortId, Port>,
     pub edges: BTreeMap<EdgeId, Edge>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub imports: BTreeMap<crate::core::GraphId, GraphImport>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub groups: BTreeMap<GroupId, Group>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub sticky_notes: BTreeMap<StickyNoteId, StickyNote>,
@@ -43,6 +46,7 @@ impl Default for GraphFragment {
             nodes: BTreeMap::new(),
             ports: BTreeMap::new(),
             edges: BTreeMap::new(),
+            imports: BTreeMap::new(),
             groups: BTreeMap::new(),
             sticky_notes: BTreeMap::new(),
             symbols: BTreeMap::new(),
@@ -113,6 +117,15 @@ impl GraphFragment {
             };
             if let Some(symbol) = graph.symbols.get(&symbol_id) {
                 out.symbols.insert(symbol_id, symbol.clone());
+            }
+        }
+
+        for (node_id, node) in &out.nodes {
+            let Ok(Some(graph_id)) = subgraph_target_graph_id(*node_id, node) else {
+                continue;
+            };
+            if let Some(import) = graph.imports.get(&graph_id) {
+                out.imports.insert(graph_id, import.clone());
             }
         }
 
@@ -411,6 +424,13 @@ impl GraphFragment {
             symbol_map.insert(*symbol_id, remapper.remap_symbol(*symbol_id));
         }
 
+        for (id, import) in &self.imports {
+            tx.push(GraphOp::AddImport {
+                id: *id,
+                import: import.clone(),
+            });
+        }
+
         for (old_id, old_symbol) in &self.symbols {
             let new_id = symbol_map[old_id];
             tx.push(GraphOp::AddSymbol {
@@ -429,6 +449,13 @@ impl GraphFragment {
         for (old_id, old_node) in &self.nodes {
             let new_id = node_map[old_id];
             let mut node = old_node.clone();
+
+            if let Ok(Some(old_symbol_id)) = symbol_ref_target_symbol_id(*old_id, old_node)
+                && let Some(new_symbol_id) = symbol_map.get(&old_symbol_id)
+            {
+                node.data = symbol_ref_node_data(*new_symbol_id);
+            }
+
             node.pos = CanvasPoint {
                 x: node.pos.x + tuning.offset.x,
                 y: node.pos.y + tuning.offset.y,

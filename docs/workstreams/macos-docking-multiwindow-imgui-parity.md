@@ -48,9 +48,9 @@ Without a dedicated parity plan, the implementation tends to accumulate backend-
 - Cross-window drag sessions: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - Multi-window + DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
 - Docking arbitration matrix: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- Multi-window degradation policy: `docs/adr/0084-multi-window-degradation-policy.md`
+- Multi-window degradation policy: `docs/adr/0083-multi-window-degradation-policy.md`
 - Platform capabilities (runtime): `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
-- Window styles / utility windows (future): `docs/adr/0154-window-styles-and-utility-windows.md` (Proposed)
+- Window styles / utility windows (future): `docs/adr/0139-window-styles-and-utility-windows.md` (Proposed)
 
 ## Target UX (ImGui-class behaviors)
 
@@ -256,7 +256,7 @@ Goal:
 - Reduce focus churn during drag tracking by avoiding “makeKey” during an active dock drag, while still
   ordering the window above the source.
 
-This likely belongs under the future `WindowStyleRequest` surface (ADR 0154) once stabilized.
+This likely belongs under the future `WindowStyleRequest` surface (ADR 0139) once stabilized.
 
 ## Diagnostics & debugging
 

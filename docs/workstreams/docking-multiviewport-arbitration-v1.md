@@ -16,20 +16,20 @@ The goal is to avoid a late-stage rewrite by locking the “hard-to-change” ar
 ## Scope (What “viewport” means here)
 
 This document focuses on **engine viewport panels** (render targets embedded via `RenderTargetId`,
-ADR 0007) and their forwarded input (`ViewportInputEvent`, ADR 0147).
+ADR 0007) and their forwarded input (`ViewportInputEvent`, ADR 0132).
 
 UI clipping/scroll “viewports” are a separate concern.
 
 ## Contract Gates (Hard Boundaries)
 
 - Engine viewport surfaces: `docs/adr/0007-viewport-surfaces.md`
-- Viewport input forwarding (explicit units): `docs/adr/0147-viewport-input-forwarding-explicit-units.md`
+- Viewport input forwarding (explicit units): `docs/adr/0132-viewport-input-forwarding-explicit-units.md`
 - Focus + command routing (modal gating): `docs/adr/0020-focus-and-command-routing.md`
 - Multi-root overlays: `docs/adr/0011-overlays-and-multi-root.md`
 - Docking layering split (B route): `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
 - Docking × overlays × viewport capture arbitration: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- Multi-pointer identity + sessions: `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`,
-  `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- Multi-pointer identity + sessions: `docs/adr/0150-pointer-identity-and-multi-pointer-capture.md`,
+  `docs/adr/0151-multi-pointer-drag-sessions-and-routing-keys.md`
 
 ## Current State (Baseline)
 
@@ -67,7 +67,7 @@ tests as the primary delivery.
 
 3) **Refactor guardrails (multi-pointer ready)**
    - Move docking’s viewport capture from a single `Option<...>` to pointer-keyed state (`PointerId → capture`),
-     aligning with ADR 0072/0165/0166 (even if demos remain mouse-only).
+     aligning with ADR 0072/0150/0151 (even if demos remain mouse-only).
 
 ## Non-goals (v1)
 

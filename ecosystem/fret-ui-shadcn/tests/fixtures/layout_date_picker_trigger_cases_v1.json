@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "date-picker-demo.trigger-geometry",
+      "web_name": "date-picker-demo",
+      "recipe": "date_picker",
+      "label": "Pick a date"
+    },
+    {
+      "id": "date-picker-with-presets.trigger-geometry",
+      "web_name": "date-picker-with-presets",
+      "recipe": "date_picker_with_presets",
+      "label": "Pick a date"
+    },
+    {
+      "id": "date-picker-with-range.trigger-geometry",
+      "web_name": "date-picker-with-range",
+      "recipe": "date_range_picker",
+      "label": "Jan 20, 2022 - Feb 09, 2022"
+    }
+  ]
+}

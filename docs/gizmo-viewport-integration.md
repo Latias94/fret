@@ -10,8 +10,8 @@ target as the scene.
 See also:
 
 - Tier A viewport contract: `docs/viewport-panels.md`
-- Explicit-units input contract: `docs/adr/0147-viewport-input-forwarding-explicit-units.md`
-- Gizmo boundary ADR: `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
+- Explicit-units input contract: `docs/adr/0132-viewport-input-forwarding-explicit-units.md`
+- Gizmo boundary ADR: `docs/adr/0130-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - End-to-end reference: `apps/fret-examples/src/gizmo3d_demo.rs`
 
 ## Recommended architecture
@@ -19,7 +19,7 @@ See also:
 **UI layer (declarative):**
 
 - Embed the engine output using `ViewportSurface` (usually via `fret-ui-kit::viewport_surface_panel(...)`).
-- Forward pointer + wheel events as `Effect::ViewportInput(ViewportInputEvent)` (ADR 0147).
+- Forward pointer + wheel events as `Effect::ViewportInput(ViewportInputEvent)` (ADR 0132).
 
 **Driver / engine layer:**
 
@@ -70,7 +70,7 @@ To reduce boilerplate and keep unit conversions consistent, use:
 
 Note:
 
-- `ViewportToolInput` is shared infrastructure (ADR 0168). It lives in `ecosystem/fret-viewport-tooling`
+- `ViewportToolInput` is shared infrastructure (ADR 0153). It lives in `ecosystem/fret-viewport-tooling`
   and is re-exported by `fret-gizmo` for convenience.
 
 It derives:
@@ -97,7 +97,7 @@ broader scene-units/rebasing policy in the host.
 This is sometimes convenient if you want tooling math to live entirely in UI/input space.
 
 - Set `viewport` to the mapped draw rect in window logical pixels:
-  - `draw_rect = event.geometry.draw_rect_px` (ADR 0147)
+  - `draw_rect = event.geometry.draw_rect_px` (ADR 0132)
   - convert the `Rect`/`Point`/`Px` types into `glam::Vec2` by extracting the inner numeric values
     (e.g. `event.cursor_px.x.0` in the demo).
 - Use `event.cursor_px` (window logical px) as the source of `GizmoInput.cursor_px` (after converting
@@ -141,7 +141,7 @@ Most editor viewports need multiple concurrent tools:
 - plus domain-specific gizmos.
 
 To keep these boundaries explicit and reusable across ecosystem crates, treat each interaction as a
-**viewport tool** and route them through the shared host helper (ADR 0168).
+**viewport tool** and route them through the shared host helper (ADR 0153).
 
 Recommended host pattern:
 
@@ -151,7 +151,7 @@ Recommended host pattern:
 - Use `ViewportToolRouterState` (`hot` / `active` / captured button) as the stable “tool session”
   state you store in your model.
 - If you need a pure “am I over a handle?” check for routing, prefer the side-effect-free pick helper:
-  - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0168 hit-test rule)
+  - `GizmoPluginManager::pick_hovered_handle(...)` (no state updates; see ADR 0153 hit-test rule)
 - When handling `Esc` / cancel commands, cancel the active tool session via the routing helpers:
   - callback router: `cancel_active_viewport_tools(...)`
   - trait-object router: `ViewportToolArbitrator::cancel_active_and_clear_hot()`
@@ -227,7 +227,7 @@ subsystem.
 
 ## Ergonomics helpers (available today)
 
-The core boundary remains host-driven (ADR 0139 / ADR 0147), but common glue is now shared:
+The core boundary remains host-driven (ADR 0130 / ADR 0132), but common glue is now shared:
 
 - Portable input mapping + tool protocol: `ecosystem/fret-viewport-tooling`
   - `ViewportToolInput`, `ViewportRect`, `ViewportTool{Id,Priority,Result}`, `ViewportToolCx`

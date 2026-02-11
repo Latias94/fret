@@ -573,6 +573,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -746,6 +749,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -907,6 +913,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1053,6 +1062,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1121,6 +1133,10 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
+            grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1180,6 +1196,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1248,6 +1267,10 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
+            grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1306,6 +1329,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1377,6 +1403,10 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
+            grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1433,6 +1463,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1504,6 +1537,10 @@ mod tests {
         assert!(!step.unfinished);
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
+            grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1578,6 +1615,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -1730,6 +1770,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

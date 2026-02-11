@@ -74,19 +74,28 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             rect,
             background,
             border,
-            border_color,
+            border_paint,
             corner_radii,
             ..
         } => {
-            draw::encode_quad(state, rect, background, border, border_color, corner_radii);
+            draw::encode_quad(
+                renderer,
+                state,
+                rect,
+                background,
+                border,
+                border_paint,
+                corner_radii,
+            );
         }
         SceneOp::Image {
             rect,
             image,
+            fit,
             opacity,
             ..
         } => {
-            draw::encode_image(renderer, state, rect, image, opacity);
+            draw::encode_image(renderer, state, rect, image, fit, opacity);
         }
         SceneOp::ImageRegion {
             rect,

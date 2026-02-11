@@ -130,19 +130,22 @@ pub fn file_tree_view_retained_v0<H: UiHost>(
 where
     H: 'static,
 {
-    let theme = Arc::new(Theme::global(&*cx.app).clone());
-
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
-    let TreeState { selected, expanded } =
-        cx.watch_model(&state).paint().cloned().unwrap_or_default();
-    let items_value = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let TreeState { selected, expanded } = cx.watch_model(&state).paint().cloned_or_default();
+    let items_value = cx.watch_model(&items).layout().cloned_or_default();
 
-    let (list_bg, row_hover, row_active) = resolve_list_colors(theme.as_ref());
-    let row_h = resolve_row_height(theme.as_ref(), props.row_height);
-    let row_px = resolve_row_padding_x(theme.as_ref());
-    let row_py = resolve_row_padding_y(theme.as_ref());
-    let indent = resolve_indent(theme.as_ref());
+    let (list_bg, row_hover, row_active, row_h, row_px, row_py, indent) = {
+        let theme = Theme::global(&*cx.app);
+        let (list_bg, row_hover, row_active) = resolve_list_colors(theme);
+        let row_h = resolve_row_height(theme, props.row_height);
+        let row_px = resolve_row_padding_x(theme);
+        let row_py = resolve_row_padding_y(theme);
+        let indent = resolve_indent(theme);
+        (
+            list_bg, row_hover, row_active, row_h, row_px, row_py, indent,
+        )
+    };
 
     let entries: Arc<Vec<TreeEntry>> = cx.with_state(FileTreeRowsState::default, |rows_state| {
         if rows_state.last_items_revision != Some(items_revision)
@@ -211,7 +214,6 @@ where
 
         let enabled = !entry.disabled;
         let pad_left = Px(row_px.0 + indent.0 * (entry.depth as f32).max(0.0));
-        let theme = Arc::clone(&theme);
         let state_for_row = state_for_row.clone();
 
         cx.pressable(
@@ -258,13 +260,16 @@ where
                     "-"
                 };
 
-                let mut row_props = decl_style::container_props(
-                    theme.as_ref(),
-                    ChromeRefinement::default().bg(ColorRef::Color(background)),
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(row_h)),
-                );
+                let mut row_props = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default().bg(ColorRef::Color(background)),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(row_h)),
+                    )
+                };
                 row_props.layout.overflow = fret_ui::element::Overflow::Clip;
                 row_props.padding = Edges {
                     top: row_py,

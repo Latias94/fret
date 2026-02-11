@@ -117,6 +117,65 @@ impl<'a, TData> RowModel<'a, TData> {
         &self.flat_rows
     }
 
+    /// TanStack-aligned: `row.getParentRows()` (root → ... → parent), excluding the row itself.
+    pub fn parent_rows(&self, row: RowIndex) -> Vec<RowIndex> {
+        let Some(mut current) = self.row(row).and_then(|r| r.parent) else {
+            return Vec::new();
+        };
+
+        let mut out = Vec::new();
+        while let Some(r) = self.row(current) {
+            out.push(current);
+            let Some(parent) = r.parent else {
+                break;
+            };
+            current = parent;
+        }
+
+        out.reverse();
+        out
+    }
+
+    /// TanStack-aligned: `row.getParentRows().map(r => r.id)`.
+    pub fn parent_row_ids(&self, row: RowIndex) -> Vec<RowId> {
+        self.parent_rows(row)
+            .into_iter()
+            .filter_map(|idx| self.row(idx).map(|r| r.id.clone()))
+            .collect()
+    }
+
+    /// TanStack-aligned: `row.getLeafRows()` is implemented upstream as
+    /// `flattenBy(row.subRows, r => r.subRows)` (DFS preorder), excluding the row itself.
+    ///
+    /// Note: despite the name, this includes all descendants (not only leaf nodes).
+    pub fn leaf_rows(&self, row: RowIndex) -> Vec<RowIndex> {
+        fn push_descendants<TData>(
+            arena: &[Row<'_, TData>],
+            out: &mut Vec<RowIndex>,
+            row: RowIndex,
+        ) {
+            let Some(r) = arena.get(row) else {
+                return;
+            };
+            for &child in &r.sub_rows {
+                out.push(child);
+                push_descendants(arena, out, child);
+            }
+        }
+
+        let mut out = Vec::new();
+        push_descendants(&self.arena, &mut out, row);
+        out
+    }
+
+    /// TanStack-aligned: `row.getLeafRows().map(r => r.id)`.
+    pub fn leaf_row_ids(&self, row: RowIndex) -> Vec<RowId> {
+        self.leaf_rows(row)
+            .into_iter()
+            .filter_map(|idx| self.row(idx).map(|r| r.id.clone()))
+            .collect()
+    }
+
     pub fn row(&self, index: RowIndex) -> Option<&Row<'a, TData>> {
         self.arena.get(index)
     }
@@ -153,6 +212,12 @@ type GetGroupedRowModelFn<'a, TData> = Arc<
         ) -> super::GroupedRowModel
         + 'a,
 >;
+type GetGlobalFacetedRowModelFn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> RowModel<'a, TData> + 'a>;
+type GetGlobalFacetedUniqueValuesFn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> super::FacetCounts + 'a>;
+type GetGlobalFacetedMinMaxU64Fn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> Option<(u64, u64)> + 'a>;
 
 pub struct TableBuilder<'a, TData> {
     data: &'a [TData],
@@ -172,6 +237,9 @@ pub struct TableBuilder<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    get_global_faceted_row_model: Option<GetGlobalFacetedRowModelFn<'a, TData>>,
+    get_global_faceted_unique_values: Option<GetGlobalFacetedUniqueValuesFn<'a, TData>>,
+    get_global_faceted_min_max_u64: Option<GetGlobalFacetedMinMaxU64Fn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
     sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
@@ -202,6 +270,9 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_id: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            get_global_faceted_row_model: None,
+            get_global_faceted_unique_values: None,
+            get_global_faceted_min_max_u64: None,
             filtered_row_model_override_pre_filtered: false,
             sorted_row_model_override_pre_sorted: false,
             expanded_row_model_override_pre_expanded: false,
@@ -479,6 +550,33 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Override the "global faceted row model" surface (TanStack `getGlobalFacetedRowModel`).
+    pub fn get_global_faceted_row_model(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> RowModel<'a, TData> + 'a,
+    ) -> Self {
+        self.get_global_faceted_row_model = Some(Arc::new(f));
+        self
+    }
+
+    /// Override the "global faceted unique values" surface (TanStack `getGlobalFacetedUniqueValues`).
+    pub fn get_global_faceted_unique_values(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> super::FacetCounts + 'a,
+    ) -> Self {
+        self.get_global_faceted_unique_values = Some(Arc::new(f));
+        self
+    }
+
+    /// Override the "global faceted min/max" surface (TanStack `getGlobalFacetedMinMaxValues`).
+    pub fn get_global_faceted_min_max_u64(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> Option<(u64, u64)> + 'a,
+    ) -> Self {
+        self.get_global_faceted_min_max_u64 = Some(Arc::new(f));
+        self
+    }
+
     /// Register a named aggregation function (TanStack `options.aggregationFns` equivalent).
     pub fn aggregation_fn(
         mut self,
@@ -519,6 +617,9 @@ pub struct Table<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    get_global_faceted_row_model: Option<GetGlobalFacetedRowModelFn<'a, TData>>,
+    get_global_faceted_unique_values: Option<GetGlobalFacetedUniqueValuesFn<'a, TData>>,
+    get_global_faceted_min_max_u64: Option<GetGlobalFacetedMinMaxU64Fn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
     sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
@@ -548,6 +649,9 @@ pub struct Table<'a, TData> {
     faceted_unique_values_by_column: OnceCell<Vec<OnceCell<super::FacetCounts>>>,
     faceted_unique_labels_by_column: OnceCell<Vec<OnceCell<super::FacetLabels<'a>>>>,
     faceted_min_max_u64_by_column: OnceCell<Vec<OnceCell<Option<(u64, u64)>>>>,
+    global_faceted_row_model: OnceCell<RowModel<'a, TData>>,
+    global_faceted_unique_values: OnceCell<super::FacetCounts>,
+    global_faceted_min_max_u64: OnceCell<Option<(u64, u64)>>,
 }
 
 fn rebuild_flat_rows_from_roots_including_duplicates<TData>(row_model: &mut RowModel<'_, TData>) {
@@ -628,6 +732,9 @@ impl<'a, TData> Table<'a, TData> {
             get_row_id: builder.get_row_id,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            get_global_faceted_row_model: builder.get_global_faceted_row_model,
+            get_global_faceted_unique_values: builder.get_global_faceted_unique_values,
+            get_global_faceted_min_max_u64: builder.get_global_faceted_min_max_u64,
             filtered_row_model_override_pre_filtered: builder
                 .filtered_row_model_override_pre_filtered,
             sorted_row_model_override_pre_sorted: builder.sorted_row_model_override_pre_sorted,
@@ -658,6 +765,9 @@ impl<'a, TData> Table<'a, TData> {
             faceted_unique_values_by_column: OnceCell::new(),
             faceted_unique_labels_by_column: OnceCell::new(),
             faceted_min_max_u64_by_column: OnceCell::new(),
+            global_faceted_row_model: OnceCell::new(),
+            global_faceted_unique_values: OnceCell::new(),
+            global_faceted_min_max_u64: OnceCell::new(),
         }
     }
 
@@ -727,6 +837,39 @@ impl<'a, TData> Table<'a, TData> {
             }
             other => Some(other),
         }
+    }
+
+    /// TanStack-aligned: `row.getUniqueValues(columnId)` for a leaf row in the core row model.
+    ///
+    /// Notes:
+    ///
+    /// - If `column.unique_values_fn` is configured, it is used (matches TanStack
+    ///   `columnDef.getUniqueValues`).
+    /// - Otherwise, returns a single-element array containing `getValue(columnId)`.
+    /// - If the column has no value source in the Rust engine, this returns `None`.
+    pub fn row_unique_values(
+        &self,
+        row_key: RowKey,
+        column_id: &str,
+    ) -> Option<Vec<super::TanStackValue>> {
+        let col = self.column(column_id)?;
+        let core = self.core_row_model();
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+
+        if let Some(get_unique_values) = col.unique_values_fn.as_ref() {
+            return Some(get_unique_values(row.original, row.index));
+        }
+
+        let has_value_source = col.sort_value.is_some()
+            || col.value_u64_fn.is_some()
+            || col.facet_key_fn.is_some()
+            || col.facet_str_fn.is_some();
+        if !has_value_source {
+            return None;
+        }
+
+        Some(vec![self.tanstack_value_for_item(col, row.original)])
     }
 
     fn column_index(&self, id: &str) -> Option<usize> {
@@ -800,6 +943,23 @@ impl<'a, TData> Table<'a, TData> {
         Some(row.id.clone())
     }
 
+    /// Rust-native equivalent of TanStack `cell.getContext()`.
+    pub fn cell_context(
+        &self,
+        row_key: RowKey,
+        column_id: &str,
+    ) -> Option<super::CellContextSnapshot> {
+        let row_id = self.row_id_for_key(row_key)?;
+        let col = self.column(column_id)?;
+        let id = Arc::<str>::from(format!("{}_{}", row_id.as_str(), col.id.as_ref()));
+        Some(super::CellContextSnapshot {
+            id,
+            row_id,
+            row_key,
+            column_id: col.id.clone(),
+        })
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
     }
@@ -814,15 +974,87 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn is_column_visible(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
-        Some(super::is_column_visible(
-            &self.state.column_visibility,
-            &col.id,
-        ))
+
+        fn is_visible<TData>(
+            col: &super::ColumnDef<TData>,
+            visibility: &super::ColumnVisibilityState,
+        ) -> bool {
+            if !col.columns.is_empty() {
+                return col.columns.iter().any(|c| is_visible(c, visibility));
+            }
+
+            super::is_column_visible(visibility, &col.id)
+        }
+
+        Some(is_visible(col, &self.state.column_visibility))
     }
 
     pub fn column_can_hide(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
         Some(self.options.enable_hiding && col.enable_hiding)
+    }
+
+    /// TanStack-aligned: `table.getAllFlatColumns()`.
+    ///
+    /// This returns the full column tree in a pre-order DFS flattening (`column`, then its
+    /// descendants). It does **not** apply `columnOrder` reordering, matching upstream semantics.
+    pub fn all_flat_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        fn push<'a, TData>(
+            cols: &'a [super::ColumnDef<TData>],
+            out: &mut Vec<&'a super::ColumnDef<TData>>,
+        ) {
+            for col in cols {
+                out.push(col);
+                if !col.columns.is_empty() {
+                    push(col.columns.as_slice(), out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push(self.column_tree.as_slice(), &mut out);
+        out
+    }
+
+    /// TanStack-aligned: `table.getVisibleFlatColumns()`.
+    ///
+    /// Visibility rules match TanStack:
+    /// - leaf columns consult `state.column_visibility` (default visible),
+    /// - group columns are visible if any descendant is visible.
+    pub fn visible_flat_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        fn is_visible<TData>(
+            col: &super::ColumnDef<TData>,
+            visibility: &super::ColumnVisibilityState,
+        ) -> bool {
+            if !col.columns.is_empty() {
+                return col.columns.iter().any(|c| is_visible(c, visibility));
+            }
+
+            super::is_column_visible(visibility, &col.id)
+        }
+
+        fn push<'a, TData>(
+            cols: &'a [super::ColumnDef<TData>],
+            visibility: &super::ColumnVisibilityState,
+            out: &mut Vec<&'a super::ColumnDef<TData>>,
+        ) {
+            for col in cols {
+                if is_visible(col, visibility) {
+                    out.push(col);
+                }
+                if !col.columns.is_empty() {
+                    push(col.columns.as_slice(), visibility, out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push(
+            self.column_tree.as_slice(),
+            &self.state.column_visibility,
+            &mut out,
+        );
+        out
     }
 
     pub fn hideable_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -1813,6 +2045,65 @@ impl<'a, TData> Table<'a, TData> {
         (order.clone(), recomputed)
     }
 
+    /// Returns the final **ungrouped** row-model ordering (rows + flatRows) with a persistent
+    /// external memo cache.
+    ///
+    /// This helper exists to support "rebuild each frame" callers: they can rebuild a fresh
+    /// `Table` every frame while keeping a persistent memo cache (TanStack-style) outside the
+    /// ephemeral instance.
+    ///
+    /// Returns `None` when grouping is active, since grouped row models contain non-core rows (group
+    /// headers) whose stable-key strategy is a separate concern.
+    pub fn tanstack_ungrouped_row_model_order_with_cache(
+        &self,
+        items_revision: u64,
+        cache: &mut super::TanStackUngroupedRowModelOrderCache,
+    ) -> Option<(Arc<super::TanStackRowModelOrderSnapshot>, bool)> {
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            return None;
+        }
+
+        let deps = super::TanStackUngroupedRowModelOrderDeps {
+            items_revision,
+            data_len: self.data.len(),
+            sorting: self.state.sorting.clone(),
+            column_filters: self.state.column_filters.clone(),
+            global_filter: self.state.global_filter.clone(),
+            expanding: self.state.expanding.clone(),
+            pagination: self.state.pagination,
+            options: self.options,
+            global_filter_fn: self.global_filter_fn.clone(),
+            has_get_column_can_global_filter: self.get_column_can_global_filter.is_some(),
+        };
+
+        debug_assert_eq!(deps.data_len, self.data.len());
+        debug_assert_eq!(
+            deps.has_get_column_can_global_filter,
+            self.get_column_can_global_filter.is_some()
+        );
+
+        let signature = super::tanstack_memo::columns_signature(&self.columns);
+        let (value, recomputed) = cache.ungrouped_order(signature, deps, || {
+            let model = self.row_model();
+            let rows: Vec<super::RowKey> = model
+                .root_rows()
+                .iter()
+                .filter_map(|&i| model.row(i).map(|r| r.key))
+                .collect();
+            let flat_rows: Vec<super::RowKey> = model
+                .flat_rows()
+                .iter()
+                .filter_map(|&i| model.row(i).map(|r| r.key))
+                .collect();
+            super::TanStackRowModelOrderSnapshot {
+                rows: Arc::from(rows.into_boxed_slice()),
+                flat_rows: Arc::from(flat_rows.into_boxed_slice()),
+            }
+        });
+
+        Some((value.clone(), recomputed))
+    }
+
     /// TanStack-aligned: `column.getCanSort()`.
     pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
@@ -2197,8 +2488,14 @@ impl<'a, TData> Table<'a, TData> {
     /// Returns `-1` when the row is not currently visible in its pinned region. Returns `None`
     /// when the row key does not exist.
     pub fn row_pinned_index(&self, row_key: RowKey) -> Option<i32> {
-        let core = self.core_row_model();
-        if core.row_by_key(row_key).is_none() {
+        let exists = if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            grouped.row_by_key(row_key).is_some()
+                || self.core_row_model().row_by_key(row_key).is_some()
+        } else {
+            self.core_row_model().row_by_key(row_key).is_some()
+        };
+        if !exists {
             return None;
         }
 
@@ -2220,12 +2517,34 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_can_pin(&self, row_key: RowKey) -> Option<bool> {
         let core = self.core_row_model();
-        let index = core.row_by_key(row_key)?;
-        let row = core.row(index)?;
-        if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
-            return Some(enable_row_pinning(row_key, row.original));
+
+        if let Some(index) = core.row_by_key(row_key) {
+            let row = core.row(index)?;
+            if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
+                return Some(enable_row_pinning(row_key, row.original));
+            }
+            return Some(self.options.enable_row_pinning);
         }
-        Some(self.options.enable_row_pinning)
+
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            let index = grouped.row_by_key(row_key)?;
+            let row = grouped.row(index)?;
+            if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
+                let first_leaf_key = match row.kind {
+                    super::GroupedRowKind::Group {
+                        first_leaf_row_key, ..
+                    } => first_leaf_row_key,
+                    super::GroupedRowKind::Leaf { row_key } => row_key,
+                };
+                let leaf_index = core.row_by_key(first_leaf_key)?;
+                let leaf_row = core.row(leaf_index)?;
+                return Some(enable_row_pinning(row_key, leaf_row.original));
+            }
+            return Some(self.options.enable_row_pinning);
+        }
+
+        None
     }
 
     pub fn row_pinning_updater(
@@ -2861,27 +3180,6 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn core_model_snapshot(&self) -> super::CoreModelSnapshot {
-        fn push_column_nodes<TData>(
-            cols: &[super::ColumnDef<TData>],
-            depth: usize,
-            parent_id: Option<Arc<str>>,
-            out: &mut Vec<super::ColumnNodeSnapshot>,
-        ) {
-            for col in cols {
-                let id = col.id.clone();
-                let child_ids: Vec<Arc<str>> = col.columns.iter().map(|c| c.id.clone()).collect();
-                out.push(super::ColumnNodeSnapshot {
-                    id: id.clone(),
-                    depth,
-                    parent_id: parent_id.clone(),
-                    child_ids: child_ids.clone(),
-                });
-                if !col.columns.is_empty() {
-                    push_column_nodes(&col.columns, depth + 1, Some(id), out);
-                }
-            }
-        }
-
         fn snapshot_row_model_ids<'a, TData>(
             model: &RowModel<'a, TData>,
         ) -> super::RowModelIdSnapshot {
@@ -2898,8 +3196,26 @@ impl<'a, TData> Table<'a, TData> {
             super::RowModelIdSnapshot { root, flat }
         }
 
-        let mut column_tree = Vec::new();
-        push_column_nodes(&self.column_tree, 0, None, &mut column_tree);
+        let column_tree = self.column_tree_snapshot();
+
+        let mut column_capabilities: std::collections::BTreeMap<
+            Arc<str>,
+            super::ColumnCapabilitySnapshot,
+        > = std::collections::BTreeMap::new();
+        for col in self.ordered_columns() {
+            let id = col.id.clone();
+            column_capabilities.insert(
+                id.clone(),
+                super::ColumnCapabilitySnapshot {
+                    can_hide: self.column_can_hide(id.as_ref()).unwrap_or(false),
+                    can_pin: self.column_can_pin(id.as_ref()).unwrap_or(false),
+                    pin_position: self.column_pin_position(id.as_ref()),
+                    pinned_index: self.column_pinned_index(id.as_ref()).unwrap_or(0),
+                    can_resize: self.column_can_resize(id.as_ref()).unwrap_or(false),
+                    is_visible: self.is_column_visible(id.as_ref()).unwrap_or(false),
+                },
+            );
+        }
 
         let all_leaf = self
             .ordered_columns()
@@ -2916,10 +3232,109 @@ impl<'a, TData> Table<'a, TData> {
         let center_visible = center.into_iter().map(|c| c.id.clone()).collect::<Vec<_>>();
         let right_visible = right.into_iter().map(|c| c.id.clone()).collect::<Vec<_>>();
 
+        let all_flat = self
+            .all_flat_columns()
+            .into_iter()
+            .map(|c| c.id.clone())
+            .collect::<Vec<_>>();
+        let visible_flat = self
+            .visible_flat_columns()
+            .into_iter()
+            .map(|c| c.id.clone())
+            .collect::<Vec<_>>();
+
         let header_groups = self.header_groups();
         let left_header_groups = self.left_header_groups();
         let center_header_groups = self.center_header_groups();
         let right_header_groups = self.right_header_groups();
+
+        let mut header_size: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut header_start: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+
+        for groups in [
+            &header_groups,
+            &left_header_groups,
+            &center_header_groups,
+            &right_header_groups,
+        ] {
+            for g in groups {
+                for h in &g.headers {
+                    let id = h.id.clone();
+                    if let Some(size) = self.header_size(id.as_ref()) {
+                        header_size.insert(id.clone(), size);
+                    }
+                    if let Some(start) = self.header_start(id.as_ref()) {
+                        header_start.insert(id.clone(), start);
+                    }
+                }
+            }
+        }
+
+        let (left_total_size, center_total_size, right_total_size) = self.pinned_total_sizes();
+
+        let mut column_size: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_start_all: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_start_left: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_start_center: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_start_right: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_all: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_after_left: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_center: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_right: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+
+        for col in self.ordered_columns() {
+            let id = col.id.clone();
+            column_size.insert(
+                id.clone(),
+                super::resolved_column_size(&self.state.column_sizing, col),
+            );
+            column_start_all.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::All)
+                    .unwrap_or(0.0),
+            );
+            column_start_left.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Left),
+            );
+            column_start_center.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Center),
+            );
+            column_start_right.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Right),
+            );
+
+            column_after_all.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::All)
+                    .unwrap_or(0.0),
+            );
+            column_after_left.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Left),
+            );
+            column_after_center.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Center),
+            );
+            column_after_right.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Right),
+            );
+        }
 
         let core = snapshot_row_model_ids(self.core_row_model());
         let row_model = snapshot_row_model_ids(self.row_model());
@@ -2930,14 +3345,20 @@ impl<'a, TData> Table<'a, TData> {
             let Some(row) = self.row_model().row(row_i) else {
                 continue;
             };
-            let row_id = Arc::<str>::from(row.key.0.to_string());
+            let row_id = row.id.0.clone();
             if let Some(snapshot) = self.row_cells(row.key) {
                 cells.insert(row_id, snapshot);
             }
         }
 
         super::CoreModelSnapshot {
+            schema_version: 4,
             column_tree,
+            column_capabilities,
+            flat_columns: super::FlatColumnsSnapshot {
+                all: all_flat,
+                visible: visible_flat,
+            },
             leaf_columns: super::LeafColumnsSnapshot {
                 all: all_leaf,
                 visible,
@@ -2949,6 +3370,31 @@ impl<'a, TData> Table<'a, TData> {
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: super::HeaderSizingSnapshot {
+                size: header_size,
+                start: header_start,
+            },
+            leaf_column_sizing: super::LeafColumnSizingSnapshot {
+                sizing: super::ColumnSizingSnapshot {
+                    total_size: self.total_size(),
+                    left_total_size,
+                    center_total_size,
+                    right_total_size,
+                },
+                size: column_size,
+                start: super::ColumnStartSnapshot {
+                    all: column_start_all,
+                    left: column_start_left,
+                    center: column_start_center,
+                    right: column_start_right,
+                },
+                after: super::ColumnAfterSnapshot {
+                    all: column_after_all,
+                    left: column_after_left,
+                    center: column_after_center,
+                    right: column_after_right,
+                },
+            },
             rows: super::CoreRowsSnapshot { core, row_model },
             cells,
         }
@@ -3066,6 +3512,7 @@ impl<'a, TData> Table<'a, TData> {
             &mut next,
             col.id.clone(),
             pointer_x,
+            start,
             vec![(col.id.clone(), start)],
         );
         Some(next)
@@ -3186,11 +3633,10 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         match region {
-            super::ColumnSizingRegion::All => Some(tanstack_start_for(
-                left.into_iter().chain(center).chain(right),
-                col,
-                sizing,
-            )),
+            super::ColumnSizingRegion::All => {
+                let visible = self.visible_columns();
+                Some(tanstack_start_for(visible, col, sizing))
+            }
             super::ColumnSizingRegion::Left => {
                 if pin_pos != Some(super::ColumnPinPosition::Left) {
                     return None;
@@ -3241,11 +3687,10 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         match region {
-            super::ColumnSizingRegion::All => Some(tanstack_after_for(
-                left.into_iter().chain(center).chain(right),
-                col,
-                sizing,
-            )),
+            super::ColumnSizingRegion::All => {
+                let visible = self.visible_columns();
+                Some(tanstack_after_for(visible, col, sizing))
+            }
             super::ColumnSizingRegion::Left => {
                 if pin_pos != Some(super::ColumnPinPosition::Left) {
                     return None;
@@ -4049,6 +4494,49 @@ impl<'a, TData> Table<'a, TData> {
             super::faceted_min_max_u64(model, column)
         })
     }
+
+    /// TanStack-aligned: `table.getGlobalFacetedRowModel()`.
+    ///
+    /// Notes:
+    /// - Matches upstream behavior by returning `pre_filtered_row_model()` when `manualFiltering=true`.
+    /// - When no override is provided, this defaults to `filtered_row_model()` (which already
+    ///   respects `manualFiltering`).
+    pub fn global_faceted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_filtering {
+            return self.pre_filtered_row_model();
+        }
+
+        let Some(get) = self.get_global_faceted_row_model.as_ref() else {
+            return self.filtered_row_model();
+        };
+
+        self.global_faceted_row_model.get_or_init(|| get(self))
+    }
+
+    /// TanStack-aligned: `table.getGlobalFacetedUniqueValues()`.
+    ///
+    /// Notes:
+    /// - Upstream does **not** gate this by `manualFiltering`; only the row model surface is gated.
+    pub fn global_faceted_unique_values(&self) -> &super::FacetCounts {
+        if let Some(get) = self.get_global_faceted_unique_values.as_ref() {
+            return self.global_faceted_unique_values.get_or_init(|| get(self));
+        }
+
+        self.global_faceted_unique_values
+            .get_or_init(super::FacetCounts::new)
+    }
+
+    /// TanStack-aligned: `table.getGlobalFacetedMinMaxValues()` (u64-only mapping).
+    ///
+    /// Notes:
+    /// - Upstream does **not** gate this by `manualFiltering`; only the row model surface is gated.
+    pub fn global_faceted_min_max_u64(&self) -> Option<(u64, u64)> {
+        if let Some(get) = self.get_global_faceted_min_max_u64.as_ref() {
+            return *self.global_faceted_min_max_u64.get_or_init(|| get(self));
+        }
+
+        *self.global_faceted_min_max_u64.get_or_init(|| None)
+    }
 }
 
 impl<'a, TData> Table<'a, TData> {
@@ -4069,6 +4557,76 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         find(self.column_tree.as_slice(), column_id)
+    }
+
+    /// TanStack-aligned: `table.getColumn(columnId)`.
+    ///
+    /// Note: unlike [`Self::column`], this searches the full column tree and can return group
+    /// columns as well as leaf columns.
+    pub fn column_any(&self, column_id: &str) -> Option<&super::ColumnDef<TData>> {
+        self.find_column_in_tree(column_id)
+    }
+
+    /// TanStack-aligned: `table.getAllColumns()` snapshot surface.
+    pub fn column_tree_snapshot(&self) -> Vec<super::ColumnNodeSnapshot> {
+        fn push_column_nodes<TData>(
+            cols: &[super::ColumnDef<TData>],
+            depth: usize,
+            parent_id: Option<Arc<str>>,
+            out: &mut Vec<super::ColumnNodeSnapshot>,
+        ) {
+            for col in cols {
+                let id = col.id.clone();
+                let child_ids: Vec<Arc<str>> = col.columns.iter().map(|c| c.id.clone()).collect();
+                out.push(super::ColumnNodeSnapshot {
+                    id: id.clone(),
+                    depth,
+                    parent_id: parent_id.clone(),
+                    child_ids,
+                });
+                if !col.columns.is_empty() {
+                    push_column_nodes(&col.columns, depth + 1, Some(id), out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push_column_nodes(&self.column_tree, 0, None, &mut out);
+        out
+    }
+
+    /// TanStack-aligned: `table.getColumn(columnId)` structural snapshot.
+    pub fn column_node_snapshot(&self, column_id: &str) -> Option<super::ColumnNodeSnapshot> {
+        fn find<TData>(
+            cols: &[super::ColumnDef<TData>],
+            depth: usize,
+            parent_id: Option<Arc<str>>,
+            id: &str,
+        ) -> Option<super::ColumnNodeSnapshot> {
+            for col in cols {
+                let col_id = col.id.clone();
+                let next_parent = Some(col_id.clone());
+                if col_id.as_ref() == id {
+                    let child_ids: Vec<Arc<str>> =
+                        col.columns.iter().map(|c| c.id.clone()).collect();
+                    return Some(super::ColumnNodeSnapshot {
+                        id: col_id,
+                        depth,
+                        parent_id,
+                        child_ids,
+                    });
+                }
+
+                if !col.columns.is_empty() {
+                    if let Some(found) = find(&col.columns, depth + 1, next_parent, id) {
+                        return Some(found);
+                    }
+                }
+            }
+            None
+        }
+
+        find(self.column_tree.as_slice(), 0, None, column_id)
     }
 
     fn column_leaf_ids_for(&self, column_id: &str) -> Option<Vec<super::ColumnId>> {
@@ -4231,7 +4789,7 @@ mod tests {
     use crate::table::is_column_visible;
     use crate::table::{
         ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, ColumnSizingRegion, PaginationState,
-        SortSpec, TableOptions, TableState, create_column_helper,
+        SortSpec, TableOptions, TableState, TanStackValue, create_column_helper,
     };
     use std::sync::Arc;
 
@@ -4339,6 +4897,66 @@ mod tests {
 
         assert_eq!(keys, vec![1, 0, 2]);
         assert!(std::ptr::eq(sorted, table.sorted_row_model()));
+    }
+
+    #[test]
+    fn row_unique_values_uses_column_hook_or_falls_back_to_single_get_value() {
+        #[derive(Debug, Clone)]
+        struct UniqueItem {
+            tags: Vec<&'static str>,
+        }
+
+        let data = vec![UniqueItem {
+            tags: vec!["a", "b"],
+        }];
+
+        let col = ColumnDef::new("tags")
+            .sort_value_by(|it: &UniqueItem| {
+                TanStackValue::Array(
+                    it.tags
+                        .iter()
+                        .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                        .collect(),
+                )
+            })
+            .unique_values_by(|it: &UniqueItem, _index| {
+                it.tags
+                    .iter()
+                    .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                    .collect()
+            });
+
+        let table = Table::builder(&data).columns(vec![col]).build();
+        let row_key = RowKey::from_index(0);
+        assert_eq!(
+            table.row_unique_values(row_key, "tags").unwrap(),
+            vec![
+                TanStackValue::String(Arc::<str>::from("a")),
+                TanStackValue::String(Arc::<str>::from("b")),
+            ]
+        );
+
+        let col = ColumnDef::new("tags").sort_value_by(|it: &UniqueItem| {
+            TanStackValue::Array(
+                it.tags
+                    .iter()
+                    .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                    .collect(),
+            )
+        });
+
+        let table = Table::builder(&data).columns(vec![col]).build();
+        assert_eq!(
+            table.row_unique_values(row_key, "tags").unwrap(),
+            vec![TanStackValue::Array(vec![
+                TanStackValue::String(Arc::<str>::from("a")),
+                TanStackValue::String(Arc::<str>::from("b")),
+            ])]
+        );
+
+        let col = ColumnDef::<UniqueItem>::new("missing_accessor");
+        let table = Table::builder(&data).columns(vec![col]).build();
+        assert_eq!(table.row_unique_values(row_key, "missing_accessor"), None);
     }
 
     #[test]

@@ -6,12 +6,12 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::prelude::{cubic_bezier_derivative, wire_ctrl_points};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -57,6 +57,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -175,7 +188,7 @@ fn bezier_markers_align_with_bezier_start_end_tangents() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
         s.interaction.only_render_visible_elements = false;
@@ -202,9 +215,9 @@ fn bezier_markers_align_with_bezier_start_end_tangents() {
     let from = geom.port_center(a_out).expect("from port center");
     let to = geom.port_center(b_in).expect("to port center");
 
-    let (c1, c2) = super::super::wire_ctrl_points(from, to, snapshot.zoom);
-    let start_tangent = super::super::cubic_bezier_derivative(from, c1, c2, to, 0.0);
-    let end_tangent = super::super::cubic_bezier_derivative(from, c1, c2, to, 1.0);
+    let (c1, c2) = wire_ctrl_points(from, to, snapshot.zoom);
+    let start_tangent = cubic_bezier_derivative(from, c1, c2, to, 0.0);
+    let end_tangent = cubic_bezier_derivative(from, c1, c2, to, 1.0);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();

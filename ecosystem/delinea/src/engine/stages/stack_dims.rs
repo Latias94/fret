@@ -100,13 +100,13 @@ impl StackDimsStage {
                 continue;
             };
 
-            let Some(table) = datasets.dataset(inputs.dataset_id) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(inputs.dataset_id)) else {
                 self.cache.remove(&stack);
                 continue;
             };
 
-            let data_rev = table.revision;
-            let row_count = table.row_count;
+            let data_rev = table.revision();
+            let row_count = table.row_count();
 
             match self.cache.get(&stack) {
                 Some(StackGroupEntry::Ready {
@@ -189,12 +189,12 @@ impl StackDimsStage {
                 continue;
             }
 
-            let Some(table) = datasets.dataset(*dataset) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(*dataset)) else {
                 self.cursor += 1;
                 continue;
             };
 
-            if table.revision != *data_rev || table.row_count != *row_count {
+            if table.revision() != *data_rev || table.row_count() != *row_count {
                 self.cursor += 1;
                 continue;
             }
@@ -434,7 +434,7 @@ fn stack_group_inputs(
             return None;
         }
 
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             return None;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -501,7 +501,7 @@ fn stack_indexing_for_group(
     inputs: &StackGroupInputs,
     row_count: usize,
 ) -> StackIndexing {
-    let Some(table) = datasets.dataset(inputs.dataset_id) else {
+    let Some(table) = datasets.dataset(model.root_dataset_id(inputs.dataset_id)) else {
         return StackIndexing::ByRowIndex {
             accum_pos: vec![0.0; row_count],
             accum_neg: if inputs.strategy == StackStrategy::SameSign {
@@ -631,6 +631,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -705,7 +708,7 @@ mod tests {
         table.push_column(Column::F64(vec![0.0, 1.0, 2.0]));
         table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
         table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
-        let data_rev = table.revision;
+        let data_rev = table.revision();
         datasets.insert(dataset_id, table);
 
         let mut stage = StackDimsStage::default();
@@ -773,6 +776,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -850,7 +856,7 @@ mod tests {
         table.push_column(Column::F64(vec![0.0, 2.0, 1.0]));
         table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
         table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
-        let data_rev = table.revision;
+        let data_rev = table.revision();
         datasets.insert(dataset_id, table);
 
         let mut stage = StackDimsStage::default();

@@ -10,6 +10,7 @@
 //! downstream code can keep importing a `toast` surface while migrating.
 
 pub use crate::sonner::{
-    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
-    ToastVariant, Toaster,
+    Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
+    ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
+    ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };

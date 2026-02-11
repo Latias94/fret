@@ -128,6 +128,16 @@ impl<H: UiHost> UiTree<H> {
                     .and_then(|svc| svc.snapshot(window))
                     .map(|s| s.edit_can_redo)
                     .unwrap_or(true),
+                router_can_back: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.router_can_back)
+                    .unwrap_or(false),
+                router_can_forward: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.router_can_forward)
+                    .unwrap_or(false),
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(mode) = app

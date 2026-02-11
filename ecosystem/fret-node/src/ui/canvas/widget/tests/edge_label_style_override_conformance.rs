@@ -7,12 +7,11 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
 struct CaptureServices;
@@ -58,6 +57,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -143,7 +155,7 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
         s.interaction.frame_view_duration_ms = 0;
@@ -188,7 +200,7 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         let SceneOp::Quad {
             order,
             background,
-            border_color,
+            border_paint,
             ..
         } = ops[ix]
         else {
@@ -197,10 +209,10 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != canvas.style.edge_label_background {
+        if background != fret_core::Paint::Solid(canvas.style.edge_label_background) {
             continue;
         }
-        if border_color != override_color {
+        if border_paint != fret_core::Paint::Solid(override_color) {
             continue;
         }
         if matches!(ops[ix + 1], SceneOp::Text { .. }) {

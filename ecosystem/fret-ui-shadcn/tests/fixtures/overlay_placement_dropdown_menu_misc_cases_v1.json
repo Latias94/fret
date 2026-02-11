@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "item-dropdown.menu_item_height",
+      "web_name": "item-dropdown",
+      "recipe": "item_dropdown_menu_item_height"
+    },
+    {
+      "id": "item-dropdown.vp375x240.menu_item_height",
+      "web_name": "item-dropdown.vp375x240",
+      "recipe": "item_dropdown_menu_item_height"
+    },
+    {
+      "id": "item-dropdown.content_insets",
+      "web_name": "item-dropdown",
+      "recipe": "item_dropdown_menu_content_insets"
+    },
+    {
+      "id": "item-dropdown.vp375x240.content_insets",
+      "web_name": "item-dropdown.vp375x240",
+      "recipe": "item_dropdown_menu_content_insets"
+    },
+
+    {
+      "id": "button-group-demo.overlay_placement",
+      "web_name": "button-group-demo",
+      "recipe": "button_group_demo_overlay_placement"
+    },
+    {
+      "id": "button-group-demo.vp375x240.overlay_placement",
+      "web_name": "button-group-demo.vp375x240",
+      "recipe": "button_group_demo_overlay_placement"
+    },
+
+    {
+      "id": "mode-toggle.overlay_placement",
+      "web_name": "mode-toggle",
+      "recipe": "mode_toggle_overlay_placement"
+    },
+    {
+      "id": "mode-toggle.vp375x240.overlay_placement",
+      "web_name": "mode-toggle.vp375x240",
+      "recipe": "mode_toggle_overlay_placement"
+    },
+
+    {
+      "id": "combobox-dropdown-menu.overlay_placement",
+      "web_name": "combobox-dropdown-menu",
+      "recipe": "combobox_dropdown_menu_overlay_placement"
+    },
+    {
+      "id": "combobox-dropdown-menu.vp375x240.overlay_placement",
+      "web_name": "combobox-dropdown-menu.vp375x240",
+      "recipe": "combobox_dropdown_menu_overlay_placement"
+    },
+    {
+      "id": "combobox-dropdown-menu.menu_item_height",
+      "web_name": "combobox-dropdown-menu",
+      "recipe": "combobox_dropdown_menu_menu_item_height"
+    },
+    {
+      "id": "combobox-dropdown-menu.vp375x240.menu_item_height",
+      "web_name": "combobox-dropdown-menu.vp375x240",
+      "recipe": "combobox_dropdown_menu_menu_item_height"
+    },
+    {
+      "id": "combobox-dropdown-menu.menu_content_insets",
+      "web_name": "combobox-dropdown-menu",
+      "recipe": "combobox_dropdown_menu_menu_content_insets"
+    },
+    {
+      "id": "combobox-dropdown-menu.vp375x240.menu_content_insets",
+      "web_name": "combobox-dropdown-menu.vp375x240",
+      "recipe": "combobox_dropdown_menu_menu_content_insets"
+    },
+
+    {
+      "id": "breadcrumb-dropdown.menu_item_height",
+      "web_name": "breadcrumb-dropdown",
+      "recipe": "breadcrumb_dropdown_menu_item_height"
+    },
+    {
+      "id": "breadcrumb-dropdown.vp375x240.menu_item_height",
+      "web_name": "breadcrumb-dropdown.vp375x240",
+      "recipe": "breadcrumb_dropdown_menu_item_height"
+    },
+    {
+      "id": "breadcrumb-dropdown.menu_content_insets",
+      "web_name": "breadcrumb-dropdown",
+      "recipe": "breadcrumb_dropdown_menu_content_insets"
+    },
+    {
+      "id": "breadcrumb-dropdown.vp375x240.menu_content_insets",
+      "web_name": "breadcrumb-dropdown.vp375x240",
+      "recipe": "breadcrumb_dropdown_menu_content_insets"
+    }
+  ]
+}

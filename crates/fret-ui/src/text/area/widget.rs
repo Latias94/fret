@@ -2,7 +2,7 @@ use super::{PreparedKey, TextArea};
 use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
 use crate::{Invalidation, UiHost};
 use fret_core::{
-    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, MouseButton, Px, Rect, SceneOp,
+    CaretAffinity, Color, Corners, DrawOrder, Edges, Event, MouseButton, Paint, Px, Rect, SceneOp,
     SemanticsRole, Size, TextConstraints, TextOverflow,
 };
 use fret_runtime::Effect;
@@ -505,9 +505,21 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if !focused {
                     return;
                 }
+
+                let mut anchor = *anchor as usize;
+                let mut focus = *focus as usize;
+                if self.is_ime_composing() {
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+                    let preedit_len = self.preedit.len();
+                    anchor =
+                        crate::text_edit::ime::display_to_base_index(caret, preedit_len, anchor);
+                    focus = crate::text_edit::ime::display_to_base_index(caret, preedit_len, focus);
+                }
+
                 self.clear_preedit();
                 self.edit_state()
-                    .set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
+                    .set_selection_grapheme_clamped(anchor, focus);
                 self.ensure_caret_visible = true;
 
                 cx.invalidate_self(Invalidation::Paint);
@@ -1092,8 +1104,11 @@ impl<H: UiHost> Widget<H> for TextArea {
         let layout_text_owned = self.layout_text();
         let layout_text = layout_text_owned.as_deref().unwrap_or(&self.text);
 
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_width(self.wrap, inner.size.width);
         let mut constraints = TextConstraints {
-            max_width: Some(inner.size.width),
+            max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
@@ -1104,7 +1119,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 .measure_str(layout_text, &self.text_style, constraints);
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
-            constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
+            let max_width = Px((inner.size.width.0 - scrollbar_w.0).max(0.0));
+            let max_width = cx.tree.maybe_bucket_text_wrap_width(self.wrap, max_width);
+            constraints.max_width = Some(max_width);
             metrics = cx
                 .services
                 .text()
@@ -1149,6 +1166,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         } else {
             inner.size.width
         };
+        let max_width = cx.tree.maybe_bucket_text_wrap_width(self.wrap, max_width);
         let constraints = TextConstraints {
             max_width: Some(max_width),
             wrap: self.wrap,
@@ -1183,9 +1201,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: self.style.background,
+            background: Paint::Solid(self.style.background),
             border: self.style.border,
-            border_color: self.style.border_color,
+            border_paint: Paint::Solid(self.style.border_color),
             corner_radii: self.style.corner_radii,
         });
 
@@ -1240,9 +1258,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect,
-                background: self.style.selection_color,
+                background: Paint::Solid(self.style.selection_color),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -1267,9 +1285,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(0),
                     rect,
-                    background: self.style.preedit_bg_color,
+                    background: Paint::Solid(self.style.preedit_bg_color),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: Paint::Solid(Color::TRANSPARENT),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1391,9 +1409,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: underline,
-                        background: self.style.preedit_underline_color,
+                        background: Paint::Solid(self.style.preedit_underline_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: Paint::Solid(Color::TRANSPARENT),
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1402,9 +1420,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: caret_rect,
-                background: self.style.caret_color,
+                background: Paint::Solid(self.style.caret_color),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(Px(0.0)),
             });
         } else {
@@ -1426,9 +1444,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(100),
                 rect: track,
-                background: track_bg,
+                background: Paint::Solid(track_bg),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(radius),
             });
 
@@ -1441,9 +1459,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(101),
                 rect: thumb,
-                background: thumb_bg,
+                background: Paint::Solid(thumb_bg),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: Paint::Solid(Color::TRANSPARENT),
                 corner_radii: Corners::all(radius),
             });
         }

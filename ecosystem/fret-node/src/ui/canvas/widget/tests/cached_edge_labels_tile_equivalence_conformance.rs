@@ -4,14 +4,13 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeRenderHint;
 use crate::ui::presenter::{EdgeMarker, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 use std::sync::Arc;
 
@@ -67,6 +66,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 }
 
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
@@ -107,7 +119,7 @@ fn extract_edge_label_ops(scene: &Scene, style: &NodeGraphStyle) -> Vec<(Rect, P
             order,
             rect,
             background,
-            border_color,
+            border_paint,
             ..
         } = ops[ix]
         else {
@@ -116,7 +128,9 @@ fn extract_edge_label_ops(scene: &Scene, style: &NodeGraphStyle) -> Vec<(Rect, P
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != style.edge_label_background || border_color != style.edge_label_border {
+        if background != fret_core::Paint::Solid(style.edge_label_background)
+            || border_paint != fret_core::Paint::Solid(style.edge_label_border)
+        {
             continue;
         }
         let SceneOp::Text { origin, .. } = ops[ix + 1] else {
@@ -177,7 +191,7 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
         s.interaction.only_render_visible_elements = true;

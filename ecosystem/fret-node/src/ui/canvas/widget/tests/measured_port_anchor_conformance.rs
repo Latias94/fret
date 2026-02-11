@@ -3,13 +3,12 @@ use std::sync::Arc;
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::interaction::NodeGraphConnectionMode;
-use crate::io::NodeGraphViewState;
 use crate::ui::measured::{MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch};
 use crate::ui::presenter::PortAnchorHint;
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
 use super::prelude::*;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
@@ -46,7 +45,7 @@ fn measured_port_anchor_hint_updates_hit_testing_in_strict_mode() {
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
@@ -110,7 +109,7 @@ fn measured_port_anchor_hint_is_scaled_in_canvas_space_by_zoom() {
     let (graph_value, _a, _a_in, _a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(0.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =

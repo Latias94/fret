@@ -52,7 +52,7 @@ gesture chord and does not implicitly apply edge expansion.
 
 ## Multi-axis routing (P0)
 
-When multiple X/Y axes are present, `ChartCanvas` follows the “active axis pair” contract (ADR 1134):
+When multiple X/Y axes are present, `ChartCanvas` follows the “active axis pair” contract (ADR 0196):
 
 - Hovering an axis band updates the active axis for that dimension.
 - Interactions in the plot region target the active axis pair (X + Y), unless constrained by modifiers.
@@ -67,7 +67,7 @@ When multiple X/Y axes are present, `ChartCanvas` follows the “active axis pai
 - Lock zoom: prevents zooming the corresponding axis via wheel or box zoom.
 
 These locks live in `delinea::ChartState.axis_locks` and gate **interaction-derived** actions only
-(see ADR 1135). For persistent axis constraints, use `delinea::AxisRange` in the spec/model:
+(see ADR 0197). For persistent axis constraints, use `delinea::AxisRange` in the spec/model:
 
 - `AxisRange::Fixed { min, max }` disables interaction on that axis.
 - `AxisRange::LockMin { .. }` / `LockMax { .. }` clamp interaction updates.

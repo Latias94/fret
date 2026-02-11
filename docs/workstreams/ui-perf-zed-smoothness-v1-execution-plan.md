@@ -24,15 +24,25 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 ---
 
-## Current state (as of 2026-02-07)
+## Current state (as of 2026-02-08)
 
-- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json`.
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
 - P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
+- Editor resize jitter baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
+- Seed policy preset (editor resize probes): `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
+- Text measure/shaping stability knobs (to reduce resize-tail solve outliers; recorded in the perf log):
+  - `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES` (default: `4096`)
+  - `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES` (default: `128`)
+- Interactive-resize wrap-width bucketing knobs (to reduce width-jitter text churn; recorded in the perf log):
+  - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`)
+  - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`)
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
-- Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
+  - Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
+  - Tip: when chasing rare resize tails, use `--attempts 3` and require a strict majority pass to reduce
+    “single outlier run” flakiness without loosening thresholds.
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.
@@ -66,6 +76,9 @@ Every perf-affecting change must:
    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
    - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
    - Gate runner: `tools/perf/diag_resize_probes_gate.sh` (suite: `ui-resize-probes`)
+2.5. If the change touches text layout / wrap behavior, also **not regress the editor resize jitter suite**:
+   - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+   - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`
 3. **Not regress at least one input hot-path probe**:
    - pointer-move gate (bounds-tree / dispatch): `ui-gallery-hit-test-torture-*move-sweep*`
 4. If the change touches renderer/text caches, also run one GPU/churn probe:
@@ -114,16 +127,16 @@ must keep a clear order of operations based on *how often the hot path executes*
 
 ---
 
-## Active milestone ladder (updated 2026-02-07)
+## Active milestone ladder (updated 2026-02-09)
 
 | Milestone | Status | Scope | Required evidence |
 | --- | --- | --- | --- |
-| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v22.json`, selection summary in perf log (2026-02-07 10:10) |
+| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v23.json`, selection summary in perf log (2026-02-07 10:10) |
 | M4.0.1 Resize probes stabilization + baseline | Done | Make resize probes stable + reproducible, then refresh baseline and gate default | `ui-resize-probes.macos-m4.v3.json`, gate pass summary `target/fret-diag-resize-probes-gate-r13/summary.json` (2026-02-07 09:28) |
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
 | M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |
-| M4.4 Resize-drag smoothness | Pending | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-gallery-window-resize-stress-steady.json` p95/max improvements recorded in perf log; new diagnostics or gates if needed |
+| M4.4 Resize-drag smoothness | In progress | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-resize-probes` gate evidence recorded in perf log (2026-02-09 entries, incl. commits `d834481b3`, `e337b4299`) |
 | M5.0 Text pipeline stabilization | Pending | Cache-key spec + warmup/cold-path miss gate | Text cache miss gate and miss attribution recorded in bundles |
 | M7.0 GPU/CPU attribution | Pending | GPU timing capture and hitch-class triage flow | One hitch classified with recorded CPU/GPU evidence |
 
@@ -133,7 +146,8 @@ must keep a clear order of operations based on *how often the hot path executes*
 2. **M4.4 resize LOD (guarded)**: bucket wrap widths / defer expensive probes while resizing, then reconcile on idle.
 3. **M4.3 escape-trigger observability**: make escape-driven shifts assertable when expected (deprioritized vs P0).
 4. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
-5. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
+5. **M5.x measure/paint reuse**: align `TextService::measure` vs `prepare` caches so paint can reuse measurement work.
+6. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
 
 This queue is intentionally aggressive, but each item has a measurable gate and a rollback trail in the perf log.
 
@@ -189,6 +203,11 @@ Deliverables:
 1. **Document stable cache keys** for measure/shaping (wrap width, font stack, style, hinting).
 2. **Make atlas eviction / re-upload observable** in perf snapshots (if not already sufficient).
 3. **Add a “text cache miss” gate** (lightweight; no pixel diffs) that fails when misses spike after warmup.
+
+Progress notes:
+
+- 2026-02-09: commit `7b9a98a8f` avoids cloning per-line glyph/cluster vectors when wrapping from cached unwrapped
+  layouts (word wrap, LTR). Evidence: `ui-resize-probes` gate PASS; see the perf log entry `2026-02-09 22:12:02`.
 
 Exit criteria:
 

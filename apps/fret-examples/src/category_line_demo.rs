@@ -68,6 +68,7 @@ impl CategoryLineDemoDriver {
                         column: 2,
                     },
                 ],
+                ..Default::default()
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

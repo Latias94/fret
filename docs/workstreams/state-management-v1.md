@@ -4,7 +4,7 @@ Status: Draft (notes only; ADRs remain the source of truth)
 
 Related ADR:
 
-- `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 
 Related guidance:
 
@@ -21,7 +21,7 @@ Fret’s kernel already has strong primitives:
 
 - main-thread-only mutable state (`Model<T>` in `crates/fret-runtime`)
 - explicit observation + invalidation (ADR 0051)
-- portable execution and driver-boundary inbox draining (ADR 0190)
+- portable execution and driver-boundary inbox draining (ADR 0175)
 
 What is missing is a **coherent, default authoring story** that covers:
 
@@ -40,7 +40,7 @@ If these are not addressed, apps drift into:
 - **Keep kernel minimal:** `crates/fret-ui` stays mechanism-only (ADR 0066). Policies and ergonomics
   live in ecosystem crates.
 - **Portable by default:** do not assume threads or a specific async runtime. Depend only on
-  `Dispatcher.exec_capabilities()` (ADR 0190).
+  `Dispatcher.exec_capabilities()` (ADR 0175).
 - **Data-only boundaries:** effects/commands/inbox messages remain data-only; apply results on the
   main thread at a driver boundary.
 - **Typed over stringly:** prefer typed messages and structured keys; keep stable `CommandId`s only
@@ -109,7 +109,7 @@ Implementation:
     - `fret_query::ui::QueryElementContextExt::use_query_async(...)`
     - `fret_query::ui::QueryElementContextExt::use_query_async_local(...)`
   - lifecycle semantics (stale/refetch/cancel/retry): see
-    `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md` and `docs/workstreams/query-lifecycle-v1.md`
+    `docs/adr/0225-query-lifecycle-and-cache-semantics-v1.md` and `docs/workstreams/query-lifecycle-v1.md`
   - async fetch requires installing a `FutureSpawnerHandle` global (tokio/wasm spawners); see
     `docs/integrating-tokio-and-reqwest.md`
 

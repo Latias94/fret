@@ -1,14 +1,18 @@
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 };
+
+use crate::model::MessageRole;
 
 #[derive(Clone)]
 /// A row container for per-message action buttons (AI Elements `MessageActions`-style).
@@ -82,6 +86,119 @@ impl MessageActions {
             },
             move |_cx| vec![row],
         )
+    }
+}
+
+#[derive(Clone)]
+pub struct MessageActionTemplate {
+    id: Arc<str>,
+    label: Arc<str>,
+    tooltip: Option<Arc<str>>,
+    icon: Option<IconId>,
+    on_activate: Option<OnActivate>,
+    roles: Option<Arc<[MessageRole]>>,
+    disabled: bool,
+    variant: ButtonVariant,
+    size: ButtonSize,
+}
+
+impl std::fmt::Debug for MessageActionTemplate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MessageActionTemplate")
+            .field("id", &self.id)
+            .field("label", &self.label)
+            .field("tooltip", &self.tooltip.as_deref())
+            .field("icon", &self.icon)
+            .field("has_on_activate", &self.on_activate.is_some())
+            .field("roles", &self.roles.as_deref())
+            .field("disabled", &self.disabled)
+            .field("variant", &self.variant)
+            .field("size", &self.size)
+            .finish()
+    }
+}
+
+impl MessageActionTemplate {
+    pub fn new(id: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            tooltip: None,
+            icon: None,
+            on_activate: None,
+            roles: None,
+            disabled: false,
+            variant: ButtonVariant::Ghost,
+            size: ButtonSize::IconSm,
+        }
+    }
+
+    pub fn tooltip(mut self, tooltip: impl Into<Arc<str>>) -> Self {
+        self.tooltip = Some(tooltip.into());
+        self
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn roles(mut self, roles: impl Into<Arc<[MessageRole]>>) -> Self {
+        self.roles = Some(roles.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn matches_role(&self, role: MessageRole) -> bool {
+        self.roles
+            .as_ref()
+            .map(|roles| roles.iter().any(|r| *r == role))
+            .unwrap_or(true)
+    }
+
+    pub fn into_action<H: UiHost + 'static>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        message_test_id_prefix: Option<&str>,
+    ) -> MessageAction {
+        let mut action = MessageAction::new(self.label.clone())
+            .variant(self.variant)
+            .size(self.size)
+            .disabled(self.disabled);
+
+        if let Some(tooltip) = self.tooltip.clone() {
+            action = action.tooltip(tooltip);
+        }
+        if let Some(on_activate) = self.on_activate.clone() {
+            action = action.on_activate(on_activate);
+        }
+        if let Some(prefix) = message_test_id_prefix {
+            action = action.test_id(Arc::<str>::from(format!("{prefix}action-{}", self.id)));
+        }
+        if let Some(icon) = self.icon.clone() {
+            action = action.children([decl_icon::icon(cx, icon)]);
+        }
+
+        action
     }
 }
 

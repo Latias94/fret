@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in crate::ui::canvas::widget) fn activate_context_menu_item<H: UiHost>(
         &mut self,

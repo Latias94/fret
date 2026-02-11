@@ -4,7 +4,7 @@
 //! rendering topology is:
 //! - Gizmo geometry is rendered by the engine into the viewport render target (depth tested).
 //! - Fret composites the viewport via `SceneOp::ViewportSurface` (or `fret-ui`'s declarative
-//!   `ViewportSurface` element) (ADR 0139).
+//!   `ViewportSurface` element) (ADR 0130).
 //! - Optional screen-space affordances (labels/HUD) may be rendered as regular UI overlays.
 //!
 //! Optional feature:

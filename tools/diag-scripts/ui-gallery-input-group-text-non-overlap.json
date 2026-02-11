@@ -1,0 +1,90 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "input_group" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-input-group" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-input-group" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-text" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-text-leading" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-text-trailing" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-text-control" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-input-group-text-leading" },
+        "b": { "kind": "test_id", "id": "ui-gallery-input-group-text-trailing" },
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group-text-control" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-input-group-text-non-overlap" },
+    { "type": "capture_screenshot", "label": "ui-gallery-input-group-text-non-overlap" }
+  ]
+}
+

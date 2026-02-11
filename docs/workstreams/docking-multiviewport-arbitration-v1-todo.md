@@ -23,11 +23,11 @@ Each TODO is labeled:
 
 - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
-- `docs/adr/0147-viewport-input-forwarding-explicit-units.md`
+- `docs/adr/0132-viewport-input-forwarding-explicit-units.md`
 - `docs/adr/0011-overlays-and-multi-root.md`
 - `docs/adr/0020-focus-and-command-routing.md`
-- `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
-- `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- `docs/adr/0150-pointer-identity-and-multi-pointer-capture.md`
+- `docs/adr/0151-multi-pointer-drag-sessions-and-routing-keys.md`
 
 ## P0 — Diagnostics & Observability (AI-Friendly)
 
@@ -39,7 +39,7 @@ Each TODO is labeled:
   - Evidence:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records `ViewportInputEvent` into diagnostics)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.viewport_input`)
-    - `apps/fretboard/src/diag.rs` (`--check-viewport-input-min`)
+    - `crates/fret-diag/src/stats.rs` (`--check-viewport-input-min`)
 - [x] DMV1-diag-002 Export docking drag/capture ownership as a stable diagnostic record.
   - Target: per-frame “dock drag active” + pointer owner (dock drag vs viewport capture vs none).
   - Rationale: most regressions are arbitration bugs; diagnostics must make ownership visible.
@@ -67,7 +67,7 @@ Each TODO is labeled:
 ## P0 — Refactor Guardrails (Multi-pointer Ready)
 
 - [x] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
-  - Rationale: ADR 0072/0165 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
+  - Rationale: ADR 0072/0150 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
   - Evidence anchors:
     - current capture: `ecosystem/fret-docking/src/dock/space.rs` (`viewport_capture: HashMap<PointerId, ViewportCaptureState>`)
     - viewport capture types: `ecosystem/fret-docking/src/dock/viewport.rs`
@@ -92,7 +92,7 @@ Each TODO is labeled:
   - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
   - Evidence:
     - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
-    - runner: `apps/fretboard/src/diag.rs` (`diag suite docking-arbitration`)
+    - runner: `crates/fret-diag/src/lib.rs` (`diag suite docking-arbitration`; `apps/fretboard/src/diag.rs` is a thin wrapper)
 
 ## P2 — Unification Opportunities (Optional)
 

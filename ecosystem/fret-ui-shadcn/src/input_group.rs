@@ -289,34 +289,86 @@ impl InputGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let resolved =
-            resolve_input_chrome(&theme, self.size, &self.chrome, InputTokenKeys::none());
-
-        let addon_pl = fret_ui_kit::MetricRef::space(Space::N3).resolve(&theme);
-        let addon_py = fret_ui_kit::MetricRef::space(Space::N1p5).resolve(&theme);
-        let compact_px = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
-        let textarea_py = fret_ui_kit::MetricRef::space(Space::N3).resolve(&theme);
-
-        let font_line_height = theme.metric_required("font.line_height");
-        let text_style = TextStyle {
-            font: FontId::default(),
-            size: resolved.text_px,
-            line_height: Some(font_line_height),
-            ..Default::default()
-        };
-
         let is_block_layout = !self.block_start.is_empty() || !self.block_end.is_empty();
 
-        let root_layout = decl_style::layout_style(&theme, {
-            let mut root = self.layout.relative().w_full().min_w_0();
-            if !is_block_layout && self.control == InputGroupControlKind::Input {
-                root = root.h_px(resolved.min_height);
-            }
-            root
-        });
+        let (
+            resolved,
+            addon_pl,
+            addon_py,
+            compact_px,
+            textarea_py,
+            text_style,
+            root_layout,
+            root_shadow,
+            border_color,
+            focus_border_color,
+            focus_ring,
+        ) = {
+            let theme = Theme::global(&*cx.app);
+
+            let resolved =
+                resolve_input_chrome(theme, self.size, &self.chrome, InputTokenKeys::none());
+
+            let addon_pl = fret_ui_kit::MetricRef::space(Space::N3).resolve(theme);
+            let addon_py = fret_ui_kit::MetricRef::space(Space::N1p5).resolve(theme);
+            let compact_px = fret_ui_kit::MetricRef::space(Space::N2).resolve(theme);
+            let textarea_py = fret_ui_kit::MetricRef::space(Space::N3).resolve(theme);
+
+            let font_line_height = theme.metric_required("font.line_height");
+            let text_style = TextStyle {
+                font: FontId::default(),
+                size: resolved.text_px,
+                line_height: Some(font_line_height),
+                ..Default::default()
+            };
+
+            let root_layout = decl_style::layout_style(theme, {
+                let mut root = self.layout.relative().w_full().min_w_0();
+                if !is_block_layout && self.control == InputGroupControlKind::Input {
+                    root = root.h_px(resolved.min_height);
+                }
+                root
+            });
+
+            let root_shadow = decl_style::shadow_xs(theme, resolved.radius);
+
+            let (border_color, focus_border_color, focus_ring) = {
+                let mut ring = decl_style::focus_ring(theme, resolved.radius);
+                let focus_border = Some(resolved.border_color_focused);
+
+                if self.aria_invalid {
+                    let border_color = theme.color_required("destructive");
+                    let ring_key = if theme.name.contains("/dark") {
+                        "destructive/40"
+                    } else {
+                        "destructive/20"
+                    };
+                    ring.color = theme
+                        .color_by_key(ring_key)
+                        .or_else(|| theme.color_by_key("destructive/20"))
+                        .unwrap_or(border_color);
+                    (border_color, None, Some(ring))
+                } else {
+                    (resolved.border_color, focus_border, Some(ring))
+                }
+            };
+
+            (
+                resolved,
+                addon_pl,
+                addon_py,
+                compact_px,
+                textarea_py,
+                text_style,
+                root_layout,
+                root_shadow,
+                border_color,
+                focus_border_color,
+                focus_ring,
+            )
+        };
 
         let leading = self.leading;
         let trailing = self.trailing;
@@ -328,7 +380,6 @@ impl InputGroup {
         let trailing_has_button = self.trailing_has_button;
         let leading_has_kbd = self.leading_has_kbd;
         let trailing_has_kbd = self.trailing_has_kbd;
-        let aria_invalid = self.aria_invalid;
         let control = self.control;
         let a11y_label = self.a11y_label;
         let submit_command = self.submit_command;
@@ -339,27 +390,6 @@ impl InputGroup {
         let control_test_id = self.control_test_id;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
-
-        let (border_color, focus_border_color, focus_ring) = {
-            let mut ring = decl_style::focus_ring(&theme, resolved.radius);
-            let focus_border = Some(resolved.border_color_focused);
-
-            if aria_invalid {
-                let border_color = theme.color_required("destructive");
-                let ring_key = if theme.name.contains("/dark") {
-                    "destructive/40"
-                } else {
-                    "destructive/20"
-                };
-                ring.color = theme
-                    .color_by_key(ring_key)
-                    .or_else(|| theme.color_by_key("destructive/20"))
-                    .unwrap_or(border_color);
-                (border_color, None, Some(ring))
-            } else {
-                (resolved.border_color, focus_border, Some(ring))
-            }
-        };
 
         let mut root_border = Edges::all(resolved.border_width);
         if let Some(border) = border_width_override.top {
@@ -387,7 +417,7 @@ impl InputGroup {
             fret_ui::element::ContainerProps {
                 layout: root_layout,
                 background: None,
-                shadow: Some(decl_style::shadow_xs(&theme, resolved.radius)),
+                shadow: Some(root_shadow),
                 border: root_border,
                 border_color: Some(border_color),
                 focus_ring,
@@ -411,7 +441,8 @@ impl InputGroup {
                                 compact_px
                             };
 
-                            let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+                            let mut chrome =
+                                TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
                             chrome.padding = Edges {
                                 top: resolved.padding.top,
                                 right: right_pad,
@@ -435,13 +466,16 @@ impl InputGroup {
                             input.cancel_command = cancel_command;
                             input.chrome = chrome;
                             input.text_style = text_style.clone();
-                            input.layout = decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .min_w_0()
-                                    .min_h(block_control_min_height),
-                            );
+                            input.layout = {
+                                let theme = Theme::global(&*cx.app);
+                                decl_style::layout_style(
+                                    theme,
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .min_w_0()
+                                        .min_h(block_control_min_height),
+                                )
+                            };
                             cx.text_input(input)
                         }
                         InputGroupControlKind::Textarea => {
@@ -465,10 +499,13 @@ impl InputGroup {
                             props.chrome = chrome;
                             props.text_style = text_style.clone();
                             props.min_height = textarea_min_height;
-                            props.layout = decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().w_full().min_w_0(),
-                            );
+                            props.layout = {
+                                let theme = Theme::global(&*cx.app);
+                                decl_style::layout_style(
+                                    theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                )
+                            };
                             cx.text_area(props)
                         }
                     };
@@ -476,8 +513,17 @@ impl InputGroup {
                     let block_start = (!block_start.is_empty()).then(|| {
                         let px_3 = addon_pl;
                         let py_3 = addon_pl;
-                        let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
-                        let input_pt = fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme);
+                        let (gap, input_pt, layout) = {
+                            let theme = Theme::global(&*cx.app);
+                            (
+                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                                fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
+                                decl_style::layout_style(
+                                    theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                            )
+                        };
                         let pt = if control == InputGroupControlKind::Input {
                             input_pt
                         } else {
@@ -491,10 +537,7 @@ impl InputGroup {
 
                         cx.container(
                             fret_ui::element::ContainerProps {
-                                layout: decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
-                                ),
+                                layout,
                                 border: Edges {
                                     top: Px(0.0),
                                     right: Px(0.0),
@@ -533,8 +576,17 @@ impl InputGroup {
                     let block_end = (!block_end.is_empty()).then(|| {
                         let px_3 = addon_pl;
                         let py_3 = addon_pl;
-                        let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
-                        let input_pb = fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme);
+                        let (gap, input_pb, layout) = {
+                            let theme = Theme::global(&*cx.app);
+                            (
+                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                                fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
+                                decl_style::layout_style(
+                                    theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                            )
+                        };
                         let pt = if block_end_border_top { py_3 } else { addon_py };
                         let pb = if control == InputGroupControlKind::Input {
                             input_pb
@@ -544,10 +596,7 @@ impl InputGroup {
 
                         cx.container(
                             fret_ui::element::ContainerProps {
-                                layout: decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
-                                ),
+                                layout,
                                 border: Edges {
                                     top: if block_end_border_top {
                                         resolved.border_width
@@ -585,10 +634,13 @@ impl InputGroup {
 
                     vec![cx.flex(
                         FlexProps {
-                            layout: decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().size_full(),
-                            ),
+                            layout: {
+                                let theme = Theme::global(&*cx.app);
+                                decl_style::layout_style(
+                                    theme,
+                                    LayoutRefinement::default().size_full(),
+                                )
+                            },
                             direction: Axis::Vertical,
                             gap: Px(0.0),
                             padding: Edges::all(Px(0.0)),
@@ -620,7 +672,7 @@ impl InputGroup {
                         compact_px
                     };
 
-                    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+                    let mut chrome = TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
                     chrome.padding = Edges {
                         top: resolved.padding.top,
                         right: right_pad,
@@ -644,17 +696,22 @@ impl InputGroup {
                     input.cancel_command = cancel_command;
                     input.chrome = chrome;
                     input.text_style = text_style;
-                    input.layout = decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .flex_1()
-                            .h_full()
-                            .min_w_0()
-                            .min_h(resolved.min_height),
-                    );
+                    input.layout = {
+                        let theme = Theme::global(&*cx.app);
+                        decl_style::layout_style(
+                            theme,
+                            LayoutRefinement::default()
+                                .flex_1()
+                                .h_full()
+                                .min_w_0()
+                                .min_h(resolved.min_height),
+                        )
+                    };
 
-                    let flex_layout =
-                        decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                    let flex_layout = {
+                        let theme = Theme::global(&*cx.app);
+                        decl_style::layout_style(theme, LayoutRefinement::default().size_full())
+                    };
 
                     let leading = (!leading.is_empty()).then(|| {
                         let layout = if leading_has_button {
@@ -664,11 +721,18 @@ impl InputGroup {
                         } else {
                             LayoutRefinement::default().flex_none()
                         };
+                        let (layout, gap) = {
+                            let theme = Theme::global(&*cx.app);
+                            (
+                                decl_style::layout_style(theme, layout),
+                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                            )
+                        };
                         cx.flex(
                             FlexProps {
-                                layout: decl_style::layout_style(&theme, layout),
+                                layout,
                                 direction: Axis::Horizontal,
-                                gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
+                                gap,
                                 padding: Edges {
                                     top: addon_py,
                                     right: Px(0.0),
@@ -691,11 +755,18 @@ impl InputGroup {
                         } else {
                             LayoutRefinement::default().flex_none()
                         };
+                        let (layout, gap) = {
+                            let theme = Theme::global(&*cx.app);
+                            (
+                                decl_style::layout_style(theme, layout),
+                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                            )
+                        };
                         cx.flex(
                             FlexProps {
-                                layout: decl_style::layout_style(&theme, layout),
+                                layout,
                                 direction: Axis::Horizontal,
-                                gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
+                                gap,
                                 padding: Edges {
                                     top: addon_py,
                                     right: addon_pl,
@@ -790,8 +861,9 @@ impl InputGroupText {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app);
         let color = theme.color_required("muted-foreground");
 
         let (px, line_height) = match self.size {
@@ -804,7 +876,7 @@ impl InputGroupText {
         };
 
         cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout.h_px(line_height)),
+            layout: decl_style::layout_style(theme, self.layout.h_px(line_height)),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -901,36 +973,82 @@ impl InputGroupButton {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let (bg, bg_hover, bg_active, _border_color, fg) = variant_colors(&theme, self.variant);
+            let (
+                bg,
+                bg_hover,
+                bg_active,
+                _border_color,
+                fg,
+                _size_px,
+                padding_x,
+                gap,
+                radius,
+                text_px,
+                line_height,
+                pressable_layout,
+            ) = {
+                let theme = Theme::global(&*cx.app);
+                let (bg, bg_hover, bg_active, border_color, fg) =
+                    variant_colors(theme, self.variant);
 
-            let (size_px, padding_x, gap, radius) = match self.size {
-                InputGroupButtonSize::Xs => (
-                    Px(24.0),
-                    fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
-                    fret_ui_kit::MetricRef::space(Space::N1).resolve(&theme),
-                    Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
-                ),
-                InputGroupButtonSize::Sm => (
-                    Px(32.0),
-                    fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme),
-                    fret_ui_kit::MetricRef::space(Space::N1p5).resolve(&theme),
-                    theme.metric_required("metric.radius.md"),
-                ),
-                InputGroupButtonSize::IconXs => (
-                    Px(24.0),
-                    Px(0.0),
-                    Px(0.0),
-                    Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
-                ),
-                InputGroupButtonSize::IconSm => (
-                    Px(32.0),
-                    Px(0.0),
-                    Px(0.0),
-                    theme.metric_required("metric.radius.md"),
-                ),
+                let (size_px, padding_x, gap, radius) = match self.size {
+                    InputGroupButtonSize::Xs => (
+                        Px(24.0),
+                        fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                        fret_ui_kit::MetricRef::space(Space::N1).resolve(theme),
+                        Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                    ),
+                    InputGroupButtonSize::Sm => (
+                        Px(32.0),
+                        fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
+                        fret_ui_kit::MetricRef::space(Space::N1p5).resolve(theme),
+                        theme.metric_required("metric.radius.md"),
+                    ),
+                    InputGroupButtonSize::IconXs => (
+                        Px(24.0),
+                        Px(0.0),
+                        Px(0.0),
+                        Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                    ),
+                    InputGroupButtonSize::IconSm => (
+                        Px(32.0),
+                        Px(0.0),
+                        Px(0.0),
+                        theme.metric_required("metric.radius.md"),
+                    ),
+                };
+
+                let text_px = theme.metric_required("metric.font.size");
+                let line_height = theme.metric_required("metric.font.line_height");
+
+                let mut layout = self.layout;
+                layout = match self.size {
+                    InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm => layout
+                        .w_px(size_px)
+                        .h_px(size_px)
+                        .min_w(size_px)
+                        .min_h(size_px),
+                    _ => layout.min_h(size_px),
+                };
+                let pressable_layout = decl_style::layout_style(theme, layout);
+
+                (
+                    bg,
+                    bg_hover,
+                    bg_active,
+                    border_color,
+                    fg,
+                    size_px,
+                    padding_x,
+                    gap,
+                    radius,
+                    text_px,
+                    line_height,
+                    pressable_layout,
+                )
             };
 
             let command = self.command;
@@ -942,23 +1060,10 @@ impl InputGroupButton {
             let label = self.label;
             let a11y_label = self.a11y_label;
             let children = self.children;
-            let text_px = theme.metric_required("metric.font.size");
-            let line_height = theme.metric_required("metric.font.line_height");
             let fill_content_width = matches!(
                 self.size,
                 InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm
             );
-
-            let mut layout = self.layout;
-            layout = match self.size {
-                InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm => layout
-                    .w_px(size_px)
-                    .h_px(size_px)
-                    .min_w(size_px)
-                    .min_h(size_px),
-                _ => layout.min_h(size_px),
-            };
-            let pressable_layout = decl_style::layout_style(&theme, layout);
 
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -980,6 +1085,7 @@ impl InputGroupButton {
                     focusable: !disabled,
                     focus_ring: None,
                     focus_ring_bounds: None,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Button),
                         label: Some(a11y_label.clone().unwrap_or_else(|| label.clone())),

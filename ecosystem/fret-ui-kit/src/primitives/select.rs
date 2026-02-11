@@ -20,8 +20,9 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, PointerDownCx,
-    PointerMoveCx, PointerUpCx, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
+    PressablePointerDownResult, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
@@ -278,6 +279,184 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 /// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
 pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
 
+/// Base UI style delay before mouse-up is allowed to commit the already-selected option.
+///
+/// This protects against accidental commit when the list opens from a trigger pointer interaction
+/// and the release lands over the currently selected row.
+pub const SELECT_MOUSE_UP_SELECTED_DELAY_MS: u64 = 400;
+
+/// Base UI style delay before mouse-up is allowed to commit an unselected option.
+///
+/// When a selected option exists, this delay is shorter than `SELECT_MOUSE_UP_SELECTED_DELAY_MS`.
+pub const SELECT_MOUSE_UP_UNSELECTED_DELAY_MS: u64 = 200;
+
+/// Select mouse interaction policy knobs.
+///
+/// These are intended to make the "anti-misclick" semantics explicit, while keeping Radix-shaped
+/// defaults:
+/// - pointer-up suppression after opening on trigger mouse `pointerdown` (Radix)
+/// - delayed mouse-up selection commit gating (Base UI style; optional)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMousePolicies {
+    /// When `true`, install the Radix-style pointer-up suppression outcome after opening on mouse
+    /// `pointerdown` (the "pointer up guard").
+    pub pointer_up_guard: bool,
+
+    /// When `Some`, delay mouse-up commits after opening to avoid accidental selection when the
+    /// release lands over an option row (Base UI style).
+    pub mouse_up_selection_gate: Option<SelectMouseUpSelectionGatePolicy>,
+}
+
+impl Default for SelectMousePolicies {
+    fn default() -> Self {
+        Self {
+            pointer_up_guard: true,
+            mouse_up_selection_gate: Some(SelectMouseUpSelectionGatePolicy::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMouseUpSelectionGatePolicy {
+    pub selected_delay: Duration,
+    pub unselected_delay_when_has_selected: Duration,
+    pub unselected_delay_when_no_selected: Duration,
+}
+
+impl Default for SelectMouseUpSelectionGatePolicy {
+    fn default() -> Self {
+        Self {
+            selected_delay: Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            unselected_delay_when_has_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+            ),
+            unselected_delay_when_no_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+            ),
+        }
+    }
+}
+
+/// Timer-driven mouse-up commit gate for select item rows.
+///
+/// Mirrors Base UI's delayed `onMouseUp` selection policy:
+/// - unselected rows are blocked for ~200ms after opening when a selected row exists
+/// - selected rows are blocked for ~400ms after opening
+/// - if no selected row exists in the list, both paths are blocked for ~400ms
+#[derive(Debug, Default)]
+pub struct SelectMouseUpSelectionGateState {
+    allow_selected_mouse_up: bool,
+    allow_unselected_mouse_up: bool,
+    selected_delay_token: Option<TimerToken>,
+    unselected_delay_token: Option<TimerToken>,
+}
+
+impl SelectMouseUpSelectionGateState {
+    fn cancel_timer(host: &mut dyn UiActionHost, token: &mut Option<TimerToken>) {
+        if let Some(token) = token.take() {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+    }
+
+    fn arm_timer(
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        after: Duration,
+        slot: &mut Option<TimerToken>,
+    ) {
+        Self::cancel_timer(host, slot);
+        let token = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after,
+            repeat: None,
+        });
+        *slot = Some(token);
+    }
+
+    pub fn arm_on_open(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        has_selected_item_in_list: bool,
+    ) {
+        self.arm_on_open_with_policy(
+            host,
+            window,
+            has_selected_item_in_list,
+            SelectMouseUpSelectionGatePolicy::default(),
+        );
+    }
+
+    pub fn arm_on_open_with_policy(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        has_selected_item_in_list: bool,
+        policy: SelectMouseUpSelectionGatePolicy,
+    ) {
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+
+        let unselected_delay = if has_selected_item_in_list {
+            policy.unselected_delay_when_has_selected
+        } else {
+            policy.unselected_delay_when_no_selected
+        };
+
+        Self::arm_timer(
+            host,
+            window,
+            unselected_delay,
+            &mut self.unselected_delay_token,
+        );
+        Self::arm_timer(
+            host,
+            window,
+            policy.selected_delay,
+            &mut self.selected_delay_token,
+        );
+    }
+
+    pub fn reset_without_cancel(&mut self) {
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+        self.selected_delay_token = None;
+        self.unselected_delay_token = None;
+    }
+
+    pub fn clear_and_cancel(&mut self, host: &mut dyn UiActionHost) {
+        Self::cancel_timer(host, &mut self.selected_delay_token);
+        Self::cancel_timer(host, &mut self.unselected_delay_token);
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+    }
+
+    pub fn on_timer(&mut self, token: TimerToken) -> bool {
+        let mut handled = false;
+        if self.unselected_delay_token == Some(token) {
+            self.unselected_delay_token = None;
+            self.allow_unselected_mouse_up = true;
+            handled = true;
+        }
+        if self.selected_delay_token == Some(token) {
+            self.selected_delay_token = None;
+            self.allow_selected_mouse_up = true;
+            handled = true;
+        }
+        handled
+    }
+
+    pub fn should_allow_item_mouse_up(&self, item_is_selected: bool) -> bool {
+        if item_is_selected {
+            self.allow_selected_mouse_up
+        } else {
+            self.allow_unselected_mouse_up
+        }
+    }
+}
+
 pub type SelectMouseOpenGuard = Arc<Mutex<SelectMouseOpenGuardState>>;
 
 pub fn select_mouse_open_guard() -> SelectMouseOpenGuard {
@@ -477,7 +656,15 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     inputs: SelectItemAlignedElementInputs,
 ) -> Option<SelectItemAlignedLayout> {
     let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
-    let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
+    // The item-aligned solver expects DOM-like layout-space measurements (`offsetTop` etc). Using
+    // visual bounds here is incorrect because it bakes in render transforms (e.g. presence scale),
+    // which can cause the overlay to "chase" its own animation and jitter on open/close.
+    //
+    // Prefer layout bounds for the scroll viewport. Fall back to the generic anchor helper only
+    // when we have no recorded layout bounds yet (e.g. very first mount).
+    let viewport = cx
+        .last_bounds_for_element(inputs.viewport)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.viewport))?;
     // Item-aligned select positioning uses `offsetTop`-like measurements that must remain stable
     // as the viewport scrolls. Prefer layout bounds for scrolled descendants (they do not include
     // the scroll render transform) so wheel scrolling cannot cause the overlay to "chase" the
@@ -1059,12 +1246,13 @@ impl SelectContentKeyState {
     pub fn handle_key_down_when_open(
         &mut self,
         host: &mut dyn UiActionHost,
-        window: AppWindowId,
+        action_cx: ActionCx,
         open: &Model<bool>,
         value: &Model<Option<Arc<str>>>,
         values_by_row: &[Option<Arc<str>>],
         labels_by_row: &[Arc<str>],
         disabled_by_row: &[bool],
+        on_value_change: Option<&Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
         key: KeyCode,
         repeat: bool,
         loop_navigation: bool,
@@ -1073,6 +1261,7 @@ impl SelectContentKeyState {
             return false;
         }
 
+        let window = action_cx.window;
         let is_open = host.models_mut().get_copied(open).unwrap_or(false);
         if !is_open {
             return false;
@@ -1123,9 +1312,16 @@ impl SelectContentKeyState {
                     return true;
                 }
                 if let Some(chosen_value) = values_by_row.get(active_row).cloned().flatten() {
-                    let _ = host
-                        .models_mut()
-                        .update(value, |v| *v = Some(chosen_value.clone()));
+                    let before = host.models_mut().read(value, |v| v.clone()).ok().flatten();
+                    let did_change = before.as_deref() != Some(chosen_value.as_ref());
+                    if did_change {
+                        let _ = host
+                            .models_mut()
+                            .update(value, |v| *v = Some(chosen_value.clone()));
+                        if let Some(on_value_change) = on_value_change {
+                            on_value_change(host, action_cx, chosen_value.clone());
+                        }
+                    }
                     let _ = host.models_mut().update(open, |v| *v = false);
                     host.request_redraw(window);
                 }
@@ -1399,6 +1595,31 @@ pub fn select_item_pointer_up_handler(
     item_disabled: bool,
     mouse_open_guard: SelectMouseOpenGuard,
 ) -> OnPointerUp {
+    select_item_pointer_up_handler_with_mouse_up_gate(
+        open,
+        value,
+        item_value,
+        item_disabled,
+        mouse_open_guard,
+        false,
+        None,
+    )
+}
+
+/// Same as `select_item_pointer_up_handler`, plus an optional delayed mouse-up commit gate.
+///
+/// When `mouse_up_gate` is present, mouse pointer-up commit is only allowed if the gate currently
+/// permits the row type (`item_is_selected` vs unselected), mirroring Base UI's delayed mouse-up
+/// policy after opening.
+pub fn select_item_pointer_up_handler_with_mouse_up_gate(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+    item_is_selected: bool,
+    mouse_up_gate: Option<Arc<Mutex<SelectMouseUpSelectionGateState>>>,
+) -> OnPointerUp {
     Arc::new(move |host, action_cx, up: PointerUpCx| {
         if up.button != fret_core::MouseButton::Left {
             return false;
@@ -1412,6 +1633,12 @@ pub fn select_item_pointer_up_handler(
         if select_mouse_open_guard_should_suppress_pointer_up_shared(&mouse_open_guard, up) {
             return true;
         }
+        if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
+            let gate = mouse_up_gate.lock().unwrap_or_else(|e| e.into_inner());
+            if !gate.should_allow_item_mouse_up(item_is_selected) {
+                return true;
+            }
+        }
 
         let _ = host
             .models_mut()
@@ -1420,6 +1647,121 @@ pub fn select_item_pointer_up_handler(
         host.request_redraw(action_cx.window);
         true
     })
+}
+
+/// Pressable pointer handlers for select listbox items.
+///
+/// This consolidates the Radix pointer-up guard (opening on trigger mouse `pointerdown`) with
+/// Base UI's delayed mouse-up commit policy (200/400ms) in one place so shadcn recipes can share
+/// the same behavior without re-assembling handler logic.
+#[derive(Clone)]
+pub struct SelectItemPressablePointerHandlers {
+    pub on_pointer_down: OnPressablePointerDown,
+    pub on_pointer_up: OnPressablePointerUp,
+}
+
+/// Builds item-level `Pressable` pointer handlers that:
+/// - record whether the item received a mouse `pointerdown`
+/// - commit selection on `pointerup` when the interaction is not treated as a click (`is_click=false`)
+/// - gate "mouse-up without pointerdown" commits using Radix's pointer-up guard + Base UI's
+///   delayed selection window.
+///
+/// Notes:
+/// - When the item had a pointer-down and the pointer-up is a click, this returns `Continue` so the
+///   default pressable activation path commits the selection.
+/// - `mouse_up_gate` is only consulted for the "no item pointerdown" mouse-up commit path, matching
+///   Base UI's semantics.
+pub fn select_item_pressable_pointer_handlers_with_mouse_up_gate(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+    item_is_selected: bool,
+    mouse_up_gate: Option<Arc<Mutex<SelectMouseUpSelectionGateState>>>,
+    on_value_change: Option<Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
+) -> SelectItemPressablePointerHandlers {
+    let did_pointer_down = Arc::new(Mutex::new(false));
+
+    let did_pointer_down_for_down = did_pointer_down.clone();
+    let mouse_open_guard_for_down = mouse_open_guard.clone();
+    let on_pointer_down: OnPressablePointerDown = Arc::new(move |_host, _action_cx, down| {
+        if matches!(down.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            select_mouse_open_guard_clear(&mouse_open_guard_for_down);
+            let mut pressed = did_pointer_down_for_down
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            *pressed = true;
+        }
+        PressablePointerDownResult::Continue
+    });
+
+    let did_pointer_down_for_up = did_pointer_down.clone();
+    let open_for_up = open.clone();
+    let value_for_up = value.clone();
+    let item_value_for_up = item_value.clone();
+    let mouse_open_guard_for_up = mouse_open_guard.clone();
+    let on_value_change_for_up = on_value_change.clone();
+    let on_pointer_up: OnPressablePointerUp = Arc::new(move |host, action_cx, up| {
+        if up.button != fret_core::MouseButton::Left {
+            return PressablePointerUpResult::Continue;
+        }
+        if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            return PressablePointerUpResult::Continue;
+        }
+        if item_disabled {
+            return PressablePointerUpResult::SkipActivate;
+        }
+
+        let had_pointer_down = {
+            let mut pressed = did_pointer_down_for_up
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            let had = *pressed;
+            *pressed = false;
+            had
+        };
+
+        if had_pointer_down && up.is_click {
+            return PressablePointerUpResult::Continue;
+        }
+
+        if !had_pointer_down {
+            if select_mouse_open_guard_should_suppress_pointer_up_shared(
+                &mouse_open_guard_for_up,
+                up,
+            ) {
+                return PressablePointerUpResult::SkipActivate;
+            }
+            if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
+                let gate = mouse_up_gate.lock().unwrap_or_else(|e| e.into_inner());
+                if !gate.should_allow_item_mouse_up(item_is_selected) {
+                    return PressablePointerUpResult::SkipActivate;
+                }
+            }
+        }
+
+        let before = host
+            .models_mut()
+            .read(&value_for_up, |v| v.clone())
+            .ok()
+            .flatten();
+        let did_change = before.as_deref() != Some(item_value_for_up.as_ref());
+        let _ = host
+            .models_mut()
+            .update(&value_for_up, |v| *v = Some(item_value_for_up.clone()));
+        let _ = host.models_mut().update(&open_for_up, |v| *v = false);
+        if did_change && let Some(on_value_change) = on_value_change_for_up.as_ref() {
+            on_value_change(host, action_cx, item_value_for_up.clone());
+        }
+        host.request_redraw(action_cx.window);
+        PressablePointerUpResult::SkipActivate
+    });
+
+    SelectItemPressablePointerHandlers {
+        on_pointer_down,
+        on_pointer_up,
+    }
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.
@@ -1471,9 +1813,73 @@ mod tests {
         AppWindowId, Event, Modifiers, MouseButtons, Point, PointerEvent, PointerId, PointerType,
         Px, Rect, Size,
     };
+    use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
+    use fret_core::{PathCommand, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Scene, Transform2D};
+    use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
-    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
+    use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use std::time::Duration;
+
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            true
+        }
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1567,6 +1973,235 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn select_item_aligned_layout_from_elements_ignores_visual_bounds_for_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+
+        let prepare_frame = |app: &mut App, window: AppWindowId| {
+            let frame_id = app.frame_id();
+            app.with_global_mut_untracked(
+                fret_ui::elements::ElementRuntime::default,
+                |rt, _app| {
+                    rt.prepare_window_for_frame(window, frame_id);
+                },
+            );
+        };
+
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+
+        // Fixed layout-space geometry for the headless solver.
+        let trigger = Rect::new(
+            Point::new(Px(120.0), Px(32.0)),
+            Size::new(Px(120.0), Px(28.0)),
+        );
+        let value_node = Rect::new(
+            Point::new(Px(132.0), Px(40.0)),
+            Size::new(Px(80.0), Px(16.0)),
+        );
+        let content_panel = Rect::new(
+            Point::new(Px(80.0), Px(72.0)),
+            Size::new(Px(200.0), Px(140.0)),
+        );
+        let viewport = Rect::new(
+            Point::new(Px(80.0), Px(88.0)),
+            Size::new(Px(200.0), Px(108.0)),
+        );
+        let listbox = Rect::new(
+            Point::new(Px(80.0), Px(88.0)),
+            Size::new(Px(200.0), Px(420.0)),
+        );
+        let selected_item = Rect::new(
+            Point::new(Px(80.0), Px(120.0)),
+            Size::new(Px(200.0), Px(28.0)),
+        );
+        let selected_item_text = Rect::new(
+            Point::new(Px(96.0), Px(126.0)),
+            Size::new(Px(120.0), Px(16.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            b: Rect,
+            trigger: Rect,
+            value_node: Rect,
+            content_panel: Rect,
+            viewport: Rect,
+            listbox: Rect,
+            selected_item: Rect,
+            selected_item_text: Rect,
+            got: Option<&Cell<Option<SelectItemAlignedLayout>>>,
+        ) -> fret_core::NodeId {
+            let viewport_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let listbox_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let content_panel_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let selected_item_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let selected_item_text_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+
+            fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
+                let abs = |rect: Rect| {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(rect.origin.x);
+                    layout.inset.top = Some(rect.origin.y);
+                    layout.size.width = Length::Px(rect.size.width);
+                    layout.size.height = Length::Px(rect.size.height);
+                    ContainerProps {
+                        layout,
+                        ..Default::default()
+                    }
+                };
+
+                let value_node_el = cx.container(abs(value_node), |_cx| Vec::new());
+
+                let mut transform_layout = LayoutStyle::default();
+                transform_layout.size.width = Length::Fill;
+                transform_layout.size.height = Length::Fill;
+                let transformed = cx.render_transform_props(
+                    fret_ui::element::RenderTransformProps {
+                        layout: transform_layout,
+                        transform: Transform2D::scale_uniform(0.5),
+                    },
+                    |cx| {
+                        let viewport_el = cx.container(abs(viewport), |_cx| Vec::new());
+                        viewport_id.set(Some(viewport_el.id));
+                        let listbox_el = cx.container(abs(listbox), |_cx| Vec::new());
+                        listbox_id.set(Some(listbox_el.id));
+                        let content_panel_el = cx.container(abs(content_panel), |_cx| Vec::new());
+                        content_panel_id.set(Some(content_panel_el.id));
+                        let selected_item_el = cx.container(abs(selected_item), |_cx| Vec::new());
+                        selected_item_id.set(Some(selected_item_el.id));
+                        let selected_item_text_el =
+                            cx.container(abs(selected_item_text), |_cx| Vec::new());
+                        selected_item_text_id.set(Some(selected_item_text_el.id));
+
+                        vec![
+                            viewport_el,
+                            listbox_el,
+                            content_panel_el,
+                            selected_item_el,
+                            selected_item_text_el,
+                        ]
+                    },
+                );
+
+                if let Some(got) = got {
+                    let inputs = SelectItemAlignedElementInputs {
+                        direction: popper::LayoutDirection::Ltr,
+                        window: b,
+                        trigger,
+                        content_min_width: Px(80.0),
+                        content_border_top: Px(1.0),
+                        content_padding_top: Px(0.0),
+                        content_border_bottom: Px(1.0),
+                        content_padding_bottom: Px(0.0),
+                        viewport_padding_top: Px(4.0),
+                        viewport_padding_bottom: Px(4.0),
+                        selected_item_is_first: false,
+                        selected_item_is_last: false,
+                        value_node: value_node_el.id,
+                        viewport: viewport_id.get().expect("viewport id"),
+                        listbox: listbox_id.get().expect("listbox id"),
+                        content_panel: content_panel_id.get().expect("content_panel id"),
+                        content_width_probe: None,
+                        selected_item: selected_item_id.get().expect("selected_item id"),
+                        selected_item_text: selected_item_text_id
+                            .get()
+                            .expect("selected_item_text id"),
+                    };
+                    got.set(select_item_aligned_layout_from_elements(&*cx, inputs));
+                }
+
+                vec![value_node_el, transformed]
+            })
+        }
+
+        // Frame 0: mount the geometry nodes and paint with a render transform so last-visual-bounds
+        // differ from last-layout-bounds for overlay elements.
+        app.set_frame_id(fret_core::FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        prepare_frame(&mut app, window);
+        let root0 = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            trigger,
+            value_node,
+            content_panel,
+            viewport,
+            listbox,
+            selected_item,
+            selected_item_text,
+            None,
+        );
+        ui.set_root(root0);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+
+        // Frame boundary: commit recorded bounds so `last_*_bounds_for_element` can observe them.
+        app.set_frame_id(fret_core::FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        prepare_frame(&mut app, window);
+
+        // Expected output is based on layout-space geometry (render transforms must not affect it).
+        let expected = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: fret_core::LayoutDirection::Ltr,
+            window: b,
+            trigger,
+            content: content_panel,
+            value_node,
+            selected_item_text,
+            selected_item,
+            viewport,
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
+            items_height: listbox.size.height,
+        });
+
+        let got: Cell<Option<SelectItemAlignedLayout>> = Cell::new(None);
+        let root1 = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            trigger,
+            value_node,
+            content_panel,
+            viewport,
+            listbox,
+            selected_item,
+            selected_item_text,
+            Some(&got),
+        );
+        ui.set_root(root1);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let got = got.get().expect("expected resolved layout");
+        assert_eq!(got.rect, expected.rect);
+        assert_eq!(got.side, expected.side);
+        assert_eq!(got.outputs, expected.outputs);
     }
 
     struct PointerHost<'a> {
@@ -2042,12 +2677,16 @@ mod tests {
 
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::ArrowDown,
             false,
             true,
@@ -2071,12 +2710,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Tab,
             false,
             true,
@@ -2104,12 +2747,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Enter,
             false,
             true,

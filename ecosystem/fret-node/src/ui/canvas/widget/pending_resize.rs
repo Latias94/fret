@@ -1,9 +1,9 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::state::{NodeResize, ViewSnapshot};
 use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{NodeResize, ViewSnapshot};
 
 pub(super) fn handle_pending_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

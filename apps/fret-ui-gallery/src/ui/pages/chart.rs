@@ -1,10 +1,13 @@
 use super::super::*;
 
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-    let chart_1 = theme.color_required("chart-1");
-    let chart_2 = theme.color_required("chart-2");
-    let chart_3 = theme.color_required("chart-3");
+    let (chart_1, chart_2, chart_3) = cx.with_theme(|theme| {
+        (
+            theme.color_required("chart-1"),
+            theme.color_required("chart-2"),
+            theme.color_required("chart-3"),
+        )
+    });
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -28,17 +31,17 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -66,7 +69,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .hide_indicator(hide_indicator)
             .test_id_prefix(test_id)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let legend = |cx: &mut ElementContext<'_, App>,
@@ -84,7 +87,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .wrap(wrap)
             .hide_icon(hide_icon)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let demo_content = stack::vstack(
@@ -281,8 +284,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-chart-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-chart-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

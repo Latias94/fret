@@ -1,6 +1,9 @@
 //! Input, editing, and command handling for the code editor surface.
 
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
+use std::collections::{HashMap, VecDeque};
+use std::ops::Range;
 
 #[cfg(feature = "syntax")]
 use super::paint::invalidate_syntax_row_cache_for_delta;
@@ -31,7 +34,7 @@ pub(super) fn scroll_caret_into_view(
 pub(super) fn push_caret_rect_effect(
     host: &mut dyn UiActionHost,
     action_cx: ActionCx,
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row_h: Px,
     cell_w: Px,
     scroll_handle: &fret_ui::scroll::ScrollHandle,
@@ -87,7 +90,7 @@ pub(super) fn apply_pointer_down_selection(
     click_count: u8,
     shift: bool,
 ) {
-    st.preedit = None;
+    st.set_preedit(None);
 
     let caret = st
         .buffer
@@ -141,6 +144,9 @@ pub(super) fn handle_key_down(
     modifiers: Modifiers,
 ) -> bool {
     let mut st = state.borrow_mut();
+    if !st.interaction.enabled || !st.interaction.focusable || !st.interaction.selectable {
+        return false;
+    }
     let shift = modifiers.shift;
     let ctrl_or_meta = modifiers.ctrl || modifiers.meta;
     let word = modifiers.ctrl || modifiers.alt;
@@ -162,7 +168,7 @@ pub(super) fn handle_key_down(
             _ => false,
         };
         if cancel_preedit {
-            st.preedit = None;
+            st.set_preedit(None);
         }
     }
 
@@ -174,6 +180,16 @@ pub(super) fn handle_key_down(
     let cell_w_px = cell_w.get();
 
     match key {
+        KeyCode::KeyA if ctrl_or_meta => {
+            st.set_preedit(None);
+            let end = st.buffer.len_bytes();
+            st.selection = Selection {
+                anchor: 0,
+                focus: end,
+            };
+            st.caret_preferred_x = None;
+            st.undo_group = None;
+        }
         KeyCode::ArrowLeft => {
             if meta {
                 move_caret_home_end(&mut st, true, false, shift);
@@ -227,6 +243,11 @@ pub(super) fn handle_key_down(
             st.undo_group = None;
         }
         KeyCode::Backspace => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             if word {
                 delete_word_backward(&mut st);
             } else {
@@ -234,6 +255,11 @@ pub(super) fn handle_key_down(
             }
         }
         KeyCode::Delete => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             if word {
                 delete_word_forward(&mut st);
             } else {
@@ -241,18 +267,35 @@ pub(super) fn handle_key_down(
             }
         }
         KeyCode::Enter => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             let _ = insert_text(&mut st, "\n");
         }
         KeyCode::Tab => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             let _ = insert_text(&mut st, "\t");
         }
         KeyCode::KeyC if ctrl_or_meta => copy_selection(host, &st),
-        KeyCode::KeyV if ctrl_or_meta => request_paste(host, action_cx),
+        KeyCode::KeyV if ctrl_or_meta => {
+            if st.interaction.editable {
+                request_paste(host, action_cx);
+            } else {
+                st.set_preedit(None);
+                st.undo_group = None;
+            }
+        }
         _ => return false,
     }
 
     scroll_caret_into_view(&st, row_h, scroll_handle);
-    push_caret_rect_effect(host, action_cx, &st, row_h, cell_w_px, scroll_handle);
+    push_caret_rect_effect(host, action_cx, &mut st, row_h, cell_w_px, scroll_handle);
 
     host.notify(action_cx);
     host.request_redraw(action_cx.window);
@@ -497,7 +540,8 @@ pub(super) fn delete_forward(st: &mut CodeEditorState) {
 
 pub(super) fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = st.buffer.prev_char_boundary(caret);
+    let mut new = st.buffer.prev_char_boundary(caret);
+    new = clamp_byte_out_of_folds(st, new, FoldSnap::Start);
     st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
@@ -511,7 +555,8 @@ pub(super) fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
 
 pub(super) fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = st.buffer.next_char_boundary(caret);
+    let mut new = st.buffer.next_char_boundary(caret);
+    new = clamp_byte_out_of_folds(st, new, FoldSnap::End);
     st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
@@ -540,17 +585,24 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
     };
     let max_row = st.display_map.row_count().saturating_sub(1);
     let next_row = next_row.min(max_row);
+    let next_row_has_preedit = st.preedit.is_some() && pt.row == next_row;
     let next = if let Some((geom, _)) = st.row_geom_cache.get(&next_row)
         && !geom.caret_stops.is_empty()
+        && geom.has_preedit == next_row_has_preedit
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
-        let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
+        let byte = map_row_display_local_to_buffer_byte(&st.buffer, geom, local);
         st.buffer
             .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()))
     } else {
+        st.cache_stats.geom_vertical_move_fallbacks = st
+            .cache_stats
+            .geom_vertical_move_fallbacks
+            .saturating_add(1);
         st.display_map
             .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col))
     };
+    let next = clamp_byte_out_of_folds(st, next, FoldSnap::Start);
     if extend {
         st.selection.focus = next;
     } else {
@@ -567,6 +619,17 @@ pub(super) fn apply_and_record_edit(
     edit: Edit,
     next_selection: Selection,
 ) -> Option<()> {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return None;
+    }
+    let (edit_start, edit_old_end, edit_byte_delta, edit_is_single_line) =
+        edit_cache_shift_params(&st.buffer, &edit);
+    let before_wrap_cols = st.display_wrap_cols;
+    let before_line = st
+        .buffer
+        .line_index_at_byte(edit_start.min(st.buffer.len_bytes()));
+    let before_line_rows = st.display_map.line_display_row_range(before_line);
+
     if !st.selection.is_caret() {
         st.undo_group = None;
     }
@@ -579,7 +642,7 @@ pub(super) fn apply_and_record_edit(
         });
     }
 
-    st.preedit = None;
+    st.set_preedit(None);
     let delta = {
         let group = st.undo_group.as_mut().expect("undo group must exist");
         st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?
@@ -593,11 +656,36 @@ pub(super) fn apply_and_record_edit(
     let _ = delta;
     st.selection = next_selection;
     st.caret_preferred_x = None;
+
+    let can_shift_row_geom_cache = edit_is_single_line
+        && before_wrap_cols == st.display_wrap_cols
+        && delta.lines.old_count == 1
+        && delta.lines.new_count == 1
+        && delta.lines.start == before_line
+        && st.line_folds.is_empty();
+    if can_shift_row_geom_cache {
+        let after_line_rows = st.display_map.line_display_row_range(before_line);
+        if after_line_rows.start == before_line_rows.start {
+            shift_row_geom_cache_for_single_line_edit(
+                st,
+                before_line_rows,
+                after_line_rows,
+                edit_old_end,
+                edit_byte_delta,
+            );
+        } else {
+            st.row_geom_cache_tick = 0;
+            st.row_geom_cache.clear();
+            st.row_geom_cache_queue.clear();
+        }
+    } else {
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
     st.row_geom_cache_rev = st.buffer.revision();
     st.row_geom_cache_wrap_cols = st.display_wrap_cols;
-    st.row_geom_cache_tick = 0;
-    st.row_geom_cache.clear();
-    st.row_geom_cache_queue.clear();
+    st.row_geom_cache_folds_epoch = st.folds_epoch;
 
     let (buffer_tx, inverse_selection, coalesce_key) = {
         let group = st.undo_group.as_ref().expect("undo group must exist");
@@ -617,7 +705,102 @@ pub(super) fn apply_and_record_edit(
     Some(())
 }
 
+fn edit_cache_shift_params(buf: &TextBuffer, edit: &Edit) -> (usize, usize, isize, bool) {
+    let (start, old_end, delta, inserted_text) = match edit {
+        Edit::Insert { at, text } => (*at, *at, text.len() as isize, text.as_str()),
+        Edit::Delete { range } => (
+            range.start,
+            range.end,
+            -((range.end.saturating_sub(range.start)) as isize),
+            "",
+        ),
+        Edit::Replace { range, text } => (
+            range.start,
+            range.end,
+            text.len() as isize - (range.end.saturating_sub(range.start) as isize),
+            text.as_str(),
+        ),
+    };
+
+    let inserted_is_single_line = !inserted_text.contains('\n');
+    let start_line = buf.line_index_at_byte(start.min(buf.len_bytes()));
+    let end_line = buf.line_index_at_byte(old_end.min(buf.len_bytes()));
+    let is_single_line = inserted_is_single_line && start_line == end_line;
+    (start, old_end, delta, is_single_line)
+}
+
+fn shift_row_geom_cache_for_single_line_edit(
+    st: &mut CodeEditorState,
+    before_line_rows: std::ops::Range<usize>,
+    after_line_rows: std::ops::Range<usize>,
+    edit_old_end: usize,
+    edit_byte_delta: isize,
+) {
+    let row_delta = after_line_rows.len() as isize - before_line_rows.len() as isize;
+
+    let old_cache = std::mem::take(&mut st.row_geom_cache);
+    let old_queue = std::mem::take(&mut st.row_geom_cache_queue);
+
+    let mut new_cache = HashMap::with_capacity(old_cache.len());
+    for (row, (mut geom, tick)) in old_cache {
+        if before_line_rows.contains(&row) {
+            continue;
+        }
+
+        if row >= before_line_rows.end {
+            geom.row_range =
+                shift_range_for_single_line_edit(geom.row_range, edit_old_end, edit_byte_delta);
+        }
+        let new_row = if row >= before_line_rows.end {
+            shift_usize(row, row_delta)
+        } else {
+            row
+        };
+        new_cache.insert(new_row, (geom, tick));
+    }
+
+    let mut new_queue = VecDeque::with_capacity(old_queue.len());
+    for (row, tick) in old_queue {
+        if before_line_rows.contains(&row) {
+            continue;
+        }
+        let new_row = if row >= before_line_rows.end {
+            shift_usize(row, row_delta)
+        } else {
+            row
+        };
+        new_queue.push_back((new_row, tick));
+    }
+
+    st.row_geom_cache = new_cache;
+    st.row_geom_cache_queue = new_queue;
+}
+
+fn shift_usize(value: usize, delta: isize) -> usize {
+    if delta >= 0 {
+        value.saturating_add(delta as usize)
+    } else {
+        value.saturating_sub((-delta) as usize)
+    }
+}
+
+fn shift_range_for_single_line_edit(
+    range: Range<usize>,
+    edit_old_end: usize,
+    delta: isize,
+) -> Range<usize> {
+    if range.end <= edit_old_end || delta == 0 {
+        return range;
+    }
+    let start = shift_usize(range.start, delta);
+    let end = shift_usize(range.end, delta);
+    start..end.max(start)
+}
+
 pub(super) fn undo(st: &mut CodeEditorState) -> bool {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return false;
+    }
     st.undo_group = None;
     st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (
@@ -639,6 +822,7 @@ pub(super) fn undo(st: &mut CodeEditorState) -> bool {
         st.refresh_display_map();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -656,6 +840,9 @@ pub(super) fn undo(st: &mut CodeEditorState) -> bool {
 }
 
 pub(super) fn redo(st: &mut CodeEditorState) -> bool {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return false;
+    }
     st.undo_group = None;
     st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (
@@ -677,6 +864,7 @@ pub(super) fn redo(st: &mut CodeEditorState) -> bool {
         st.refresh_display_map();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -712,6 +900,11 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
     } else {
         move_word_right_in_buffer(&st.buffer, caret, mode)
     };
+    let next = if dir < 0 {
+        clamp_byte_out_of_folds(st, next, FoldSnap::Start)
+    } else {
+        clamp_byte_out_of_folds(st, next, FoldSnap::End)
+    };
 
     if extend {
         if st.selection.is_caret() {
@@ -724,8 +917,80 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
             focus: next,
         };
     }
-    st.preedit = None;
+    st.set_preedit(None);
     true
+}
+
+pub(super) fn clamp_selection_out_of_folds(st: &mut CodeEditorState) {
+    if st.preedit.is_some() || st.line_folds.is_empty() {
+        return;
+    }
+
+    if st.selection.is_caret() {
+        let caret = st.selection.caret().min(st.buffer.len_bytes());
+        let caret = clamp_byte_out_of_folds(st, caret, FoldSnap::Start);
+        st.selection = Selection {
+            anchor: caret,
+            focus: caret,
+        };
+        return;
+    }
+
+    let normalized = st.selection.normalized();
+    let start = clamp_byte_out_of_folds(st, normalized.start, FoldSnap::Start);
+    let end = clamp_byte_out_of_folds(st, normalized.end, FoldSnap::End);
+    let (anchor, focus) = if st.selection.anchor <= st.selection.focus {
+        (start, end)
+    } else {
+        (end, start)
+    };
+    st.selection.anchor = anchor;
+    st.selection.focus = focus;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FoldSnap {
+    Start,
+    End,
+}
+
+fn clamp_byte_out_of_folds(st: &CodeEditorState, byte: usize, snap: FoldSnap) -> usize {
+    if st.preedit.is_some() || st.line_folds.is_empty() {
+        return byte;
+    }
+
+    let line = st.buffer.line_index_at_byte(byte);
+    let Some(folds) = st.line_folds.get(&line) else {
+        return byte;
+    };
+
+    let Some(line_range) = st.buffer.line_byte_range(line) else {
+        return byte;
+    };
+    if byte <= line_range.start || byte >= line_range.end {
+        return byte;
+    }
+
+    let Some(line_text) = st.buffer.line_text(line) else {
+        return byte;
+    };
+    if fret_code_editor_view::validate_fold_spans(&line_text, folds.as_ref()).is_err() {
+        return byte;
+    }
+
+    let local = byte.saturating_sub(line_range.start);
+    for span in folds.iter() {
+        let start = span.range.start;
+        let end = span.range.end.max(start);
+        if local > start && local < end {
+            return match snap {
+                FoldSnap::Start => line_range.start.saturating_add(start),
+                FoldSnap::End => line_range.start.saturating_add(end),
+            };
+        }
+    }
+
+    byte
 }
 
 pub(super) fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool {

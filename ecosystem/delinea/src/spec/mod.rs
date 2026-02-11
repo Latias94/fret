@@ -29,6 +29,47 @@ pub struct ChartSpec {
 pub struct DatasetSpec {
     pub id: DatasetId,
     pub fields: Vec<FieldSpec>,
+    /// When set, this dataset is derived from an upstream dataset by applying `transforms` in
+    /// order.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub from: Option<DatasetId>,
+    /// v1 subset: row-preserving transforms only (filter/sort); schema is inherited from `from`.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub transforms: Vec<DatasetTransformSpecV1>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DatasetSortOrder {
+    #[default]
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DatasetFilterSpecV1 {
+    pub field: FieldId,
+    pub gte: Option<f64>,
+    pub gt: Option<f64>,
+    pub lte: Option<f64>,
+    pub lt: Option<f64>,
+    pub eq: Option<f64>,
+    pub ne: Option<f64>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DatasetSortSpecV1 {
+    pub field: FieldId,
+    pub order: DatasetSortOrder,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DatasetTransformSpecV1 {
+    Filter(DatasetFilterSpecV1),
+    Sort(DatasetSortSpecV1),
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -85,12 +126,12 @@ pub enum FilterMode {
     /// ECharts-like `weakFilter`.
     ///
     /// v1 note: treated as equivalent to `Filter` until multi-dimensional filtering is introduced
-    /// (see ADR 1150).
+    /// (see ADR 0211).
     WeakFilter,
     /// ECharts-like `empty`.
     ///
     /// Out-of-window samples are treated as "missing" for mark emission while preserving a stable
-    /// row/index space (see ADR 1150).
+    /// row/index space (see ADR 0211).
     Empty,
     None,
 }
@@ -206,7 +247,7 @@ pub struct DataZoomYSpec {
     pub axis: AxisId,
     /// Row filtering mode for Y dataZoom.
     ///
-    /// v1 default is `None` (mapping-only; ADR 1136). When enabled, the view/transform pipeline
+    /// v1 default is `None` (mapping-only; ADR 0198). When enabled, the view/transform pipeline
     /// may materialize sparse selections (ECharts-like) which can be more expensive on large data.
     pub filter_mode: FilterMode,
     /// Minimum allowed span (in data value space) for interaction-derived zoom updates.

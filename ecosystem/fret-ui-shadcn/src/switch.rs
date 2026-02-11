@@ -232,25 +232,60 @@ impl Switch {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let model = self.model;
 
-            let theme = Theme::global(&*cx.app).clone();
+            let (
+                w,
+                h,
+                thumb,
+                pad_x,
+                radius,
+                ring_border,
+                ring,
+                bg_off,
+                bg_on,
+                thumb_bg,
+                pressable_layout,
+            ) = {
+                let theme = Theme::global(&*cx.app);
 
-            let w = switch_track_w(&theme);
-            let h = switch_track_h(&theme);
-            let thumb = switch_thumb(&theme);
-            let pad_x = switch_padding(&theme);
+                let w = switch_track_w(theme);
+                let h = switch_track_h(theme);
+                let thumb = switch_thumb(theme);
+                let pad_x = switch_padding(theme);
 
-            let radius = Px((h.0 * 0.5).max(0.0));
-            let ring_border = switch_ring_color(&theme);
-            let mut ring = decl_style::focus_ring(&theme, radius);
-            ring.color = alpha_mul(ring_border, 0.5);
+                let radius = Px((h.0 * 0.5).max(0.0));
+                let ring_border = switch_ring_color(theme);
+                let mut ring = decl_style::focus_ring(theme, radius);
+                ring.color = alpha_mul(ring_border, 0.5);
 
-            let bg_off = switch_bg_off(&theme);
-            let bg_on = switch_bg_on(&theme);
-            let thumb_bg = switch_thumb_bg(&theme);
+                let bg_off = switch_bg_off(theme);
+                let bg_on = switch_bg_on(theme);
+                let thumb_bg = switch_thumb_bg(theme);
+
+                let layout = LayoutRefinement::default()
+                    .w_px(w)
+                    .h_px(h)
+                    .merge(self.layout);
+                let pressable_layout = decl_style::layout_style(theme, layout);
+
+                (
+                    w,
+                    h,
+                    thumb,
+                    pad_x,
+                    radius,
+                    ring_border,
+                    ring,
+                    bg_off,
+                    bg_on,
+                    thumb_bg,
+                    pressable_layout,
+                )
+            };
 
             let default_track_background = WidgetStateProperty::new(ColorRef::Color(bg_off))
                 .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
@@ -277,12 +312,6 @@ impl Switch {
                 WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
                     .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
-            let layout = LayoutRefinement::default()
-                .w_px(w)
-                .h_px(h)
-                .merge(self.layout);
-            let pressable_layout = decl_style::layout_style(&theme, layout);
-
             let a11y_label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
             let disabled_explicit = self.disabled;
@@ -305,7 +334,6 @@ impl Switch {
                     }
                 }
 
-                let theme = Theme::global(&*cx.app).clone();
                 let on = match &model {
                     SwitchModel::Determinate(model) => {
                         cx.watch_model(model).copied().unwrap_or(false)
@@ -318,27 +346,28 @@ impl Switch {
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, on);
 
+                let theme = Theme::global(&*cx.app);
                 let bg = resolve_override_slot(
                     style_override.track_background.as_ref(),
                     &default_track_background,
                     states,
                 )
-                .resolve(&theme);
+                .resolve(theme);
                 let border_color = resolve_override_slot(
                     style_override.border_color.as_ref(),
                     &default_border_color,
                     states,
                 )
-                .resolve(&theme);
+                .resolve(theme);
                 let thumb_color = resolve_override_slot(
                     style_override.thumb_background.as_ref(),
                     &default_thumb_background,
                     states,
                 )
-                .resolve(&theme);
+                .resolve(theme);
 
                 let mut chrome_props = decl_style::container_props(
-                    &theme,
+                    theme,
                     ChromeRefinement::default()
                         .bg(ColorRef::Color(bg))
                         .rounded(Radius::Full)
@@ -348,7 +377,7 @@ impl Switch {
                     LayoutRefinement::default(),
                 );
                 chrome_props.corner_radii = Corners::all(radius);
-                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
+                chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
                 // NOTE: Container layout already treats border as part of layout insets
@@ -508,6 +537,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn switch_thumb_is_vertically_centered_in_track() {
         fn overlap_area(a: Rect, b: Rect) -> f32 {
@@ -582,9 +624,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app).clone();
-        let track_bg = switch_bg_off(&theme);
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(&theme));
         let thumb_size = switch_thumb(&theme);
-        let thumb_bg = switch_thumb_bg(&theme);
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(&theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;

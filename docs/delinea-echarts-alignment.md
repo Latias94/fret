@@ -18,22 +18,22 @@ Status symbols:
   - `src/component/dataZoom/AxisProxy.ts` (data window computation + filter modes)
   - `src/chart/*` (series behavior + large/progressive knobs)
 - `delinea` ADR series:
-  - Headless engine: `docs/adr/1128-delinea-headless-chart-engine.md`
-  - Transform pipeline + X dataZoom: `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`
-  - Axis scales + mapping: `docs/adr/1130-delinea-axis-scales-and-coordinate-mapping.md`
-  - Marks contract: `docs/adr/1131-delinea-marks-identity-and-renderer-contract.md`
-  - Large-data + progressive: `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
-  - Interaction + hit testing: `docs/adr/1133-delinea-interaction-and-hit-testing-contract.md`
-  - Multi-axis + layout: `docs/adr/1134-delinea-multi-axis-and-layout-contract.md`
-  - Axis locks + shortcuts: `docs/adr/1135-delinea-axis-interaction-locks-and-shortcuts.md`
-  - DataZoom Y + 2D semantics (v1 divergence): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`
-  - Row selection + filtering: `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`
-- DataZoom composition + span policy: `docs/adr/1138-delinea-datazoom-component-composition-and-span-policy.md`
-- Dataset storage + indices: `docs/adr/1140-delinea-dataset-storage-and-indices.md`
-- Brush selection output: `docs/adr/1144-delinea-brush-selection-and-output-contract.md`
-- Brush selection row-range fast path: `docs/adr/1145-delinea-brush-selection-to-row-selection-fast-path.md`
-- Brush selection link events: `docs/adr/1146-delinea-link-events-for-brush-selection.md`
-- VisualMap (data-driven styling): `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`
+  - Headless engine: `docs/adr/0190-delinea-headless-chart-engine.md`
+  - Transform pipeline + X dataZoom: `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
+  - Axis scales + mapping: `docs/adr/0192-delinea-axis-scales-and-coordinate-mapping.md`
+  - Marks contract: `docs/adr/0193-delinea-marks-identity-and-renderer-contract.md`
+  - Large-data + progressive: `docs/adr/0194-delinea-large-data-and-progressive-rendering.md`
+  - Interaction + hit testing: `docs/adr/0195-delinea-interaction-and-hit-testing-contract.md`
+  - Multi-axis + layout: `docs/adr/0196-delinea-multi-axis-and-layout-contract.md`
+  - Axis locks + shortcuts: `docs/adr/0197-delinea-axis-interaction-locks-and-shortcuts.md`
+  - DataZoom Y + 2D semantics (v1 divergence): `docs/adr/0198-delinea-datazoom-y-and-2d-semantics.md`
+  - Row selection + filtering: `docs/adr/0199-delinea-row-selection-and-filtering-contract.md`
+- DataZoom composition + span policy: `docs/adr/0200-delinea-datazoom-component-composition-and-span-policy.md`
+- Dataset storage + indices: `docs/adr/0202-delinea-dataset-storage-and-indices.md`
+- Brush selection output: `docs/adr/0205-delinea-brush-selection-and-output-contract.md`
+- Brush selection row-range fast path: `docs/adr/0206-delinea-brush-selection-to-row-selection-fast-path.md`
+- Brush selection link events: `docs/adr/0207-delinea-link-events-for-brush-selection.md`
+- VisualMap (data-driven styling): `docs/adr/0208-delinea-visualmap-and-data-driven-styling.md`
 
 ## Quick Manual Validation
 
@@ -74,11 +74,11 @@ See `apps/fret-demo-web/README.md` for prerequisites and the full list of demo n
 
 ## P0: Decisions That Must Stay Stable (Avoid Future Rewrites)
 
-- `[x]` Stable “raw index” identity across transforms (`RowSelection` + indices) (ADR 1140).
-- `[x]` Separate durable config vs ephemeral view windows (ADR 1129 / ADR 1136).
-- `[x]` Large-data strategy is explicit (budgeted stepping; progressive marks) (ADR 1132).
-- `[x]` Interaction contract is mark-based and allocation-aware (ADR 1133).
-- `[x]` Multi-axis routing is deterministic (active axis pair; region routing) (ADR 1134).
+- `[x]` Stable “raw index” identity across transforms (`RowSelection` + indices) (ADR 0202).
+- `[x]` Separate durable config vs ephemeral view windows (ADR 0191 / ADR 0198).
+- `[x]` Large-data strategy is explicit (budgeted stepping; progressive marks) (ADR 0194).
+- `[x]` Interaction contract is mark-based and allocation-aware (ADR 0195).
+- `[x]` Multi-axis routing is deterministic (active axis pair; region routing) (ADR 0196).
 
 ## Conformance Scenarios (P0)
 
@@ -99,7 +99,7 @@ single “at a glance” view of:
 **S1 - DataZoom X inside + slider window writes** (`[x]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/AxisProxy.ts`, `repo-ref/echarts/src/component/dataZoom/dataZoomProcessor.ts`
-- ADR(s): `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/1138-delinea-datazoom-component-composition-and-span-policy.md`
+- ADR(s): `docs/adr/0191-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/0200-delinea-datazoom-component-composition-and-span-policy.md`
 - Evidence: `ecosystem/delinea/src/engine/window.rs` (span limits), `ecosystem/delinea/src/engine/mod.rs` (interaction action routing), `ecosystem/fret-chart/src/retained/canvas.rs` (inside + slider gestures), `ecosystem/fret-chart/src/echarts/mod.rs` (option adapter window seeding via `dataZoom.startValue/endValue` -> value-window actions, `dataZoom.start/end` -> `Action::SetAxisWindowPercent`)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
@@ -112,7 +112,7 @@ single “at a glance” view of:
 **S2 - DataZoom Y + 2D zoom parity boundary (v1 divergence)** (`[~]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
-- ADR(s): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`
+- ADR(s): `docs/adr/0198-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/0199-delinea-row-selection-and-filtering-contract.md`
 - Evidence: `ecosystem/delinea/src/engine/mod.rs` (percent-window routing + stage order), `ecosystem/delinea/src/engine/stages/filter_processor.rs` (Y percent extent derivation + Y filtering materialization + participation snapshot), `ecosystem/delinea/src/transform/data_zoom_y.rs` (Y filter node), `ecosystem/delinea/src/transform_graph/data_view.rs` (budgeted indices materialization), `ecosystem/delinea/src/view/mod.rs` (view selection/mask policy), `ecosystem/delinea/src/transform/*` (RowSelection), `ecosystem/delinea/src/engine/tests.rs` (`percent_y_extent_is_scoped_by_x_percent_window`, `data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty`, `data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection`, `data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selection`)
 - Notes: The per-series participation contract (`ParticipationState::series_contract`) is the single source of truth for selection + mask consumption in marks and sampling.
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
@@ -135,7 +135,7 @@ single “at a glance” view of:
 **S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` + brush/interaction glue (behavioral reference only; implementation differs)
-- ADR(s): `docs/adr/1136-delinea-datazoom-y-and-2d-semantics.md`
+- ADR(s): `docs/adr/0198-delinea-datazoom-y-and-2d-semantics.md`
 - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (`Action::SetViewWindow2DFromZoom`)
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (P0):
@@ -146,7 +146,7 @@ single “at a glance” view of:
 **S4 - Category axis under zoom for non-bar series** (`[~]`)
 
 - ECharts reference: category axis + dataZoom behavior (series sampling under ordinal transforms)
-- ADR(s): `docs/adr/1130-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/1140-delinea-dataset-storage-and-indices.md`
+- ADR(s): `docs/adr/0192-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/0202-delinea-dataset-storage-and-indices.md`
 - Evidence: `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (ordinal mapping), `ecosystem/delinea/src/engine/axis.rs` (category bands), `ecosystem/delinea/src/view/mod.rs` (band-edge mapping window under zoom), `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_shadow_rect_respects_category_band_edges_under_x_window`, `category_x_filter_culls_marks_for_non_monotonic_line_and_samples_first_duplicate`, `category_x_filter_materializes_indices_for_scatter_and_respects_base_row_range`)
 - Validation (existing coverage):
   - `cargo run -p fret-demo --bin fret-demo -- horizontal_bars_demo` (category Y axis + bar layout + axis pointer)
@@ -165,7 +165,7 @@ single “at a glance” view of:
 **S5 - Tooltip content parity + formatting hooks** (`[~]`)
 
 - ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
-- ADR(s): `docs/adr/1133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/1148-delinea-tooltip-formatting-contract.md`
+- ADR(s): `docs/adr/0195-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/0209-delinea-tooltip-formatting-contract.md`
 - Evidence: `ecosystem/delinea/src/tooltip.rs`, `ecosystem/delinea/src/engine/hit_test/mod.rs`, `ecosystem/fret-chart/src/retained/tooltip.rs`, `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
 - Validation (desktop): `cargo run -p fret-demo --bin fret-demo -- chart_demo`
 - Validation (wasm): `cargo run -p fretboard -- dev web --demo chart_demo`
@@ -239,7 +239,7 @@ single “at a glance” view of:
 **S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/visualMap/VisualMapModel.ts`, `repo-ref/echarts/src/component/visualMap/visualEncoding.ts`
-- ADR(s): `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`
+- ADR(s): `docs/adr/0208-delinea-visualmap-and-data-driven-styling.md`
 - Evidence: `ecosystem/delinea/src/engine/stages/marks.rs` (bucketed batches), `ecosystem/fret-chart/src/retained/canvas.rs` (controller UI)
 - Validation (desktop):
   - `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo` (scatter visualMap + multi-axis controller band)
@@ -255,7 +255,7 @@ single “at a glance” view of:
 **S8 - LOD / downsampling strategies and conformance harness** (`[~]`)
 
 - ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
-- ADR(s): `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
+- ADR(s): `docs/adr/0194-delinea-large-data-and-progressive-rendering.md`
 - Evidence: `ecosystem/delinea/src/spec/mod.rs` (`SeriesSpec.lod`), `ecosystem/delinea/src/engine/lod/*` + stage budgets
 - v1 invariants (P0 baseline):
   - Line-family (line/area/band): min/max-per-pixel bucketing over the plot width, emitting `<= 4 * plot_width_px`
@@ -282,8 +282,8 @@ single “at a glance” view of:
 **S9 - Append/update semantics (`appendData`)** (`[~]`)
 
 - ECharts reference: `appendData` and incremental updates on `DataStore`
-- ADR(s): `docs/adr/1140-delinea-dataset-storage-and-indices.md`, `docs/adr/1149-delinea-appenddata-and-incremental-caches.md`
-- ADR(s): `docs/adr/1140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
+- ADR(s): `docs/adr/0202-delinea-dataset-storage-and-indices.md`, `docs/adr/0210-delinea-appenddata-and-incremental-caches.md`
+- ADR(s): `docs/adr/0202-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
 - Evidence:
   - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
   - `ecosystem/delinea/src/transform_graph/data_view.rs` (append-only resume for XFilter index scans)
@@ -352,7 +352,7 @@ single “at a glance” view of:
 - Chord: `Alt + RMB drag` in plot starts a brush selection.
 - Brush selection does not write view windows (it is selection-only in v1).
 - When `LinkGroup` is configured, brush selection changes emit a `LinkEvent::BrushSelectionChanged`
-  event, enabling ECharts-like `brushLink` behavior (see ADR 1146).
+  event, enabling ECharts-like `brushLink` behavior (see ADR 0207).
 - In the multi-axis harness, the demo runs two charts in the same link group:
   - Brushing in one chart updates the selection in the other chart.
   - Clearing brush selection in one chart clears it in the other chart.
@@ -419,26 +419,32 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
   - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`)
 - AxisPointer/tooltip sampling respects `FilterMode::Empty` masks even when the underlying row selection is non-empty.
   - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series`, `axis_pointer_tooltip_respects_y_empty_mask_for_band_series`, `axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`, `axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection_is_not`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_line_series`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_band_series`, `axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples`, `axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series`, `scatter_large_mode_does_not_hit_y_empty_masked_outlier`, `bar_item_trigger_does_not_hit_y_empty_masked_outlier`, `axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_masked`, `data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection`, `axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_selection_is_not`, `axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_under_x_empty_mask`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar_under_x_empty_mask`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_marks_are_empty`)
-- Y dataZoom is mapping-only in v1 (no row filtering) (ADR 1136).
+- Multi-dimensional filtering is intentionally a v1 subset:
+  - the engine owns an explicit per-grid step plan (`XYWeakFilter -> XRange -> XIndices -> YPercent -> YIndices`),
+  - indices materialization is budgeted and size-capped,
+  - and this is not yet full ECharts parity (see ADR 0211 + `ecosystem/delinea/src/engine/stages/filter_processor.rs`).
+- Y dataZoom is mapping-first in v1: it always has a window/mapping carrier, but it may materialize
+  sparse indices selections under size caps when `DataZoomYSpec.filter_mode` opts into filtering
+  semantics (ADR 0198 amendments; ADR 0211).
 - 2D zoom is expressed as a paired window write (`Action::SetViewWindow2DFromZoom`) without introducing
-  sparse selections (ADR 1136).
+  sparse selections (ADR 0198).
 
 ## Feature Checklist (ECharts-Class Cartesian Charts)
 
 ### Data model & transforms
 
-- `[x]` Dataset + field indirection (`DatasetSpec` + `FieldSpec`) (ADR 1140).
-- `[x]` `encode`-style mapping (series `x/y/y2` fields) (ADR 1128).
-- `[x]` Row range gating (`SetDatasetRowRange`) for external virtualization (ADR 1137).
-- `[x]` X filtering via `FilterMode` (`Filter` / `None` / `WeakFilter` / `Empty`) (ADR 1129 / ADR 1150).
-- `[~]` `FilterMode::{WeakFilter,Empty}` surface + v1 subset semantics (ADR 1150); multi-dimensional parity still pending.
+- `[x]` Dataset + field indirection (`DatasetSpec` + `FieldSpec`) (ADR 0202).
+- `[x]` `encode`-style mapping (series `x/y/y2` fields) (ADR 0190).
+- `[x]` Row range gating (`SetDatasetRowRange`) for external virtualization (ADR 0199).
+- `[x]` X filtering via `FilterMode` (`Filter` / `None` / `WeakFilter` / `Empty`) (ADR 0191 / ADR 0211).
+- `[~]` `FilterMode::{WeakFilter,Empty}` surface + v1 subset semantics (ADR 0211); multi-dimensional parity still pending.
 
 ### Axes, scales, and grids
 
-- `[x]` X/Y axes with explicit kind + placement (`AxisKind`, `AxisPosition`) (ADR 1130).
-- `[x]` Value scales + mapping windows + axis ranges (ADR 1130).
+- `[x]` X/Y axes with explicit kind + placement (`AxisKind`, `AxisPosition`) (ADR 0192).
+- `[x]` Value scales + mapping windows + axis ranges (ADR 0192).
 - `[~]` Category axis with stable ordinal index mapping under zoom (works for bar/axis pointer; needs DataZoom Y workstream).
-- `[x]` Time axis tick strategy aligned with ECharts defaults (ADR 1139; UTC-only labels in v1).
+- `[x]` Time axis tick strategy aligned with ECharts defaults (ADR 0201; UTC-only labels in v1).
 
 ### Series types (cartesian)
 
@@ -451,30 +457,30 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ### Components: tooltip / axisPointer / legend / dataZoom
 
-- `[x]` Axis pointer (ECharts-like `trigger=item/axis`) (ADR 1133).
+- `[x]` Axis pointer (ECharts-like `trigger=item/axis`) (ADR 0195).
 - `[~]` Tooltip content parity (series ordering, formatting hooks, value snapping) (overlay UX implemented; formatter parity still pending).
 - `[x]` Legend semantics (series visibility) + baseline UI parity (selector + isolate + range toggle).
-- `[x]` X dataZoom inside (wheel/drag zoom/pan) (ADR 1129).
+- `[x]` X dataZoom inside (wheel/drag zoom/pan) (ADR 0191).
 - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (axis-band pan, plot modifiers, and window writes).
 - Demo: `apps/fret-examples/src/chart_multi_axis_demo.rs` (multi-axis interaction conformance harness; desktop + wasm).
 - `[x]` dataZoom sliders (UI-only) in `fret-chart`.
   - X: bottom X axis only.
   - Y: active Y axis (left/right) based on axis-band routing.
-- `[x]` Y inside zoom/pan (wheel on Y axis band; drag pan constrained via axis band or plot modifiers) (ADR 1136).
-- `[x]` 2D box zoom that writes `SetViewWindow2DFromZoom` for the active axis pair (ADR 1136).
+- `[x]` Y inside zoom/pan (wheel on Y axis band; drag pan constrained via axis band or plot modifiers) (ADR 0198).
+- `[x]` 2D box zoom that writes `SetViewWindow2DFromZoom` for the active axis pair (ADR 0198).
   - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (box zoom drag -> `Action::SetViewWindow2DFromZoom`).
 - `[~]` 2D brush selection (rect selection output; does not write view windows).
   - Headless state/output: `delinea::ChartState.brush_selection_2d` / `delinea::ChartOutput.brush_selection_2d`
-  - Action: `delinea::Action::SetBrushSelection2D` / `delinea::Action::ClearBrushSelection` (ADR 1144)
-  - Derived fast path: `delinea::ChartOutput.brush_x_row_ranges_by_series` (X-only contiguous selection; ADR 1145)
+  - Action: `delinea::Action::SetBrushSelection2D` / `delinea::Action::ClearBrushSelection` (ADR 0205)
+  - Derived fast path: `delinea::ChartOutput.brush_x_row_ranges_by_series` (X-only contiguous selection; ADR 0206)
   - UI gesture (current default): `Alt + RMB drag` (ImPlot-style)
-- `[x]` `minSpan/maxSpan` policies for interaction-derived view window writes (ADR 1138).
+- `[x]` `minSpan/maxSpan` policies for interaction-derived view window writes (ADR 0200).
   - Evidence: `ecosystem/delinea/src/engine/mod.rs` (span clamp in interaction actions) + `ecosystem/delinea/src/engine/window.rs` (span limiter).
   - Notes: implemented as value-space `DataZoomXSpec.min_value_span/max_value_span` (no percent space).
 
 ### Performance & large data
 
-- `[x]` Explicit progressive stepping budget (ADR 1132).
+- `[x]` Explicit progressive stepping budget (ADR 0194).
 - `[x]` Progressive stepping does not rely on pointer-driven invalidation.
   - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (requests animation frames while unfinished) +
     `crates/fret-ui/src/tree/paint.rs` (clears stale paint cache entries when caching is disabled for a node).
@@ -484,9 +490,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ### Styling & theming
 
-- `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
+- `[~]` Token-driven chart styling (tracked in `docs/adr/0131-fret-chart-theme-tokens-and-style-resolution.md`).
 - `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
-  - Evidence (engine): `docs/adr/1147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/delinea/src/spec/mod.rs` (`VisualMapSpec`).
+  - Evidence (engine): `docs/adr/0208-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/delinea/src/spec/mod.rs` (`VisualMapSpec`).
   - Evidence (translator): `ecosystem/fret-chart/src/echarts/mod.rs` (`translate_visual_maps_v1`) + `ecosystem/fret-chart/tests/echarts_headless_goldens.rs` (golden: `goldens/echarts-headless/v1/visualmap-scatter-opacity-and-size.json`).
   - Notes: v1 includes continuous + piecewise controller UI, scatter/bar bucket coloring, per-bucket opacity ramps, scatter point radius mapping, and optional stroke width ranges; per-item attribute pipelines are future work.
   - Notes (ECharts adapter v1): supports `visualMap.type`, `seriesIndex` (or dataset-wide when single dataset), `dimension` (index/name), `min/max` (or inferred from data), `range`, `inRange.opacity`, `outOfRange.opacity`, and `inRange.symbolSize` (mapped to `point_radius_mul_range` using `symbolSize / 10.0` as a heuristic).
@@ -497,12 +503,18 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
 - `[~]` Multi-grid layout (multiple independent grids in one chart).
   - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
-    The current UI adapter workaround renders multi-grid charts by splitting the `ChartSpec` into multiple single-grid charts (one viewport per chart) and laying them out side-by-side/stacked.
+
+    - Current (v1): the retained UI adapter hosts a single `ChartEngine` instance and supplies per-grid plot
+      viewports, allowing the engine to emit deterministic per-grid marks and routing surfaces.
+    - Remaining gap (high value): consolidate the UI adapter around **global** controllers (one legend +
+      one tooltip/axisPointer overlay for the multi-grid surface) instead of per-grid duplication (see
+      workstream notes, section “Global controllers (B)”).
   - Evidence:
     - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
-    - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
-    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-grid host)
+    - `ecosystem/fret-chart/src/retained/canvas.rs` (per-grid plot viewport patching via `grid_override`)
     - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
+    - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).
@@ -511,13 +523,17 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
+Workstream tracker for engine-level contract closure (multi-grid + transform lineage + incremental updates):
+`docs/workstreams/delinea-engine-contract-closure-v1.md`.
+
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
-3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
-   - Note: the current v1 UI shows multi-grid charts via `ChartSpec` splitting; the long-term target is per-grid viewport/layout inside a single chart instance (crosshair/zoom/tooltip linking).
-4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
+3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 0196 follow-ups).
+   - Note: v1 now uses per-grid plot viewports in a single chart instance; the remaining target is
+     global controllers (shared legend + tooltip/axisPointer overlay) and cross-grid linking semantics.
+4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 0210).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
-6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).
+6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 0209).
 
 ## ECharts Replica P0 Backlog (Option -> Engine Baseline)
 
@@ -555,12 +571,11 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
   - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
 - Missing vs ECharts:
-  - `[~]` `dataset.transform` (ECharts dataset transforms): v1 supports a small eager translator subset:
-    - `filter` (numeric dimension + `gte/gt/lte/lt/eq/ne`)
-    - `sort` (numeric dimension + `order=asc/desc`)
-    - `fromDatasetIndex` chaining for derived datasets
-    - Evidence: `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-*.json`
-    - Known gap: raw-index identity across dataset transforms is not yet modeled as an ECharts-class `DataStore` graph; derived datasets currently re-index rows (needs an engine-level transform graph contract).
+  - `[x]` `dataset.transform` (ECharts dataset transforms): v1 supports a minimal engine-owned subset:
+    - derived datasets via `fromDatasetIndex` + row-preserving transform chains (`filter`, `sort`)
+    - stable raw-index identity (selection and marks refer to the lineage root table indices)
+    - Evidence: `ecosystem/delinea/src/transform_graph/dataset_transform.rs`, `ecosystem/delinea/src/engine/stages/filter_processor.rs`, `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-chain-filter-sort-desc.json`
+    - Remaining gaps: broader transform types (aggregate/group), derived columns beyond category scaffolding, and more complete conformance coverage.
   - `source` object rows, `sourceHeader`, and type inference (P1)
 
 ### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)

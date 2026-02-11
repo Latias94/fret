@@ -3,12 +3,13 @@ use fret_core::scene::{EffectMode, EffectQuality};
 use fret_ui::element::{
     AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::ChromeRefinement;
+use crate::declarative::reduced_transparency_queries;
 use crate::recipes::glass::{
-    GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys, glass_effect_chain,
-    resolve_glass_chrome, resolve_glass_effect,
+    GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys, resolve_glass_chrome,
+    resolve_glass_effect, resolve_glass_effect_chain_for_environment,
 };
 
 #[derive(Debug, Clone)]
@@ -47,15 +48,19 @@ pub fn glass_panel<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
+    let prefers_reduced_transparency =
+        reduced_transparency_queries::prefers_reduced_transparency(cx, Invalidation::Paint, false);
+
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_glass_chrome(theme, &props.chrome, props.chrome_keys);
     let effect = resolve_glass_effect(theme, &props.effect, props.effect_keys);
-    let chain = glass_effect_chain(effect);
+    let chain = resolve_glass_effect_chain_for_environment(effect, prefers_reduced_transparency);
+    chain.report_if_degraded(&mut *cx.app);
 
     // Structure:
     //
     // - Outer wrapper provides the rounded clip that the renderer can consume at the effect
-    //   boundary (ADR 0119 + ADR 0153).
+    //   boundary (ADR 0117 + ADR 0138).
     // - Effect layer wraps a tinted/bordered container (tint + border are drawn after the blurred
     //   backdrop inside the group).
     let outer = ContainerProps {
@@ -76,7 +81,7 @@ where
             EffectLayerProps {
                 layout: effect_layout,
                 mode: props.mode,
-                chain,
+                chain: chain.value,
                 quality: props.quality,
             },
             |cx| {

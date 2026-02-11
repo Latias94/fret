@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
 use fret_i18n::{
@@ -10,7 +10,7 @@ use unic_langid::LanguageIdentifier;
 
 #[derive(Default)]
 pub struct FluentCatalog {
-    bundles: HashMap<LocaleId, Arc<FluentBundle<FluentResource>>>,
+    bundles: HashMap<LocaleId, Rc<FluentBundle<FluentResource>>>,
 }
 
 impl FluentCatalog {
@@ -33,7 +33,7 @@ impl FluentCatalog {
             .add_resource(resource)
             .map_err(|errors| FluentCatalogError::AddResource { errors })?;
 
-        self.bundles.insert(locale, Arc::new(bundle));
+        self.bundles.insert(locale, Rc::new(bundle));
         Ok(())
     }
 
@@ -68,11 +68,11 @@ impl std::fmt::Display for FluentCatalogError {
 impl std::error::Error for FluentCatalogError {}
 
 pub struct FluentLookup {
-    catalog: Arc<FluentCatalog>,
+    catalog: Rc<FluentCatalog>,
 }
 
 impl FluentLookup {
-    pub fn new(catalog: Arc<FluentCatalog>) -> Self {
+    pub fn new(catalog: Rc<FluentCatalog>) -> Self {
         Self { catalog }
     }
 }
@@ -173,7 +173,7 @@ mod tests {
             .add_locale_ftl(locale("zh-CN"), "hello = 你好，{ $name }！")
             .expect("catalog should load");
 
-        let lookup = FluentLookup::new(Arc::new(catalog));
+        let lookup = FluentLookup::new(Rc::new(catalog));
 
         let args = MessageArgs::new().with("name", "Fret");
         let message = lookup
@@ -208,7 +208,7 @@ mod tests {
         catalog
             .add_locale_ftl(locale("en-US"), "hello = Hello")
             .expect("catalog should load");
-        let lookup = FluentLookup::new(Arc::new(catalog));
+        let lookup = FluentLookup::new(Rc::new(catalog));
 
         let no_locale = lookup.format(&[locale("fr-FR")], &MessageKey::from("hello"), None);
         assert!(matches!(

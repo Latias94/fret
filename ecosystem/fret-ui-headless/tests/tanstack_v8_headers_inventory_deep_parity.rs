@@ -76,10 +76,29 @@ fn headers_to_jsonish(
     headers.into_iter().map(header_to_jsonish).collect()
 }
 
+fn column_node_to_jsonish(n: fret_ui_headless::table::ColumnNodeSnapshot) -> ColumnNodeSnapshot {
+    ColumnNodeSnapshot {
+        id: n.id.as_ref().to_string(),
+        depth: n.depth,
+        parent_id: n.parent_id.as_ref().map(|s| s.as_ref().to_string()),
+        child_ids: n
+            .child_ids
+            .into_iter()
+            .map(|s| s.as_ref().to_string())
+            .collect(),
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CellSnapshot {
     id: String,
     column_id: String,
+    #[serde(default)]
+    is_grouped: bool,
+    #[serde(default)]
+    is_placeholder: bool,
+    #[serde(default)]
+    is_aggregated: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -130,6 +149,23 @@ struct LeafColumnsSnapshot {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum ColumnPinPosition {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct ColumnCapabilitySnapshot {
+    can_hide: bool,
+    can_pin: bool,
+    pin_position: Option<ColumnPinPosition>,
+    pinned_index: i32,
+    can_resize: bool,
+    is_visible: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct RowModelIdSnapshot {
     root: Vec<String>,
     flat: Vec<String>,
@@ -141,16 +177,65 @@ struct CoreRowsSnapshot {
     row_model: RowModelIdSnapshot,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct HeaderSizingExpect {
+    size: BTreeMap<String, f32>,
+    start: BTreeMap<String, f32>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnSizingExpect {
+    total_size: f32,
+    left_total_size: f32,
+    center_total_size: f32,
+    right_total_size: f32,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnStartExpect {
+    all: BTreeMap<String, f32>,
+    left: BTreeMap<String, Option<f32>>,
+    center: BTreeMap<String, Option<f32>>,
+    right: BTreeMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnAfterExpect {
+    all: BTreeMap<String, f32>,
+    left: BTreeMap<String, Option<f32>>,
+    center: BTreeMap<String, Option<f32>>,
+    right: BTreeMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct LeafColumnSizingExpect {
+    sizing: ColumnSizingExpect,
+    size: BTreeMap<String, f32>,
+    start: ColumnStartExpect,
+    after: ColumnAfterExpect,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 struct CoreModelExpect {
+    schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
+    column_capabilities: BTreeMap<String, ColumnCapabilitySnapshot>,
+    flat_columns: FlatColumnsExpect,
     leaf_columns: LeafColumnsSnapshot,
     header_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
     center_header_groups: Vec<HeaderGroupSnapshot>,
     right_header_groups: Vec<HeaderGroupSnapshot>,
+    header_sizing: HeaderSizingExpect,
+    leaf_column_sizing: LeafColumnSizingExpect,
     rows: CoreRowsSnapshot,
     cells: BTreeMap<String, RowCellsSnapshot>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct FlatColumnsExpect {
+    all: Vec<String>,
+    visible: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -179,6 +264,9 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
     let conv = |c: fret_ui_headless::table::CellSnapshot| CellSnapshot {
         id: c.id.as_ref().to_string(),
         column_id: c.column_id.as_ref().to_string(),
+        is_grouped: c.is_grouped,
+        is_placeholder: c.is_placeholder,
+        is_aggregated: c.is_aggregated,
     };
     RowCellsSnapshot {
         all: cells.all.into_iter().map(conv).collect(),
@@ -190,7 +278,13 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
 }
 
 fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -> CoreModelExpect {
+    let conv_pin = |p: fret_ui_headless::table::ColumnPinPosition| match p {
+        fret_ui_headless::table::ColumnPinPosition::Left => ColumnPinPosition::Left,
+        fret_ui_headless::table::ColumnPinPosition::Right => ColumnPinPosition::Right,
+    };
+
     CoreModelExpect {
+        schema_version: snapshot.schema_version,
         column_tree: snapshot
             .column_tree
             .into_iter()
@@ -205,6 +299,37 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                     .collect(),
             })
             .collect(),
+        column_capabilities: snapshot
+            .column_capabilities
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.as_ref().to_string(),
+                    ColumnCapabilitySnapshot {
+                        can_hide: v.can_hide,
+                        can_pin: v.can_pin,
+                        pin_position: v.pin_position.map(conv_pin),
+                        pinned_index: v.pinned_index,
+                        can_resize: v.can_resize,
+                        is_visible: v.is_visible,
+                    },
+                )
+            })
+            .collect(),
+        flat_columns: FlatColumnsExpect {
+            all: snapshot
+                .flat_columns
+                .all
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+            visible: snapshot
+                .flat_columns
+                .visible
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+        },
         leaf_columns: LeafColumnsSnapshot {
             all: snapshot
                 .leaf_columns
@@ -241,6 +366,94 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
         left_header_groups: header_groups_to_jsonish(snapshot.left_header_groups),
         center_header_groups: header_groups_to_jsonish(snapshot.center_header_groups),
         right_header_groups: header_groups_to_jsonish(snapshot.right_header_groups),
+        header_sizing: HeaderSizingExpect {
+            size: snapshot
+                .header_sizing
+                .size
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+            start: snapshot
+                .header_sizing
+                .start
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+        },
+        leaf_column_sizing: LeafColumnSizingExpect {
+            sizing: ColumnSizingExpect {
+                total_size: snapshot.leaf_column_sizing.sizing.total_size,
+                left_total_size: snapshot.leaf_column_sizing.sizing.left_total_size,
+                center_total_size: snapshot.leaf_column_sizing.sizing.center_total_size,
+                right_total_size: snapshot.leaf_column_sizing.sizing.right_total_size,
+            },
+            size: snapshot
+                .leaf_column_sizing
+                .size
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+            start: ColumnStartExpect {
+                all: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .all
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                left: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .left
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                center: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .center
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                right: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .right
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+            },
+            after: ColumnAfterExpect {
+                all: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .all
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                left: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .left
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                center: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .center
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                right: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .right
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+            },
+        },
         rows: CoreRowsSnapshot {
             core: RowModelIdSnapshot {
                 root: snapshot
@@ -437,6 +650,19 @@ fn tanstack_v8_headers_inventory_deep_parity() {
                 "snapshot {} cells mismatch for row {}",
                 snap.id,
                 row_id
+            );
+        }
+
+        for expected in &snap.expect.core_model.column_tree {
+            let got = table
+                .column_node_snapshot(expected.id.as_str())
+                .unwrap_or_else(|| panic!("unknown column id: {}", expected.id));
+            assert_eq!(
+                column_node_to_jsonish(got),
+                expected.clone(),
+                "snapshot {} column_node_snapshot({}) mismatch",
+                snap.id,
+                expected.id
             );
         }
 

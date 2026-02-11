@@ -58,15 +58,9 @@ pub fn begin_column_resize(
     info: &mut ColumnSizingInfoState,
     resizing_column: ColumnId,
     start_offset: f32,
+    start_size: f32,
     column_sizing_start: Vec<(ColumnId, f32)>,
 ) {
-    // TanStack includes the resizing column itself in `columnSizingStart` (even for grouped headers),
-    // but `startSize` is the size of the resizing header, not the sum of all entries.
-    let start_size = column_sizing_start
-        .iter()
-        .find(|(id, _)| id.as_ref() == resizing_column.as_ref())
-        .map(|(_, s)| *s)
-        .unwrap_or_else(|| column_sizing_start.iter().map(|(_, s)| *s).sum::<f32>());
     *info = ColumnSizingInfoState {
         start_offset: Some(start_offset),
         start_size: Some(start_size),
@@ -207,6 +201,7 @@ mod tests {
             &mut info,
             ColumnId::from("a"),
             10.0,
+            100.0,
             vec![(ColumnId::from("a"), 100.0)],
         );
 
@@ -252,6 +247,7 @@ mod tests {
             &mut info,
             ColumnId::from("a"),
             0.0,
+            100.0,
             vec![(ColumnId::from("a"), 100.0)],
         );
 
@@ -287,6 +283,7 @@ mod tests {
             &mut info,
             ColumnId::from("ab"),
             0.0,
+            150.0,
             vec![
                 (ColumnId::from("a"), 100.0),
                 (ColumnId::from("b"), 50.0),
@@ -306,6 +303,7 @@ mod tests {
             &mut info,
             ColumnId::from("a"),
             0.0,
+            100.0,
             vec![(ColumnId::from("a"), 100.0)],
         );
 
@@ -331,6 +329,7 @@ mod tests {
             &mut info,
             ColumnId::from("a"),
             0.0,
+            100.0,
             vec![(ColumnId::from("a"), 100.0)],
         );
 

@@ -14,12 +14,12 @@ This is a workstream note (not an ADR). Any “hard-to-change” contract change
 Tracking:
 
 - TODO tracker (keep updated during implementation): `docs/workstreams/gpui-parity-refactor-todo.md`
-- Cache roots + cached subtree semantics (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+- Cache roots + cached subtree semantics (ViewCache v1): `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
 - GPUI-aligned contract gates (must stay in sync with implementation):
-  - Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
-  - Interactivity pseudoclasses + structural stability: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
-  - Prepaint + interaction stream range reuse: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
-  - Prepaint-windowed virtual surfaces: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
+  - Dirty views + notify: `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
+  - Interactivity pseudoclasses + structural stability: `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`
+  - Prepaint + interaction stream range reuse: `docs/adr/0167-prepaint-interaction-stream-and-range-reuse.md`
+  - Prepaint-windowed virtual surfaces: `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`
 
 ---
 
@@ -95,7 +95,7 @@ widget tree”. It is a split:
 - **Rebuilt each frame (per dirty view/cache root)**:
   - Declarative element tree (structure, props, style) is rebuilt on demand (dirty views), with explicit cross-frame
     state living outside the tree (`ElementRuntime`).
-  - Hover/focus/pressed/capture-derived chrome should be *paint-only by default* (ADR 0181), i.e. it should not
+  - Hover/focus/pressed/capture-derived chrome should be *paint-only by default* (ADR 0166), i.e. it should not
     change the layout tree shape in steady state.
 - **Ephemeral per frame (derived during prepaint, not a retained subtree)**:
   - Large “virtual surfaces” should derive their visible window during prepaint and emit per-frame items without
@@ -104,7 +104,7 @@ widget tree”. It is a split:
     and only lays out/prepaints the visible items (`repo-ref/gpui-component/crates/ui/src/virtual_list.rs`).
 - **Retained across frames (keyed caches, not implicit state)**:
   - `ElementRuntime` state, view-cache recorded ranges, prepaint interaction caches, layout engine solves, text shaping
-    caches, and GPU resources must remain retained and reused behind explicit “dirty + cache key” gates (ADR 0180/0182).
+    caches, and GPU resources must remain retained and reused behind explicit “dirty + cache key” gates (ADR 0150/0167).
 
 Candidate migrations (v1; performance-first):
 
@@ -125,7 +125,7 @@ Alignment checklist (v1; what must be derived per frame / per dirty view):
 - View rebuild boundaries:
   - Dirty views/cache roots decide *whether we rebuild*; rebuilding should be the default authoring model, not a special-case.
 - Interaction-derived visuals (should not force structural/layout churn):
-  - Hover/pressed/focus/capture states (ADR 0181).
+  - Hover/pressed/focus/capture states (ADR 0166).
   - Scrollbar visibility, opacity fades, thumb geometry.
   - Cursor icon and caret/selection visuals.
 - Virtualization windows (should not require rerender on small deltas):
@@ -143,13 +143,13 @@ prepaint-driven windows + per-frame ephemeral items.
 Even with dirty views + cache roots in place, “stable feel + stable perf” requires closing a few practical gaps:
 
 - **Windowed surfaces beyond VirtualList**: code/text/markdown surfaces and 2D canvas/node graphs must be able to update
-  their visible window (scroll/camera) without forcing cache-root rerenders for small deltas (ADR 0190, MVP5).
+  their visible window (scroll/camera) without forcing cache-root rerenders for small deltas (ADR 0175, MVP5).
 - **Nested-cache composition**: our v1 cache-root model is subtree-replay-based, which tends to “bubble dirtiness” to
   ancestor cache roots. If we want GPUI-like “local dirtiness, stable outer shells”, we likely need a more composable
   recording boundary (e.g. prepaint/paint range reuse that can tolerate dirty descendants) or better cache-root
   placement guidance in ecosystem surfaces.
 - **Cache key precision**: view-cache reuse must remain gated by explicit cache keys, but we should gradually refine the
-  recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 1152 §7).
+  recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 0213 §7).
 - **Explainability under reuse**: diagnostics bundles should make it obvious whether we missed reuse due to dirtiness vs
   key mismatch vs inspection mode, so “why didn’t this update?” questions have a single-run answer.
 - **Notify hotspot regression gates**: input-driven `notify()` hotspots should be attributable by callsite and
@@ -196,11 +196,11 @@ It is easy to talk about “retain vs rebuild” as a binary. GPUI (and our targ
   - text buffers, syntax state, selection/cursor state,
   - layout caches (text shaping, line-breaking, row measurement),
   - GPU resources (atlases, pipelines, bind groups),
-  - stable identity paths / element state (ADR 0028 / ADR 1151).
+  - stable identity paths / element state (ADR 0028 / ADR 0212).
 - **Per-frame rebuilt** (ephemeral, derived from retained state + viewport):
   - the declarative element tree for dirty views (ADR 0028),
-  - “visible window” item sets for large virtual surfaces (ADR 0190),
-  - interaction chrome that should normally be paint-only (ADR 0181): hover/pressed/focus rings, selection highlights,
+  - “visible window” item sets for large virtual surfaces (ADR 0175),
+  - interaction chrome that should normally be paint-only (ADR 0166): hover/pressed/focus rings, selection highlights,
     caret blink, drag previews, scrollbars.
 
 The goal is not “rebuild everything always”. The goal is: **rebuild only when a view is dirty**, and for “windowed
@@ -212,7 +212,7 @@ Current vs target (VirtualList example):
   (`crates/fret-ui/src/elements/cx.rs`), so when the visible window leaves the last rendered overscan window we must
   mark the nearest cache root dirty on the next tick to rebuild the item subtree
   (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`).
-- **Target** (GPUI-aligned): derive the visible window during `prepaint` (ADR 0190) so that scroll-driven window
+- **Target** (GPUI-aligned): derive the visible window during `prepaint` (ADR 0175) so that scroll-driven window
   changes can be applied as “ephemeral items” without requiring a full cache-root rerender/relayout for small deltas.
 
 Concrete alignment targets (beyond VirtualList):
@@ -229,7 +229,7 @@ Concrete alignment targets (beyond VirtualList):
   - plots/charts (`ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`, `ecosystem/delinea`):
     pan/zoom adjusts a data window / sampling window without rebuilding full series.
 
-- **Paint-only chrome surfaces** (should avoid rerender by default; ADR 0181):
+- **Paint-only chrome surfaces** (should avoid rerender by default; ADR 0166):
   - hover/focus/pressed style refinements across common controls,
   - caret blink + selection highlights in text/code views,
   - scrollbars and drag/drop indicators.
@@ -242,19 +242,19 @@ What should be “per-frame rebuilt” (and where):
 - **Declarative render (structural)**: should be as stable as possible; this is where we pay the “rerender/relayout” cost.
   - Allowed: changing subtree shape due to real state/data changes.
   - Avoid: hover/pressed toggles, caret blink, transient chrome.
-- **Prepaint (ephemeral windows; ADR 0190)**: compute the visible window from viewport/scroll/camera and emit ephemeral items.
+- **Prepaint (ephemeral windows; ADR 0175)**: compute the visible window from viewport/scroll/camera and emit ephemeral items.
   - Examples: list row windows, code/text visible line windows, markdown long-doc windows, node graph viewport culling windows, plot sampling windows.
   - Goal: small scroll/pan deltas should not force a cache-root rerender when the view is otherwise clean.
-- **Paint-only (chrome; ADR 0181)**: pointer-driven visuals that refine style without structural changes.
+- **Paint-only (chrome; ADR 0166)**: pointer-driven visuals that refine style without structural changes.
   - Examples: hover highlight, focus ring, pressed state, selection rectangles, scrollbar fade/hover, drag/drop indicators.
   - Goal: update via paint invalidation + redraw under view-cache reuse (no rerender unless the component explicitly opts in).
 
 Fearless refactor tactic:
 
 1) Keep the *retained* state stable (data revisions, selection, scroll/camera state).
-2) Move “what’s visible” derivation into `prepaint` (ADR 0190), and make it explainable via diagnostics bundles.
+2) Move “what’s visible” derivation into `prepaint` (ADR 0175), and make it explainable via diagnostics bundles.
 3) Ensure out-of-band commands (e.g. `scroll_to_item`, `ensure_line_visible`, `zoom_to_fit`) deterministically schedule
-   a redraw and invalidate the right cache boundary (ADR 0180 / ADR 0190).
+   a redraw and invalidate the right cache boundary (ADR 0165 / ADR 0175).
 4) Migrate surfaces one-by-one via ecosystem helpers (`fret-ui-kit`), so multiple crates get the same perf/correctness
    loop without duplicating invalidation logic.
 
@@ -273,19 +273,19 @@ as the source of truth:
 
 - View model and identity:
   - Declarative element tree + externalized state: `docs/adr/0028-declarative-elements-and-element-state.md`
-  - Element identity debug paths + frame-staged state: `docs/adr/1151-element-identity-debug-paths-and-frame-staged-element-state.md`
+  - Element identity debug paths + frame-staged state: `docs/adr/0212-element-identity-debug-paths-and-frame-staged-element-state.md`
 - Observation and invalidation:
   - Model observation + propagation (baseline): `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
-  - Dirty views + notify (GPUI-aligned target): `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+  - Dirty views + notify (GPUI-aligned target): `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
 - Caching:
   - Paint-stream replay caching: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
-  - Cache roots (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
-  - View-cache subtree reuse + state retention: `docs/adr/1163-view-cache-subtree-reuse-and-state-retention.md`
-  - Prepaint + interaction stream range reuse (GPUI-aligned target): `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+  - Cache roots (ViewCache v1): `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
+  - View-cache subtree reuse + state retention: `docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md`
+  - Prepaint + interaction stream range reuse (GPUI-aligned target): `docs/adr/0167-prepaint-interaction-stream-and-range-reuse.md`
 - Interactivity:
-  - Pseudoclasses + structural stability (paint-only by default): `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+  - Pseudoclasses + structural stability (paint-only by default): `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`
 - Tooling:
-  - Diagnostics snapshot + scripted interaction tests: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+  - Diagnostics snapshot + scripted interaction tests: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 
 ---
 
@@ -332,7 +332,7 @@ The refactor should always move these metrics in the right direction, as reporte
 - Caching: paint cache hits/misses/replayed ops, cache root hits and per-root replayed ops.
   - Evidence surface: `crates/fret-ui/src/tree/mod.rs`, `apps/fret-ui-gallery/src/driver.rs`
 - Invalidation: count of layout invalidations attributed to pseudoclass edges (MVP1), and dirty view reasons (MVP2).
-  - Evidence surface: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+  - Evidence surface: `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
 
 ### 2.5 Harness recipes (repeatable)
 
@@ -403,7 +403,7 @@ The refactor should always move these metrics in the right direction, as reporte
 - Caching: paint cache hits/misses/replayed ops, cache root hits and per-root replayed ops.
   - Evidence surface: `crates/fret-ui/src/tree/mod.rs`, `apps/fret-ui-gallery/src/driver.rs`
 - Invalidation: count of layout invalidations attributed to pseudoclass edges (MVP1), and dirty view reasons (MVP2).
-  - Evidence surface: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+  - Evidence surface: `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
 
 ---
 
@@ -478,7 +478,7 @@ Deliverable: a repeatable “before/after” baseline (numbers, not vibes).
 
 ### MVP1 — Pseudoclasses + Structural Stability (2–4 weeks)
 
-Goal: make hover/focus/pressed “cheap by default” (ADR 0181) so stable scenes stay stable:
+Goal: make hover/focus/pressed “cheap by default” (ADR 0166) so stable scenes stay stable:
 
 - Structural stability rule: pseudoclasses MUST NOT change subtree shape.
 - Invalidation rule: pseudoclass transitions default to paint-only, but MUST still invalidate paint output when the
@@ -488,7 +488,7 @@ Goal: make hover/focus/pressed “cheap by default” (ADR 0181) so stable scene
 
 ### MVP2 — Dirty Views + View-Level Caching (runtime + ecosystem, 3–6 weeks)
 Goal: converge on the GPUI mental model: `notify -> dirty views -> reuse ranges unless dirty/refreshing/inspecting`
-(ADR 0180 + ADR 1152 + ADR 0055).
+(ADR 0165 + ADR 0213 + ADR 0055).
 
 This is the highest leverage performance refactor, and it should be implemented before introducing a full prepaint
 stream.
@@ -529,7 +529,7 @@ We implement a “cached subtree” primitive that:
 Implementation note (current state):
 
 - The declarative element GC now treats view-cache reuse as a performance optimization only: cache-hit frames MUST NOT
-  change lifetime semantics (ADR 0191).
+  change lifetime semantics (ADR 0176).
 - The previous global stopgap (“skip sweep while any reuse roots exist”) has been removed as part of MVP2-cache-005 by
   making liveness explicit under reuse:
   - reachability roots include installed layer roots + view-cache reuse roots,
@@ -573,7 +573,7 @@ Goal: make the new contracts the “default obvious” way to build UI while kee
 
 Goal: close the biggest “editor feel” gap after perf substrate is stable (IME, caret geometry, font stacks).
 
-- Implement font stack bootstrap + stable key propagation (ADR 0162).
+- Implement font stack bootstrap + stable key propagation (ADR 0147).
 - Make TextInput/TextArea integrate tightly with:
   - `TextFontStackKey` changes,
   - theme revisions,
@@ -825,7 +825,7 @@ Text is the most visible editor-grade subsystem. Missing font bootstrap + incomp
 Split into two refactor tracks:
 
 1) **Font stack bootstrap**
-   - Implement ADR 0162 (stable font stack key propagation).
+   - Implement ADR 0147 (stable font stack key propagation).
    - Guarantee that changing font stack triggers relayout via `TextFontStackKey` dependency.
 2) **IME + caret geometry correctness**
    - Ensure cursor rect effect is updated precisely when caret moves (including during preedit).
@@ -937,8 +937,8 @@ breaking-change corridor once the substrate and acceptance harnesses are stable.
 
 ADR impact:
 
-- Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
-- Cache roots + nested invalidation correctness: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+- Dirty views + notify: `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
+- Cache roots + nested invalidation correctness: `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
 
 ### D5 — Redraw scheduling: immediate vs coalesced per tick
 
@@ -988,7 +988,7 @@ These defaults are optimized for “ship demos fast while raising the performanc
 
 ### Step E — Text bootstrap
 
-- Implement ADR 0162 and re-run text/IME acceptance checks.
+- Implement ADR 0147 and re-run text/IME acceptance checks.
 
 ---
 

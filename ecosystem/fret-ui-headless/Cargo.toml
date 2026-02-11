@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Headless interaction policies and primitives for Fret UI composition."
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 serde.workspace = true
 serde_json.workspace = true
 time.workspace = true

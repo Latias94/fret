@@ -73,6 +73,8 @@ pub struct Renderer {
     viewport_sampler: wgpu::Sampler,
 
     instance_buffers: Vec<wgpu::Buffer>,
+    quad_instance_bind_group_layout: wgpu::BindGroupLayout,
+    quad_instance_bind_groups: Vec<wgpu::BindGroup>,
     instance_buffer_index: usize,
     instance_capacity: usize,
 
@@ -210,6 +212,17 @@ pub struct Renderer {
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
     scene_encoding_scratch: SceneEncoding,
+
+    materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
+    materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
+    material_paint_budget_per_frame: u64,
+    material_distinct_budget_per_frame: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MaterialEntry {
+    desc: fret_core::MaterialDescriptor,
+    refs: u32,
 }
 
 pub struct RenderSceneParams<'a> {

@@ -304,7 +304,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::Anchored(_)
             | ElementInstance::Stack(_)),
-        ) if tree.children(node).is_empty() => {
+        ) if tree.children_ref(node).is_empty() => {
             let mut style = style_for_item_in_parent(
                 app,
                 window,
@@ -355,11 +355,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
 
-            let children = tree.children(node).to_vec();
+            let children = tree.children_ref(node);
             engine.set_style(node, style);
-            engine.set_children(node, &children);
+            engine.set_children(node, children);
             engine.set_measured(node, false);
-            for child in children {
+            for &child in children {
                 build_flow_subtree(
                     engine,
                     app,
@@ -406,11 +406,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
 
-            let children = tree.children(node).to_vec();
+            let children = tree.children_ref(node);
             engine.set_style(node, style);
-            engine.set_children(node, &children);
+            engine.set_children(node, children);
             engine.set_measured(node, false);
-            for child in children {
+            for &child in children {
                 build_flow_subtree(
                     engine,
                     app,
@@ -457,11 +457,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
 
-            let children = tree.children(node).to_vec();
+            let children = tree.children_ref(node);
             engine.set_style(node, style);
-            engine.set_children(node, &children);
+            engine.set_children(node, children);
             engine.set_measured(node, false);
-            for child in children {
+            for &child in children {
                 build_flow_subtree(
                     engine,
                     app,
@@ -503,11 +503,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 .map(taffy::style_helpers::evenly_sized_tracks)
                 .unwrap_or_default();
 
-            let children = tree.children(node).to_vec();
+            let children = tree.children_ref(node);
             engine.set_style(node, style);
-            engine.set_children(node, &children);
+            engine.set_children(node, children);
             engine.set_measured(node, false);
-            for child in children {
+            for &child in children {
                 build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Grid, child);
             }
         }
@@ -530,7 +530,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::Anchored(_)
             | ElementInstance::Stack(_)),
-        ) if !tree.children(node).is_empty()
+        ) if !tree.children_ref(node).is_empty()
             && (!matches!(&instance, ElementInstance::HoverRegion(_))
                 || !hover_region_has_absolute_child(app, tree, window, node)) =>
         {
@@ -565,7 +565,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 apply_container_insets(&mut style, &props, sf);
             }
 
-            let children = tree.children(node).to_vec();
+            let children = tree.children_ref(node);
 
             // If this wrapper sizes itself to content (`Auto`) but its *flow child* requests `Fill`,
             // promote the wrapper to `Fill` as well.
@@ -579,7 +579,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let wrapper_style = layout_style_for_node(app, window, node);
             let mut has_flow_child_fill_w = false;
             let mut has_flow_child_fill_h = false;
-            for &child in &children {
+            for &child in children {
                 let child_style = layout_style_for_node(app, window, child);
                 if child_style.position == crate::element::PositionStyle::Absolute {
                     continue;
@@ -601,9 +601,9 @@ fn build_flow_subtree_impl<H: UiHost>(
             }
 
             engine.set_style(node, style);
-            engine.set_children(node, &children);
+            engine.set_children(node, children);
             engine.set_measured(node, false);
-            for child in children {
+            for &child in children {
                 build_flow_subtree(
                     engine,
                     app,
@@ -653,8 +653,8 @@ fn build_flow_subtree_impl<H: UiHost>(
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
             // mounted subtree across frames (GPUI-aligned request/build phase).
-            let children = tree.children(node).to_vec();
-            for child in children {
+            let children = tree.children_ref(node);
+            for &child in children {
                 build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
             }
         }
@@ -675,8 +675,8 @@ fn build_flow_subtree_impl<H: UiHost>(
             // Barriers are explicit layout systems and must not couple their children into the
             // parent's flow solve, but we still want the engine to retain stable identity for the
             // mounted subtree across frames (GPUI-aligned request/build phase).
-            let children = tree.children(node).to_vec();
-            for child in children {
+            let children = tree.children_ref(node);
+            for &child in children {
                 build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
             }
         }
@@ -703,7 +703,7 @@ fn hover_region_has_absolute_child<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> bool {
-    tree.children(node).iter().copied().any(|child| {
+    tree.children_ref(node).iter().copied().any(|child| {
         layout_style_for_node(app, window, child).position
             == crate::element::PositionStyle::Absolute
     })
@@ -877,7 +877,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         return None;
     }
 
-    let children = tree.children(node);
+    let children = tree.children_ref(node);
     if children.len() != 1 {
         return None;
     }
@@ -908,6 +908,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::RenderTransform(_)
         | ElementInstance::FractionalRenderTransform(_)
         | ElementInstance::Semantics(_)
+        | ElementInstance::LayoutQueryRegion(_)
         | ElementInstance::ViewCache(_)
         | ElementInstance::FocusScope(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))

@@ -6,10 +6,13 @@ import { execSync } from "child_process"
 type CaseId =
   | "demo_process"
   | "auto_reset"
+  | "auto_reset_data_updates"
+  | "auto_reset_queue"
   | "resets"
   | "pagination"
   | "sort_undefined"
   | "sorting_fns"
+  | "sorting_edge_cases"
   | "filtering_fns"
   | "headers_cells"
   | "headers_inventory_deep"
@@ -20,6 +23,7 @@ type CaseId =
   | "column_pinning"
   | "faceting"
   | "column_sizing"
+  | "column_sizing_interactions"
   | "column_resizing_group_headers"
   | "state_shapes"
   | "selection"
@@ -45,6 +49,20 @@ type SnapshotId =
   | "auto_reset_global_filter_manual_pagination_true_no_reset"
   | "auto_reset_global_filter_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
   | "auto_reset_global_filter_auto_reset_all_false_disables"
+  | "auto_reset_column_filters_default_resets"
+  | "auto_reset_column_filters_manual_pagination_true_no_reset"
+  | "auto_reset_column_filters_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_column_filters_auto_reset_all_false_disables"
+  | "auto_reset_data_updates_stable_ids_default_resets"
+  | "auto_reset_data_updates_stable_ids_manual_pagination_true_no_reset"
+  | "auto_reset_data_updates_stable_ids_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_data_updates_stable_ids_auto_reset_all_false_disables"
+  | "auto_reset_data_updates_identity_change_default_resets"
+  | "auto_reset_data_updates_identity_change_manual_pagination_true_no_reset"
+  | "auto_reset_data_updates_identity_change_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_data_updates_identity_change_auto_reset_all_false_disables"
+  | "auto_reset_queue_register_first_no_reset"
+  | "auto_reset_queue_second_pass_resets_coalesced"
   | "resets_reset_sorting_restores_initial"
   | "resets_reset_sorting_default_true_clears"
   | "resets_reset_column_filters_restores_initial"
@@ -87,6 +105,8 @@ type SnapshotId =
   | "colsize_resize_on_end_move_no_sizing"
   | "colsize_resize_on_end_end_writes"
   | "colsize_resize_rtl_move_flips"
+  | "colsize_resize_on_end_rtl_move_flips"
+  | "colsize_resize_on_end_rtl_end_writes"
   | "colsize_enable_column_resizing_false_noops"
   | "colsize_reset_column_size_removes_override"
   | "colsize_reset_column_sizing_default_true_clears"
@@ -96,12 +116,23 @@ type SnapshotId =
   | "colsize_hook_noop_sizing_reset_column_sizing_keeps_state"
   | "colsize_hook_noop_info_move_keeps_info_and_sizing"
   | "colsize_hook_noop_info_reset_header_size_info_keeps_state"
+  | "colsize_interactions_pin_vis_order_then_resize_group_on_change"
+  | "colsize_interactions_pin_vis_order_then_resize_group_on_change_rtl"
+  | "colsize_interactions_manual_sizing_pins_visibility"
+  | "colsize_interactions_group_resize_on_end_writes_with_pins"
+  | "colsize_interactions_group_resize_on_end_rtl_writes_with_pins"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
   | "group_resize_pinned_on_change_move_updates"
   | "group_resize_pinned_on_change_end_resets"
   | "group_resize_pinned_on_end_end_writes"
+  | "group_resize_on_change_rtl_move_updates"
+  | "group_resize_on_change_rtl_end_resets"
+  | "group_resize_on_end_rtl_end_writes"
+  | "group_resize_pinned_on_change_rtl_move_updates"
+  | "group_resize_pinned_on_change_rtl_end_resets"
+  | "group_resize_pinned_on_end_rtl_end_writes"
   | "sorting_fns_builtin_basic"
   | "sorting_fns_builtin_datetime"
   | "sorting_fns_builtin_text"
@@ -115,6 +146,11 @@ type SnapshotId =
   | "sorting_fns_registry_custom_text"
   | "sorting_fns_toggle_num_auto_first"
   | "sorting_fns_toggle_text_auto_first"
+  | "sorting_edge_text_mixed_default_asc"
+  | "sorting_edge_text_mixed_sort_undefined_false_asc"
+  | "sorting_edge_multi_text_false_then_dt"
+  | "sorting_edge_alphanumeric_mixed_asc"
+  | "sorting_edge_datetime_nullish_asc"
   | "filtering_fns_text_auto_includes"
   | "filtering_fns_text_equals_string"
   | "filtering_fns_num_in_number_range"
@@ -157,6 +193,7 @@ type SnapshotId =
   | "selection_enable_row_selection_fn_odd_ids_toggle_all_rows_selects_selectable"
   | "selection_enable_row_selection_fn_odd_ids_toggle_row_unselectable_noop"
   | "faceting_baseline"
+  | "faceting_global_custom_cpu"
   | "faceting_cpu_own_filter_ignored"
   | "faceting_cpu_other_filter_applied"
   | "faceting_manual_filtering_bypasses"
@@ -227,6 +264,7 @@ type SnapshotId =
   | "pinning_action_reset_row_pinning_default_true_clears"
   | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
   | "pinning_tree_keep_true_child_visible_when_parent_expanded"
+  | "pinning_tree_keep_true_child_surfaces_when_filtered_out"
   | "pinning_tree_keep_false_never_surfaces_child_row"
   | "pinning_tree_action_pin_root_includes_leaf_rows"
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
@@ -238,6 +276,9 @@ type SnapshotId =
   | "column_pinning_default_can_pin"
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
+  | "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells"
+  | "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells"
+  | "column_pinning_group_leafs_pinned_both_sides_prefers_left"
   | "column_pinning_action_pin_left_right_unpin"
   | "column_pinning_action_pin_group_pins_leaf_columns"
   | "column_pinning_action_pins_when_enable_column_pinning_false"
@@ -373,6 +414,8 @@ type TanStackOptions = {
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
   filterFnsMode?: "custom_text_case_sensitive"
   globalFilterFn?: "auto" | string
+  // Fixture-only: remap `__global__` faceting to a concrete column id for a non-empty global surface.
+  __globalFaceting?: "cpu"
   // Fixture-only: simulate controlled state hooks that ignore the updater.
   __onColumnSizingChange?: "noop"
   __onColumnSizingInfoChange?: "noop"
@@ -398,6 +441,23 @@ type RowSelectionDetail = {
   can_select: Record<string, boolean>
   can_multi_select: Record<string, boolean>
   can_select_sub_rows: Record<string, boolean>
+}
+
+type RowTraversalDetail = {
+  parent_rows: Record<string, string[]>
+  leaf_rows: Record<string, string[]>
+}
+
+type RowStructureDetail = {
+  rows: Record<
+    string,
+    {
+      index: number
+      depth: number
+      parent_id: string | null
+      sub_row_ids: string[]
+    }
+  >
 }
 
 type FilteringHelpersSnapshot = {
@@ -455,6 +515,8 @@ type FixtureSnapshot = {
     is_all_page_rows_selected?: boolean
     is_some_page_rows_selected?: boolean
     row_selection_detail?: RowSelectionDetail
+    row_traversal_detail?: RowTraversalDetail
+    row_structure_detail?: RowStructureDetail
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
@@ -674,21 +736,37 @@ type FixtureSnapshot = {
       cells: Record<
         string,
         {
-          all: { id: string; column_id: string }[]
-          visible: { id: string; column_id: string }[]
-          left: { id: string; column_id: string }[]
-          center: { id: string; column_id: string }[]
-          right: { id: string; column_id: string }[]
+          all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
         }
       >
     }
     core_model?: {
+      schema_version?: number
       column_tree: {
         id: string
         depth: number
         parent_id: string | null
         child_ids: string[]
       }[]
+      flat_columns?: {
+        all: string[]
+        visible: string[]
+      }
+      column_capabilities?: Record<
+        string,
+        {
+          can_hide: boolean
+          can_pin: boolean
+          pin_position: "left" | "right" | null
+          pinned_index: number
+          can_resize: boolean
+          is_visible: boolean
+        }
+      >
       leaf_columns: {
         all: string[]
         visible: string[]
@@ -706,11 +784,22 @@ type FixtureSnapshot = {
       right_header_groups: NonNullable<
         NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["right_header_groups"]
       >
+      header_sizing: NonNullable<FixtureSnapshot["expect"]["header_sizing"]>
+      leaf_column_sizing?: {
+        sizing: NonNullable<FixtureSnapshot["expect"]["column_sizing"]>
+        size: Record<string, number>
+        start: NonNullable<FixtureSnapshot["expect"]["column_start"]>
+        after: NonNullable<FixtureSnapshot["expect"]["column_after"]>
+      }
       rows: {
         core: RowModelSnapshot
         row_model: RowModelSnapshot
       }
       cells: NonNullable<NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["cells"]>
+    }
+    flat_columns?: {
+      all: string[]
+      visible: string[]
     }
     column_sizing?: {
       total_size: number
@@ -867,6 +956,10 @@ type FixtureAction =
   | {
       type: "setGlobalFilterValue"
       value: unknown
+    }
+  | {
+      type: "setData"
+      data: unknown[]
     }
   | {
       type: "toggleColumnVisibility"
@@ -1038,10 +1131,13 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
       if (
         v !== "demo_process" &&
         v !== "auto_reset" &&
+        v !== "auto_reset_data_updates" &&
+        v !== "auto_reset_queue" &&
         v !== "resets" &&
         v !== "pagination" &&
         v !== "sort_undefined" &&
         v !== "sorting_fns" &&
+        v !== "sorting_edge_cases" &&
         v !== "filtering_fns" &&
         v !== "headers_cells" &&
         v !== "headers_inventory_deep" &&
@@ -1052,6 +1148,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "column_pinning" &&
         v !== "faceting" &&
         v !== "column_sizing" &&
+        v !== "column_sizing_interactions" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
         v !== "selection" &&
@@ -1071,7 +1168,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|auto_reset_queue|resets|pagination|sort_undefined|sorting_fns|sorting_edge_cases|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1301,6 +1398,8 @@ async function main(): Promise<void> {
   if (
     case_id === "demo_process" ||
     case_id === "auto_reset" ||
+    case_id === "auto_reset_data_updates" ||
+    case_id === "auto_reset_queue" ||
     case_id === "resets" ||
     case_id === "pagination" ||
     case_id === "state_shapes" ||
@@ -1654,6 +1753,56 @@ async function main(): Promise<void> {
         sortingFn: "custom_text",
       },
     ]
+  } else if (case_id === "sorting_edge_cases") {
+    const rows = [
+      // Intentionally "weird" edge set: mixed primitives + nullish + NaN/Infinity tags.
+      { id: 1, text_raw: "  ", alpha: "a2", dt_ms: 1700000000000 },
+      { id: 2, text_raw: 10, alpha: "a10", dt_ms: null },
+      { id: 3, text_raw: "__NaN__", alpha: "a1", dt_ms: 1600000000000 },
+      { id: 4, text_raw: "__Inf__", alpha: "b2" },
+      { id: 5, text_raw: "__-Inf__", alpha: "b10", dt_ms: 1500000000000 },
+      { id: 6, text_raw: null, alpha: "b1" },
+      { id: 7, alpha: "A2", dt_ms: 1400000000000 },
+      { id: 8, text_raw: "Banana", alpha: "A10", dt_ms: 1300000000000 },
+      { id: 9, text_raw: "apple", alpha: "a0", dt_ms: 1200000000000 },
+      { id: 10, text_raw: "", alpha: "a", dt_ms: 1100000000000 },
+      { id: 11, text_raw: "zzz", alpha: "", dt_ms: 1000000000000 },
+      { id: 12, text_raw: "0", alpha: "a00", dt_ms: 900000000000 },
+    ]
+
+    data = rows
+
+    const mapTaggedNumber = (v: any) => {
+      if (v === "__NaN__") return Number.NaN
+      if (v === "__Inf__") return Number.POSITIVE_INFINITY
+      if (v === "__-Inf__") return Number.NEGATIVE_INFINITY
+      return v
+    }
+
+    columns = [
+      {
+        id: "text_mixed_default",
+        accessorFn: (row: any) => mapTaggedNumber(row.text_raw),
+        sortingFn: "text",
+      },
+      {
+        id: "text_mixed_false",
+        accessorFn: (row: any) => mapTaggedNumber(row.text_raw),
+        sortingFn: "text",
+        sortUndefined: false,
+      },
+      {
+        id: "alpha_mixed",
+        accessorFn: (row: any) => row.alpha,
+        sortingFn: "alphanumeric",
+      },
+      {
+        id: "dt_mixed",
+        accessorFn: (row: any) =>
+          row.dt_ms === undefined ? undefined : row.dt_ms === null ? null : new Date(row.dt_ms),
+        sortingFn: "datetime",
+      },
+    ]
   } else if (case_id === "filtering_fns") {
     const rows = [
       { id: 1, text: "apple", num: 3, flag: true, tags: ["a", "b"] as string[] },
@@ -1821,6 +1970,37 @@ async function main(): Promise<void> {
       },
       leaf(sizingColumns[2]),
     ]
+  } else if (case_id === "column_sizing_interactions") {
+    // Column sizing offsets under pinning/visibility/ordering changes, plus grouped-header resize fan-out.
+    // We keep a 1-row dataset so table-core initializes consistently.
+    const rows: DemoProcessRow[] = [{ id: 1, name: "x", status: "x", cpu: 0, mem_mb: 0 }]
+    data = rows
+
+    const sizingColumns = [
+      { id: "a", size: 100, minSize: 20, maxSize: 300, enablePinning: true, enableHiding: true },
+      { id: "b", size: 50, enablePinning: false, enableHiding: true },
+      { id: "c", size: 25, enablePinning: true, enableHiding: true },
+    ]
+    columns_meta = sizingColumns
+
+    const leaf = (c: any) => ({
+      id: c.id,
+      accessorFn: (row: DemoProcessRow) => row.id,
+      size: c.size,
+      minSize: c.minSize,
+      maxSize: c.maxSize,
+      enableResizing: true,
+      enablePinning: c.enablePinning,
+      enableHiding: c.enableHiding,
+    })
+
+    columns = [
+      {
+        id: "ab",
+        columns: [leaf(sizingColumns[0]), leaf(sizingColumns[1])],
+      },
+      leaf(sizingColumns[2]),
+    ]
   } else if (case_id === "visibility_ordering") {
     // Column visibility + ordering state transitions.
     // We keep a 1-row dataset so table-core initializes consistently.
@@ -1906,7 +2086,11 @@ async function main(): Promise<void> {
     }))
   }
 
-  function buildTable(options: TanStackOptions, state: TanStackState) {
+  function buildTable(
+    options: TanStackOptions,
+    state: TanStackState,
+    data_override?: unknown[],
+  ) {
     const currentState = {
       sorting: [],
       columnFilters: [],
@@ -1937,10 +2121,10 @@ async function main(): Promise<void> {
         : (row: DemoProcessRow) => String(row.id)
 
     const table = tableCore.createTable<DemoProcessRow>({
-    data,
-    columns,
-    getRowId,
-    getSubRows: (row: DemoProcessRow) => (row as any).subRows,
+      data: (data_override ?? data) as any,
+      columns,
+      getRowId,
+      getSubRows: (row: DemoProcessRow) => (row as any).subRows,
       initialState: options.initialState,
       autoResetAll: options.autoResetAll,
       manualFiltering: options.manualFiltering ?? false,
@@ -2042,11 +2226,23 @@ async function main(): Promise<void> {
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
       ...(case_id === "faceting"
-        ? {
-            getFacetedRowModel: tableCore.getFacetedRowModel(),
-            getFacetedUniqueValues: tableCore.getFacetedUniqueValues(),
-            getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
-          }
+        ? (() => {
+            const baseRowModel = tableCore.getFacetedRowModel()
+            const baseUnique = tableCore.getFacetedUniqueValues()
+            const baseMinMax = tableCore.getFacetedMinMaxValues()
+            const remap = (columnId: string) => {
+              if (options.__globalFaceting === "cpu" && columnId === "__global__") {
+                return "cpu"
+              }
+              return columnId
+            }
+            return {
+              getFacetedRowModel: (t: any, columnId: string) => baseRowModel(t, remap(columnId)),
+              getFacetedUniqueValues: (t: any, columnId: string) =>
+                baseUnique(t, remap(columnId)),
+              getFacetedMinMaxValues: (t: any, columnId: string) => baseMinMax(t, remap(columnId)),
+            }
+          })()
         : {}),
       ...(case_id === "grouping" ||
       case_id === "grouping_aggregation_fns" ||
@@ -2177,8 +2373,9 @@ function snapshotForState(
   options: TanStackOptions,
   state: TanStackState,
   extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
+  data_override?: unknown[],
 ): FixtureSnapshot["expect"] {
-  const { table } = buildTable(options, state)
+  const { table } = buildTable(options, state, data_override)
   const out: FixtureSnapshot["expect"] = {
       core: snapshotRowModel(table.getCoreRowModel()),
       filtered: snapshotRowModel(table.getFilteredRowModel()),
@@ -2229,6 +2426,50 @@ function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
       is_filtered: Boolean(col.getIsFiltered?.()),
       filter_index: Number(col.getFilterIndex?.() ?? -1),
       can_global_filter: Boolean(col.getCanGlobalFilter?.()),
+    }
+  }
+
+  return out
+}
+
+function snapshotRowTraversalDetail(table: any, rowIds: string[]): RowTraversalDetail {
+  const out: RowTraversalDetail = {
+    parent_rows: {},
+    leaf_rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.parent_rows[id] = []
+      out.leaf_rows[id] = []
+      continue
+    }
+
+    out.parent_rows[id] = (row.getParentRows?.() ?? []).map((r: any) => String(r.id))
+    out.leaf_rows[id] = (row.getLeafRows?.() ?? []).map((r: any) => String(r.id))
+  }
+
+  return out
+}
+
+function snapshotRowStructureDetail(table: any, rowIds: string[]): RowStructureDetail {
+  const out: RowStructureDetail = {
+    rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.rows[id] = { index: -1, depth: -1, parent_id: null, sub_row_ids: [] }
+      continue
+    }
+
+    out.rows[id] = {
+      index: Number(row.index ?? -1),
+      depth: Number(row.depth ?? -1),
+      parent_id: row.parentId != null ? String(row.parentId) : null,
+      sub_row_ids: (row.subRows ?? []).map((r: any) => String(r.id)),
     }
   }
 
@@ -2349,47 +2590,39 @@ function snapshotHeaders(headers: any[]): {
 function snapshotCells(table: any): Record<
   string,
   {
-    all: { id: string; column_id: string }[]
-    visible: { id: string; column_id: string }[]
-    left: { id: string; column_id: string }[]
-    center: { id: string; column_id: string }[]
-    right: { id: string; column_id: string }[]
+    all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
   }
 > {
   const rows = table.getRowModel().rows ?? []
   const out: Record<
     string,
     {
-      all: { id: string; column_id: string }[]
-      visible: { id: string; column_id: string }[]
-      left: { id: string; column_id: string }[]
-      center: { id: string; column_id: string }[]
-      right: { id: string; column_id: string }[]
+      all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
     }
   > = {}
   for (const r of rows) {
     const rowId = String(r.id)
+    const mk = (c: any) => ({
+      id: String(c.id),
+      column_id: String(c.column?.id),
+      is_grouped: Boolean(c.getIsGrouped?.()),
+      is_placeholder: Boolean(c.getIsPlaceholder?.()),
+      is_aggregated: Boolean(c.getIsAggregated?.()),
+    })
     out[rowId] = {
-      all: (r.getAllCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      visible: (r.getVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      left: (r.getLeftVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      center: (r.getCenterVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      right: (r.getRightVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
+      all: (r.getAllCells?.() ?? []).map(mk),
+      visible: (r.getVisibleCells?.() ?? []).map(mk),
+      left: (r.getLeftVisibleCells?.() ?? []).map(mk),
+      center: (r.getCenterVisibleCells?.() ?? []).map(mk),
+      right: (r.getRightVisibleCells?.() ?? []).map(mk),
     }
   }
   return out
@@ -2415,6 +2648,47 @@ function snapshotColumnTree(columns: any[], parent_id: string | null = null): {
     out.push({ id, depth, parent_id, child_ids: childIds })
     if (c.columns && c.columns.length) {
       out.push(...snapshotColumnTree(c.columns, id))
+    }
+  }
+
+  return out
+}
+
+function snapshotLeafColumnCapabilities(table: any): Record<
+  string,
+  {
+    can_hide: boolean
+    can_pin: boolean
+    pin_position: "left" | "right" | null
+    pinned_index: number
+    can_resize: boolean
+    is_visible: boolean
+  }
+> {
+  const out: Record<
+    string,
+    {
+      can_hide: boolean
+      can_pin: boolean
+      pin_position: "left" | "right" | null
+      pinned_index: number
+      can_resize: boolean
+      is_visible: boolean
+    }
+  > = {}
+
+  const leaf = table.getAllLeafColumns?.() ?? []
+  for (const col of leaf) {
+    const id = String(col.id)
+    const pinned = col.getIsPinned?.()
+    const pin_position = pinned === "left" ? "left" : pinned === "right" ? "right" : null
+    out[id] = {
+      can_hide: Boolean(col.getCanHide?.()),
+      can_pin: Boolean(col.getCanPin?.()),
+      pin_position,
+      pinned_index: Number(col.getPinnedIndex?.() ?? 0),
+      can_resize: Boolean(col.getCanResize?.()),
+      is_visible: Boolean(col.getIsVisible?.()),
     }
   }
 
@@ -2481,6 +2755,25 @@ function snapshotColumnSizing(table: any): {
   }
 }
 
+function snapshotLeafColumnSizing(
+  table: any,
+): NonNullable<NonNullable<FixtureSnapshot["expect"]["core_model"]>["leaf_column_sizing"]> {
+  const { column_sizing, column_start, column_after } = snapshotColumnSizing(table)
+
+  const size: Record<string, number> = {}
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    size[String(col.id)] = Number(col.getSize?.() ?? 0)
+  }
+
+  return {
+    sizing: column_sizing,
+    size,
+    start: column_start,
+    after: column_after,
+  }
+}
+
 function snapshotHeaderSizing(
   table: any,
 ): NonNullable<FixtureSnapshot["expect"]["header_sizing"]> {
@@ -2544,11 +2837,17 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   const bottom = (table.getBottomRows?.() ?? []).map((r: any) => String(r.id))
 
   const coreRows = table.getCoreRowModel?.()?.flatRows ?? []
+  const modelRows = table.getRowModel?.()?.flatRows ?? []
+  const rowIds = [
+    ...new Set([
+      ...coreRows.map((row: any) => String(row.id)),
+      ...modelRows.map((row: any) => String(row.id)),
+    ]),
+  ]
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "top" | "bottom" | null> = {}
   const pinned_index: Record<string, number> = {}
-  for (const row of coreRows) {
-    const id = String(row.id)
+  for (const id of rowIds) {
     const r = table.getRow?.(id, true)
     if (!r) {
       continue
@@ -3429,7 +3728,8 @@ function snapshotColumnPinning(
     state: TanStackState,
     actions: FixtureAction[],
   ): Promise<FixtureSnapshot["expect"]> {
-    const { table, currentState } = buildTable(options, state)
+    let currentData = data as unknown[]
+    const { table, currentState } = buildTable(options, state, currentData)
 
     // Simulate an initial render pass that computes the full row model. TanStack's row-model
     // memo debug callbacks register auto-reset behavior without resetting on the first call.
@@ -3452,6 +3752,11 @@ function snapshotColumnPinning(
         col.setFilterValue(action.value)
       } else if (action.type === "setGlobalFilterValue") {
         table.setGlobalFilter(action.value)
+      } else if (action.type === "setGrouping") {
+        table.setGrouping(action.grouping)
+      } else if (action.type === "setData") {
+        currentData = action.data
+        table.setOptions((old: any) => ({ ...old, data: currentData }))
       } else {
         throw new Error(
           `snapshotForAutoResetActionsWithFlush does not support action: ${action.type}`,
@@ -3467,7 +3772,7 @@ function snapshotColumnPinning(
       await Promise.resolve()
     }
 
-    const expect = snapshotForState(options, currentState)
+    const expect = snapshotForState(options, currentState, undefined, currentData)
 
     return {
       ...expect,
@@ -3794,7 +4099,185 @@ function snapshotColumnPinning(
         { pagination: { pageIndex: 1, pageSize: 2 } },
         [{ type: "setGlobalFilterValue", value: "Renderer" }],
       ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
     ]
+  } else if (case_id === "auto_reset_data_updates") {
+    const mkActionsAutoReset = async (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = await snapshotForAutoResetActionsWithFlush(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect,
+      }
+    }
+
+    const stableIds = [
+      { id: 1, name: "Renderer", status: "Running", cpu: 99, mem_mb: 420 },
+      { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 3, name: "Indexer", status: "Running", cpu: 1, mem_mb: 860 },
+      { id: 4, name: "Spellcheck", status: "Disabled", cpu: 0, mem_mb: 0 },
+      { id: 5, name: "Language Server", status: "Running", cpu: 7, mem_mb: 512 },
+    ]
+
+    const identityChange = [
+      { id: 10, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
+      { id: 11, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 12, name: "Indexer", status: "Running", cpu: 38, mem_mb: 860 },
+      { id: 13, name: "Spellcheck", status: "Disabled", cpu: 0, mem_mb: 0 },
+      { id: 14, name: "Language Server", status: "Running", cpu: 7, mem_mb: 512 },
+    ]
+
+    snapshots = [
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+    ]
+  } else if (case_id === "auto_reset_queue") {
+    const options: TanStackOptions = {
+      ...defaultOptions,
+      initialState: {
+        pagination: { pageIndex: 0, pageSize: 2 },
+        expanded: {},
+      },
+    }
+
+    const state: TanStackState = {
+      pagination: { pageIndex: 1, pageSize: 2 },
+      expanded: true,
+    }
+
+    const mkQueueSnapshot = async (id: SnapshotId, passes: number) => {
+      const currentData = data as unknown[]
+      const { table, currentState } = buildTable(options, state, currentData)
+      const anyTable = table as any
+
+      if (typeof anyTable._autoResetPageIndex !== "function") {
+        throw new Error("Missing internal table._autoResetPageIndex")
+      }
+      if (typeof anyTable._autoResetExpanded !== "function") {
+        throw new Error("Missing internal table._autoResetExpanded")
+      }
+
+      for (let pass = 0; pass < passes; pass++) {
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetExpanded()
+        anyTable._autoResetExpanded()
+        anyTable._autoResetExpanded()
+
+        // Flush the microtask queue to run `table._queue` callbacks (including the reset itself).
+        await Promise.resolve()
+        await Promise.resolve()
+      }
+
+      return {
+        id,
+        options,
+        state,
+        passes,
+        expect: {
+          next_state: {
+            sorting: currentState.sorting ?? [],
+            columnFilters: currentState.columnFilters ?? [],
+            globalFilter: currentState.globalFilter,
+            pagination: currentState.pagination,
+            grouping: currentState.grouping ?? [],
+            expanded: currentState.expanded,
+            rowPinning: currentState.rowPinning,
+            rowSelection: currentState.rowSelection ?? {},
+            columnVisibility: currentState.columnVisibility,
+            columnSizing: currentState.columnSizing ?? {},
+            columnSizingInfo: currentState.columnSizingInfo,
+            columnPinning: currentState.columnPinning,
+            columnOrder: currentState.columnOrder,
+          },
+        },
+      }
+    }
+
+    snapshots = [
+      await mkQueueSnapshot("auto_reset_queue_register_first_no_reset", 1),
+      await mkQueueSnapshot("auto_reset_queue_second_pass_resets_coalesced", 2),
+    ] as any
   } else if (case_id === "resets") {
     const options: TanStackOptions = defaultOptions
 
@@ -4090,6 +4573,8 @@ function snapshotColumnPinning(
         expect: {
           ...baseSnap,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
@@ -4113,6 +4598,8 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
@@ -4601,6 +5088,57 @@ function snapshotColumnPinning(
         ]),
       },
     ]
+  } else if (case_id === "sorting_edge_cases") {
+    snapshots = [
+      {
+        id: "sorting_edge_text_mixed_default_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "text_mixed_default", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "text_mixed_default", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_text_mixed_sort_undefined_false_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "text_mixed_false", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "text_mixed_false", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_multi_text_false_then_dt",
+        options: defaultOptions,
+        state: {
+          sorting: [
+            { id: "text_mixed_false", desc: false },
+            { id: "dt_mixed", desc: false },
+          ],
+        },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [
+            { id: "text_mixed_false", desc: false },
+            { id: "dt_mixed", desc: false },
+          ],
+        }),
+      },
+      {
+        id: "sorting_edge_alphanumeric_mixed_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "alpha_mixed", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "alpha_mixed", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_datetime_nullish_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "dt_mixed", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "dt_mixed", desc: false }],
+        }),
+      },
+    ]
   } else if (case_id === "filtering_fns") {
     const base = defaultOptions
     const withFilteringHelpers = (table: any) => ({
@@ -4782,7 +5320,13 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
+            schema_version: 4,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            flat_columns: {
+              all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            },
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4800,6 +5344,8 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
+            leaf_column_sizing: snapshotLeafColumnSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -4907,7 +5453,13 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
+            schema_version: 4,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            flat_columns: {
+              all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            },
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4925,6 +5477,8 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
+            leaf_column_sizing: snapshotLeafColumnSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -4962,7 +5516,13 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
+        schema_version: 4,
         column_tree: snapshotColumnTree(table.getAllColumns()),
+        flat_columns: {
+          all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+          visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+        },
+        column_capabilities: snapshotLeafColumnCapabilities(table),
         leaf_columns: {
           all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
           visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4978,6 +5538,8 @@ function snapshotColumnPinning(
         left_header_groups,
         center_header_groups,
         right_header_groups,
+        header_sizing: snapshotHeaderSizing(table),
+        leaf_column_sizing: snapshotLeafColumnSizing(table),
         rows: {
           core: snapshotRowModel(table.getCoreRowModel()),
           row_model: snapshotRowModel(table.getRowModel()),
@@ -5611,6 +6173,15 @@ function snapshotColumnPinning(
         },
       ),
       mk(
+        "pinning_tree_keep_true_child_surfaces_when_filtered_out",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          expanded: { "1": true },
+          columnFilters: [{ id: "name", value: "Root 2" }],
+          rowPinning: { top: ["11"], bottom: [] },
+        },
+      ),
+      mk(
         "pinning_tree_keep_false_never_surfaces_child_row",
         { enableRowPinning: true, keepPinnedRows: false },
         {
@@ -5795,6 +6366,21 @@ function snapshotColumnPinning(
         { enablePinning: false },
         {},
       ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells",
+        {},
+        { columnPinning: { left: ["a"], right: [] }, columnVisibility: { a: false } },
+      ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells",
+        {},
+        { columnPinning: { left: ["a", "b"], right: [] }, columnVisibility: { b: false } },
+      ),
+      mk(
+        "column_pinning_group_leafs_pinned_both_sides_prefers_left",
+        {},
+        { columnPinning: { left: ["a"], right: ["b"] } },
+      ),
       mkActions(
         "column_pinning_action_pin_left_right_unpin",
         {},
@@ -5862,6 +6448,7 @@ function snapshotColumnPinning(
 
     snapshots = [
       mk("faceting_baseline", {}, {}),
+      mk("faceting_global_custom_cpu", { __globalFaceting: "cpu" }, {}),
       mk(
         "faceting_cpu_own_filter_ignored",
         {},
@@ -6315,6 +6902,174 @@ function snapshotColumnPinning(
           ],
         ),
       },
+      {
+        id: "colsize_resize_on_end_rtl_move_flips",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onEnd",
+            columnResizeDirection: "rtl",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+          ],
+        ),
+      },
+      {
+        id: "colsize_resize_on_end_rtl_end_writes",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onEnd",
+            columnResizeDirection: "rtl",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+            { type: "columnResizeEnd", client_x: 35 },
+          ],
+        ),
+      },
+    ]
+  } else if (case_id === "column_sizing_interactions") {
+    const baseOptions: TanStackOptions = {
+      enableColumnResizing: true,
+    }
+
+    const baseState: TanStackState = {
+      columnOrder: ["b", "c", "a"],
+      columnPinning: { left: ["b"], right: ["a"] },
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          header_sizing: snapshotHeaderSizing(table),
+        },
+      }
+    }
+
+    snapshots = [
+      mkActions(
+        "colsize_interactions_pin_vis_order_then_resize_group_on_change",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        baseState,
+        [
+          { type: "toggleColumnVisibility", column_id: "b", value: false },
+          { type: "setColumnOrder", order: ["c", "a", "b"] },
+          { type: "pinColumn", column_id: "c", position: "right" },
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "colsize_interactions_pin_vis_order_then_resize_group_on_change_rtl",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        baseState,
+        [
+          { type: "toggleColumnVisibility", column_id: "b", value: false },
+          { type: "setColumnOrder", order: ["c", "a", "b"] },
+          { type: "pinColumn", column_id: "c", position: "right" },
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "colsize_interactions_manual_sizing_pins_visibility",
+        baseOptions,
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 220, b: 10, c: 180 },
+        },
+        [],
+      ),
+      mkActions(
+        "colsize_interactions_group_resize_on_end_writes_with_pins",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "ltr",
+        },
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 120, b: 60, c: 40 },
+        },
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "colsize_interactions_group_resize_on_end_rtl_writes_with_pins",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 120, b: 60, c: 40 },
+        },
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
     ]
   } else if (case_id === "column_resizing_group_headers") {
     const baseOptions: TanStackOptions = {
@@ -6423,6 +7178,88 @@ function snapshotColumnPinning(
           ...baseOptions,
           columnResizeMode: "onEnd",
           columnResizeDirection: "ltr",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_change_rtl_move_updates",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_change_rtl_end_resets",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_end_rtl_end_writes",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_rtl_move_updates",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_rtl_end_resets",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_end_rtl_end_writes",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
         },
         pinnedState,
         [

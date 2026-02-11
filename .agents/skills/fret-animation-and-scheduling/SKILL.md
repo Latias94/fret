@@ -8,7 +8,17 @@ description: Scheduling and animation in Fret (runner-owned frame loop). Use whe
 Fret’s runner owns the event loop and frame clock. Declarative UI drives time via **effects**
 (`Effect::RequestAnimationFrame`, `Effect::SetTimer`) and **continuous frames leases**.
 
-## Overview
+## When to use
+
+Use this skill when:
+
+- Implementing animations/transitions (presence, expand/collapse, spinners).
+- Adding timed behavior (debounce, hover intent delays, auto-close).
+- Deciding between one-shot redraw, RAF, and continuous frames leases.
+
+## Quick start
+
+### Redraw primitives (what to reach for)
 
 **Redraw primitives:**
 
@@ -22,8 +32,6 @@ Fret’s runner owns the event loop and frame clock. Declarative UI drives time 
 - Continuous frames lease management: `fret_ui_kit::declarative::scheduling::set_continuous_frames`
 - Transition drivers: `fret_ui_kit::declarative::transition::*`
 - Presence helpers (fade/scale-fade): `fret_ui_kit::declarative::presence::*`
-
-## Quick start
 
 ### 1) Fade presence (open/close with opacity)
 
@@ -55,6 +63,14 @@ pub fn spinner_like<H: UiHost>(cx: &mut ElementContext<'_, H>, spinning: bool) -
 }
 ```
 
+## Workflow (recommended checklist)
+
+1. Prefer ecosystem helpers (`presence`, `transition`) for common animations.
+2. Tie any continuous-frames lease to element lifetime:
+   - Store the lease in element-local state so unmount drops it (no leaked RAF requests).
+3. Prefer tokened, runner-owned timers (`Effect::SetTimer` / `CancelTimer`) for UI-visible time.
+4. For delays and long-lived callbacks, prefer weak models to avoid keeping state alive.
+
 ## Timers (delays, hover intent, auto-close)
 
 Prefer runner-owned timer effects over ad-hoc thread timers:
@@ -66,6 +82,12 @@ Prefer runner-owned timer effects over ad-hoc thread timers:
 
 Use `WeakModel<T>` in long-lived callbacks when the timer should not keep state alive.
 
+## Common pitfalls
+
+- Leaking continuous frames by keeping a `ContinuousFrames` lease alive after unmount.
+- Using ad-hoc thread timers for UI-visible behavior (breaks determinism and diagnostics).
+- Re-issuing the same “scroll/animation request” every frame instead of treating it as a one-shot intent.
+
 ## Best practices
 
 - Prefer `presence::*` + `transition::*` helpers over custom “tick counters” in leaf components.
@@ -73,10 +95,10 @@ Use `WeakModel<T>` in long-lived callbacks when the timer should not keep state 
 - While animating opacity/transform, call `cx.notify_for_animation_frame()` (helpers do this) so
   paint-cache roots rerun paint deterministically.
 
-## References
+## Evidence anchors (where to look)
 
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-- Execution/portability surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- Execution/portability surface: `docs/adr/0184-execution-and-concurrency-surface-v1.md`
 - Runtime APIs:
   - `crates/fret-ui/src/elements/cx.rs` (`request_frame`, `request_animation_frame`, `begin_continuous_frames`)
   - `crates/fret-runtime/src/effect.rs` (`Effect::Redraw`, `Effect::RequestAnimationFrame`, timers)
@@ -84,3 +106,9 @@ Use `WeakModel<T>` in long-lived callbacks when the timer should not keep state 
   - `ecosystem/fret-ui-kit/src/declarative/scheduling.rs`
   - `ecosystem/fret-ui-kit/src/declarative/transition.rs`
   - `ecosystem/fret-ui-kit/src/declarative/presence.rs`
+
+## Related skills
+
+- `fret-action-hooks` (timers + long-lived callbacks wired as component-owned policy)
+- `fret-overlays-and-focus` (hover intent, delayed tooltips/menus)
+- `fret-diag-workflow` (scripted repros for timing bugs)

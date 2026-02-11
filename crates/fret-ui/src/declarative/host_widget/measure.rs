@@ -193,12 +193,6 @@ impl ElementHostWidget {
             ElementInstance::EffectLayer(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
-            ElementInstance::HitTestGate(props) => {
-                self.measure_passthrough_box(cx, window, props.layout)
-            }
-            ElementInstance::FocusTraversalGate(props) => {
-                self.measure_passthrough_box(cx, window, props.layout)
-            }
             ElementInstance::VisualTransform(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
@@ -216,6 +210,9 @@ impl ElementHostWidget {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
             ElementInstance::FocusScope(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::LayoutQueryRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
             ElementInstance::InteractivityGate(props) => {
@@ -415,46 +412,21 @@ impl ElementHostWidget {
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap)
-            .map(|w| crate::pixel_snap::snap_px_floor(w, cx.scale_factor));
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        // Keep paint-time text preparation aligned with the wrap width we measured against.
-        //
-        // Without this, shrink-wrapped text (e.g. in a cross-axis `Items::Start` flex) can measure
-        // against the parent available width but later prepare/paint against its own narrower
-        // bounds width, producing additional wrapped lines that overflow the measured height.
-        self.text_cache.measured_scale_factor_bits = Some(cx.scale_factor.to_bits());
-        self.text_cache.last_measure_width = constraints.max_width;
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx.services.text().measure(&input, constraints);
-        cx.tree.debug_record_text_metrics_measured(cx.node, metrics);
-        let clamp_constraints = if matches!(props.layout.size.height, Length::Auto)
-            && props.layout.size.max_height.is_none()
-        {
-            // Text intrinsic height is independent of height constraints. When a flex/grid parent
-            // provides a "known height" during sizing passes, clamping here can under-report the
-            // true text height and cause sibling overlap (the parent may then position subsequent
-            // items too early, while paint still prepares the full glyph blob).
-            //
-            // Keep width constraints intact (wrapping depends on width), but ignore height clamps
-            // so intrinsic sizing can overflow and be clipped/scrolled by ancestors.
-            LayoutConstraints {
-                known: LayoutSize::new(cx.constraints.known.width, None),
-                available: LayoutSize::new(
-                    cx.constraints.available.width,
-                    AvailableSpace::MaxContent,
-                ),
-            }
-        } else {
-            cx.constraints
-        };
-        clamp_to_constraints_in_measure(metrics.size, props.layout, clamp_constraints)
+        clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
     fn measure_styled_text<H: UiHost>(
@@ -464,34 +436,21 @@ impl ElementHostWidget {
     ) -> Size {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap)
-            .map(|w| crate::pixel_snap::snap_px_floor(w, cx.scale_factor));
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        self.text_cache.measured_scale_factor_bits = Some(cx.scale_factor.to_bits());
-        self.text_cache.last_measure_width = constraints.max_width;
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx.services.text().measure(&input, constraints);
-        cx.tree.debug_record_text_metrics_measured(cx.node, metrics);
-        let clamp_constraints = if matches!(props.layout.size.height, Length::Auto)
-            && props.layout.size.max_height.is_none()
-        {
-            LayoutConstraints {
-                known: LayoutSize::new(cx.constraints.known.width, None),
-                available: LayoutSize::new(
-                    cx.constraints.available.width,
-                    AvailableSpace::MaxContent,
-                ),
-            }
-        } else {
-            cx.constraints
-        };
-        clamp_to_constraints_in_measure(metrics.size, props.layout, clamp_constraints)
+        clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
     fn measure_selectable_text<H: UiHost>(
@@ -501,34 +460,21 @@ impl ElementHostWidget {
     ) -> Size {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
-        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap)
-            .map(|w| crate::pixel_snap::snap_px_floor(w, cx.scale_factor));
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = max_width.map(|v| crate::pixel_snap::snap_px_round(v, cx.scale_factor));
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        self.text_cache.measured_scale_factor_bits = Some(cx.scale_factor.to_bits());
-        self.text_cache.last_measure_width = constraints.max_width;
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx.services.text().measure(&input, constraints);
-        cx.tree.debug_record_text_metrics_measured(cx.node, metrics);
-        let clamp_constraints = if matches!(props.layout.size.height, Length::Auto)
-            && props.layout.size.max_height.is_none()
-        {
-            LayoutConstraints {
-                known: LayoutSize::new(cx.constraints.known.width, None),
-                available: LayoutSize::new(
-                    cx.constraints.available.width,
-                    AvailableSpace::MaxContent,
-                ),
-            }
-        } else {
-            cx.constraints
-        };
-        clamp_to_constraints_in_measure(metrics.size, props.layout, clamp_constraints)
+        clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
     fn measure_text_input<H: UiHost>(

@@ -283,6 +283,7 @@ impl RadioGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self {
             model,
@@ -732,6 +733,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn radio_group_selected_indicator_is_centered_in_icon() {
         let window = AppWindowId::default();
@@ -793,7 +807,7 @@ mod tests {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
@@ -802,19 +816,19 @@ mod tests {
 
             let is_dot = (rect.size.width.0 - indicator.0).abs() <= 0.1
                 && (rect.size.height.0 - indicator.0).abs() <= 0.1
-                && *background == dot;
+                && *background == fret_core::Paint::Solid(dot);
             if is_dot {
                 dot_rect = Some(*rect);
             }
 
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == Color::TRANSPARENT
+                && *background == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
-                && border_color.a > 0.0;
+                && matches!(*border_paint, fret_core::Paint::Solid(c) if c.a > 0.0);
             if is_icon {
                 icon_rects.push(*rect);
             }
@@ -907,7 +921,7 @@ mod tests {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
@@ -916,14 +930,16 @@ mod tests {
 
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == Color::TRANSPARENT
+                && *background == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
                 && border.bottom.0 > 0.0
-                && border_color.a > 0.0;
+                && matches!(*border_paint, fret_core::Paint::Solid(c) if c.a > 0.0);
             if is_icon {
-                icon_border_colors.push(*border_color);
+                if let fret_core::Paint::Solid(border_color) = *border_paint {
+                    icon_border_colors.push(border_color);
+                }
             }
         }
 
@@ -997,15 +1013,15 @@ mod tests {
             let fret_core::SceneOp::Quad {
                 background,
                 border,
-                border_color,
+                border_paint,
                 ..
             } = op
             else {
                 continue;
             };
 
-            if *background == expected_bg
-                && *border_color == primary
+            if *background == fret_core::Paint::Solid(expected_bg)
+                && *border_paint == fret_core::Paint::Solid(primary)
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0

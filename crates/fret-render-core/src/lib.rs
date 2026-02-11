@@ -11,3 +11,18 @@ pub enum RenderTargetColorSpace {
     Srgb,
     Linear,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_target_color_space_serializes_as_snake_case() {
+        let srgb = serde_json::to_string(&RenderTargetColorSpace::Srgb).expect("serialize srgb");
+        let linear =
+            serde_json::to_string(&RenderTargetColorSpace::Linear).expect("serialize linear");
+
+        assert_eq!(srgb, "\"srgb\"");
+        assert_eq!(linear, "\"linear\"");
+    }
+}

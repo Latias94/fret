@@ -24,6 +24,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
 const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
@@ -153,6 +155,7 @@ impl DrawerContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let side = drawer_side_in_scope(cx);
@@ -216,7 +219,11 @@ impl DrawerContent {
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
-                .max_h(drawer_vertical_max_height(cx.bounds.size.height))
+                .max_h(drawer_vertical_max_height(
+                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                        .size
+                        .height,
+                ))
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
@@ -308,6 +315,7 @@ impl DrawerHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let side = drawer_side_in_scope(cx);
         let items = match side {
@@ -344,6 +352,7 @@ impl DrawerFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -461,6 +470,21 @@ impl Drawer {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.inner = self.inner.on_open_change(on_open_change);
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.inner = self.inner.on_open_change_complete(on_open_change_complete);
+        self
+    }
+
     /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
     pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
         self.inner = self.inner.on_open_auto_focus(hook);
@@ -494,6 +518,7 @@ impl Drawer {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -512,7 +537,10 @@ impl Drawer {
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
-                let viewport_w = cx.bounds.size.width;
+                let viewport_w = cx
+                    .environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                    .size
+                    .width;
                 let desired = Px((viewport_w.0 * DRAWER_SIDE_PANEL_WIDTH_FRACTION)
                     .min(DRAWER_SIDE_PANEL_MAX_WIDTH_PX.0)
                     .max(0.0));
@@ -529,7 +557,10 @@ impl Drawer {
 
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
             let (runtime, offset_model, was_open) = drawer_drag_models(cx);
-            let window_height = cx.bounds.size.height;
+            let window_height = cx
+                .environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                .size
+                .height;
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
             if is_open && !was_open {
@@ -861,6 +892,7 @@ impl DrawerTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -901,6 +933,7 @@ impl DrawerClose {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.inner.into_element(cx)
     }
@@ -957,6 +990,20 @@ mod tests {
         });
     }
 
+    #[test]
+    fn drawer_open_change_handlers_forward_to_sheet() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let drawer = Drawer::new(open)
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        let inner_debug = format!("{:?}", drawer.inner);
+        assert!(inner_debug.contains("on_open_change: true"));
+        assert!(inner_debug.contains("on_open_change_complete: true"));
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -997,6 +1044,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

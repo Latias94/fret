@@ -1,6 +1,6 @@
 # ADR 0003: Platform Boundary (winit runner)
 
-Status: Superseded (see ADR 0091-platform-backends-native-web.md)
+Status: Superseded (see ADR 0090-platform-backends-native-web.md)
 
 Note: This ADR reflected an early desktop-only split. The current implementation separates
 portable contracts (`fret-platform`) from per-target backends (`fret-platform-native`,
@@ -51,4 +51,3 @@ Keep the runner boundary responsible for:
 
 - Move more logic from `fret-demo` into `fret-runner-winit` once APIs stabilize.
 - Add clipboard/IME/drag-and-drop as platform services exposed via effects.
-

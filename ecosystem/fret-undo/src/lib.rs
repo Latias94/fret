@@ -1,7 +1,7 @@
 //! App-owned undo/redo infrastructure.
 //!
 //! This crate intentionally lives in `ecosystem/`:
-//! - The UI runtime must not own a global undo stack (ADR 0136).
+//! - The UI runtime must not own a global undo stack (ADR 0127).
 //! - Editors still benefit from a reusable history implementation with explicit transaction
 //!   boundaries and coalescing semantics (ADR 0024).
 //!
@@ -308,7 +308,7 @@ impl<T> UndoHistory<T> {
     }
 }
 
-/// Window/document-scoped undo routing helper (ADR 0136).
+/// Window/document-scoped undo routing helper (ADR 0127).
 ///
 /// This is a small convenience service that:
 /// - stores a history per document,

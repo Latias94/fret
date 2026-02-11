@@ -177,6 +177,7 @@ impl ResizablePanelGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         resizable_panel_group_with_entries(
             cx,

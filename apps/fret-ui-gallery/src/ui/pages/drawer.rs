@@ -117,8 +117,6 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -141,17 +139,17 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -185,48 +183,43 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         let trigger_open = demo_open.clone();
         let close_open = demo_open.clone();
 
-        let drawer = shadcn::Drawer::new(demo_open.clone())
-            .into_element(
-                cx,
-                move |cx| {
-                    shadcn::Button::new("Open Drawer")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(trigger_open.clone())
-                        .test_id("ui-gallery-drawer-demo-trigger")
-                        .into_element(cx)
-                },
-                move |cx| {
-                    shadcn::DrawerContent::new([
-                        shadcn::DrawerHeader::new([
-                            shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                            shadcn::DrawerDescription::new("Set your daily activity goal.")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::DrawerFooter::new([
-                            shadcn::Button::new("Submit").into_element(cx),
-                            shadcn::Button::new("Cancel")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(close_open.clone())
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
+        let drawer = shadcn::Drawer::new(demo_open.clone()).into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Open Drawer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(trigger_open.clone())
+                    .test_id("ui-gallery-drawer-demo-trigger")
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-drawer-demo-content"),
-                    )
-                },
-            )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-demo"));
+            },
+            move |cx| {
+                shadcn::DrawerContent::new([
+                    shadcn::DrawerHeader::new([
+                        shadcn::DrawerTitle::new("Move Goal").into_element(cx),
+                        shadcn::DrawerDescription::new("Set your daily activity goal.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new([
+                        shadcn::Button::new("Submit").into_element(cx),
+                        shadcn::Button::new("Cancel")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-drawer-demo-content")
+            },
+        );
 
-        section_card(cx, "Demo", drawer)
+        section_card(cx, "Demo", drawer).test_id("ui-gallery-drawer-demo")
     };
 
     let scrollable_content = {
         let trigger_open = scroll_open.clone();
         let close_open = scroll_open.clone();
-        let theme_for_scrollable_content = theme.clone();
 
         let drawer = shadcn::Drawer::new(scroll_open.clone())
             .side(shadcn::DrawerSide::Right)
@@ -260,14 +253,16 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        cx.container(
-                            decl_style::container_props(
-                                &theme_for_scrollable_content,
-                                ChromeRefinement::default().px(Space::N4),
-                                LayoutRefinement::default().w_full(),
-                            ),
-                            move |_cx| [scroller],
-                        ),
+                        {
+                            let props = cx.with_theme(|theme| {
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default().px(Space::N4),
+                                    LayoutRefinement::default().w_full(),
+                                )
+                            });
+                            cx.container(props, move |_cx| [scroller])
+                        },
                         shadcn::DrawerFooter::new([
                             shadcn::Button::new("Submit").into_element(cx),
                             shadcn::Button::new("Cancel")
@@ -278,17 +273,11 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-drawer-scrollable-content"),
-                    )
+                    .test_id("ui-gallery-drawer-scrollable-content")
                 },
-            )
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-drawer-scrollable"),
             );
 
-        section_card(cx, "Scrollable Content", drawer)
+        section_card(cx, "Scrollable Content", drawer).test_id("ui-gallery-drawer-scrollable")
     };
 
     let sides = {
@@ -325,9 +314,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id(format!("{test_id_prefix}-content")),
-                    )
+                    .test_id(format!("{test_id_prefix}-content"))
                 },
             )
         };
@@ -369,7 +356,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .w_full()
         .items_center()
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-sides"));
+        .test_id("ui-gallery-drawer-sides");
 
         section_card(cx, "Sides", buttons)
     };
@@ -406,10 +393,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-drawer-responsive-desktop-content"),
-                )
+                .test_id("ui-gallery-drawer-responsive-desktop-content")
             },
         );
 
@@ -439,10 +423,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-drawer-responsive-mobile-content"),
-                )
+                .test_id("ui-gallery-drawer-responsive-mobile-content")
             },
         );
 
@@ -507,14 +488,12 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                             .into_element(cx),
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-drawer-rtl-content"),
-                        )
+                        .test_id("ui-gallery-drawer-rtl-content")
                     },
                 )
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-rtl"));
+        .test_id("ui-gallery-drawer-rtl");
 
         section_card(cx, "RTL", drawer)
     };
@@ -541,8 +520,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-drawer-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

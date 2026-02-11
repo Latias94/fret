@@ -19,6 +19,23 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::primitives::trigger_a11y;
 
+fn is_context_menu_open_shortcut(down: KeyDownCx) -> bool {
+    if down.repeat {
+        return false;
+    }
+
+    let no_extra_modifiers = !down.modifiers.ctrl
+        && !down.modifiers.alt
+        && !down.modifiers.meta
+        && !down.modifiers.alt_gr;
+
+    let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift && no_extra_modifiers;
+    let is_context_menu_key =
+        down.key == KeyCode::ContextMenu && !down.modifiers.shift && no_extra_modifiers;
+
+    is_shift_f10 || is_context_menu_key
+}
+
 /// Stamps Radix-like trigger relationships:
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id)
@@ -114,11 +131,7 @@ pub fn wire_open_on_shift_f10<H: UiHost>(
         trigger_id,
         Arc::new(
             move |host: &mut dyn UiFocusActionHost, _acx: ActionCx, down: KeyDownCx| {
-                if down.repeat {
-                    return false;
-                }
-                let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                if !is_shift_f10 {
+                if !is_context_menu_open_shortcut(down) {
                     return false;
                 }
                 let _ = host.models_mut().update(&open, |v| *v = true);
@@ -126,4 +139,51 @@ pub fn wire_open_on_shift_f10<H: UiHost>(
             },
         ),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::Modifiers;
+
+    #[test]
+    fn context_menu_shortcut_accepts_shift_f10() {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        assert!(is_context_menu_open_shortcut(KeyDownCx {
+            key: KeyCode::F10,
+            modifiers,
+            repeat: false,
+        }));
+    }
+
+    #[test]
+    fn context_menu_shortcut_accepts_context_menu_key() {
+        assert!(is_context_menu_open_shortcut(KeyDownCx {
+            key: KeyCode::ContextMenu,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        }));
+    }
+
+    #[test]
+    fn context_menu_shortcut_rejects_plain_f10() {
+        assert!(!is_context_menu_open_shortcut(KeyDownCx {
+            key: KeyCode::F10,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        }));
+    }
+
+    #[test]
+    fn context_menu_shortcut_rejects_repeat_events() {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        assert!(!is_context_menu_open_shortcut(KeyDownCx {
+            key: KeyCode::F10,
+            modifiers,
+            repeat: true,
+        }));
+    }
 }

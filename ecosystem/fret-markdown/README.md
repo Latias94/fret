@@ -8,6 +8,28 @@ This crate is intentionally “layout-normal”: it renders into regular `AnyEle
 create implicit scroll containers. Scrolling is decided by the host (wrap Markdown inside a scroll
 panel if desired).
 
+## Mermaid
+
+By default, fenced code blocks with language `mermaid` are rendered as SVG via `merman` (headless).
+Rendering runs in the background and is cached via `fret-query`.
+Note: Mermaid SVG often uses `<foreignObject>` for labels; `fret-markdown` uses a best-effort
+text overlay fallback so diagrams remain readable in headless renderers.
+
+Note: `merman` is currently pulled in as a workspace path dependency (`../merman`). Clone the
+`merman` repo next to `fret` (same parent directory) to build Mermaid support.
+
+- Disable Mermaid rendering:
+
+```toml
+fret-markdown = { path = "...", default-features = false }
+```
+
+- Re-enable Mermaid explicitly:
+
+```toml
+fret-markdown = { path = "...", default-features = false, features = ["mermaid"] }
+```
+
 ## Usage
 
 Use `MarkdownComponents` to customize rendering and policies (links, images, code blocks, etc.).
@@ -59,5 +81,5 @@ Code blocks:
 - `MarkdownComponents.code_block_max_height_from_theme` (default: true): disable this to opt out of
   theme-driven `max_height` resolution.
 
-See `docs/adr/0103-text-decorations-and-markdown-theme-tokens.md` for the full token list and
+See `docs/adr/0102-text-decorations-and-markdown-theme-tokens.md` for the full token list and
 compatibility rules.

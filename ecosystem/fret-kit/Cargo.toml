@@ -36,6 +36,7 @@ icons-radix = ["fret-bootstrap/icons-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
 workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "shadcn"]
+router = ["dep:fret-router-ui"]
 
 [dependencies]
 thiserror.workspace = true
@@ -46,6 +47,7 @@ fret = { path = "../../crates/fret", optional = true, default-features = false }
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
 fret-icons = { path = "../fret-icons" }
+fret-router-ui = { path = "../fret-router-ui", optional = true }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-workspace = { path = "../fret-workspace", optional = true }
@@ -57,3 +59,6 @@ fret-launch = { path = "../../crates/fret-launch" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 wgpu = { workspace = true, optional = true }
+
+[dev-dependencies]
+slotmap.workspace = true

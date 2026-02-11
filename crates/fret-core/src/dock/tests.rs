@@ -199,6 +199,44 @@ fn layout_roundtrips_floatings_with_rect_and_order() {
 }
 
 #[test]
+fn dock_layout_json_roundtrips_and_validates() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let main_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, main_tabs);
+
+    let floating_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let floating = g.insert_node(DockNode::Floating {
+        child: floating_tabs,
+    });
+    g.floating_windows_mut(w).push(DockFloatingWindow {
+        floating,
+        rect: rect(10.0, 20.0, 300.0, 200.0),
+    });
+
+    let windows = vec![(w, "main".to_string())];
+    let layout = g.export_layout(&windows);
+
+    let json = serde_json::to_string(&layout).expect("serialize DockLayout");
+    let roundtripped: crate::DockLayout =
+        serde_json::from_str(&json).expect("deserialize DockLayout");
+    roundtripped.validate().expect("DockLayout validates");
+
+    let mut g2 = DockGraph::new();
+    assert!(g2.import_layout_for_windows(&roundtripped, &windows));
+    assert_eq!(g2.collect_panels_in_window(w), vec![panel_a, panel_b]);
+}
+
+#[test]
 fn import_layout_degrades_unmapped_windows_into_floating_containers() {
     let window_a = window(1);
     let panel_a = PanelKey::new("test.a");

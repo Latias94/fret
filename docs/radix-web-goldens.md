@@ -5,7 +5,7 @@ component goldens.
 
 ## Do we need it?
 
-Yes, if the goal is to replicate Radix primitives behavior headlessly (ADR 0090) with high
+Yes, if the goal is to replicate Radix primitives behavior headlessly (ADR 0089) with high
 confidence.
 
 shadcn goldens primarily answer: “does the recipe look/lay out like upstream?”

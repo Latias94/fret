@@ -3,6 +3,7 @@ use super::frame::element_record_for_node;
 use super::prelude::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
 use fret_runtime::CommandId;
+use std::sync::OnceLock;
 
 mod event;
 mod layout;
@@ -10,12 +11,38 @@ mod measure;
 mod paint;
 mod semantics;
 
+fn interactive_resize_text_width_cache_entries() -> usize {
+    static ENTRIES: OnceLock<usize> = OnceLock::new();
+    *ENTRIES.get_or_init(|| {
+        // Default: keep a tiny LRU of prepared text blobs keyed by wrap width during interactive
+        // resize. This can reduce `Text::prepare` churn when the user drags back-and-forth across
+        // a small number of wrap-width buckets (the common "resize jitter" class).
+        //
+        // Default: keep 1 previous width (2 entries total). This keeps the memory cost bounded
+        // (and ephemeral: the cache is released once interactive resize ends) while addressing
+        // the most common "toggle across two buckets" case.
+        std::env::var("FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(2)
+            .min(8)
+    })
+}
+
+#[derive(Debug, Clone)]
+struct CachedPreparedTextByWidth {
+    width: Px,
+    blob: fret_core::TextBlobId,
+    metrics: TextMetrics,
+}
+
 #[derive(Debug, Default, Clone)]
 struct TextCache {
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
     prepared_scale_factor_bits: Option<u32>,
     measured_scale_factor_bits: Option<u32>,
+    prepared_by_width: Vec<CachedPreparedTextByWidth>,
     last_text: Option<std::sync::Arc<str>>,
     last_rich: Option<fret_core::AttributedText>,
     last_style: Option<TextStyle>,
@@ -24,6 +51,48 @@ struct TextCache {
     last_width: Option<Px>,
     last_measure_width: Option<Px>,
     last_font_stack_key: Option<u64>,
+}
+
+impl TextCache {
+    fn release_prepared_by_width(&mut self, services: &mut dyn fret_core::UiServices) {
+        for cached in self.prepared_by_width.drain(..) {
+            services.text().release(cached.blob);
+        }
+    }
+
+    fn take_prepared_for_width(&mut self, width: Px) -> Option<CachedPreparedTextByWidth> {
+        self.prepared_by_width
+            .iter()
+            .position(|v| v.width == width)
+            .map(|idx| self.prepared_by_width.remove(idx))
+    }
+
+    fn push_prepared_for_width(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        max_entries: usize,
+        cached: CachedPreparedTextByWidth,
+    ) {
+        if max_entries <= 1 {
+            services.text().release(cached.blob);
+            return;
+        }
+
+        if let Some(idx) = self
+            .prepared_by_width
+            .iter()
+            .position(|v| v.width == cached.width)
+        {
+            let old = self.prepared_by_width.remove(idx);
+            services.text().release(old.blob);
+        }
+
+        self.prepared_by_width.push(cached);
+        while self.prepared_by_width.len() > max_entries.saturating_sub(1) {
+            let old = self.prepared_by_width.remove(0);
+            services.text().release(old.blob);
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -749,6 +818,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         if let Some(blob) = self.text_cache.blob.take() {
             services.text().release(blob);
         }
+        self.text_cache.release_prepared_by_width(services);
         self.text_cache.prepared_scale_factor_bits = None;
         self.text_cache.metrics = None;
         self.text_cache.last_text = None;

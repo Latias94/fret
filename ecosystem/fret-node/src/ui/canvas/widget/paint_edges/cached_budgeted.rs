@@ -1,5 +1,5 @@
-use super::super::paint_render_data::EdgeRender;
-use super::super::*;
+use crate::ui::canvas::widget::paint_render_data::EdgeRender;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges_cached_budgeted<H: UiHost>(
@@ -206,9 +206,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(2),
                 rect,
-                background: self.style.edge_label_background,
+                background: fret_core::Paint::Solid(self.style.edge_label_background),
+
                 border: Edges::all(Px(border_w)),
-                border_color,
+                border_paint: fret_core::Paint::Solid(border_color),
                 corner_radii: Corners::all(Px(corner_screen.max(0.0) / z)),
             });
 

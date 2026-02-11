@@ -56,11 +56,11 @@ Fret already has most of the primitives needed for a “test-engine-like” work
 
 - Scripted actions + selectors (semantics/test_id first): `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Inspect/picker overlay producing stable selectors: `docs/debugging-ui-with-inspector-and-scripts.md`
-- Portable bundle export (`bundle.json`) + offline viewer: `apps/fretboard/src/diag.rs`, `tools/fret-bundle-viewer`
-- Perf triage and matrix compare: `fretboard diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.ps1`
+- Portable bundle export (`bundle.json`) + offline viewer: `crates/fret-diag/src/lib.rs` (`apps/fretboard/src/diag.rs` wrapper), `tools/fret-bundle-viewer`
+- Perf triage and matrix compare: `fretboard diag perf|stats|compare|matrix`, `tools/diag_matrix_ui_gallery.py`
 - Tracy integration via `tracing`: `docs/tracy.md`
 - RenderDoc scriptable inspection: `docs/renderdoc-inspection.md`, `apps/fret-renderdoc`
-- “Stale paint” detection based on semantics bounds vs scene fingerprint: `apps/fretboard/src/diag.rs` (`--check-stale-paint`)
+- “Stale paint” detection based on semantics bounds vs scene fingerprint: `crates/fret-diag/src/stats.rs` (`--check-stale-paint`)
 
 This workstream should *not* replace those pieces; it should unify and extend them.
 
@@ -121,7 +121,7 @@ This section is a quick “what’s real today vs what we want in v1” checklis
 
 - Screenshot goldens as the primary correctness strategy.
 - Shipping a production inspector UI inside `fret-ui`.
-- Perfect IME record/replay in CI (best effort only; see ADR 0174).
+- Perfect IME record/replay in CI (best effort only; see ADR 0159).
 
 ## Design principles
 
@@ -267,7 +267,7 @@ To support robust automation and repaint debugging, we likely need a few core-le
 2. **`semantics_fingerprint`**
    - A small hash per snapshot enabling “semantics changed but paint didn’t” detection.
 3. **Deterministic “action resolution” mode**
-   - Ensure selector resolution and picking can temporarily disable caching/hitbox elision (ADR 0174).
+   - Ensure selector resolution and picking can temporarily disable caching/hitbox elision (ADR 0159).
 4. **More structured invalidation attribution**
    - The bundle should answer: “this action caused invalidation X because Y” (without scraping logs).
 
@@ -283,7 +283,7 @@ These must remain feature-gated and must not turn `fret-ui` into a policy layer.
 
 ## Suggested next reads
 
-- ADR 0174 (diagnostics + scripted tests): `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- ADR 0159 (diagnostics + scripted tests): `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Debugging workflow: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Bundles + scripts details: `docs/ui-diagnostics-and-scripted-tests.md`
 - Tracy correlation: `docs/tracy.md`

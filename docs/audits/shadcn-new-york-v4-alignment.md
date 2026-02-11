@@ -13,8 +13,9 @@ For coverage status (what is gated vs only has goldens), see:
 - `docs/audits/shadcn-new-york-v4-coverage.md`
 - Chart-specific audit: `docs/audits/shadcn-chart.md`
 - Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
+- Sidebar component-surface + Base UI semantics audit: `docs/audits/shadcn-sidebar.md`
 
-Coverage snapshot (update via `tools/golden_coverage.ps1`):
+Coverage snapshot (update via `tools/golden_coverage.py`):
 
 - shadcn-web `v4/new-york-v4`: `578/578` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-03
 
@@ -35,6 +36,9 @@ These areas have multiple geometry + overlay placement/chrome gates and tend to 
   max-height behavior, and menu row height as a styling outcome).
 - **Sidebar blocks**: sidebar menu-button heights (including the “collapsed overrides size” rule), and a dialog
   portal placement gate for `sidebar-13` (`*.open.json`).
+- Status note (2026-02-08): the Sidebar bullet above describes existing high-signal gates only.
+  Full Sidebar component-surface parity and Base UI contract alignment are tracked in
+  `docs/audits/shadcn-sidebar.md`.
 - **Calendar (single-month variants)**: day grid geometry + ARIA label strings; outside-days + week number
   behaviors that are easy to drift when refactoring.
 - **Typography**: breadth gates for `typography-*` pages (geometry + recorded text style inputs; inline-code padding tolerates sub-pixel rounding).
@@ -471,8 +475,8 @@ Conformance gates:
   - Nested group spacing: `has-[>[data-slot=button-group]]:gap-2` (8px) should be reflected in Fret flex gap.
   - Border merge: `border-l-0` on non-first buttons (avoids double borders).
   - Radius merge: `rounded-l-none` / `rounded-r-none` on middle buttons (keeps only outer corners rounded).
-  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0117).
-  - Scope: do not introduce generic slot/asChild support (see ADR 0117).
+  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0115).
+  - Scope: do not introduce generic slot/asChild support (see ADR 0115).
 - Conformance gates:
   - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_demo_button_chrome_matches`).

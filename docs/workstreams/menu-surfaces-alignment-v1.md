@@ -13,7 +13,7 @@ This workstream is about preventing **behavior drift** between Fret’s menu sur
 It complements (but does not replace) existing ADRs and workstreams:
 
 - Data-only menu model: ADR 0023 (`docs/adr/0023-command-metadata-menus-and-palette.md`)
-- OS menubar seam: ADR 0183 (`docs/adr/0183-os-menubar-effect-setmenubar.md`)
+- OS menubar seam: ADR 0168 (`docs/adr/0168-os-menubar-effect-setmenubar.md`)
 - OS menubar tracker: `docs/workstreams/os-menubar.md`
 - Overlay policy split: ADR 0067 (`docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`)
 - Focus + command routing: ADR 0020 (`docs/adr/0020-focus-and-command-routing.md`)
@@ -116,7 +116,7 @@ Evidence:
 
 2) **One data model**
    - `fret-runtime::MenuBar/MenuItem` remains the shared menu structure contract.
-   - Customization continues to be layered via `menubar.json` (ADR 0014 / ADR 0183).
+   - Customization continues to be layered via `menubar.json` (ADR 0014 / ADR 0168).
 
 3) **One gating model**
    - All menu surfaces use `WindowCommandGatingSnapshot` (or best-effort snapshot helpers) for

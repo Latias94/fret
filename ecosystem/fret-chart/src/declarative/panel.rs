@@ -170,7 +170,7 @@ pub struct ChartCanvasPanelProps {
     pub engine: Option<Model<ChartEngine>>,
     pub spec: delinea::ChartSpec,
 
-    /// Optional formatter hook for axis-trigger tooltips (ADR 1148).
+    /// Optional formatter hook for axis-trigger tooltips (ADR 0209).
     ///
     /// When `None`, `DefaultTooltipFormatter` is used.
     pub tooltip_formatter: Option<Arc<dyn TooltipFormatter>>,
@@ -749,9 +749,10 @@ pub fn chart_canvas_panel<H: UiHost>(
             painter.scene().push(fret_core::SceneOp::Quad {
                 order: DrawOrder(style.draw_order.0.saturating_sub(1)),
                 rect: bounds,
-                background,
+                background: fret_core::Paint::Solid(background),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -841,9 +842,9 @@ pub fn chart_canvas_panel<H: UiHost>(
                             painter.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(style.draw_order.0.saturating_add(node.order.0)),
                                 rect: *rect,
-                                background,
+                                background: fret_core::Paint::Solid(background),
                                 border: Edges::all(stroke_width),
-                                border_color,
+                                border_paint: fret_core::Paint::Solid(border_color),
                                 corner_radii: Corners::all(Px(0.0)),
                             });
                         }
@@ -892,9 +893,10 @@ pub fn chart_canvas_panel<H: UiHost>(
                                     Point::new(Px(p.x.0 - point_r), Px(p.y.0 - point_r)),
                                     Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
                                 ),
-                                background: fill,
+                                background: fret_core::Paint::Solid(fill),
+
                                 border: Edges::all(stroke_width),
-                                border_color,
+                                border_paint: fret_core::Paint::Solid(border_color),
                                 corner_radii: Corners::all(Px(point_r)),
                             });
                         }
@@ -915,9 +917,11 @@ pub fn chart_canvas_panel<H: UiHost>(
                     painter.scene().push(fret_core::SceneOp::Quad {
                         order: shadow_order,
                         rect,
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 } else {
@@ -941,9 +945,11 @@ pub fn chart_canvas_panel<H: UiHost>(
                                 Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
                                 Size::new(Px(crosshair_w), plot.size.height),
                             ),
-                            background: style.crosshair_color,
+                            background: fret_core::Paint::Solid(style.crosshair_color),
+
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     }
@@ -954,9 +960,11 @@ pub fn chart_canvas_panel<H: UiHost>(
                                 Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
                                 Size::new(plot.size.width, Px(crosshair_w)),
                             ),
-                            background: style.crosshair_color,
+                            background: fret_core::Paint::Solid(style.crosshair_color),
+
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     }
@@ -972,9 +980,11 @@ pub fn chart_canvas_panel<H: UiHost>(
                         Point::new(Px(point.x.0 - r), Px(point.y.0 - r)),
                         Size::new(Px(size), Px(size)),
                     ),
-                    background: style.hover_point_color,
+                    background: fret_core::Paint::Solid(style.hover_point_color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(r)),
                 });
             }

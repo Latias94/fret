@@ -10,7 +10,7 @@ Tracking:
 - TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
 - Shadcn declarative progress: `docs/shadcn-declarative-progress.md` (component parity + `ui()` coverage table)
 - Authoring-model ADR (macros planned, not implemented): `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
-- Unified builder ADR (ecosystem-only): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- Unified builder ADR (ecosystem-only): `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 
 ---
 

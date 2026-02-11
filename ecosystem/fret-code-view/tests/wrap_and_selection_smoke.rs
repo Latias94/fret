@@ -360,6 +360,19 @@ impl fret_core::SvgService for RecordingUiServices {
     }
 }
 
+impl fret_core::MaterialService for RecordingUiServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 #[test]
 fn code_block_wrap_grapheme_and_selection_smoke() {
     let mut app = TestHost::default();

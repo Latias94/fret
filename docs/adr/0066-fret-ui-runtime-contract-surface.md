@@ -46,7 +46,7 @@ must name at least one authoritative upstream reference.
 deterministically:
 
 - event routing (pointer/keyboard), hit testing, focus + capture, focus-visible,
-- render transforms that keep paint + hit testing + event coordinates consistent (ADR 0083),
+- render transforms that keep paint + hit testing + event coordinates consistent (ADR 0082),
 - deterministic multi-root layering (overlays/barriers) and scene operations,
 - declarative element tree hosting (ADR 0028 / ADR 0039) and layout vocabulary (`LayoutStyle`),
 - scroll + virtualization contracts (handles + algorithms),

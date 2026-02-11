@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 use crate::core::EdgeId;
 use crate::rules::EdgeEndpoint;
 
-use super::super::state::ViewSnapshot;
 use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

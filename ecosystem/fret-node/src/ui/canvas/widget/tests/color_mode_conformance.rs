@@ -2,10 +2,9 @@ use fret_core::{AppWindowId, NodeId as UiNodeId, Point, Px, Rect, Scene, Size, T
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::io::NodeGraphViewState;
 use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes};
+use super::{NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -47,10 +46,8 @@ fn color_mode_system_syncs_style_from_theme() {
         Size::new(Px(800.0), Px(600.0)),
     );
 
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::System);
 
@@ -68,10 +65,8 @@ fn color_mode_light_forces_light_palette() {
         Size::new(Px(800.0), Px(600.0)),
     );
 
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::Light);
 
@@ -92,10 +87,8 @@ fn color_mode_dark_forces_dark_palette() {
         Size::new(Px(800.0), Px(600.0)),
     );
 
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_color_mode(NodeGraphColorMode::Dark);
 

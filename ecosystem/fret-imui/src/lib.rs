@@ -54,7 +54,7 @@ pub fn imui_vstack<'a, H: UiHost>(
     props.layout.size.height = Length::Fill;
 
     let element = cx.column(props, |cx| imui(cx, f));
-    vec![element].into()
+    element.into()
 }
 
 pub fn imui_build<'a, H: UiHost>(
@@ -249,6 +249,19 @@ mod tests {
 
         fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
             false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
         }
     }
 

@@ -43,7 +43,7 @@ Expected semantics outcomes:
 
 - Popover root is `List`.
 - Items are exposed as `ListItem` with correct `disabled/selected` flags.
-- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
+- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0084).
 
 ### 2) Context menu
 
@@ -58,7 +58,7 @@ Expected semantics outcomes:
 
 - Context menu root is `Menu`.
 - Items are exposed as `MenuItem` with correct `disabled/selected/expanded` flags.
-- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
+- Items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0084).
 
 ### 3) Combobox (typeahead + popover list)
 
@@ -75,7 +75,7 @@ Expected semantics outcomes:
 - Combobox surface role is `ComboBox` (not only `TextField`).
 - `value` reflects the current input text.
 - `expanded` tracks whether the popover request exists for this owner.
-- List items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0085).
+- List items include `pos_in_set` / `set_size` so AT can announce “Item X of Y” (ADR 0084).
 
 ## Recommended tooling (platform-specific)
 
@@ -117,6 +117,6 @@ cargo nextest run -p fret-a11y-accesskit
   relationships (ARIA `controls/owns/activedescendant`-style linkage). If parity needs it, extend
   `fret-core` semantics schema behind an ADR + tests.
 - Very large menus/lists can be expensive to expose in full to assistive technology.
-  Prefer virtualized list surfaces for long collections, and follow ADR 0085’s rules:
+  Prefer virtualized list surfaces for long collections, and follow ADR 0084’s rules:
   `active_descendant` must reference an item that is present in the current snapshot and within the
   active modal barrier scope, and visible items should include `pos_in_set` / `set_size` when known.

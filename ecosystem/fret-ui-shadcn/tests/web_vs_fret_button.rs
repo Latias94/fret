@@ -329,6 +329,19 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn find_button_quad_style(
     scene: &Scene,
     button_bounds: Rect,
@@ -358,10 +371,16 @@ fn find_button_quad_style(
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 corner_radii,
                 ..
             } if rect == button_bounds => {
+                let fret_core::Paint::Solid(background) = background else {
+                    continue;
+                };
+                let fret_core::Paint::Solid(border_color) = border_paint else {
+                    continue;
+                };
                 return (
                     rect,
                     background,
@@ -486,24 +505,28 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
         CoreSize::new(Px(320.0), Px(180.0)),
     );
 
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "web-vs-fret-button-pressed",
-        |cx| {
-            vec![
-                fret_ui_shadcn::Button::new("Button")
-                    .variant(variant)
-                    .into_element(cx),
-            ]
-        },
-    );
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "web-vs-fret-button-pressed",
+            |cx| {
+                vec![
+                    fret_ui_shadcn::Button::new("Button")
+                        .variant(variant)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    };
+
+    render_frame(&mut ui, &mut app, &mut services);
 
     let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
     let button_bounds = semantics
@@ -542,25 +565,7 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
     );
 
     // Re-render after the interaction so pressable state is reflected in chrome props.
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "web-vs-fret-button-pressed",
-        |cx| {
-            vec![
-                fret_ui_shadcn::Button::new("Button")
-                    .variant(variant)
-                    .into_element(cx),
-            ]
-        },
-    );
-    ui.set_root(root);
-
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    render_frame(&mut ui, &mut app, &mut services);
 
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
@@ -623,24 +628,28 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
         CoreSize::new(Px(320.0), Px(180.0)),
     );
 
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "web-vs-fret-button-hover",
-        |cx| {
-            vec![
-                fret_ui_shadcn::Button::new("Button")
-                    .variant(variant)
-                    .into_element(cx),
-            ]
-        },
-    );
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "web-vs-fret-button-hover",
+            |cx| {
+                vec![
+                    fret_ui_shadcn::Button::new("Button")
+                        .variant(variant)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    };
+
+    render_frame(&mut ui, &mut app, &mut services);
 
     let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
     let button_bounds = semantics
@@ -667,25 +676,7 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
     );
 
     // Re-render so hover state is reflected in chrome props.
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "web-vs-fret-button-hover",
-        |cx| {
-            vec![
-                fret_ui_shadcn::Button::new("Button")
-                    .variant(variant)
-                    .into_element(cx),
-            ]
-        },
-    );
-    ui.set_root(root);
-
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    render_frame(&mut ui, &mut app, &mut services);
 
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);

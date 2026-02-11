@@ -165,6 +165,8 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
@@ -213,6 +215,8 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 
@@ -343,7 +347,8 @@ unsafe fn append_menu_item(
         MenuItem::Label { title } => {
             let item = NSMenuItem::new(nil).autorelease();
             let _: () = msg_send![item, setTitle: ns_string(title)];
-            item.setEnabled_(false);
+            // Avoid relying on deprecated cocoa trait surface; send the selector directly.
+            let _: () = msg_send![item, setEnabled: false];
             menu.addItem_(item);
         }
         MenuItem::Submenu { title, items, .. } => {
@@ -706,6 +711,8 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
 

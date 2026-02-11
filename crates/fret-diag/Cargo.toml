@@ -1,0 +1,21 @@
+[package]
+name = "fret-diag"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+
+[dependencies]
+serde_json.workspace = true
+zip.workspace = true
+image.workspace = true
+windows-sys.workspace = true
+sysinfo.workspace = true
+
+fret-diag-protocol = { path = "../fret-diag-protocol" }
+fret-diag-ws = { path = "../fret-diag-ws", default-features = false, features = ["client-native"] }

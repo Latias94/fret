@@ -55,13 +55,15 @@ impl ElementHostWidget {
             return;
         };
 
-        match instance {
-            ElementInstance::PointerRegion(props) => {
-                if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
-                    pointer_region::handle_pointer_region(self, cx, window, props, event);
-                }
-            }
-            _ => {}
+        if let ElementInstance::PointerRegion(props) = instance
+            && matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Down { .. })
+                    | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                    | Event::PointerCancel(_)
+            )
+        {
+            pointer_region::handle_pointer_region(self, cx, window, props, event);
         }
     }
 

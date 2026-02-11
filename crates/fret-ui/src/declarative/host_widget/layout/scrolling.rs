@@ -99,17 +99,12 @@ fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 enum ScrollDeferredUnboundedProbeKind {
+    #[default]
     None,
     Invalidation,
     Resize,
-}
-
-impl Default for ScrollDeferredUnboundedProbeKind {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -611,7 +606,7 @@ impl ElementHostWidget {
                 });
         }
 
-        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0190):
+        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0175):
         // - retained hosts reconcile during prepaint,
         // - non-retained lists schedule a one-shot rerender during prepaint.
         //

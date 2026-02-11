@@ -43,6 +43,7 @@ pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
 pub mod experimental;
+pub mod extras;
 pub mod field;
 pub mod form;
 pub mod hover_card;
@@ -53,6 +54,7 @@ pub mod item;
 pub mod kbd;
 pub mod label;
 mod layout;
+pub mod media_image;
 pub mod menubar;
 pub mod native_select;
 pub mod navigation_menu;
@@ -144,6 +146,7 @@ pub use context_menu::{
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
+pub use media_image::MediaImage;
 /// Default high-performance data grid surface (canvas-rendered).
 ///
 /// This is the "performance ceiling" option for spreadsheet-scale density:
@@ -241,14 +244,19 @@ pub use sheet::{
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
-    Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
-    SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+    Sidebar, SidebarCollapsible, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction,
+    SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput, SidebarInset, SidebarMenu,
+    SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
+    SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
+    SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
+    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
 pub use sonner::{
-    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
-    ToastVariant, Toaster,
+    Sonner, ToastAction, ToastIconOverride, ToastIconOverrides, ToastId, ToastMessageOptions,
+    ToastOffset, ToastPosition, ToastPromise, ToastPromiseAsyncOptions, ToastPromiseHandle,
+    ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};
@@ -270,7 +278,10 @@ pub use tooltip::{
 };
 
 #[cfg(feature = "app-integration")]
-pub use app_integration::{install, install_app, install_app_with, install_app_with_theme};
+pub use app_integration::{
+    ShadcnInstallConfig, install, install_app, install_app_with, install_app_with_theme,
+    sync_theme_from_environment,
+};
 
 pub use ::fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.

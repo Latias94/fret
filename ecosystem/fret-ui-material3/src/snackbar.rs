@@ -16,6 +16,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{
     OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastId, ToastLayerStyle,
     ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
@@ -70,10 +71,7 @@ impl Snackbar {
     }
 
     pub fn action(mut self, label: impl Into<Arc<str>>, command: CommandId) -> Self {
-        self.action = Some(ToastAction {
-            label: label.into(),
-            command,
-        });
+        self.action = Some(ToastAction::new(label, command));
         self
     }
 
@@ -92,9 +90,11 @@ impl Snackbar {
         if let Some(desc) = self.supporting_text {
             req = req.description(desc);
         }
-        req.duration = self.duration.to_duration();
-        req.action = self.action;
-        req.dismissible = self.dismissible;
+        req = req.duration(self.duration.to_duration());
+        if let Some(action) = self.action {
+            req = req.action(action);
+        }
+        req = req.dismissible(self.dismissible);
         req
     }
 }
@@ -191,10 +191,10 @@ impl SnackbarHost {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
-            let theme = Theme::global(&*cx.app).clone();
 
             let config_changed = cx.with_state(SnackbarHostConfigState::default, |st| {
                 let max = Some(self.max_snackbars);
@@ -210,7 +210,7 @@ impl SnackbarHost {
                 });
             }
 
-            let style = snackbar_toast_layer_style(&theme);
+            let style = cx.with_theme(snackbar_toast_layer_style);
 
             let mut request = OverlayRequest::toast_layer(id, self.store.clone())
                 .toast_position(self.position)
@@ -273,5 +273,6 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         action: snackbar_tokens::action_button_style(theme),
         cancel: ToastButtonStyle::default(),
         close: snackbar_tokens::close_icon_button_style(theme),
+        ..ToastLayerStyle::default()
     }
 }

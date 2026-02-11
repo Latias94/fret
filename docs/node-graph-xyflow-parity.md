@@ -11,7 +11,7 @@ files in `repo-ref/xyflow` and the current (or planned) module in `fret-node`.
 If you are looking for overall sequencing and milestones, see `docs/node-graph-roadmap.md`.
 If you are looking for an execution plan (milestones + deliverables), see
 `docs/workstreams/fret-node-xyflow-parity.md`.
-If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
+If you are looking for contracts, see `docs/adr/0126-node-graph-editor-and-typed-connections.md`.
 If you are looking for an API-level guide, see `docs/node-graph-how-to-build-like-xyflow.md`.
 
 ## How to use this doc
@@ -48,6 +48,7 @@ For the detailed internals contract checklist, see `docs/workstreams/fret-node-i
 - **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`DerivedBuildCounters`) + `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Semantic zoom discipline** (node sizes stay constant in window space; geometry rebuild is scoped and deterministic).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Hit-testing determinism** (same inputs → same hit results; Strict vs Loose modes are stable).
@@ -111,7 +112,7 @@ XyFlow is split into:
 
 ## fret-node code map (where to look)
 
-High-level layering (ADR 0135):
+High-level layering (ADR 0126):
 
 - **Graph model (serializable)**: `ecosystem/fret-node/src/core/*`
 - **Headless policies (optional)**: `ecosystem/fret-node/src/rules/*`, `ecosystem/fret-node/src/profile/*`
@@ -147,7 +148,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Internals update pipeline ("node internals" as derived UI state)**
   - XyFlow: `updateNodeInternals(...)` in `repo-ref/xyflow/packages/react/src/store/index.ts`
-  - fret-node: `NodeGraphInternalsStore`, `MeasuredGeometryStore`, `CanvasGeometry`, `CanvasSpatialIndex`
+  - fret-node: `NodeGraphInternalsStore`, `MeasuredGeometryStore`, `CanvasGeometry`, `CanvasSpatialDerived` (wraps `CanvasSpatialIndex` + `CanvasPortEdgeAdjacency`)
 
 - [~] **Canonical lookup maps (nodeLookup/edgeLookup/connectionLookup)**
   - XyFlow: store `nodeLookup`, `edgeLookup`, `connectionLookup` (React runtime)
@@ -360,7 +361,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [x] **Viewport persistence contract**
   - XyFlow: app decides; store holds `transform`
   - fret-node:
-    - contract: `docs/adr/0135-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
+    - contract: `docs/adr/0126-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
     - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewStateFileV1`, `default_project_view_state_path`)
     - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
 
@@ -385,13 +386,15 @@ canonical data flow and invalidation boundaries:
     - conservative AABBs used for spatial indexing and culling.
   - Built and cached by: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/{base_cache,cache_keys,updates,spatial_index}.rs`
   - Invalidation key (must remain stable and auditable):
-    - graph revision + zoom + node-origin + draw order hash + presenter revision + edgeTypes revision.
+    - graph revision + zoom + node-origin + draw order fingerprint + presenter revision + edgeTypes revision.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).
     - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+    - Rebuild counters (`DerivedBuildCounters`) increment only on cache-key changes and are asserted by conformance tests.
+    - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Spatial index (canvas space, UI-only)**
-  - `CanvasSpatialIndex` is an acceleration structure built from `Graph + CanvasGeometry` and
-    spatial tuning, used by hit-testing and previews.
-  - Built by: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
+  - `CanvasSpatialDerived` is derived output built from `Graph + CanvasGeometry` and spatial tuning, used by hit-testing and previews.
+    - It bundles the coarse rect/radius query acceleration structure (`CanvasSpatialIndex`), port→edge adjacency (`CanvasPortEdgeAdjacency`), and edge-AABB padding policy.
+  - Built by: `ecosystem/fret-node/src/ui/canvas/spatial.rs` and wired by `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
   - Edge AABB padding is treated as a correctness guardrail: it must cover at least the effective
     edge hit slop (`edge_interaction_width`) and the visible wire stroke width (`NodeGraphStyle.wire_width`),
     even if the tuning knobs are reduced.
@@ -406,7 +409,7 @@ canonical data flow and invalidation boundaries:
     a geometry rebuild.
 - **Hit-testing (consumer)**
   - All pointer hit-testing and connection candidate selection must use `CanvasGeometry` +
-    `CanvasSpatialIndex` (never ad-hoc “layout guesses”).
+    `CanvasSpatialDerived` (never ad-hoc “layout guesses”).
 - Implemented in: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
 
 ## 2.1 User node vs internal node separation
@@ -866,7 +869,7 @@ canonical data flow and invalidation boundaries:
 
 - [x] **Escape hatch for complex widgets (IME/text/clipboard)**
   - XyFlow: DOM is native; overlays are just DOM
-  - fret-node: `NodeGraphPortalHost` mounts `fret-ui` subtrees per node in window-space (ADR 0135 Stage 2)
+  - fret-node: `NodeGraphPortalHost` mounts `fret-ui` subtrees per node in window-space (ADR 0126 Stage 2)
 
 - [x] **Overlay input transparency by default**
   - XyFlow: most overlays are pointer-events: none except interactive controls
@@ -923,6 +926,10 @@ canonical data flow and invalidation boundaries:
     - deterministic fragment payload: `ecosystem/fret-node/src/ops/fragment.rs` (`GraphFragment`)
     - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardSetText` / `ClipboardGetText`)
     - captures selected nodes + selected groups (including group children) + internal edges
+    - subgraph payload hygiene: referenced imports are included for pasted subgraph nodes, and duplicated imports are filtered at apply points
+      - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
+    - symbol-ref payload hygiene: pasted symbol-ref nodes rebind to remapped pasted symbol IDs (no stale source symbol IDs)
+      - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_paste_transaction_remaps_symbol_ref_targets_to_pasted_symbols`)
 
 ---
 
@@ -933,8 +940,9 @@ canonical data flow and invalidation boundaries:
   - fret-node:
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
     - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [x] edge paint culling uses a spatial index rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialIndex::query_edges_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [x] node visibility culling uses a spatial index rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialIndex::query_nodes_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
+    - [x] edge paint culling uses a spatial rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_edges_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
+    - [x] node visibility culling uses a spatial rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialDerived::query_nodes_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
+    - [x] culling metrics gate (candidate/visible counts shrink when culling is enabled): `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
     - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [~] incremental scene op updates (true retained scene graph diffing)

@@ -29,6 +29,7 @@ mod label;
 mod menubar;
 mod native_select;
 mod navigation_menu;
+mod shadcn_extras;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -180,6 +181,10 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     navigation_menu::preview_navigation_menu(cx)
 }
 
+pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    shadcn_extras::preview_shadcn_extras(cx)
+}
+
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     drawer::preview_drawer(cx)
 }
@@ -227,7 +232,7 @@ pub(super) fn render_component_page_tabs(
             shadcn::TabsItem::new("notes", "Notes", [notes_panel]),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id(format!("{test_id_prefix}-tabs")));
+        .test_id(format!("{test_id_prefix}-tabs"));
 
     vec![tabs]
 }

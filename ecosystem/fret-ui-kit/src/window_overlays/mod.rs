@@ -15,8 +15,8 @@ mod toast;
 #[cfg(test)]
 mod tests;
 
-use fret_core::AppWindowId;
-use fret_runtime::FrameId;
+use fret_core::{AppWindowId, NodeId};
+use fret_runtime::{FrameId, Model};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
@@ -38,18 +38,26 @@ pub use names::{
 pub use render::render;
 pub use requests::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastButtonStyle,
-    ToastIconButtonStyle, ToastLayerRequest, ToastLayerStyle, ToastTextStyle, ToastVariantColors,
-    ToastVariantPalette, TooltipRequest,
+    ToastIconButtonStyle, ToastIconOverride, ToastIconOverrides, ToastLayerRequest,
+    ToastLayerStyle, ToastOffset, ToastTextStyle, ToastVariantColors, ToastVariantPalette,
+    TooltipRequest,
 };
 pub use toast::{
     DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
-    DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
-    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_toast_action, toast_action,
-    toast_store,
+    DEFAULT_SWIPE_THRESHOLD_PX, DEFAULT_TOAST_DURATION, DEFAULT_VISIBLE_TOASTS, ToastAction,
+    ToastAsyncMsg, ToastAsyncQueueHandle, ToastId, ToastPosition, ToastRequest, ToastStore,
+    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_all_toasts_action,
+    dismiss_toast_action, toast_action, toast_async_queue, toast_store,
 };
+
+#[allow(unused_imports)]
+pub use toast::{ToastDescription, ToastDuration, ToastSwipeDirections};
 
 /// Radix `ToastViewport` focus-jump command (default hotkey: `F8`).
 pub const TOAST_VIEWPORT_FOCUS_COMMAND: &str = "toast.viewport.focus";
+
+/// Restores focus after a `ToastViewport` focus jump (default hotkey: `Escape` while focused).
+pub const TOAST_VIEWPORT_RESTORE_COMMAND: &str = "toast.viewport.restore";
 
 /// Attempts to handle a window-scoped command that targets overlay substrates.
 ///
@@ -61,42 +69,110 @@ pub fn try_handle_window_command<H: UiHost>(
     window: AppWindowId,
     command: &fret_runtime::CommandId,
 ) -> bool {
-    if command.as_str() != TOAST_VIEWPORT_FOCUS_COMMAND {
+    let cmd = command.as_str();
+    if cmd != TOAST_VIEWPORT_FOCUS_COMMAND && cmd != TOAST_VIEWPORT_RESTORE_COMMAND {
         return false;
     }
 
-    let layer = app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
-        overlays
-            .toast_layers
-            .iter()
-            .find_map(|((w, _id), active)| (*w == window).then_some(active.layer))
-    });
+    let before = ui.focus();
 
-    let Some(layer) = layer else {
-        return false;
-    };
-    if !ui.is_layer_visible(layer) {
+    let mut candidates: Vec<(GlobalElementId, UiLayerId, Option<Model<ToastStore>>)> = app
+        .with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+            overlays
+                .toast_layers
+                .iter()
+                .filter_map(|((w, id), active)| {
+                    if *w != window {
+                        return None;
+                    }
+                    let store = overlays
+                        .cached_toast_layer_requests
+                        .get(&(*w, *id))
+                        .map(|req| req.store.clone());
+                    Some((*id, active.layer, store))
+                })
+                .collect()
+        });
+    if candidates.is_empty() {
         return false;
     }
 
-    let Some(root) = ui.layer_root(layer) else {
+    // Prefer the toast layer that currently contains focus (restore), otherwise fall back to the
+    // first visible toast layer.
+    let mut chosen: Option<(
+        GlobalElementId,
+        UiLayerId,
+        Option<Model<ToastStore>>,
+        NodeId,
+    )> = None;
+    for (id, layer, store) in candidates.drain(..) {
+        if !ui.is_layer_visible(layer) {
+            continue;
+        }
+        let Some(root) = ui.layer_root(layer) else {
+            continue;
+        };
+        if cmd == TOAST_VIEWPORT_RESTORE_COMMAND
+            && before.is_some_and(|focused| ui.is_descendant(root, focused))
+        {
+            chosen = Some((id, layer, store, root));
+            break;
+        }
+        if chosen.is_none() {
+            chosen = Some((id, layer, store, root));
+        }
+    }
+
+    let Some((toaster_key, _layer, store, root)) = chosen else {
         return false;
     };
 
-    if let Some(prev) = ui.focus() {
+    if cmd == TOAST_VIEWPORT_FOCUS_COMMAND && before != Some(root) {
+        app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+            overlays.toast_viewport_restore_focus.insert(window, before);
+        });
+    }
+
+    if let Some(store) = store {
+        let _ = app.models_mut().update(&store, |st| {
+            st.set_toaster_hotkey_expanded(window, toaster_key, cmd == TOAST_VIEWPORT_FOCUS_COMMAND)
+        });
+    }
+
+    if cmd == TOAST_VIEWPORT_FOCUS_COMMAND {
+        ui.set_focus(Some(root));
+    } else {
+        let restore =
+            app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+                overlays
+                    .toast_viewport_restore_focus
+                    .remove(&window)
+                    .unwrap_or(before)
+            });
+        match restore {
+            Some(node) => ui.set_focus(Some(node)),
+            None => ui.set_focus(None),
+        }
+    }
+
+    let after = ui.focus();
+    let focus_changed = before != after;
+
+    if focus_changed {
+        if let Some(prev) = before {
+            ui.invalidate_with_source(
+                prev,
+                Invalidation::Paint,
+                fret_ui::tree::UiDebugInvalidationSource::Focus,
+            );
+        }
         ui.invalidate_with_source(
-            prev,
+            root,
             Invalidation::Paint,
             fret_ui::tree::UiDebugInvalidationSource::Focus,
         );
+        app.request_redraw(window);
     }
-    ui.set_focus(Some(root));
-    ui.invalidate_with_source(
-        root,
-        Invalidation::Paint,
-        fret_ui::tree::UiDebugInvalidationSource::Focus,
-    );
-    app.request_redraw(window);
     true
 }
 

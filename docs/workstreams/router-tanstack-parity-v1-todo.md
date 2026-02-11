@@ -1,6 +1,6 @@
 # Router (TanStack Parity) v1 (Tracking)
 
-Last updated: 2026-02-07
+Last updated: 2026-02-08
 
 This file tracks concrete work for:
 
@@ -14,58 +14,80 @@ Status legend:
 
 ## Phase 0 - Decisions and scope
 
-- `[ ]` Confirm router instance ownership model:
+- `[x]` Confirm router instance ownership model:
   - shared `RouteTree`, per-window `RouterState` + history (recommended)
-- `[ ]` Confirm search typing strategy:
+- `[x]` Confirm search typing strategy:
   - progressive typing (recommended)
-- `[ ]` Confirm loader backend:
+- `[x]` Confirm loader backend:
   - `fret-query` primary integration (recommended)
 
 ## Phase 1 - Match chain core
 
-- `[ ]` Add `RouteTree` definition surface (builder API; macro-free).
-- `[ ]` Add `match_routes(RouteLocation) -> Vec<RouteMatch>` with accumulated:
+- `[x]` Add `RouteTree` definition surface (builder API; macro-free).
+- `[x]` Add `match_routes(RouteLocation) -> Vec<RouteMatch>` with accumulated:
   - `full_path`
   - `params`
   - raw `search` (pre-validation)
-- `[ ]` Add deterministic not-found handling:
+- `[x]` Add deterministic not-found handling:
   - global not-found route, and/or per-subtree not-found route
-- `[ ]` Add ambiguity diagnostics for overlapping route patterns.
-- `[ ]` Add unit tests for nested routes and not-found behavior.
+- `[x]` Add ambiguity diagnostics for overlapping route patterns.
+- `[x]` Add unit tests for nested routes and not-found behavior.
 
 ## Phase 2 - Search validation and stabilization
 
-- `[ ]` Define canonical `SearchMap` representation (stable + duplicates preserved).
-- `[ ]` Add per-route `validate_search(parent_search, raw_search)` hook.
-- `[ ]` Define error handling policy:
+- `[x]` Define canonical `SearchMap` representation (stable + duplicates preserved).
+- `[x]` Add lightweight typed search helpers:
+  - `SearchValue` + `SearchMap::{first_typed, values_typed, with_typed}`
+- `[x]` Add per-route `validate_search(parent_search, raw_search)` hook.
+- `[x]` Define error handling policy:
   - “throw” vs “recover with raw search” (TanStack has both)
-- `[ ]` Add tests:
+- `[x]` Add a lightweight build-location helper:
+  - `Router::build_location` / `Router::build_location_for_route`
+- `[x]` Add tests:
   - parent -> child accumulation
   - error path behavior
 
 ## Phase 3 - RouterState + history adapters
 
-- `[ ]` Add `RouterState` (location, matches, status, last_transition).
-- `[ ]` Define `RouterTransition` snapshot (portable, serializable).
-- `[ ]` Define `HistoryAdapter` trait and implement:
+- `[x]` Add `RouterState` (location, matches, status, last_transition).
+- `[x]` Define `RouterTransition` snapshot (portable; diagnostics-friendly).
+- `[x]` Add `RouterUpdate` return type for `navigate` / `sync`.
+- `[x]` Add `RouterEvent` queue (`Router::take_events()`).
+- `[x]` Add guard contract:
+  - `Push`/`Replace`: pre-guard (block/redirect)
+  - `Back`/`Forward`: pre-guard when history can peek, post-guard fallback otherwise
+- `[x]` Add redirect loop detection + hop limit (default 4).
+- `[x]` Define `HistoryAdapter` trait and implement:
   - memory adapter (wrap `MemoryHistory`)
   - web history adapter (wrap existing `web-history`)
   - hash adapter (wrap existing `hash-routing`)
-- `[ ]` Add integration tests for:
+- `[x]` Add integration tests for:
   - back/forward restore
   - deep-link open -> matches computed
 
 ## Phase 4 - `fret-query` loader integration
 
-- `[ ]` Define route->query key conventions for loader-like behavior.
-- `[ ]` Add transition-based invalidate/prefetch planning:
+- `[x]` Define route->query key conventions for loader-like behavior.
+- `[x]` Add transition-based invalidate/prefetch planning:
   - input: `RouterTransition`
   - output: list of namespaces + keys to prefetch
-- `[ ]` Add race/cancellation tests for rapid route changes.
+- `[x]` Add route-level hook surface (ADR 0230):
+  - `before_load` (per-route middleware)
+  - `loader` (prefetch intents)
+- `[x]` Add update-scoped helpers:
+  - `Router::navigate_with_prefetch_intents`
+  - `Router::sync_with_prefetch_intents`
+- `[x]` Support initial load prefetch without navigation:
+  - `Router::init_with_prefetch_intents`
+- `[x]` Add race/cancellation tests for rapid route changes.
 
 ## Phase 5 - App adoption
 
-- `[ ]` Add an app-level reference integration example:
+- `[x]` Add an app-level reference integration example:
   - window-scoped router state + navigation commands
   - query prefetch tied to route matches
-
+- `[x]` Wire UI Gallery page history navigation:
+  - add `Back`/`Forward` commands driven by the router history stack
+- `[x]` Adopt a real web history adapter in an app:
+  - `WebHistoryAdapter` in `fret-ui-gallery` (wasm)
+  - sync router state on browser navigation (`popstate`) via `router.sync_with_prefetch_intents()`

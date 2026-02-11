@@ -12,6 +12,7 @@ use fret_ui::elements::GlobalElementId;
 ///
 /// This matches the common shadcn/Radix mental model of:
 /// `Pressable (focus ring) -> SurfaceChrome (overflow-hidden) -> content`.
+#[track_caller]
 pub fn control_chrome_pressable_with_id_props<'a, H, F, C, I>(
     cx: &mut ElementContext<'a, H>,
     f: F,

@@ -389,14 +389,15 @@ impl WinitAppDriver for EffectsDemoDriver {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: full,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.08,
                 g: 0.09,
                 b: 0.12,
                 a: 1.0,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -420,9 +421,11 @@ impl WinitAppDriver for EffectsDemoDriver {
                     Point::new(Px(x), bounds.origin.y),
                     Size::new(Px(stripe_w), Px(h)),
                 ),
-                background: Color { r, g, b, a: 1.0 },
+                background: fret_core::Paint::Solid(Color { r, g, b, a: 1.0 }),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -452,14 +455,15 @@ impl WinitAppDriver for EffectsDemoDriver {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(order),
                 rect,
-                background: Color {
+                background: fret_core::Paint::Solid(Color {
                     r: 0.0,
                     g: 0.0,
                     b: 0.0,
                     a: 0.0,
-                },
+                }),
                 border: Edges::all(Px(2.0)),
-                border_color: color,
+                border_paint: fret_core::Paint::Solid(color),
+
                 corner_radii: panel_radii,
             });
         };
@@ -490,14 +494,15 @@ impl WinitAppDriver for EffectsDemoDriver {
         scene.push(SceneOp::Quad {
             order: DrawOrder(10_000),
             rect: panel0,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.08,
                 g: 0.08,
                 b: 0.08,
                 a: 0.08,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: panel_radii,
         });
         panel_border(
@@ -534,14 +539,15 @@ impl WinitAppDriver for EffectsDemoDriver {
         scene.push(SceneOp::Quad {
             order: DrawOrder(11_000),
             rect: panel1,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 0.12,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: panel_radii,
         });
         panel_border(
@@ -602,9 +608,11 @@ impl WinitAppDriver for EffectsDemoDriver {
                     Point::new(Px(x), panel2.origin.y),
                     Size::new(Px(stripe_w), panel2.size.height),
                 ),
-                background: bg,
+                background: fret_core::Paint::Solid(bg),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -612,14 +620,15 @@ impl WinitAppDriver for EffectsDemoDriver {
         scene.push(SceneOp::Quad {
             order: DrawOrder(12_900),
             rect: panel2,
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
                 a: 0.12,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: panel_radii,
         });
         if state.panel2_enabled {
@@ -648,14 +657,15 @@ impl WinitAppDriver for EffectsDemoDriver {
                 ),
                 Size::new(Px(96.0), Px(56.0)),
             ),
-            background: Color {
+            background: fret_core::Paint::Solid(Color {
                 r: 0.9,
                 g: 0.9,
                 b: 0.9,
                 a: 0.9,
-            },
+            }),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(14.0)),
         });
 
@@ -709,19 +719,19 @@ impl WinitAppDriver for EffectsDemoDriver {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(30_000),
                     rect: bg_rect,
-                    background: Color {
+                    background: fret_core::Paint::Solid(Color {
                         r: 0.06,
                         g: 0.06,
                         b: 0.07,
                         a: 0.72,
-                    },
+                    }),
                     border: Edges::all(Px(1.0)),
-                    border_color: Color {
+                    border_paint: fret_core::Paint::Solid(Color {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
                         a: 0.12,
-                    },
+                    }),
                     corner_radii: Corners::all(Px(12.0)),
                 });
 

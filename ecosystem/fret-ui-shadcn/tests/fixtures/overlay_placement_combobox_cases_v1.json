@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "combobox-demo.listbox_height",
+      "web_name": "combobox-demo",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-demo.vp1440x320.listbox_height",
+      "web_name": "combobox-demo.vp1440x320",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-demo.vp375x320.listbox_height",
+      "web_name": "combobox-demo.vp375x320",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-demo.vp1440x240.listbox_height",
+      "web_name": "combobox-demo.vp1440x240",
+      "recipe": "listbox_height"
+    },
+
+    {
+      "id": "combobox-demo.listbox_option_height",
+      "web_name": "combobox-demo",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-demo.vp1440x320.listbox_option_height",
+      "web_name": "combobox-demo.vp1440x320",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-demo.vp375x320.listbox_option_height",
+      "web_name": "combobox-demo.vp375x320",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-demo.vp1440x240.listbox_option_height",
+      "web_name": "combobox-demo.vp1440x240",
+      "recipe": "listbox_option_height"
+    },
+
+    {
+      "id": "combobox-demo.listbox_option_insets",
+      "web_name": "combobox-demo",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-demo.vp1440x320.listbox_option_insets",
+      "web_name": "combobox-demo.vp1440x320",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-demo.vp375x320.listbox_option_insets",
+      "web_name": "combobox-demo.vp375x320",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-demo.vp1440x240.listbox_option_insets",
+      "web_name": "combobox-demo.vp1440x240",
+      "recipe": "listbox_option_insets"
+    },
+
+    {
+      "id": "combobox-popover.overlay_placement",
+      "web_name": "combobox-popover",
+      "recipe": "popover_overlay_placement"
+    },
+    {
+      "id": "combobox-popover.vp375x240.overlay_placement",
+      "web_name": "combobox-popover.vp375x240",
+      "recipe": "popover_overlay_placement"
+    },
+
+    {
+      "id": "combobox-responsive.overlay_placement",
+      "web_name": "combobox-responsive",
+      "recipe": "responsive_overlay_placement"
+    },
+    {
+      "id": "combobox-responsive.vp375x240.overlay_placement",
+      "web_name": "combobox-responsive.vp375x240",
+      "recipe": "responsive_viewport_anchored_overlay_placement"
+    },
+
+    {
+      "id": "combobox-popover.listbox_height",
+      "web_name": "combobox-popover",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-responsive.listbox_height",
+      "web_name": "combobox-responsive",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-popover.vp375x240.listbox_height",
+      "web_name": "combobox-popover.vp375x240",
+      "recipe": "listbox_height"
+    },
+    {
+      "id": "combobox-responsive.vp375x240.listbox_height",
+      "web_name": "combobox-responsive.vp375x240",
+      "recipe": "listbox_height"
+    },
+
+    {
+      "id": "combobox-popover.listbox_option_height",
+      "web_name": "combobox-popover",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-responsive.listbox_option_height",
+      "web_name": "combobox-responsive",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-popover.vp375x240.listbox_option_height",
+      "web_name": "combobox-popover.vp375x240",
+      "recipe": "listbox_option_height"
+    },
+    {
+      "id": "combobox-responsive.vp375x240.listbox_option_height",
+      "web_name": "combobox-responsive.vp375x240",
+      "recipe": "listbox_option_height"
+    },
+
+    {
+      "id": "combobox-popover.listbox_option_insets",
+      "web_name": "combobox-popover",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-responsive.listbox_option_insets",
+      "web_name": "combobox-responsive",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-popover.vp375x240.listbox_option_insets",
+      "web_name": "combobox-popover.vp375x240",
+      "recipe": "listbox_option_insets"
+    },
+    {
+      "id": "combobox-responsive.vp375x240.listbox_option_insets",
+      "web_name": "combobox-responsive.vp375x240",
+      "recipe": "listbox_option_insets"
+    }
+  ]
+}

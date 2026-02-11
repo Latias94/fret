@@ -8,12 +8,12 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
-use crate::io::NodeGraphViewState;
+
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::portal::NodeGraphPortalHost;
 use crate::ui::style::NodeGraphStyle;
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -58,7 +58,7 @@ fn portal_subtree_resets_state_on_node_kind_change() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let next_instance = Arc::new(AtomicUsize::new(0));

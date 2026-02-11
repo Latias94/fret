@@ -8,11 +8,11 @@ Tracking file:
 
 Primary references:
 
-- `docs/adr/0093-crate-structure-core-backends-apps.md`
-- `docs/adr/0091-platform-backends-native-web.md`
+- `docs/adr/0092-crate-structure-core-backends-apps.md`
+- `docs/adr/0090-platform-backends-native-web.md`
 - `docs/repo-structure.md`
 - `docs/dependency-policy.md`
-- `tools/check_layering.ps1`
+- `tools/check_layering.py`
 - Upstream reference snapshots (notes only): `repo-ref/zed/`, `repo-ref/dioxus/`
 
 ## 1) Why this workstream exists
@@ -37,7 +37,7 @@ In scope:
 
 - Reshape crates to keep contracts portable and implementations replaceable.
 - Make the web direction explicit: a dedicated web adapter (`fret-runner-web`) as the default wasm path.
-- Keep the public facade (`crates/fret`) coherent with ADR 0091/0093.
+- Keep the public facade (`crates/fret`) coherent with ADR 0089/0092.
 - Remove the layout engine feature fork if it is no longer a real decision point (reduce test matrix).
 
 Non-goals:
@@ -132,4 +132,4 @@ This workstream is considered complete when:
    - `fret-runner-winit` no longer hosts DOM-specific glue;
    - `fret` facade `web` bundle follows the default direction.
 3. Layout feature fork is removed (if committed) and the workspace builds cleanly.
-4. `tools/check_layering.ps1` remains green and CI-like guardrails remain in place.
+4. `tools/check_layering.py` remains green and CI-like guardrails remain in place.

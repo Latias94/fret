@@ -16,7 +16,7 @@ impl ImageColorSpace {
     }
 }
 
-/// Stable metadata describing how to interpret pixel bytes for streaming images (ADR 0126).
+/// Stable metadata describing how to interpret pixel bytes for streaming images (ADR 0124).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageColorInfo {
     pub encoding: ImageEncoding,
@@ -93,7 +93,7 @@ pub enum ChromaSiting {
     TopLeft,
 }
 
-/// Explicit alpha semantics for image updates (ADR 0126 / ADR 0040).
+/// Explicit alpha semantics for image updates (ADR 0124 / ADR 0040).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AlphaMode {
     Opaque,

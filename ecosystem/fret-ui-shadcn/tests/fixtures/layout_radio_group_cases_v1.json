@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "radio-group-demo.row-geometry",
+      "web_name": "radio-group-demo",
+      "recipe": "row_geometry"
+    },
+    {
+      "id": "radio-group-demo.indicator-offset",
+      "web_name": "radio-group-demo",
+      "recipe": "indicator_offset"
+    }
+  ]
+}
+

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{Edges, Px, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, MainAlign};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
@@ -32,53 +32,79 @@ impl Empty {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let border = theme.color_required("border");
         let fg = theme.color_required("foreground");
 
-        // Tailwind `md:` breakpoints apply at the viewport level. For `new-york-v4` we mirror
-        // `p-6 md:p-12` by inspecting the root bounds.
-        let padding = if cx.bounds.size.width.0 >= 768.0 {
-            Space::N12
-        } else {
-            Space::N6
-        };
-
-        let chrome = ChromeRefinement::default()
-            .p(padding)
-            .rounded(Radius::Lg)
-            .border_1()
-            .border_color(ColorRef::Color(border))
-            .text_color(ColorRef::Color(fg))
-            .merge(self.chrome);
-
-        let layout = LayoutRefinement::default()
-            .min_w_0()
-            .w_full()
-            .merge(self.layout);
-
-        let props = decl_style::container_props(&theme, chrome, layout);
+        let chrome_override = self.chrome;
+        let layout_override = self.layout;
         let children = self.children;
 
-        cx.container(props, move |cx| {
-            let layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
-            let gap = MetricRef::space(Space::N6).resolve(&theme);
-            vec![cx.flex(
-                FlexProps {
-                    layout,
-                    direction: fret_core::Axis::Vertical,
-                    gap,
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| children,
-            )]
-        })
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
+
+        // Upstream `new-york-v4` mirrors `p-6 md:p-12`. In editor-grade layouts the effective
+        // breakpoint should follow the Empty container width (panel resize), not the viewport.
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.empty",
+            region_props,
+            move |cx, region_id| {
+                let md = fret_ui_kit::declarative::container_width_at_least(
+                    cx,
+                    region_id,
+                    Invalidation::Layout,
+                    false,
+                    fret_ui_kit::declarative::container_queries::tailwind::MD,
+                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                );
+
+                let padding = if md { Space::N12 } else { Space::N6 };
+
+                let chrome = ChromeRefinement::default()
+                    .p(padding)
+                    .rounded(Radius::Lg)
+                    .border_1()
+                    .border_color(ColorRef::Color(border))
+                    .text_color(ColorRef::Color(fg))
+                    .merge(chrome_override);
+
+                let layout = LayoutRefinement::default()
+                    .min_w_0()
+                    .w_full()
+                    .merge(layout_override);
+
+                let props = decl_style::container_props(&theme, chrome, layout);
+
+                vec![cx.container(props, move |cx| {
+                    let layout = decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    );
+                    let gap = MetricRef::space(Space::N6).resolve(&theme);
+                    vec![cx.flex(
+                        FlexProps {
+                            layout,
+                            direction: fret_core::Axis::Vertical,
+                            gap,
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| children,
+                    )]
+                })]
+            },
+        )
     }
 }
 
@@ -101,6 +127,7 @@ impl EmptyHeader {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
@@ -168,6 +195,7 @@ impl EmptyMedia {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -222,6 +250,7 @@ impl EmptyTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("foreground");
@@ -253,6 +282,7 @@ impl EmptyDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("muted-foreground");
@@ -295,6 +325,7 @@ impl EmptyContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N4).resolve(&theme);

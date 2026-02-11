@@ -8,7 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Render data model and backend-agnostic rendering contracts for Fret."
 
 [dependencies]
 serde.workspace = true
 
+[dev-dependencies]
+serde_json.workspace = true

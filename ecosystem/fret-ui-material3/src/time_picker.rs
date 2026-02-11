@@ -8,6 +8,7 @@
 use std::cell::Cell;
 use std::f32::consts::PI;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsRole, TextOverflow,
@@ -41,6 +42,55 @@ use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion;
 use crate::tokens::time_input as time_input_tokens;
 use crate::tokens::time_picker as time_tokens;
+
+fn cached_two_digit_0_59(n: u32) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (0u32..=59)
+            .map(|v| Arc::<str>::from(format!("{v:02}")))
+            .collect::<Vec<_>>()
+    });
+    table
+        .get(n as usize)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(format!("{n:02}")))
+}
+
+fn cached_decimal_0_59(n: u32) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (0u32..=59)
+            .map(|v| Arc::<str>::from(format!("{v}")))
+            .collect::<Vec<_>>()
+    });
+    table
+        .get(n as usize)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(format!("{n}")))
+}
+
+fn cached_minute_dial_label(n: u32) -> Arc<str> {
+    if n == 0 {
+        cached_decimal_0_59(0)
+    } else {
+        cached_two_digit_0_59(n)
+    }
+}
+
+fn time_picker_hour_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("Hour")).clone()
+}
+
+fn time_picker_minute_field_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL.get_or_init(|| Arc::<str>::from("Minute")).clone()
+}
+
+fn time_picker_separator_text() -> Arc<str> {
+    static SEP: OnceLock<Arc<str>> = OnceLock::new();
+    SEP.get_or_init(|| Arc::<str>::from(":")).clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TimePickerVariant {
@@ -117,10 +167,9 @@ impl DockedTimePicker {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let selection_model = ensure_selection_model(cx, DockedRuntime::default);
             let selection = cx
                 .get_model_copied(&selection_model, Invalidation::Layout)
@@ -143,10 +192,15 @@ impl DockedTimePicker {
             let width = Px(368.0);
             let height = Px(384.0);
 
-            let background = time_tokens::container_color(&theme);
-            let elevation = time_tokens::container_elevation(&theme);
-            let corner_radii = time_tokens::container_shape(&theme);
-            let surface = material_surface_style(&theme, background, elevation, None, corner_radii);
+            let (surface, corner_radii) = {
+                let theme = Theme::global(&*cx.app);
+                let background = time_tokens::container_color(theme);
+                let elevation = time_tokens::container_elevation(theme);
+                let corner_radii = time_tokens::container_shape(theme);
+                let surface =
+                    material_surface_style(theme, background, elevation, None, corner_radii);
+                (surface, corner_radii)
+            };
 
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Px(width);
@@ -161,7 +215,6 @@ impl DockedTimePicker {
 
             let content = time_picker_contents(
                 cx,
-                &theme,
                 time_now,
                 self.time.clone(),
                 selection_model.clone(),
@@ -293,14 +346,13 @@ impl TimePickerDialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         underlay: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
@@ -370,30 +422,39 @@ impl TimePickerDialog {
                     .update(&models.input_minute, |v| *v = format!("{minute:02}"));
             }
 
-            let open_ms = self
-                .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
-
             let easing_key = self
                 .easing_key
                 .clone()
                 .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
+
+            let (open_ms, close_ms, bezier, scrim_base) = {
+                let theme = Theme::global(&*cx.app);
+
+                let open_ms = self
+                    .open_duration_ms
+                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
+                    .unwrap_or(300);
+                let close_ms = self
+                    .close_duration_ms
+                    .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
+                    .unwrap_or(300);
+
+                let bezier =
+                    theme
+                        .easing_by_key(easing_key.as_ref())
+                        .unwrap_or(fret_ui::theme::CubicBezier {
+                            x1: 0.0,
+                            y1: 0.0,
+                            x2: 1.0,
+                            y2: 1.0,
+                        });
+
+                let scrim_base = theme.color_required("md.sys.color.scrim");
+
+                (open_ms, close_ms, bezier, scrim_base)
+            };
+            let open_ticks = motion::ms_to_frames(open_ms);
+            let close_ticks = motion::ms_to_frames(close_ms);
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -413,7 +474,6 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_base = theme.color_required("md.sys.color.scrim");
                 let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -428,14 +488,26 @@ impl TimePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_test_id = self
-                    .test_id
-                    .clone()
-                    .map(|id| Arc::from(format!("{id}-scrim")));
-                let panel_test_id = self
-                    .test_id
-                    .clone()
-                    .map(|id| Arc::from(format!("{id}-panel")));
+                #[derive(Default)]
+                struct DerivedTestIds {
+                    base: Option<Arc<str>>,
+                    scrim: Option<Arc<str>>,
+                    panel: Option<Arc<str>>,
+                }
+
+                let (scrim_test_id, panel_test_id) =
+                    cx.with_state(DerivedTestIds::default, |st| {
+                        if st.base.as_deref() != self.test_id.as_deref() {
+                            st.base = self.test_id.clone();
+                            st.scrim = st.base.as_ref().map(|id| {
+                                Arc::from(format!("{}-scrim", id.as_ref()))
+                            });
+                            st.panel = st.base.as_ref().map(|id| {
+                                Arc::from(format!("{}-panel", id.as_ref()))
+                            });
+                        }
+                        (st.scrim.clone(), st.panel.clone())
+                    });
 
                 let overlay_root = cx.named("time_picker_overlay_root", |cx| {
                     cx.focus_scope(
@@ -525,7 +597,6 @@ impl TimePickerDialog {
 
                                 time_picker_modal_panel(
                                     cx,
-                                    &theme,
                                     time_now,
                                     models.draft_time.clone(),
                                     models.selection.clone(),
@@ -584,7 +655,6 @@ impl TimePickerDialog {
 
 fn time_picker_modal_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
@@ -604,10 +674,14 @@ fn time_picker_modal_panel<H: UiHost>(
     let width = Px(368.0);
     let height = Px(384.0);
 
-    let background = time_tokens::container_color(theme);
-    let elevation = time_tokens::container_elevation(theme);
-    let corner_radii = time_tokens::container_shape(theme);
-    let surface = material_surface_style(theme, background, elevation, None, corner_radii);
+    let (surface, corner_radii) = {
+        let theme = Theme::global(&*cx.app);
+        let background = time_tokens::container_color(theme);
+        let elevation = time_tokens::container_elevation(theme);
+        let corner_radii = time_tokens::container_shape(theme);
+        let surface = material_surface_style(theme, background, elevation, None, corner_radii);
+        (surface, corner_radii)
+    };
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(width);
@@ -622,7 +696,6 @@ fn time_picker_modal_panel<H: UiHost>(
 
     let content = time_picker_contents(
         cx,
-        theme,
         time_now,
         time_model,
         selection_model,
@@ -649,7 +722,6 @@ fn time_picker_modal_panel<H: UiHost>(
 
 fn time_picker_contents<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
@@ -675,9 +747,16 @@ fn time_picker_contents<H: UiHost>(
 
     cx.flex(props, move |cx| {
         let title_text = {
+            let (style, color) = {
+                let theme = Theme::global(&*cx.app);
+                (
+                    time_tokens::headline_style(theme),
+                    time_tokens::headline_color(theme),
+                )
+            };
             let mut t = TextProps::new(Arc::<str>::from("Select time"));
-            t.style = Some(time_tokens::headline_style(theme));
-            t.color = Some(time_tokens::headline_color(theme));
+            t.style = Some(style);
+            t.color = Some(color);
             t.wrap = TextWrap::None;
             t.overflow = TextOverflow::Ellipsis;
             cx.text_props(t)
@@ -759,7 +838,6 @@ fn time_picker_contents<H: UiHost>(
             TimePickerDisplayMode::Dial => {
                 let display = time_picker_display(
                     cx,
-                    theme,
                     time_now,
                     time_model.clone(),
                     selection_model.clone(),
@@ -769,7 +847,6 @@ fn time_picker_contents<H: UiHost>(
 
                 let dial = time_picker_clock_dial(
                     cx,
-                    theme,
                     time_now,
                     time_model.clone(),
                     selection_model.clone(),
@@ -779,7 +856,7 @@ fn time_picker_contents<H: UiHost>(
                 );
 
                 let period = (!is_24h)
-                    .then(|| time_picker_period_selector(cx, theme, time_now, time_model.clone()));
+                    .then(|| time_picker_period_selector(cx, time_now, time_model.clone()));
 
                 let dial_and_period = cx.flex(
                     FlexProps {
@@ -805,7 +882,6 @@ fn time_picker_contents<H: UiHost>(
             TimePickerDisplayMode::Input => {
                 out.push(time_picker_time_input(
                     cx,
-                    theme,
                     time_now,
                     time_model.clone(),
                     time_input_edit.clone(),
@@ -826,7 +902,6 @@ fn time_picker_contents<H: UiHost>(
 
 fn time_picker_display<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
@@ -834,8 +909,8 @@ fn time_picker_display<H: UiHost>(
     is_24h: bool,
 ) -> AnyElement {
     let (hour, minute) = time_to_display(time_now, is_24h);
-    let hour_s = Arc::<str>::from(format!("{hour:02}"));
-    let minute_s = Arc::<str>::from(format!("{minute:02}"));
+    let hour_s = cached_two_digit_0_59(hour.into());
+    let minute_s = cached_two_digit_0_59(minute.into());
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
@@ -847,8 +922,7 @@ fn time_picker_display<H: UiHost>(
     cx.flex(props, move |cx| {
         let hour_el = time_selector_field(
             cx,
-            theme,
-            Arc::<str>::from("Hour"),
+            time_picker_hour_field_label(),
             hour_s.clone(),
             selection == TimePickerSelection::Hour,
             "time-picker-hour-selector",
@@ -857,17 +931,23 @@ fn time_picker_display<H: UiHost>(
             TimePickerSelection::Hour,
         );
 
-        let mut sep = TextProps::new(Arc::<str>::from(":"));
-        sep.style = Some(time_tokens::time_selector_separator_style(theme));
-        sep.color = Some(time_tokens::time_selector_separator_color(theme));
+        let (sep_style, sep_color) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                time_tokens::time_selector_separator_style(theme),
+                time_tokens::time_selector_separator_color(theme),
+            )
+        };
+        let mut sep = TextProps::new(time_picker_separator_text());
+        sep.style = Some(sep_style);
+        sep.color = Some(sep_color);
         sep.wrap = TextWrap::None;
         sep.overflow = TextOverflow::Clip;
         let sep_el = cx.text_props(sep);
 
         let minute_el = time_selector_field(
             cx,
-            theme,
-            Arc::<str>::from("Minute"),
+            time_picker_minute_field_label(),
             minute_s.clone(),
             selection == TimePickerSelection::Minute,
             "time-picker-minute-selector",
@@ -882,7 +962,6 @@ fn time_picker_display<H: UiHost>(
 
 fn time_picker_time_input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
     time_input_edit: Model<TimeInputEditState>,
@@ -901,7 +980,6 @@ fn time_picker_time_input<H: UiHost>(
 
     let hour_column = time_input_field_column(
         cx,
-        theme,
         Arc::<str>::from("Hour"),
         Arc::<str>::from("Hour"),
         TimeInputFieldKind::Hour,
@@ -914,7 +992,6 @@ fn time_picker_time_input<H: UiHost>(
     );
     let minute_column = time_input_field_column(
         cx,
-        theme,
         Arc::<str>::from("Minute"),
         Arc::<str>::from("Minute"),
         TimeInputFieldKind::Minute,
@@ -926,15 +1003,21 @@ fn time_picker_time_input<H: UiHost>(
         is_24h,
     );
 
+    let (sep_style, sep_color) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_input_tokens::time_input_field_separator_style(theme),
+            time_input_tokens::time_input_field_separator_color(theme),
+        )
+    };
     let mut sep = TextProps::new(Arc::<str>::from(":"));
-    sep.style = Some(time_input_tokens::time_input_field_separator_style(theme));
-    sep.color = Some(time_input_tokens::time_input_field_separator_color(theme));
+    sep.style = Some(sep_style);
+    sep.color = Some(sep_color);
     sep.wrap = TextWrap::None;
     sep.overflow = TextOverflow::Clip;
     let sep_el = cx.text_props(sep);
 
-    let period =
-        (!is_24h).then(|| time_input_period_selector(cx, theme, time_now, time_model.clone()));
+    let period = (!is_24h).then(|| time_input_period_selector(cx, time_now, time_model.clone()));
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -954,7 +1037,6 @@ fn time_picker_time_input<H: UiHost>(
 
 fn time_input_field_column<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     a11y_label: Arc<str>,
     supporting_text: Arc<str>,
     kind: TimeInputFieldKind,
@@ -967,7 +1049,6 @@ fn time_input_field_column<H: UiHost>(
 ) -> AnyElement {
     let field = time_input_field(
         cx,
-        theme,
         a11y_label,
         kind,
         time_now,
@@ -978,13 +1059,16 @@ fn time_input_field_column<H: UiHost>(
         is_24h,
     );
 
+    let (supporting_style, supporting_color) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_input_tokens::time_input_field_supporting_text_style(theme),
+            time_input_tokens::time_input_field_supporting_text_color(theme),
+        )
+    };
     let mut supporting = TextProps::new(supporting_text);
-    supporting.style = Some(time_input_tokens::time_input_field_supporting_text_style(
-        theme,
-    ));
-    supporting.color = Some(time_input_tokens::time_input_field_supporting_text_color(
-        theme,
-    ));
+    supporting.style = Some(supporting_style);
+    supporting.color = Some(supporting_color);
     supporting.wrap = TextWrap::None;
     supporting.overflow = TextOverflow::Clip;
     let supporting = cx.text_props(supporting);
@@ -1000,7 +1084,6 @@ fn time_input_field_column<H: UiHost>(
 
 fn time_input_field<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     a11y_label: Arc<str>,
     kind: TimeInputFieldKind,
     time_now: Time,
@@ -1010,9 +1093,18 @@ fn time_input_field<H: UiHost>(
     test_id: &'static str,
     is_24h: bool,
 ) -> AnyElement {
-    let width = time_input_tokens::time_input_field_container_width(theme);
-    let height = time_input_tokens::time_input_field_container_height(theme);
-    let corner_radii = time_input_tokens::time_input_field_container_shape(theme);
+    let (width, height, corner_radii, focus_ring) = {
+        let theme = Theme::global(&*cx.app);
+        let width = time_input_tokens::time_input_field_container_width(theme);
+        let height = time_input_tokens::time_input_field_container_height(theme);
+        let corner_radii = time_input_tokens::time_input_field_container_shape(theme);
+        let focus_ring = material_focus_ring_for_component(
+            theme,
+            time_input_tokens::COMPONENT_PREFIX,
+            corner_radii,
+        );
+        (width, height, corner_radii, focus_ring)
+    };
 
     let mut hover_layout = LayoutStyle::default();
     hover_layout.size.width = Length::Px(width);
@@ -1022,8 +1114,6 @@ fn time_input_field<H: UiHost>(
     };
 
     cx.hover_region(hover, move |cx, hovered| {
-        let theme = Theme::global(&*cx.app).clone();
-
         let focused_out: Cell<bool> = Cell::new(false);
 
         let field = cx.pressable_with_id_props(|cx, st, pressable_id| {
@@ -1128,8 +1218,13 @@ fn time_input_field<H: UiHost>(
                 }),
             );
 
-            let label_color =
-                time_input_tokens::time_input_field_label_color(&theme, focused, hovered);
+            let (label_color, label_style) = {
+                let theme = Theme::global(&*cx.app);
+                (
+                    time_input_tokens::time_input_field_label_color(theme, focused, hovered),
+                    time_input_tokens::time_input_field_label_text_style(theme),
+                )
+            };
             let raw = cx
                 .get_model_cloned(&model, Invalidation::Layout)
                 .unwrap_or_default();
@@ -1137,7 +1232,7 @@ fn time_input_field<H: UiHost>(
 
             let text = Arc::<str>::from(raw);
             let mut tp = TextProps::new(text);
-            tp.style = Some(time_input_tokens::time_input_field_label_text_style(&theme));
+            tp.style = Some(label_style);
             tp.color = Some(label_color);
             tp.wrap = TextWrap::None;
             tp.overflow = TextOverflow::Clip;
@@ -1155,6 +1250,7 @@ fn time_input_field<H: UiHost>(
             let pressable_props = PressableProps {
                 enabled,
                 focusable: enabled,
+                key_activation: Default::default(),
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::TextField),
                     label: Some(a11y_label.clone()),
@@ -1168,11 +1264,7 @@ fn time_input_field<H: UiHost>(
                     l.size.height = Length::Fill;
                     l
                 },
-                focus_ring: Some(material_focus_ring_for_component(
-                    &theme,
-                    time_input_tokens::COMPONENT_PREFIX,
-                    corner_radii,
-                )),
+                focus_ring: Some(focus_ring),
                 focus_ring_bounds: None,
             };
             (pressable_props, vec![content])
@@ -1185,16 +1277,20 @@ fn time_input_field<H: UiHost>(
         container.layout.size.height = Length::Px(height);
         container.layout.overflow = Overflow::Clip;
         container.corner_radii = corner_radii;
-        container.background = Some(time_input_tokens::time_input_field_container_color(
-            &theme, focused,
-        ));
+        container.background = Some({
+            let theme = Theme::global(&*cx.app);
+            time_input_tokens::time_input_field_container_color(theme, focused)
+        });
         if focused {
-            container.border = Edges::all(time_input_tokens::time_input_field_focus_outline_width(
-                &theme,
-            ));
-            container.border_color = Some(time_input_tokens::time_input_field_focus_outline_color(
-                &theme,
-            ));
+            let (w, c) = {
+                let theme = Theme::global(&*cx.app);
+                (
+                    time_input_tokens::time_input_field_focus_outline_width(theme),
+                    time_input_tokens::time_input_field_focus_outline_color(theme),
+                )
+            };
+            container.border = Edges::all(w);
+            container.border_color = Some(c);
         }
 
         let overlay = (hovered && !focused).then(|| {
@@ -1205,9 +1301,13 @@ fn time_input_field<H: UiHost>(
             layout.inset.bottom = Some(Px(0.0));
             layout.inset.left = Some(Px(0.0));
 
-            let mut c = time_input_tokens::time_input_field_state_layer_color(&theme);
-            c.a = (c.a * time_input_tokens::time_input_field_state_layer_opacity(&theme))
-                .clamp(0.0, 1.0);
+            let c = {
+                let theme = Theme::global(&*cx.app);
+                let mut c = time_input_tokens::time_input_field_state_layer_color(theme);
+                c.a = (c.a * time_input_tokens::time_input_field_state_layer_opacity(theme))
+                    .clamp(0.0, 1.0);
+                c
+            };
 
             let mut overlay = ContainerProps::default();
             overlay.layout = layout;
@@ -1305,7 +1405,6 @@ fn keycode_digit(key: KeyCode) -> Option<u8> {
 
 fn time_selector_field<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     a11y_label: Arc<str>,
     text: Arc<str>,
     selected: bool,
@@ -1314,6 +1413,16 @@ fn time_selector_field<H: UiHost>(
     selection_model: Model<TimePickerSelection>,
     selection_kind: TimePickerSelection,
 ) -> AnyElement {
+    let (corner_radii, container_w, container_h, focus_ring) = {
+        let theme = Theme::global(&*cx.app);
+        let corner_radii = time_tokens::time_selector_shape(theme);
+        let container_w = time_tokens::time_selector_container_width(theme);
+        let container_h = time_tokens::time_selector_container_height(theme);
+        let focus_ring =
+            material_focus_ring_for_component(theme, time_tokens::COMPONENT_PREFIX, corner_radii);
+        (corner_radii, container_w, container_h, focus_ring)
+    };
+
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
 
@@ -1374,10 +1483,10 @@ fn time_selector_field<H: UiHost>(
             }),
         );
 
-        let corner_radii = time_tokens::time_selector_shape(theme);
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(a11y_label.clone()),
@@ -1388,15 +1497,11 @@ fn time_selector_field<H: UiHost>(
             layout: {
                 let mut l = LayoutStyle::default();
                 l.overflow = Overflow::Visible;
-                l.size.width = Length::Px(time_tokens::time_selector_container_width(theme));
-                l.size.height = Length::Px(time_tokens::time_selector_container_height(theme));
+                l.size.width = Length::Px(container_w);
+                l.size.height = Length::Px(container_h);
                 l
             },
-            focus_ring: Some(material_focus_ring_for_component(
-                theme,
-                time_tokens::COMPONENT_PREFIX,
-                corner_radii,
-            )),
+            focus_ring: Some(focus_ring),
             focus_ring_bounds: None,
         };
 
@@ -1406,24 +1511,47 @@ fn time_selector_field<H: UiHost>(
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let background = time_tokens::time_selector_container_color(theme, selected);
-                let label_color =
-                    time_tokens::time_selector_label_color(theme, selected, interaction);
+                let (
+                    background,
+                    label_color,
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-                let (state_layer_color, state_layer_target) = match interaction {
-                    Some(i @ PressableInteraction::Hovered)
-                    | Some(i @ PressableInteraction::Focused) => (
-                        time_tokens::time_selector_state_layer_color(theme, selected, i),
-                        time_tokens::time_selector_state_layer_opacity(theme, i),
-                    ),
-                    _ => (Color::TRANSPARENT, 0.0),
+                    let background = time_tokens::time_selector_container_color(theme, selected);
+                    let label_color =
+                        time_tokens::time_selector_label_color(theme, selected, interaction);
+
+                    let (state_layer_color, state_layer_target) = match interaction {
+                        Some(i @ PressableInteraction::Hovered)
+                        | Some(i @ PressableInteraction::Focused) => (
+                            time_tokens::time_selector_state_layer_color(theme, selected, i),
+                            time_tokens::time_selector_state_layer_opacity(theme, i),
+                        ),
+                        _ => (Color::TRANSPARENT, 0.0),
+                    };
+
+                    let ripple_base_opacity = time_tokens::time_selector_state_layer_opacity(
+                        theme,
+                        PressableInteraction::Pressed,
+                    );
+                    let config = material_pressable_indication_config(theme, None);
+                    let label_style = time_tokens::time_selector_label_text_style(theme);
+
+                    (
+                        background,
+                        label_color,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                        label_style,
+                    )
                 };
-
-                let ripple_base_opacity = time_tokens::time_selector_state_layer_opacity(
-                    theme,
-                    PressableInteraction::Pressed,
-                );
-                let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -1446,7 +1574,7 @@ fn time_selector_field<H: UiHost>(
                 chrome.layout.size.height = Length::Fill;
 
                 let mut tp = TextProps::new(text.clone());
-                tp.style = Some(time_tokens::time_selector_label_text_style(theme));
+                tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
                 tp.overflow = TextOverflow::Clip;
@@ -1471,7 +1599,6 @@ fn time_selector_field<H: UiHost>(
 
 fn time_picker_clock_dial<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
@@ -1479,11 +1606,15 @@ fn time_picker_clock_dial<H: UiHost>(
     dial_dragging_model: Model<bool>,
     is_24h: bool,
 ) -> AnyElement {
-    let size = time_tokens::clock_dial_size(theme);
-    let handle_size = time_tokens::clock_dial_handle_size(theme);
-
-    let background = time_tokens::clock_dial_background(theme);
-    let corner_radii = time_tokens::clock_dial_shape(theme);
+    let (size, handle_size, background, corner_radii) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_tokens::clock_dial_size(theme),
+            time_tokens::clock_dial_handle_size(theme),
+            time_tokens::clock_dial_background(theme),
+            time_tokens::clock_dial_shape(theme),
+        )
+    };
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Px(size);
@@ -1509,7 +1640,6 @@ fn time_picker_clock_dial<H: UiHost>(
                     let selected = idx == selected_idx;
                     out.push(dial_label(
                         cx,
-                        theme,
                         *label,
                         *value,
                         idx,
@@ -1696,7 +1826,6 @@ fn time_picker_clock_dial<H: UiHost>(
 
 fn dial_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: u32,
     value: u32,
     idx: usize,
@@ -1761,9 +1890,10 @@ fn dial_label<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(Arc::<str>::from(format!("{label}"))),
+                label: Some(cached_decimal_0_59(label)),
                 selected,
                 ..Default::default()
             },
@@ -1787,8 +1917,14 @@ fn dial_label<H: UiHost>(
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let handle_color = time_tokens::clock_dial_handle_color(theme);
-                let handle_shape = time_tokens::clock_dial_handle_shape(theme);
+                let (handle_color, handle_shape, label_color, label_style) = {
+                    let theme = Theme::global(&*cx.app);
+                    let handle_color = time_tokens::clock_dial_handle_color(theme);
+                    let handle_shape = time_tokens::clock_dial_handle_shape(theme);
+                    let label_color = time_tokens::clock_dial_label_text_color(theme, selected);
+                    let label_style = time_tokens::clock_dial_label_text_style(theme);
+                    (handle_color, handle_shape, label_color, label_style)
+                };
 
                 let mut container = ContainerProps::default();
                 container.layout.size.width = Length::Fill;
@@ -1797,17 +1933,13 @@ fn dial_label<H: UiHost>(
                 container.background = selected.then_some(handle_color);
                 container.corner_radii = handle_shape;
 
-                let label_color = time_tokens::clock_dial_label_text_color(theme, selected);
-                let mut label_text = if selection == TimePickerSelection::Minute {
-                    format!("{label:02}")
+                let label_text = if selection == TimePickerSelection::Minute {
+                    cached_minute_dial_label(label)
                 } else {
-                    format!("{label}")
+                    cached_decimal_0_59(label)
                 };
-                if label_text == "00" {
-                    label_text = "0".to_string();
-                }
-                let mut tp = TextProps::new(Arc::<str>::from(label_text));
-                tp.style = Some(time_tokens::clock_dial_label_text_style(theme));
+                let mut tp = TextProps::new(label_text);
+                tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
                 tp.overflow = TextOverflow::Clip;
@@ -1850,15 +1982,19 @@ fn current_period(time_now: Time) -> Period {
 
 fn time_input_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
 ) -> AnyElement {
-    let width = time_input_tokens::period_selector_container_width(theme);
-    let height = time_input_tokens::period_selector_container_height(theme);
-    let outline_width = time_input_tokens::period_selector_outline_width(theme);
-    let outline_color = time_input_tokens::period_selector_outline_color(theme);
-    let corner_radii = time_input_tokens::period_selector_shape(theme);
+    let (width, height, outline_width, outline_color, corner_radii) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_input_tokens::period_selector_container_width(theme),
+            time_input_tokens::period_selector_container_height(theme),
+            time_input_tokens::period_selector_outline_width(theme),
+            time_input_tokens::period_selector_outline_color(theme),
+            time_input_tokens::period_selector_shape(theme),
+        )
+    };
 
     let current = current_period(time_now);
 
@@ -1881,7 +2017,6 @@ fn time_input_period_selector<H: UiHost>(
     cx.container(container, move |cx| {
         let am = time_input_period_item(
             cx,
-            theme,
             "AM",
             current == Period::Am,
             time_model.clone(),
@@ -1889,7 +2024,6 @@ fn time_input_period_selector<H: UiHost>(
         );
         let pm = time_input_period_item(
             cx,
-            theme,
             "PM",
             current == Period::Pm,
             time_model.clone(),
@@ -1901,12 +2035,17 @@ fn time_input_period_selector<H: UiHost>(
 
 fn time_input_period_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: &'static str,
     selected: bool,
     time_model: Model<Time>,
     period: Period,
 ) -> AnyElement {
+    let corner_radii = Corners::all(Px(0.0));
+    let focus_ring = {
+        let theme = Theme::global(&*cx.app);
+        material_focus_ring_for_component(theme, time_input_tokens::COMPONENT_PREFIX, corner_radii)
+    };
+
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
 
@@ -1950,10 +2089,10 @@ fn time_input_period_item<H: UiHost>(
         );
 
         // Split the 72px container into two equal rows.
-        let corner_radii = Corners::all(Px(0.0));
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),
@@ -1967,11 +2106,7 @@ fn time_input_period_item<H: UiHost>(
                 l.size.height = Length::Fill;
                 l
             },
-            focus_ring: Some(material_focus_ring_for_component(
-                theme,
-                time_input_tokens::COMPONENT_PREFIX,
-                corner_radii,
-            )),
+            focus_ring: Some(focus_ring),
             focus_ring_bounds: None,
         };
 
@@ -1981,20 +2116,55 @@ fn time_input_period_item<H: UiHost>(
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let (state_layer_color, state_layer_target) = match interaction {
-                    Some(i @ PressableInteraction::Hovered)
-                    | Some(i @ PressableInteraction::Focused) => (
-                        time_input_tokens::period_selector_state_layer_color(theme, selected, i),
-                        time_input_tokens::period_selector_state_layer_opacity(theme, i),
-                    ),
-                    _ => (Color::TRANSPARENT, 0.0),
-                };
+                let (
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                    background,
+                    label_color,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-                let ripple_base_opacity = time_input_tokens::period_selector_state_layer_opacity(
-                    theme,
-                    PressableInteraction::Pressed,
-                );
-                let config = material_pressable_indication_config(theme, None);
+                    let (state_layer_color, state_layer_target) = match interaction {
+                        Some(i @ PressableInteraction::Hovered)
+                        | Some(i @ PressableInteraction::Focused) => (
+                            time_input_tokens::period_selector_state_layer_color(
+                                theme, selected, i,
+                            ),
+                            time_input_tokens::period_selector_state_layer_opacity(theme, i),
+                        ),
+                        _ => (Color::TRANSPARENT, 0.0),
+                    };
+
+                    let ripple_base_opacity =
+                        time_input_tokens::period_selector_state_layer_opacity(
+                            theme,
+                            PressableInteraction::Pressed,
+                        );
+                    let config = material_pressable_indication_config(theme, None);
+
+                    let background = selected.then_some(
+                        time_input_tokens::period_selector_selected_container_color(theme),
+                    );
+                    let label_color = time_input_tokens::period_selector_label_color(
+                        theme,
+                        selected,
+                        interaction,
+                    );
+                    let label_style = time_input_tokens::period_selector_label_text_style(theme);
+
+                    (
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                        background,
+                        label_color,
+                        label_style,
+                    )
+                };
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -2009,19 +2179,13 @@ fn time_input_period_item<H: UiHost>(
                     false,
                 );
 
-                let background = selected.then_some(
-                    time_input_tokens::period_selector_selected_container_color(theme),
-                );
-                let label_color =
-                    time_input_tokens::period_selector_label_color(theme, selected, interaction);
-
                 let mut chrome = ContainerProps::default();
                 chrome.layout.size.width = Length::Fill;
                 chrome.layout.size.height = Length::Fill;
                 chrome.background = background;
 
                 let mut tp = TextProps::new(Arc::<str>::from(label));
-                tp.style = Some(time_input_tokens::period_selector_label_text_style(theme));
+                tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
                 tp.overflow = TextOverflow::Clip;
@@ -2046,15 +2210,19 @@ fn time_input_period_item<H: UiHost>(
 
 fn time_picker_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     time_now: Time,
     time_model: Model<Time>,
 ) -> AnyElement {
-    let width = time_tokens::period_selector_container_width(theme);
-    let height = time_tokens::period_selector_container_height(theme);
-    let outline_width = time_tokens::period_selector_outline_width(theme);
-    let outline_color = time_tokens::period_selector_outline_color(theme);
-    let corner_radii = time_tokens::period_selector_shape(theme);
+    let (width, height, outline_width, outline_color, corner_radii) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            time_tokens::period_selector_container_width(theme),
+            time_tokens::period_selector_container_height(theme),
+            time_tokens::period_selector_outline_width(theme),
+            time_tokens::period_selector_outline_color(theme),
+            time_tokens::period_selector_shape(theme),
+        )
+    };
 
     let current = current_period(time_now);
 
@@ -2077,7 +2245,6 @@ fn time_picker_period_selector<H: UiHost>(
     cx.container(container, move |cx| {
         let am = period_item(
             cx,
-            theme,
             "AM",
             current == Period::Am,
             time_model.clone(),
@@ -2085,7 +2252,6 @@ fn time_picker_period_selector<H: UiHost>(
         );
         let pm = period_item(
             cx,
-            theme,
             "PM",
             current == Period::Pm,
             time_model.clone(),
@@ -2097,12 +2263,17 @@ fn time_picker_period_selector<H: UiHost>(
 
 fn period_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: &'static str,
     selected: bool,
     time_model: Model<Time>,
     period: Period,
 ) -> AnyElement {
+    let corner_radii = Corners::all(Px(0.0));
+    let focus_ring = {
+        let theme = Theme::global(&*cx.app);
+        material_focus_ring_for_component(theme, time_tokens::COMPONENT_PREFIX, corner_radii)
+    };
+
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
 
@@ -2146,10 +2317,10 @@ fn period_item<H: UiHost>(
         );
 
         // Split the 80px container into two equal rows.
-        let corner_radii = Corners::all(Px(0.0));
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),
@@ -2163,11 +2334,7 @@ fn period_item<H: UiHost>(
                 l.size.height = Length::Fill;
                 l
             },
-            focus_ring: Some(material_focus_ring_for_component(
-                theme,
-                time_tokens::COMPONENT_PREFIX,
-                corner_radii,
-            )),
+            focus_ring: Some(focus_ring),
             focus_ring_bounds: None,
         };
 
@@ -2177,20 +2344,48 @@ fn period_item<H: UiHost>(
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let (state_layer_color, state_layer_target) = match interaction {
-                    Some(i @ PressableInteraction::Hovered)
-                    | Some(i @ PressableInteraction::Focused) => (
-                        time_tokens::period_selector_state_layer_color(theme, selected, i),
-                        time_tokens::period_selector_state_layer_opacity(theme, i),
-                    ),
-                    _ => (Color::TRANSPARENT, 0.0),
-                };
+                let (
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                    background,
+                    label_color,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-                let ripple_base_opacity = time_tokens::period_selector_state_layer_opacity(
-                    theme,
-                    PressableInteraction::Pressed,
-                );
-                let config = material_pressable_indication_config(theme, None);
+                    let (state_layer_color, state_layer_target) = match interaction {
+                        Some(i @ PressableInteraction::Hovered)
+                        | Some(i @ PressableInteraction::Focused) => (
+                            time_tokens::period_selector_state_layer_color(theme, selected, i),
+                            time_tokens::period_selector_state_layer_opacity(theme, i),
+                        ),
+                        _ => (Color::TRANSPARENT, 0.0),
+                    };
+
+                    let ripple_base_opacity = time_tokens::period_selector_state_layer_opacity(
+                        theme,
+                        PressableInteraction::Pressed,
+                    );
+                    let config = material_pressable_indication_config(theme, None);
+
+                    let background = selected
+                        .then_some(time_tokens::period_selector_selected_container_color(theme));
+                    let label_color =
+                        time_tokens::period_selector_label_color(theme, selected, interaction);
+                    let label_style = time_tokens::period_selector_label_text_style(theme);
+
+                    (
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                        background,
+                        label_color,
+                        label_style,
+                    )
+                };
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -2205,11 +2400,6 @@ fn period_item<H: UiHost>(
                     false,
                 );
 
-                let background = selected
-                    .then_some(time_tokens::period_selector_selected_container_color(theme));
-                let label_color =
-                    time_tokens::period_selector_label_color(theme, selected, interaction);
-
                 let mut chrome = ContainerProps::default();
                 chrome.layout.overflow = Overflow::Clip;
                 chrome.background = background;
@@ -2218,7 +2408,7 @@ fn period_item<H: UiHost>(
                 chrome.layout.size.height = Length::Fill;
 
                 let mut tp = TextProps::new(Arc::<str>::from(label));
-                tp.style = Some(time_tokens::period_selector_label_text_style(theme));
+                tp.style = Some(label_style);
                 tp.color = Some(label_color);
                 tp.wrap = TextWrap::None;
                 tp.overflow = TextOverflow::Clip;

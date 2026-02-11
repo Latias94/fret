@@ -97,7 +97,7 @@ where
         collision_strategy,
     } = props;
 
-    let ids = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let ids = cx.watch_model(&items).layout().cloned_or_default();
     let state = get_state_model(cx);
     let dnd = dnd::dnd_service_model(cx);
     let frame_id = cx.frame_id;
@@ -117,7 +117,7 @@ where
         .or_else(|| theme.color_by_key("accent"))
         .unwrap_or_else(|| theme.color_required("accent"));
 
-    let state_snapshot = cx.watch_model(&state).paint().cloned().unwrap_or_default();
+    let state_snapshot = cx.watch_model(&state).paint().cloned_or_default();
     let (active, over) = state_snapshot
         .pointers
         .iter()
@@ -447,6 +447,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

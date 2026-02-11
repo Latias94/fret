@@ -476,6 +476,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.drain_effects(event_loop);
                 }
             }
+            WindowEvent::ThemeChanged(_theme) => {
+                let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
+                if let Some(window_ref) = window_ref {
+                    if self
+                        .update_window_environment_for_window_ref(app_window, window_ref.as_ref())
+                    {
+                        self.app.request_redraw(app_window);
+                    }
+                }
+            }
             WindowEvent::Focused(focused) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.is_focused = focused;
@@ -777,6 +787,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
                 let _redraw_guard = redraw_span.enter();
 
+                let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
+                if let Some(window_ref) = window_ref {
+                    let _ = self
+                        .update_window_environment_for_window_ref(app_window, window_ref.as_ref());
+                }
+
                 let hitch_config = redraw_hitch_config();
                 let hitch_total_started = hitch_config.map(|_| Instant::now());
                 let mut hitch_prepare_ms: Option<u64> = None;
@@ -803,21 +819,38 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     // Keep delivering size/scale events for consistency with the existing runner
                     // behavior, but apply them once per frame so interactive resizes don't spam
                     // surface reconfigures and relayouts.
-                    let (mapped, scale_factor) = {
+                    let (logical_width, logical_height, scale_factor, should_deliver_resized) = {
                         let Some(state) = self.windows.get_mut(app_window) else {
                             return;
                         };
-                        let mut mapped = Vec::new();
-                        state.platform.handle_window_event(
-                            state.window.scale_factor(),
-                            &WindowEvent::SurfaceResized(size),
-                            &mut mapped,
-                        );
-                        (mapped, state.window.scale_factor() as f32)
+                        let scale_factor = state.window.scale_factor() as f32;
+                        let logical: winit::dpi::LogicalSize<f32> =
+                            size.to_logical(state.window.scale_factor());
+                        let logical_width = quantize_logical_px(logical.width);
+                        let logical_height = quantize_logical_px(logical.height);
+                        let bits = (logical_width.to_bits(), logical_height.to_bits());
+                        let should_deliver_resized = state
+                            .last_delivered_window_resized
+                            .is_none_or(|prev| prev != bits);
+                        if should_deliver_resized {
+                            state.last_delivered_window_resized = Some(bits);
+                        }
+                        (
+                            logical_width,
+                            logical_height,
+                            scale_factor,
+                            should_deliver_resized,
+                        )
                     };
 
-                    for evt in mapped {
-                        self.deliver_window_event_now(app_window, &evt);
+                    if should_deliver_resized {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::WindowResized {
+                                width: Px(logical_width),
+                                height: Px(logical_height),
+                            },
+                        );
                     }
                     let should_deliver_scale_factor = self
                         .app
@@ -1030,17 +1063,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
                             .is_some_and(|v| !v.is_empty());
-                        if diag_renderer_perf {
-                            if let Some(perf) = renderer.take_last_frame_perf_snapshot() {
-                                let tick_id = self.tick_id.0;
-                                let frame_id = self.frame_id.0;
-                                self.app.with_global_mut_untracked(
-                                    fret_render::RendererPerfFrameStore::default,
-                                    |store, _app| {
-                                        store.record(app_window, tick_id, frame_id, perf);
-                                    },
-                                );
-                            }
+                        if diag_renderer_perf
+                            && let Some(perf) = renderer.take_last_frame_perf_snapshot()
+                        {
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            self.app.with_global_mut_untracked(
+                                fret_render::RendererPerfFrameStore::default,
+                                |store, _app| {
+                                    store.record(app_window, tick_id, frame_id, perf);
+                                },
+                            );
                         }
 
                         let mut cmd_buffers = engine_frame.command_buffers;
@@ -1264,6 +1297,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
+        self.poll_window_environment_if_due(Instant::now());
 
         for (app_window, state) in self.windows.iter_mut() {
             let Some(a11y) = state.accessibility.as_mut() else {

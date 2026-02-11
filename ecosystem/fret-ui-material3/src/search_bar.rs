@@ -122,9 +122,9 @@ impl SearchBar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
             let expanded = self
                 .expanded_model
                 .as_ref()
@@ -134,29 +134,95 @@ impl SearchBar {
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
 
-                let container_height = search_bar_tokens::container_height(&theme);
-                let corner_radii = search_bar_tokens::container_shape(&theme);
-
                 let now_frame = cx.frame_id.0;
                 let pressed = enabled && st.pressed;
                 let hovered = enabled && st.hovered;
 
-                let state_layer_target = if pressed {
-                    search_bar_tokens::pressed_state_layer_opacity(&theme)
-                } else if hovered {
-                    search_bar_tokens::hover_state_layer_opacity(&theme)
-                } else {
-                    0.0
-                };
+                let (
+                    container_height,
+                    corner_radii,
+                    state_layer_target,
+                    state_layer_color,
+                    ripple_base_opacity,
+                    indication_config,
+                    input_text_style,
+                    input_chrome,
+                    leading_color,
+                    trailing_color,
+                    shadow,
+                    container_color,
+                    focus_ring,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-                let state_layer_color = if pressed {
-                    search_bar_tokens::pressed_state_layer_color(&theme)
-                } else {
-                    search_bar_tokens::hover_state_layer_color(&theme)
-                };
+                    let container_height = search_bar_tokens::container_height(theme);
+                    let corner_radii = search_bar_tokens::container_shape(theme);
 
-                let ripple_base_opacity = search_bar_tokens::pressed_state_layer_opacity(&theme);
-                let config = material_pressable_indication_config(&theme, None);
+                    let state_layer_target = if pressed {
+                        search_bar_tokens::pressed_state_layer_opacity(theme)
+                    } else if hovered {
+                        search_bar_tokens::hover_state_layer_opacity(theme)
+                    } else {
+                        0.0
+                    };
+
+                    let state_layer_color = if pressed {
+                        search_bar_tokens::pressed_state_layer_color(theme)
+                    } else {
+                        search_bar_tokens::hover_state_layer_color(theme)
+                    };
+
+                    let ripple_base_opacity = search_bar_tokens::pressed_state_layer_opacity(theme);
+                    let indication_config = material_pressable_indication_config(theme, None);
+
+                    let input_text_style = match self.header_tokens {
+                        SearchBarHeaderTokens::SearchView => {
+                            search_view_tokens::header_input_text_style(theme)
+                        }
+                        SearchBarHeaderTokens::SearchBar => {
+                            search_bar_tokens::input_text_style(theme)
+                        }
+                    };
+                    let input_chrome =
+                        search_bar_text_input_chrome(theme, self.header_tokens, hovered, pressed);
+
+                    let (leading_color, trailing_color) = match self.header_tokens {
+                        SearchBarHeaderTokens::SearchView => (
+                            search_view_tokens::header_leading_icon_color(theme),
+                            search_view_tokens::header_trailing_icon_color(theme),
+                        ),
+                        SearchBarHeaderTokens::SearchBar => (
+                            search_bar_tokens::leading_icon_color(theme),
+                            search_bar_tokens::trailing_icon_color(theme),
+                        ),
+                    };
+
+                    let elevation = search_bar_tokens::container_elevation(theme);
+                    let shadow =
+                        shadow_for_elevation_with_color(theme, elevation, None, corner_radii);
+                    let container_color = search_bar_tokens::container_color(theme);
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        "md.comp.search-bar",
+                        corner_radii,
+                    );
+
+                    (
+                        container_height,
+                        corner_radii,
+                        state_layer_target,
+                        state_layer_color,
+                        ripple_base_opacity,
+                        indication_config,
+                        input_text_style,
+                        input_chrome,
+                        leading_color,
+                        trailing_color,
+                        shadow,
+                        container_color,
+                        focus_ring,
+                    )
+                };
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -167,7 +233,7 @@ impl SearchBar {
                     pressed,
                     state_layer_target,
                     ripple_base_opacity,
-                    config,
+                    indication_config,
                     false,
                 );
 
@@ -183,16 +249,8 @@ impl SearchBar {
                     props.test_id = self.test_id.clone();
                     props.placeholder = self.placeholder.clone();
                     props.expanded = Some(expanded);
-                    props.text_style = match self.header_tokens {
-                        SearchBarHeaderTokens::SearchView => {
-                            search_view_tokens::header_input_text_style(&theme)
-                        }
-                        SearchBarHeaderTokens::SearchBar => {
-                            search_bar_tokens::input_text_style(&theme)
-                        }
-                    };
-                    props.chrome =
-                        search_bar_text_input_chrome(&theme, self.header_tokens, hovered, pressed);
+                    props.text_style = input_text_style;
+                    props.chrome = input_chrome;
                     props.layout.size.width = Length::Fill;
                     props.layout.size.height = Length::Fill;
                     props.layout.flex.grow = 1.0;
@@ -230,16 +288,6 @@ impl SearchBar {
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
-                        let (leading_color, trailing_color) = match self.header_tokens {
-                            SearchBarHeaderTokens::SearchView => (
-                                search_view_tokens::header_leading_icon_color(&theme),
-                                search_view_tokens::header_trailing_icon_color(&theme),
-                            ),
-                            SearchBarHeaderTokens::SearchBar => (
-                                search_bar_tokens::leading_icon_color(&theme),
-                                search_bar_tokens::trailing_icon_color(&theme),
-                            ),
-                        };
 
                         let content = cx.flex(row, move |cx| {
                             let mut children: Vec<AnyElement> = Vec::new();
@@ -263,10 +311,6 @@ impl SearchBar {
                             children
                         });
 
-                        let elevation = search_bar_tokens::container_elevation(&theme);
-                        let shadow =
-                            shadow_for_elevation_with_color(&theme, elevation, None, corner_radii);
-
                         let mut container = ContainerProps::default();
                         container.layout.size.width = Length::Fill;
                         container.layout.size.height = Length::Px(container_height);
@@ -277,15 +321,11 @@ impl SearchBar {
                             top: Px(0.0),
                             bottom: Px(0.0),
                         };
-                        container.background = Some(search_bar_tokens::container_color(&theme));
+                        container.background = Some(container_color);
                         container.shadow = shadow;
                         container.corner_radii = corner_radii;
                         container.focus_within = true;
-                        container.focus_ring = Some(material_focus_ring_for_component(
-                            &theme,
-                            "md.comp.search-bar",
-                            corner_radii,
-                        ));
+                        container.focus_ring = Some(focus_ring);
 
                         vec![cx.container(container, move |_cx| vec![overlay, content])]
                     })

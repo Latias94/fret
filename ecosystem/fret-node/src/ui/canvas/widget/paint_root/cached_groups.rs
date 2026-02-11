@@ -7,7 +7,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut PaintCx<'_, H>,
         snapshot: &ViewSnapshot,
         geom: &Arc<CanvasGeometry>,
-        index: &Arc<CanvasSpatialIndex>,
+        index: &Arc<CanvasSpatialDerived>,
         cache_rect: Rect,
         render_cull_rect: Option<Rect>,
         zoom: f32,
@@ -22,7 +22,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             b.add_u32(base_key.zoom_bits);
             b.add_u32(base_key.node_origin_x_bits);
             b.add_u32(base_key.node_origin_y_bits);
-            b.add_u64(base_key.draw_order_hash);
+            b.add_u64(base_key.draw_order.lo);
+            b.add_u64(base_key.draw_order.hi);
             b.add_u64(base_key.presenter_rev);
             b.add_u64(base_key.edge_types_rev);
             b.add_u64(style_key);
@@ -74,7 +75,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
         }
 
-        // Selected group border overlay must remain ordered before edges (ADR 0082).
+        // Selected group border overlay must remain ordered before edges (ADR 0081).
         let group_corner = Px(10.0 / zoom);
         let selected_groups = snapshot.selected_groups.clone();
         let _ = self.graph.read_ref(cx.app, |g| {
@@ -93,9 +94,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect,
-                    background: self.style.group_background,
+                    background: fret_core::Paint::Solid(self.style.group_background),
+
                     border: Edges::all(Px(1.0 / zoom)),
-                    border_color: self.style.node_border_selected,
+                    border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+
                     corner_radii: Corners::all(group_corner),
                 });
             }

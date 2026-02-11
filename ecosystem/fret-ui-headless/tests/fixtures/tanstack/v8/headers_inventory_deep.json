@@ -1674,71 +1674,116 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             },
@@ -1746,71 +1791,116 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             },
@@ -1818,77 +1908,123 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             }
           }
         },
         "core_model": {
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -1956,6 +2092,72 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "left",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "right",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -2449,6 +2651,135 @@
               ]
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 600,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 450,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 300,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "left_1_name_left_2_name_left_3_name_name": 150,
+              "left_2_name_left_3_name_name": 150,
+              "left_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 450,
+              "center_2_stats_center_3_perf_cpu": 450,
+              "center_3_perf_cpu": 300,
+              "center_3_mem_mem_mb": 150,
+              "right_1_metrics_right_2_status_right_3_status_status": 150,
+              "right_2_status_right_3_status_status": 150,
+              "right_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 600,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "name": 0,
+              "cpu": 0,
+              "cpu2": 150,
+              "mem_mb": 300,
+              "status": 0,
+              "left_1_name_left_2_name_left_3_name_name": 0,
+              "left_2_name_left_3_name_name": 0,
+              "left_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 0,
+              "center_2_stats_center_3_perf_cpu": 0,
+              "center_3_perf_cpu": 0,
+              "center_3_mem_mem_mb": 300,
+              "right_1_metrics_right_2_status_right_3_status_status": 0,
+              "right_2_status_right_3_status_status": 0,
+              "right_3_status_status": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 150,
+              "center_total_size": 450,
+              "right_total_size": 150
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": 150,
+                "mem_mb": 300,
+                "status": null
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": 0
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": null,
+                "cpu": 300,
+                "cpu2": 150,
+                "mem_mb": 0,
+                "status": null
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": 0
+              }
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -2480,71 +2811,116 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             },
@@ -2552,71 +2928,116 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             },
@@ -2624,71 +3045,116 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ]
             }
@@ -4545,69 +5011,114 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -4616,69 +5127,114 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -4687,69 +5243,114 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -4757,6 +5358,7 @@
           }
         },
         "core_model": {
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -4824,6 +5426,72 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "left",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -5376,6 +6044,145 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu2": 450,
+              "2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu2": 300,
+              "2_status_3_status_status": 150,
+              "3_perf_cpu": 150,
+              "3_name_name": 150,
+              "3_perf_cpu2": 150,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "cpu": 150,
+              "name": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "left_1_metrics_left_2_stats_left_3_perf_cpu": 150,
+              "left_2_stats_left_3_perf_cpu": 150,
+              "left_3_perf_cpu": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu2": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu2": 300,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu2": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_metrics_2_stats_3_perf_cpu": 0,
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu2": 300,
+              "2_stats_3_perf_cpu": 0,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu2": 300,
+              "2_status_3_status_status": 600,
+              "3_perf_cpu": 0,
+              "3_name_name": 150,
+              "3_perf_cpu2": 300,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "cpu": 0,
+              "name": 0,
+              "cpu2": 150,
+              "mem_mb": 300,
+              "status": 450,
+              "left_1_metrics_left_2_stats_left_3_perf_cpu": 0,
+              "left_2_stats_left_3_perf_cpu": 0,
+              "left_3_perf_cpu": 0,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu2": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu2": 150,
+              "center_2_status_center_3_status_status": 450,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu2": 150,
+              "center_3_mem_mem_mb": 300,
+              "center_3_status_status": 450
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 150,
+              "center_total_size": 600,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": 150,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 450,
+                "cpu": null,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -5407,69 +6214,114 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -5478,69 +6330,114 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -5549,69 +6446,114 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7095,60 +8037,99 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7157,60 +8138,99 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7219,60 +8239,99 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7280,6 +8339,7 @@
           }
         },
         "core_model": {
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -7347,6 +8407,71 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": false
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -7792,6 +8917,131 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 450,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 300,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu": 300,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 450,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 300,
+              "3_status_status": 450,
+              "name": 0,
+              "cpu": 150,
+              "mem_mb": 300,
+              "status": 450,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu": 150,
+              "center_2_status_center_3_status_status": 450,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 300,
+              "center_3_status_status": 450
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 600,
+              "left_total_size": 0,
+              "center_total_size": 600,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 450,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 450,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 450,
+                "cpu": 300,
+                "cpu2": 600,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 450,
+                "cpu": 300,
+                "cpu2": 600,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -7823,60 +9073,99 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7885,60 +9174,99 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -7947,60 +9275,99 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -9579,68 +10946,113 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -9649,68 +11061,113 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -9719,68 +11176,113 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -9788,6 +11290,7 @@
           }
         },
         "core_model": {
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -9855,6 +11358,72 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -10326,6 +11895,133 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 600,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 450,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 300,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 600,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu": 450,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 600,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "name": 0,
+              "cpu": 150,
+              "cpu2": 300,
+              "mem_mb": 450,
+              "status": 600,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu": 150,
+              "center_2_status_center_3_status_status": 600,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 450,
+              "center_3_status_status": 600
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 0,
+              "center_total_size": 750,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -10357,68 +12053,113 @@
               "all": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -10427,68 +12168,113 @@
               "all": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -10497,68 +12283,113 @@
               "all": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -12141,68 +13972,113 @@
               "all": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -12211,68 +14087,113 @@
               "all": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -12281,68 +14202,113 @@
               "all": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -12350,6 +14316,7 @@
           }
         },
         "core_model": {
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -12417,6 +14384,72 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
+          "column_capabilities": {
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "status",
@@ -12888,6 +14921,133 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_metrics_2_status_3_status_status": 600,
+              "1_name_2_name_3_name_name": 150,
+              "2_status_3_status_status": 150,
+              "2_stats_3_mem_mem_mb": 450,
+              "2_name_3_name_name": 150,
+              "3_status_status": 150,
+              "3_mem_mem_mb": 150,
+              "3_perf_cpu": 300,
+              "3_name_name": 150,
+              "status": 150,
+              "mem_mb": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "name": 150,
+              "center_1_metrics_center_2_status_center_3_status_status": 600,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_2_status_center_3_status_status": 150,
+              "center_2_stats_center_3_mem_mem_mb": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_3_status_status": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_name_name": 150
+            },
+            "start": {
+              "1_metrics_2_status_3_status_status": 0,
+              "1_name_2_name_3_name_name": 600,
+              "2_status_3_status_status": 0,
+              "2_stats_3_mem_mem_mb": 150,
+              "2_name_3_name_name": 600,
+              "3_status_status": 0,
+              "3_mem_mem_mb": 150,
+              "3_perf_cpu": 300,
+              "3_name_name": 600,
+              "status": 0,
+              "mem_mb": 150,
+              "cpu": 300,
+              "cpu2": 450,
+              "name": 600,
+              "center_1_metrics_center_2_status_center_3_status_status": 0,
+              "center_1_name_center_2_name_center_3_name_name": 600,
+              "center_2_status_center_3_status_status": 0,
+              "center_2_stats_center_3_mem_mem_mb": 150,
+              "center_2_name_center_3_name_name": 600,
+              "center_3_status_status": 0,
+              "center_3_mem_mem_mb": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_name_name": 600
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 0,
+              "center_total_size": 750,
+              "right_total_size": 0
+            },
+            "size": {
+              "status": 150,
+              "mem_mb": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "name": 150
+            },
+            "start": {
+              "all": {
+                "status": 0,
+                "mem_mb": 150,
+                "cpu": 300,
+                "cpu2": 450,
+                "name": 600
+              },
+              "left": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              },
+              "center": {
+                "status": 0,
+                "mem_mb": 150,
+                "cpu": 300,
+                "cpu2": 450,
+                "name": 600
+              },
+              "right": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              }
+            },
+            "after": {
+              "all": {
+                "status": 600,
+                "mem_mb": 450,
+                "cpu": 300,
+                "cpu2": 150,
+                "name": 0
+              },
+              "left": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              },
+              "center": {
+                "status": 600,
+                "mem_mb": 450,
+                "cpu": 300,
+                "cpu2": 150,
+                "name": 0
+              },
+              "right": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              }
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -12919,68 +15079,113 @@
               "all": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "1_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "1_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -12989,68 +15194,113 @@
               "all": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "2_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "2_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []
@@ -13059,68 +15309,113 @@
               "all": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "visible": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "left": [],
               "center": [
                 {
                   "id": "3_status",
-                  "column_id": "status"
+                  "column_id": "status",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_mem_mb",
-                  "column_id": "mem_mb"
+                  "column_id": "mem_mb",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu",
-                  "column_id": "cpu"
+                  "column_id": "cpu",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_cpu2",
-                  "column_id": "cpu2"
+                  "column_id": "cpu2",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 },
                 {
                   "id": "3_name",
-                  "column_id": "name"
+                  "column_id": "name",
+                  "is_grouped": false,
+                  "is_placeholder": false,
+                  "is_aggregated": false
                 }
               ],
               "right": []

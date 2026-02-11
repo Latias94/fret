@@ -1,4 +1,9 @@
+use std::cell::RefCell;
+use std::collections::BTreeSet;
+use std::rc::Rc;
+
 use delinea::data::DataTable;
+use delinea::engine::ChartEngine;
 use delinea::engine::model::ModelError;
 use delinea::ids::{DatasetId, GridId};
 use delinea::spec::ChartSpec;
@@ -6,8 +11,6 @@ use fret_core::{NodeId, Px, Rect, Size};
 use fret_ui::layout_pass::LayoutPassKind;
 use fret_ui::retained_bridge::{LayoutCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{UiHost, UiTree};
-
-use crate::multi_grid::split_chart_spec_by_grid;
 
 use super::ChartCanvas;
 
@@ -78,10 +81,49 @@ impl<H: UiHost> Widget<H> for UniformGrid {
     }
 }
 
+/// A minimal retained container that lays out all children to fill the same bounds.
+///
+/// Child order defines paint/input stacking (last child is on top).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FillStack;
+
+impl FillStack {
+    pub fn create_node<H: UiHost>(ui: &mut UiTree<H>) -> NodeId {
+        ui.create_node_retained(Self)
+    }
+}
+
+impl<H: UiHost> Widget<H> for FillStack {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let is_final = cx.pass_kind == LayoutPassKind::Final;
+        let rect = cx.bounds;
+        for child in cx.children.iter().copied() {
+            if is_final {
+                let _ = cx.layout_viewport_root(child, rect);
+            } else {
+                let _ = cx.layout_in(child, rect);
+            }
+        }
+        cx.available
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MultiGridChartCanvasNodes {
     pub root: NodeId,
     pub canvases: Vec<(GridId, NodeId)>,
+}
+
+fn collect_grids(spec: &ChartSpec) -> Vec<GridId> {
+    if !spec.grids.is_empty() {
+        return spec.grids.iter().map(|g| g.id).collect();
+    }
+
+    let mut ids: BTreeSet<GridId> = spec.axes.iter().map(|a| a.grid).collect();
+    if ids.is_empty() {
+        ids.insert(GridId::new(1));
+    }
+    ids.into_iter().collect()
 }
 
 pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
@@ -90,10 +132,9 @@ pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
     datasets: &[(DatasetId, DataTable)],
     layout: UniformGrid,
 ) -> Result<MultiGridChartCanvasNodes, ModelError> {
-    let split = split_chart_spec_by_grid(&spec)?;
-    let mut canvases: Vec<(GridId, NodeId)> = Vec::with_capacity(split.len());
-    for entry in split {
-        let mut canvas = ChartCanvas::new(entry.spec)?;
+    let grids = collect_grids(&spec);
+    if grids.len() <= 1 {
+        let mut canvas = ChartCanvas::new(spec)?;
         for (dataset_id, table) in datasets {
             canvas
                 .engine_mut()
@@ -101,13 +142,41 @@ pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
                 .insert(*dataset_id, table.clone());
         }
         let node = ChartCanvas::create_node(ui, canvas);
-        canvases.push((entry.grid, node));
+        let root = UniformGrid::create_node(ui, layout);
+        ui.add_child(root, node);
+        return Ok(MultiGridChartCanvasNodes {
+            root,
+            canvases: vec![(grids.get(0).copied().unwrap_or(GridId::new(1)), node)],
+        });
     }
 
-    let root = UniformGrid::create_node(ui, layout);
-    for (_, node) in &canvases {
-        ui.add_child(root, *node);
+    let mut spec = spec;
+    spec.axis_pointer.get_or_insert_with(Default::default);
+    let engine = Rc::new(RefCell::new(ChartEngine::new(spec)?));
+    {
+        let mut engine = engine.borrow_mut();
+        for (dataset_id, table) in datasets {
+            engine.datasets_mut().insert(*dataset_id, table.clone());
+        }
     }
+
+    let mut canvases: Vec<(GridId, NodeId)> = Vec::with_capacity(grids.len());
+    for grid in grids {
+        let canvas = ChartCanvas::new_grid_view(engine.clone(), grid);
+        let node = ChartCanvas::create_node(ui, canvas);
+        canvases.push((grid, node));
+    }
+
+    let grid_root = UniformGrid::create_node(ui, layout);
+    for (_, node) in &canvases {
+        ui.add_child(grid_root, *node);
+    }
+
+    let overlay = ChartCanvas::create_node(ui, ChartCanvas::new_overlay(engine.clone()));
+
+    let root = FillStack::create_node(ui);
+    ui.add_child(root, grid_root);
+    ui.add_child(root, overlay);
 
     Ok(MultiGridChartCanvasNodes { root, canvases })
 }

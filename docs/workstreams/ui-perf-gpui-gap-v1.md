@@ -15,6 +15,53 @@ Related:
 - Zed smoothness workstream: `docs/workstreams/ui-perf-zed-smoothness-v1.md`
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
 - Perf log: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
+- Perf workflow skill (how to run/gate/log): `.agents/skills/fret-perf-workflow/SKILL.md`
+
+---
+
+## Workstream contract (how we measure “closing the gap”)
+
+This workstream uses a strict “numbers or it didn’t happen” contract.
+
+Protocol:
+
+- Every gap item must map to at least one **probe** that can be run via `fretboard diag perf`.
+- Every milestone must be guarded by a **gate** (baseline + thresholds) and recorded in the perf log with:
+  - exact command line,
+  - suite/baseline version,
+  - artifacts directory,
+  - worst bundles (for tail explanation),
+  - commit hash (for rollback).
+
+Recommended default gate set (global sanity):
+
+- `ui-gallery-steady` (canonical baseline)
+- `ui-resize-probes` (attempts=3)
+- `ui-code-editor-resize-probes` (attempts=3)
+
+Evidence template (copy/paste into the perf log):
+
+```text
+## YYYY-MM-DD HH:MM:SS (commit `<hash>`)
+
+Change:
+- <what changed>
+
+Suite(s):
+- <suite list>
+
+Commands:
+<exact commands>
+
+Artifacts:
+- <out dir paths>
+
+Results:
+- <PASS/FAIL + key deltas>
+
+Worst bundles:
+- <paths>
+```
 
 ---
 
@@ -26,6 +73,9 @@ Recent editor-class wins (evidence lives in the perf log):
   (commit `81159325`).
 - Post-merge editor regression fix: `paint_time_us p95 ~30ms → ~0.7ms` by eliminating allocator churn
   (per-row `Theme` clone) in syntax paint (commit `0d8ad27ac`).
+- Code editor resize drag smoothness: `top_total_time_us ~42ms → ~16ms` by making `CodeEditorHandle::set_language(...)`
+  idempotent (avoid per-frame syntax/rich cache resets), guided by in-bundle Canvas phase attribution (commits
+  `f664ead2d`, `1778ba563`).
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
@@ -53,6 +103,7 @@ GPUI is a strong reference for “Zed feel”, but it is not a universal rendere
 What is most transferable for Fret:
 
 - explicit frame-to-frame reuse contracts (cached views + `notify` semantics),
+- side-effect free view updates (render-time setters must be idempotent; no per-frame cache resets),
 - aggressive per-frame scratch / arena allocation discipline,
 - a deliberate text layout cache model (double-buffered reuse, visible-window aware),
 - scene replay primitives that make caching explicit and cheap.
@@ -69,6 +120,9 @@ For effect/renderer architecture, it is often more productive to cross-check aga
 
 To close the gap responsibly, treat perf as a contract and work from the “lowest primitives” upward:
 
+0) **Eliminate per-frame side effects in declarative render loops** (the “idempotent setters” footgun class).
+   - Heuristic: if `handle.set_*` is called from render, it must be a no-op for identical values.
+   - Reference: `docs/workstreams/ui-perf-setter-idempotency-v1.md`.
 1) **Pick a single hot-path probe** (pointer move, wheel, resize, scroll) and gate it.
    - Pointer move gate: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
    - Gate flags: `fretboard diag perf --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us/--max-pointer-move-global-changes`
@@ -94,6 +148,8 @@ reflow + paint work. Zed feels smooth here primarily because it keeps the per-fr
 What we already do in Fret (evidence in the perf log):
 
 - **Coalesce resizes to once per frame** at the runner boundary (apply pending size at `RedrawRequested`).
+  - Code: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`pending_surface_resize` is applied inside
+    `WindowEvent::RedrawRequested`).
 - **Defer known-expensive scroll measurement** while the viewport is actively resizing (unbounded probe deferral).
 - **Make resize probes stable and reproducible** (so baselines measure “work per resize” rather than “scheduler timing”).
 
@@ -102,22 +158,66 @@ Open questions / likely gaps (need code-level confirmation against `repo-ref/zed
 Baseline fact (quick reference):
 - On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
   (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+  - It also sets the view’s layer redraw policy to redraw during live resize:
+    `NSViewLayerContentsRedrawDuringViewResize` (same file).
+- On Wayland, GPUI explicitly throttles interactive resizes to once per vblank (`configure.resizing` + `resize_throttle`)
+  (see `repo-ref/zed/crates/gpui/src/platform/linux/wayland/window.rs`).
 
 1) **Text layout cache model under width jitter**
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+     - Implemented probe: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
+   - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
+     long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
+   - Recent win: stabilize `TextService::measure` wrapped-text shaping reuse working-set to reduce rare
+     `layout_engine_solve_time_us` tail spikes during interactive resize (commit `f2c08b806`).
+     - Default: `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES=4096`
+     - Short-label avoidance: `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES=128`
+     - This is still a FIFO, process-global cache; a more GPUI-like end state likely involves a length-bucketed
+       or LRU policy and/or “visible window aware” caching so long-lived steady suites don't accumulate
+       low-value entries.
+   - Fret stopgap (default-on for jitter-class interactive resize):
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`; widens the “small-step” class so bucketing
+       applies under common per-frame drag deltas; commit `53aa6534a`).
+     - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
+     - Small-step detection is symmetric (back-and-forth drags keep the same policy/caches enabled).
+       - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
+       - Evidence: perf log entry `2026-02-09 16:37:00` (jitter probe p95 total improves by ~0.3ms).
+   - Fret experiment knob (still default-off, broader scope): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+   - Latest evidence: see the perf log entries dated `2026-02-08` for `ui-resize-probes` gate stability before/after
+     the small-step default bucketing change.
+   - Conclusion: quantization is a pragmatic “make live-resize bounded” lever, but it is not the end state; the
+     longer-term direction remains improving wrapped-text reuse (separate shaping vs wrapping keys and reuse line
+     layouts across frames), closer to GPUI’s amortization model.
 
 2) **Layout invalidation granularity**
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.
    - Fret TODO: tighten layout-root construction and subtree invalidation so a resize does not always imply
      “layout the whole tree” when only a small set of constraints changed.
+   - Current Fret mechanism cost center:
+     - The flow layout engine request/build phase currently walks (and “requests”) the mounted subtree each frame to
+       keep stable identity (`TaffyLayoutEngine::seen` + stale-node GC at `end_frame`).
+     - `TaffyLayoutEngine` still uses hashing-heavy per-frame tables (`HashMap`/`HashSet`) keyed by `NodeId`
+       (a `slotmap` key), which is a strong candidate explanation for
+       `layout_request_build_roots_time_us ~= 2–4ms` under resize drag-jitter.
+     - Direction: M1 “hashing → dense tables” (e.g. `slotmap::SecondaryMap` + generation stamps) in the layout engine.
 
 3) **Per-frame allocation discipline on hot resize frames**
    - GPUI likely relies heavily on per-frame scratch arenas and stable caches; sporadic allocations can manifest as
      rare tail hitches even when p90 looks fine.
    - Fret TODO: track allocation and cache miss reasons directly in resize bundles (already partially available via
      layout and view-cache counters) and close remaining blind spots.
+   - Recent win: reduce avoidable allocations in the flow layout request/build phase (no more
+     `UiTree::children(...).to_vec()` clones in flow build; avoid cloning the previous children vec in
+     `TaffyLayoutEngine::set_children`).
+     - Implementation: commit `10e30dac1`
+     - Evidence: perf log entry `2026-02-09 09:10:11` (drag-jitter worst-case max total `27.5ms → 21.1ms`).
+   - Negative result: a wrapper-chain memoization attempt using a per-build `HashMap` regressed
+     `layout_request_build_roots_time_us` on drag-jitter (commit `96661c49c`).
+     - Evidence: perf log entry `2026-02-09 15:28:00` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+     - Takeaway: prefer the M1 dense-table refactor over adding more per-frame hashed caches.
 
 4) **GPU work scaling with surface area**
    - Even if CPU layout is stable, large resizes can spike GPU cost if we re-rasterize masks, upload atlases, or
@@ -160,6 +260,80 @@ Evidence:
 
 - Perf log entries under:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`, `5ab4ba71`)
+
+---
+
+## Milestones (v1)
+
+These milestones are intentionally “mechanism-first” and map to measurable probes/gates.
+
+### M0: Measurement discipline (keep experiments reversible)
+
+Goal:
+
+- Every hot-path change lands with a probe/gate and a perf log entry.
+
+Acceptance:
+
+- `ui-gallery-steady` (canonical baseline) stays green.
+- `ui-resize-probes` and `ui-code-editor-resize-probes` are stable under attempts=3 on the primary dev machine(s).
+  - Evidence: perf log entries `2026-02-09 13:31:35` (commit `1778ba563`) and `2026-02-09 13:46:46`
+    (commit `007006b28`) in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+
+### M1: Resize-drag becomes predictable (bounded tail)
+
+Goal:
+
+- Keep resize-drag work bounded and predictable under both:
+  - stress resize (`ui-gallery-window-resize-stress-steady`), and
+  - width-jitter resize (`ui-gallery-window-resize-drag-jitter-steady`).
+
+Acceptance:
+
+- The `ui-resize-probes` gate is stable under attempts=3 (low tail flake) and worst bundles are explainable.
+
+### M2: “Text under width jitter” closes the GPUI amortization gap
+
+Goal:
+
+- Move from “wrap-width quantization as a stopgap” toward GPUI-like frame-to-frame layout reuse.
+
+Acceptance:
+
+- `ui-code-editor-resize-probes` stays under budget with lower `Text::prepare` churn signals and fewer rare tail spikes.
+  - Evidence: perf log entry `2026-02-09 13:46:46` (commit `007006b28`) shows worst frames `~15.1–15.8ms` vs `16308us` target.
+
+### M3: Frame scratch / allocation discipline (arena-first)
+
+Goal:
+
+- Reduce allocator amplification on hot frames by moving scratch-heavy hot paths onto arenas/pools.
+
+Acceptance:
+
+- Key steady-state scripts show fewer tail outliers while maintaining correctness gates.
+
+### M4: GPU churn is explainable and bounded
+
+Goal:
+
+- When we do hitch, bundles clearly show whether it is CPU or GPU (uploads/evictions/intermediate pool thrash).
+
+Acceptance:
+
+- Deep triage runs (`FRET_DIAG_RENDERER_PERF=1`) produce consistent churn tables for the worst bundle(s), and fixes can be gated indirectly (CPU) while explained by churn deltas.
+
+### Recommended next steps (short-horizon)
+
+1) Keep the gate set stable after large refactors.
+   - Re-run: `ui-gallery-steady` + resize gates attempts=3.
+   - If `ui-resize-probes` tail becomes flaky, cut a new baseline with `tools/perf/diag_perf_baseline_select.sh`.
+2) Start “GPUI-like text reuse” as the next high-leverage gap closure.
+   - Target: reduce wrapped-text churn under width jitter without relying primarily on wrap-width quantization.
+   - Probe: `ui-code-editor-resize-probes` (plus the editor torture steady script for warm caches).
+3) Push “paint-only” frames as a first-class goal.
+   - Add/maintain an explicit gate check (where applicable) that asserts drag frames can be replayed from cache roots
+     without triggering extra layout/paint work.
 
 ## 1) What GPUI does that matters for smoothness
 
@@ -231,6 +405,17 @@ contract on top.
 ## 3) Primary performance gaps (GPUI vs Fret)
 
 This section is the actionable “gap list”.
+
+### Gap → probe / gate map (quick index)
+
+| Gap | Primary probe(s) | Gate / baseline |
+| --- | --- | --- |
+| Frame arena / scratch discipline | `ui-gallery-steady` (pick worst steady script), `ui-gallery-chrome-torture-steady` | `ui-gallery-steady` (canonical baseline) |
+| Timer work on interactive frames | `ui-gallery-hit-test-torture-stripes-move-sweep-steady` | pointer-move thresholds (`--max-pointer-move-*`) |
+| Text under width jitter | `ui-code-editor-resize-probes`, `ui-resize-probes` | `ui-code-editor-resize-probes` baseline + attempts=3 |
+| Resize tail predictability | `ui-resize-probes` | `ui-resize-probes` baseline + attempts=3 |
+| “Paint-only” drag frames (cache replay) | `ui-resize-probes` (and future “paint-only replay” checks) | `ui-resize-probes` + `--check-drag-cache-root-paint-only <test_id>` (when available/maintained) |
+| GPU churn / intermediate pool thrash | `ui-gallery-effects-blur-torture-steady`, `ui-gallery-effects-blur-thrash-steady` | deep triage only (`FRET_DIAG_RENDERER_PERF=1`); gate CPU separately |
 
 ### Gap A: No per-frame arena for UI “element allocations / scratch”
 

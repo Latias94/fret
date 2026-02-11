@@ -201,6 +201,7 @@ impl Menu {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_initial_focus_id(cx, Rc::new(std::cell::Cell::new(None)))
     }
@@ -211,35 +212,71 @@ impl Menu {
         initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let Menu {
+                entries,
+                a11y_label,
+                test_id,
+                style,
+            } = self;
+            let (height, container_bg, shadow, corner) = {
+                let theme = Theme::global(&*cx.app);
+                let height = menu_tokens::list_item_height(theme);
 
-            let height = menu_tokens::list_item_height(&theme);
+                let container_bg = resolve_override_slot_with(
+                    style.container_background.as_ref(),
+                    WidgetStates::empty(),
+                    |color| color.resolve(theme),
+                    || menu_tokens::container_background(theme),
+                );
+                let elevation = resolve_override_slot_with(
+                    style.container_elevation.as_ref(),
+                    WidgetStates::empty(),
+                    |v| *v,
+                    || menu_tokens::container_elevation(theme),
+                );
+                let shadow_color = menu_tokens::container_shadow_color(theme);
+                let corner = resolve_override_slot_with(
+                    style.container_corner_radii.as_ref(),
+                    WidgetStates::empty(),
+                    |v| *v,
+                    || menu_tokens::container_shape(theme),
+                );
+                let surface = material_surface_style(
+                    theme,
+                    container_bg,
+                    elevation,
+                    Some(shadow_color),
+                    corner,
+                );
+                (height, surface.background, surface.shadow, corner)
+            };
 
             let sem = SemanticsProps {
                 role: SemanticsRole::Menu,
-                label: self.a11y_label.clone(),
-                test_id: self.test_id.clone(),
+                label: a11y_label,
+                test_id,
                 ..Default::default()
             };
 
-            let mut items: Vec<MenuEntry> = Vec::new();
-            items.extend(self.entries.into_iter());
+            let items = entries;
 
-            let mut flat_items: Vec<MenuItem> = Vec::new();
-            let mut disabled: Vec<bool> = Vec::new();
-            for it in items.iter() {
-                match it {
-                    MenuEntry::Item(item) => {
-                        flat_items.push(item.clone());
-                        disabled.push(item.disabled);
-                    }
-                    MenuEntry::Separator => {}
+            let mut disabled: Vec<bool> = Vec::with_capacity(items.len());
+            let mut typeahead_items: Vec<Arc<str>> = Vec::with_capacity(items.len());
+            for entry in items.iter() {
+                if let MenuEntry::Item(item) = entry {
+                    disabled.push(item.disabled);
+                    typeahead_items.push(
+                        item.a11y_label
+                            .clone()
+                            .unwrap_or_else(|| item.label.clone()),
+                    );
                 }
             }
 
             let first_enabled_idx = disabled.iter().position(|&d| !d).unwrap_or(0);
             let disabled: Arc<[bool]> = Arc::from(disabled);
-            let count = flat_items.len();
+            let count = disabled.len();
+            let typeahead_items: Arc<[Arc<str>]> = Arc::from(typeahead_items);
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
@@ -251,31 +288,7 @@ impl Menu {
                 wrap: true,
                 disabled: disabled.clone(),
             };
-
-            let container_bg = resolve_override_slot_with(
-                self.style.container_background.as_ref(),
-                WidgetStates::empty(),
-                |color| color.resolve(&theme),
-                || menu_tokens::container_background(&theme),
-            );
-            let elevation = resolve_override_slot_with(
-                self.style.container_elevation.as_ref(),
-                WidgetStates::empty(),
-                |v| *v,
-                || menu_tokens::container_elevation(&theme),
-            );
-            let shadow_color = menu_tokens::container_shadow_color(&theme);
-            let corner = resolve_override_slot_with(
-                self.style.container_corner_radii.as_ref(),
-                WidgetStates::empty(),
-                |v| *v,
-                || menu_tokens::container_shape(&theme),
-            );
-            let surface =
-                material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
-            let container_bg = surface.background;
-            let shadow = surface.shadow;
-            let style = self.style.clone();
+            let style: Arc<MenuStyle> = Arc::new(style);
 
             cx.semantics(sem, move |cx| {
                 vec![cx.container(
@@ -352,16 +365,7 @@ impl Menu {
                             // Prefix typeahead (best-effort): matches `RadioGroup` semantics in this crate.
                             roving_typeahead_prefix_arc_str_always_wrap(
                                 cx,
-                                Arc::from(
-                                    flat_items
-                                        .iter()
-                                        .map(|it| {
-                                            it.a11y_label
-                                                .clone()
-                                                .unwrap_or_else(|| it.label.clone())
-                                        })
-                                        .collect::<Vec<_>>(),
-                                ),
+                                typeahead_items.clone(),
                                 30,
                             );
 
@@ -370,13 +374,12 @@ impl Menu {
                             for entry in items.iter() {
                                 match entry {
                                     MenuEntry::Separator => {
-                                        out.push(menu_separator(cx, &theme));
+                                        out.push(menu_separator(cx));
                                     }
                                     MenuEntry::Item(it) => {
                                         let tab_stop = item_idx == first_enabled_idx;
                                         out.push(material_menu_item(
                                             cx,
-                                            &theme,
                                             it.clone(),
                                             height,
                                             style.clone(),
@@ -398,9 +401,14 @@ impl Menu {
     }
 }
 
-fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> AnyElement {
-    let h = menu_tokens::divider_height(theme);
-    let c = menu_tokens::divider_color(theme);
+fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (h, c) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            menu_tokens::divider_height(theme),
+            menu_tokens::divider_color(theme),
+        )
+    };
 
     let mut props = ContainerProps::default();
     props.background = Some(c);
@@ -413,10 +421,9 @@ fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> A
 
 fn material_menu_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     item: MenuItem,
     height: Px,
-    style: MenuStyle,
+    style: Arc<MenuStyle>,
     tab_stop: bool,
     idx: usize,
     set_size: usize,
@@ -445,13 +452,17 @@ fn material_menu_item<H: UiHost>(
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
+            key_activation: Default::default(),
             a11y,
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
                 l.size.width = Length::Fill;
                 l.size.height = Length::Px(height);
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
             focus_ring: None,
@@ -485,24 +496,52 @@ fn material_menu_item<H: UiHost>(
                 };
 
                 let states = WidgetStates::from_pressable(cx, st, enabled);
+                let (
+                    label_color,
+                    state_layer_color,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                    label_style,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let (token_label_color, token_state_layer_color, state_layer_target) =
+                        menu_tokens::item_outcomes(theme, enabled, interaction);
+                    let label_color = resolve_override_slot_with(
+                        style.item_label_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || token_label_color,
+                    );
+                    let state_layer_color = resolve_override_slot_with(
+                        style.item_state_layer_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || token_state_layer_color,
+                    );
 
-                let (token_label_color, token_state_layer_color, state_layer_target) =
-                    menu_tokens::item_outcomes(theme, enabled, interaction);
-                let label_color = resolve_override_slot_with(
-                    style.item_label_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || token_label_color,
-                );
-                let state_layer_color = resolve_override_slot_with(
-                    style.item_state_layer_color.as_ref(),
-                    states,
-                    |color| color.resolve(theme),
-                    || token_state_layer_color,
-                );
+                    let ripple_base_opacity = menu_tokens::pressed_state_layer_opacity(theme);
+                    let config = material_pressable_indication_config(theme, None);
 
-                let ripple_base_opacity = menu_tokens::pressed_state_layer_opacity(theme);
-                let config = material_pressable_indication_config(theme, None);
+                    let default_label_style = theme
+                        .text_style_by_key("md.sys.typescale.label-large")
+                        .unwrap_or_else(|| TextStyle::default());
+                    let label_style = resolve_override_slot_with(
+                        style.item_label_text_style.as_ref(),
+                        states,
+                        |s| s.clone(),
+                        || default_label_style,
+                    );
+
+                    (
+                        label_color,
+                        state_layer_color,
+                        state_layer_target,
+                        ripple_base_opacity,
+                        config,
+                        label_style,
+                    )
+                };
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -515,16 +554,6 @@ fn material_menu_item<H: UiHost>(
                     ripple_base_opacity,
                     config,
                     false,
-                );
-
-                let default_label_style = theme
-                    .text_style_by_key("md.sys.typescale.label-large")
-                    .unwrap_or_else(|| TextStyle::default());
-                let label_style = resolve_override_slot_with(
-                    style.item_label_text_style.as_ref(),
-                    states,
-                    |s| s.clone(),
-                    || default_label_style,
                 );
                 let label_el = menu_item_label(cx, &item.label, label_style, label_color);
 

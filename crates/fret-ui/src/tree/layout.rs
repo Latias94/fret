@@ -349,7 +349,7 @@ impl<H: UiHost> UiTree<H> {
                         &record.instance
                     && scroll_props.windowed_paint
                 {
-                    // Windowed paint surfaces (ADR 0190) depend on the scroll offset to determine
+                    // Windowed paint surfaces (ADR 0175) depend on the scroll offset to determine
                     // which content is painted into the scrollable space. When view-cache reuse is
                     // enabled, a scroll transform update alone is insufficient: the cached subtree
                     // must be allowed to rerender so its paint handlers can run for the new visible
@@ -444,13 +444,13 @@ impl<H: UiHost> UiTree<H> {
 
                         if retained_host {
                             // Retained-host virtual surfaces can update row membership without
-                            // rerendering the parent cache root (ADR 0192). Schedule a redraw so
+                            // rerendering the parent cache root (ADR 0177). Schedule a redraw so
                             // `render_root` can reconcile row subtrees in the next frame.
                             self.request_redraw_coalesced(app);
                         } else {
                             // Do not force a layout pass just to discover that the visible window
                             // is outside the previously rendered overscan window. Instead, treat
-                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0190):
+                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0175):
                             // mark the nearest view-cache root dirty and request a redraw so the
                             // next frame rerenders the virtual surface children.
                             self.mark_nearest_view_cache_root_needs_rerender(
@@ -524,6 +524,10 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.measure_cache_this_frame.clear();
+
+        if pass_kind == LayoutPassKind::Final {
+            self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
+        }
 
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
@@ -651,7 +655,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        // Fast path (ADR 0190): if nothing requires layout this frame, skip the layout engine and
+        // Fast path (ADR 0175): if nothing requires layout this frame, skip the layout engine and
         // only run prepaint/semantics. This keeps scroll-only and cache-hit frames cheap while
         // still allowing prepaint-windowed surfaces to update their ephemeral outputs.
         if pass_kind == LayoutPassKind::Final
@@ -661,12 +665,12 @@ impl<H: UiHost> UiTree<H> {
             && self.layout_invalidations_count == 0
         {
             self.debug_stats.layout_fast_path_taken = true;
+            self.prepaint_after_layout(app, scale_factor);
+
             if self.semantics_requested {
                 self.semantics_requested = false;
                 self.refresh_semantics_snapshot(app);
             }
-
-            self.prepaint_after_layout(app, scale_factor);
             self.flush_deferred_cleanup(services);
 
             self.last_layout_bounds = Some(bounds);
@@ -806,7 +810,6 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
             }
         }
-
         if pass_kind == LayoutPassKind::Final {
             let prepaint_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
@@ -818,7 +821,6 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
             }
         }
-
         let started_phase = profile_layout_all.then(Instant::now);
         if pass_kind == LayoutPassKind::Final {
             let focus_started = self.debug_enabled.then(Instant::now);
@@ -2124,12 +2126,72 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let sf = scale_factor;
+        let solves_before = engine.solve_count();
+        let solve_time_before = engine.last_solve_time();
         let _ = engine.compute_root_for_node_with_measure_if_needed(
             root,
             available,
             sf,
             |node, constraints| self.measure_in(app, services, node, constraints, sf),
         );
+        if self.debug_enabled && engine.solve_count() > solves_before {
+            let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
+            let top_measures = engine
+                .last_solve_measure_hotspots()
+                .iter()
+                .map(|h| {
+                    let mut element: Option<GlobalElementId> = None;
+                    let mut element_kind: Option<&'static str> = None;
+                    if let Some(record) =
+                        crate::declarative::frame::element_record_for_node(app, window, h.node)
+                    {
+                        element = Some(record.element);
+                        element_kind = Some(record.instance.kind_name());
+                    }
+                    let top_children =
+                        self.debug_take_top_measure_children(h.node, 3)
+                            .into_iter()
+                            .map(|(child, r)| {
+                                let mut child_element: Option<GlobalElementId> = None;
+                                let mut child_kind: Option<&'static str> = None;
+                                if let Some(record) =
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, child,
+                                    )
+                                {
+                                    child_element = Some(record.element);
+                                    child_kind = Some(record.instance.kind_name());
+                                }
+                                super::UiDebugLayoutEngineMeasureChildHotspot {
+                                    child,
+                                    measure_time: r.total_time,
+                                    calls: r.calls,
+                                    element: child_element,
+                                    element_kind: child_kind,
+                                }
+                            })
+                            .collect();
+                    super::UiDebugLayoutEngineMeasureHotspot {
+                        node: h.node,
+                        measure_time: h.total_time,
+                        calls: h.calls,
+                        cache_hits: h.cache_hits,
+                        element,
+                        element_kind,
+                        top_children,
+                    }
+                })
+                .collect();
+            self.debug_record_layout_engine_solve(
+                engine.last_solve_root().unwrap_or(root),
+                elapsed,
+                engine.last_solve_measure_calls(),
+                engine.last_solve_measure_cache_hits(),
+                engine.last_solve_measure_time(),
+                top_measures,
+            );
+            self.debug_measure_children.clear();
+        }
 
         self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, scale_factor);
         self.put_layout_engine(engine);
@@ -2229,10 +2291,70 @@ impl<H: UiHost> UiTree<H> {
                 AvailableSpace::Definite(root_bounds.size.height),
             );
 
+            let solves_before = engine.solve_count();
+            let solve_time_before = engine.last_solve_time();
             let _ =
                 engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
                     self.measure_in(app, services, n, c, sf)
                 });
+            if self.debug_enabled && engine.solve_count() > solves_before {
+                let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
+                let top_measures = engine
+                    .last_solve_measure_hotspots()
+                    .iter()
+                    .map(|h| {
+                        let mut element: Option<GlobalElementId> = None;
+                        let mut element_kind: Option<&'static str> = None;
+                        if let Some(record) =
+                            crate::declarative::frame::element_record_for_node(app, window, h.node)
+                        {
+                            element = Some(record.element);
+                            element_kind = Some(record.instance.kind_name());
+                        }
+                        let top_children = self
+                            .debug_take_top_measure_children(h.node, 3)
+                            .into_iter()
+                            .map(|(child, r)| {
+                                let mut child_element: Option<GlobalElementId> = None;
+                                let mut child_kind: Option<&'static str> = None;
+                                if let Some(record) =
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, child,
+                                    )
+                                {
+                                    child_element = Some(record.element);
+                                    child_kind = Some(record.instance.kind_name());
+                                }
+                                super::UiDebugLayoutEngineMeasureChildHotspot {
+                                    child,
+                                    measure_time: r.total_time,
+                                    calls: r.calls,
+                                    element: child_element,
+                                    element_kind: child_kind,
+                                }
+                            })
+                            .collect();
+                        super::UiDebugLayoutEngineMeasureHotspot {
+                            node: h.node,
+                            measure_time: h.total_time,
+                            calls: h.calls,
+                            cache_hits: h.cache_hits,
+                            element,
+                            element_kind,
+                            top_children,
+                        }
+                    })
+                    .collect();
+                self.debug_record_layout_engine_solve(
+                    engine.last_solve_root().unwrap_or(root),
+                    elapsed,
+                    engine.last_solve_measure_calls(),
+                    engine.last_solve_measure_cache_hits(),
+                    engine.last_solve_measure_time(),
+                    top_measures,
+                );
+                self.debug_measure_children.clear();
+            }
 
             self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, sf);
         }

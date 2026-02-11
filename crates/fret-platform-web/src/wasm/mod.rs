@@ -73,7 +73,7 @@ impl std::fmt::Debug for WebPlatformServices {
 }
 
 impl WebPlatformServices {
-    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0195).
+    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0180).
     pub fn register_ime_mount(&mut self, window: AppWindowId, mount: HtmlElement) {
         self.ime_mounts.insert(window, mount);
     }
@@ -251,7 +251,7 @@ impl WebPlatformServices {
                         }
                     });
                 }
-                Effect::OpenUrl { url } => {
+                Effect::OpenUrl { url, target, rel } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()
@@ -262,7 +262,13 @@ impl WebPlatformServices {
                     let Some(window) = window() else {
                         continue;
                     };
-                    let _ = window.open_with_url(&url);
+                    if let Some(target) = target {
+                        let features = rel.as_deref().unwrap_or_default();
+                        let _ =
+                            window.open_with_url_and_target_and_features(&url, &target, features);
+                    } else {
+                        let _ = window.open_with_url(&url);
+                    }
                 }
                 Effect::FileDialogOpen { options, .. } => {
                     let caps = app

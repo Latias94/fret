@@ -8,8 +8,8 @@ use crate::core::{CanvasPoint, NodeId as GraphNodeId};
 use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 use crate::io::NodeGraphNodeOrigin;
 
-use super::super::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use crate::ui::canvas::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 
 fn clamp_rect_origin_in_rect_with_size(
     rect_origin: CanvasPoint,
@@ -120,7 +120,7 @@ fn clamp_delta_for_extent_rect(
 }
 
 fn dragged_group_bounds(
-    geom: &super::super::geometry::CanvasGeometry,
+    geom: &crate::ui::canvas::geometry::CanvasGeometry,
     nodes: &[GraphNodeId],
 ) -> Option<(CanvasPoint, CanvasSize)> {
     let mut min_x: f32 = f32::INFINITY;
@@ -249,7 +249,7 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 group0.size,
             );
 
-            let snap = super::super::snaplines::snap_delta_for_rects(
+            let snap = crate::ui::canvas::snaplines::snap_delta_for_rects(
                 moving,
                 &candidates,
                 threshold_canvas,

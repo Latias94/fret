@@ -1,9 +1,9 @@
 use fret_core::{Modifiers, MouseButton, Point, PointerId};
 use fret_ui::UiHost;
 
-use super::super::searcher::SearcherRowKind;
-use super::super::state::PendingInsertNodeDrag;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::searcher::SearcherRowKind;
+use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 pub(super) fn handle_searcher_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

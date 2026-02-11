@@ -6,7 +6,7 @@
 //!   translate app events into headless updates.
 //!
 //! Coordinate contract: when used with `fret-ui` events/layout, the canonical space is
-//! **window-local logical pixels** (ADR 0017 / ADR 0164 / ADR 0172).
+//! **window-local logical pixels** (ADR 0017 / ADR 0149 / ADR 0157).
 
 mod controller;
 mod registry;

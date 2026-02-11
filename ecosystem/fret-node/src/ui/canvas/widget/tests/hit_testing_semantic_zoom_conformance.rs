@@ -2,10 +2,9 @@ use fret_core::{Point, Px};
 use uuid::Uuid;
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 
 use super::prelude::*;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn pan_for_canvas_point_at_window_point(
     canvas_point: Point,
@@ -56,7 +55,7 @@ fn port_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     let (graph_value, _a, _a_in, _a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
 
@@ -126,7 +125,7 @@ fn edge_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     // Force a straight-line path so the screen-space distance assertions are stable.
     let edge_types =

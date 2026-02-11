@@ -8,10 +8,11 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "App-level model, command, and effect surfaces for Fret applications."
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-runtime = { path = "../fret-runtime" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 slotmap.workspace = true
 serde.workspace = true
 serde_json.workspace = true

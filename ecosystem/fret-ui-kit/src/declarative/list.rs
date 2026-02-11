@@ -125,7 +125,7 @@ where
     )
 }
 
-/// Retained-host virtualized list helper (ADR 0192).
+/// Retained-host virtualized list helper (ADR 0177).
 ///
 /// Prefer this over [`list_virtualized`] when the list is hosted inside a view-cache root and
 /// scroll stability matters. The retained-host path allows window shifts to attach/detach rows
@@ -218,7 +218,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let selected = match &selection {
-        Some(m) => cx.watch_model(m).copied().unwrap_or(None),
+        Some(m) => cx.watch_model(m).copied_or(None),
         None => None,
     };
 
@@ -367,7 +367,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let selected = match &selection {
-        Some(m) => cx.watch_model(m).copied().unwrap_or(None),
+        Some(m) => cx.watch_model(m).copied_or(None),
         None => None,
     };
 
@@ -513,7 +513,7 @@ pub fn list_from_strings<H: UiHost + 'static>(
     size: Size,
     on_select: impl Fn(usize) -> Option<CommandId> + 'static,
 ) -> AnyElement {
-    let values = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let values = cx.watch_model(&items).layout().cloned_or_default();
     let values = Arc::new(values);
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
@@ -645,6 +645,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

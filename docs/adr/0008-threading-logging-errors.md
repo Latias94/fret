@@ -50,5 +50,5 @@ This keeps platform and GPU objects single-threaded where required and avoids pe
 
 ## References
 
-- User-facing execution and concurrency surface: `docs/adr/0199-execution-and-concurrency-surface-v1.md`
+- User-facing execution and concurrency surface: `docs/adr/0184-execution-and-concurrency-surface-v1.md`
 

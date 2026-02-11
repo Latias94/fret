@@ -23,6 +23,73 @@ pub(super) struct UiLayer {
 }
 
 impl<H: UiHost> UiTree<H> {
+    /// Returns the current UI layer order in paint order (back-to-front).
+    ///
+    /// This includes the base layer and any overlay layers (even if currently invisible).
+    pub fn layer_ids_in_paint_order(&self) -> &[UiLayerId] {
+        self.layer_order.as_slice()
+    }
+
+    /// Reorders layers in paint order (back-to-front).
+    ///
+    /// This is a mechanism-only API intended for component-layer overlay orchestration. Policy
+    /// code should treat this as "stable z-order correction" rather than a per-component knob.
+    ///
+    /// Notes:
+    /// - The base layer (when present) is always kept at the back (index 0).
+    /// - Unknown/missing layer IDs are ignored, and missing existing layers are appended in their
+    ///   previous relative order.
+    pub fn reorder_layers_in_paint_order(&mut self, desired: Vec<UiLayerId>) {
+        if self.layer_order.is_empty() {
+            return;
+        }
+
+        let mut seen = std::collections::HashSet::<UiLayerId>::new();
+        let mut next: Vec<UiLayerId> = Vec::with_capacity(self.layer_order.len());
+
+        for id in desired {
+            if !self.layers.contains_key(id) {
+                continue;
+            }
+            if !seen.insert(id) {
+                continue;
+            }
+            next.push(id);
+        }
+
+        // Preserve any layers not mentioned by the caller in their existing relative order.
+        for &id in &self.layer_order {
+            if !self.layers.contains_key(id) {
+                continue;
+            }
+            if seen.insert(id) {
+                next.push(id);
+            }
+        }
+
+        if let Some(base) = self.base_layer {
+            next.retain(|&id| id != base);
+            next.insert(0, base);
+        }
+
+        if next == self.layer_order {
+            return;
+        }
+
+        self.layer_order = next;
+
+        // Layer order changes can move the active modal/focus barriers. Ensure focus/capture do
+        // not remain under a barrier after reordering.
+        let (active_roots, barrier_root) = self.active_input_layers();
+        if barrier_root.is_some() {
+            self.enforce_modal_barrier_scope(&active_roots);
+        }
+        let (active_focus_roots, focus_barrier_root) = self.active_focus_layers();
+        if focus_barrier_root.is_some() {
+            self.enforce_focus_barrier_scope(&active_focus_roots);
+        }
+    }
+
     pub fn base_root(&self) -> Option<NodeId> {
         self.base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))
@@ -389,6 +456,46 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         (roots, barrier_root)
+    }
+
+    pub(super) fn active_pointer_down_outside_layer_roots(
+        &self,
+        barrier_root: Option<NodeId>,
+    ) -> Vec<NodeId> {
+        let mut any_visible = false;
+        for &layer_id in &self.layer_order {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            any_visible = true;
+            if layer.blocks_underlay_input {
+                break;
+            }
+        }
+
+        if !any_visible {
+            return Vec::new();
+        }
+
+        let mut roots: Vec<NodeId> = Vec::new();
+        for &layer_id in self.layer_order.iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+
+            roots.push(layer.root);
+
+            if barrier_root == Some(layer.root) {
+                break;
+            }
+        }
+        roots
     }
 
     pub(super) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {

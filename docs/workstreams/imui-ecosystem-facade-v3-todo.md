@@ -228,4 +228,4 @@ Exit criteria:
   - Evidence: `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` (`floating_layer_z_order_does_not_clone_vec_each_frame`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatWindowLayerZOrderSnapshot`).
 - [x] IMUIECO3-test-051 Add a small CI-friendly gate matrix (contracts + perf + diag scripts).
-  - Evidence: `tools/diag_gate_imui_v3.ps1`.
+  - Evidence: `tools/diag_gate_imui_v3.py`.

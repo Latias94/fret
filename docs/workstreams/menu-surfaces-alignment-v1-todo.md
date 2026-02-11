@@ -11,7 +11,7 @@ Related:
 
 - OS menubar tracker: `docs/workstreams/os-menubar.md`
 - Menu model + command metadata: `docs/adr/0023-command-metadata-menus-and-palette.md`
-- OS menubar seam: `docs/adr/0183-os-menubar-effect-setmenubar.md`
+- OS menubar seam: `docs/adr/0168-os-menubar-effect-setmenubar.md`
 - Focus + command routing: `docs/adr/0020-focus-and-command-routing.md`
 - Overlay policy: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 

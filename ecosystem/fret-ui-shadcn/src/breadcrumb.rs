@@ -83,6 +83,7 @@ impl Breadcrumb {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         breadcrumb_with_patch(cx, self.items, self.separator, self.chrome, self.layout)
     }
@@ -95,35 +96,39 @@ fn breadcrumb_with_patch<H: UiHost>(
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-
-    let gap = theme
-        .metric_by_key("component.breadcrumb.gap")
-        // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
-        // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
-        .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(&theme));
-
-    let text_px = theme
-        .metric_by_key("component.breadcrumb.text_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
-    let line_height = theme
-        .metric_by_key("component.breadcrumb.line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
-
-    let fg = theme.color_required("foreground");
-    let muted = theme.color_required("muted-foreground");
-
     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+    let (gap, style, fg, muted, props) = {
+        let theme = Theme::global(&*cx.app);
 
-    let style = TextStyle {
-        font: FontId::default(),
-        size: text_px,
-        weight: FontWeight::NORMAL,
-        slant: Default::default(),
-        line_height: Some(line_height),
-        letter_spacing_em: None,
+        let gap = theme
+            .metric_by_key("component.breadcrumb.gap")
+            // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
+            // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
+            .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(theme));
+
+        let text_px = theme
+            .metric_by_key("component.breadcrumb.text_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let line_height = theme
+            .metric_by_key("component.breadcrumb.line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+        let fg = theme.color_required("foreground");
+        let muted = theme.color_required("muted-foreground");
+
+        let style = TextStyle {
+            font: FontId::default(),
+            size: text_px,
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(line_height),
+            letter_spacing_em: None,
+        };
+
+        let props = decl_style::container_props(theme, chrome, layout);
+        (gap, style, fg, muted, props)
     };
 
     let mut children: Vec<AnyElement> = Vec::new();
@@ -142,23 +147,20 @@ fn breadcrumb_with_patch<H: UiHost>(
         }
     }
 
-    cx.container(
-        decl_style::container_props(&theme, chrome, layout),
-        move |cx| {
-            vec![cx.flex(
-                FlexProps {
-                    layout: Default::default(),
-                    direction: fret_core::Axis::Horizontal,
-                    gap,
-                    padding: fret_core::Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: true,
-                },
-                move |_cx| children,
-            )]
-        },
-    )
+    cx.container(props, move |cx| {
+        vec![cx.flex(
+            FlexProps {
+                layout: Default::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap,
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: true,
+            },
+            move |_cx| children,
+        )]
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -350,8 +352,7 @@ fn breadcrumb_separator<H: UiHost>(
 fn breadcrumb_ellipsis<H: UiHost>(cx: &mut ElementContext<'_, H>, muted: Color) -> AnyElement {
     // shadcn uses a 36x36 box with a `MoreHorizontal` icon.
     // We keep the same footprint with a centered icon.
-    let theme = Theme::global(&*cx.app).clone();
-    let size = theme
+    let size = Theme::global(&*cx.app)
         .metric_by_key("component.breadcrumb.ellipsis_size")
         .unwrap_or(Px(36.0));
 
@@ -433,6 +434,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -441,11 +443,11 @@ pub mod primitives {
         where
             I: IntoIterator<Item = AnyElement>,
         {
-            let theme = Theme::global(&*cx.app).clone();
-            cx.container(
-                decl_style::container_props(&theme, self.chrome, self.layout),
-                move |cx| children(cx),
-            )
+            let props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(theme, self.chrome, self.layout)
+            };
+            cx.container(props, move |cx| children(cx))
         }
     }
 
@@ -470,6 +472,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -478,49 +481,49 @@ pub mod primitives {
         where
             I: IntoIterator<Item = AnyElement>,
         {
-            let theme = Theme::global(&*cx.app).clone();
-            let (_fg, muted) = colors(&theme);
-            let style = text_style(&theme);
+            let (muted, style, gap, props) = {
+                let theme = Theme::global(&*cx.app);
+                let (_fg, muted) = colors(theme);
+                let style = text_style(theme);
+                let gap = theme
+                    .metric_by_key("component.breadcrumb.gap")
+                    // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
+                    // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
+                    .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(theme));
+                let props = decl_style::container_props(theme, self.chrome, self.layout);
+                (muted, style, gap, props)
+            };
 
-            let gap = theme
-                .metric_by_key("component.breadcrumb.gap")
-                // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
-                // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
-                .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(&theme));
-
-            cx.container(
-                decl_style::container_props(&theme, self.chrome, self.layout),
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: Default::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: true,
-                        },
-                        move |cx| {
-                            // Apply the list-level muted foreground by default; individual children
-                            // (BreadcrumbLink/Page) can override it.
-                            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
-                            for el in &mut out {
-                                // Best-effort: only text nodes support local color overrides.
-                                if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
-                                    if props.color.is_none() {
-                                        props.color = Some(muted);
-                                    }
-                                    if props.style.is_none() {
-                                        props.style = Some(style.clone());
-                                    }
+            cx.container(props, move |cx| {
+                vec![cx.flex(
+                    FlexProps {
+                        layout: Default::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap,
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: true,
+                    },
+                    move |cx| {
+                        // Apply the list-level muted foreground by default; individual children
+                        // (BreadcrumbLink/Page) can override it.
+                        let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
+                        for el in &mut out {
+                            // Best-effort: only text nodes support local color overrides.
+                            if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
+                                if props.color.is_none() {
+                                    props.color = Some(muted);
+                                }
+                                if props.style.is_none() {
+                                    props.style = Some(style.clone());
                                 }
                             }
-                            out
-                        },
-                    )]
-                },
-            )
+                        }
+                        out
+                    },
+                )]
+            })
         }
     }
 
@@ -545,6 +548,7 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
@@ -553,28 +557,29 @@ pub mod primitives {
         where
             I: IntoIterator<Item = AnyElement>,
         {
-            let theme = Theme::global(&*cx.app).clone();
-            let item_gap = theme
-                .metric_by_key("component.breadcrumb.item_gap")
-                .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(&theme));
+            let (item_gap, props) = {
+                let theme = Theme::global(&*cx.app);
+                let item_gap = theme
+                    .metric_by_key("component.breadcrumb.item_gap")
+                    .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(theme));
+                let props = decl_style::container_props(theme, self.chrome, self.layout);
+                (item_gap, props)
+            };
 
-            cx.container(
-                decl_style::container_props(&theme, self.chrome, self.layout),
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: Default::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: item_gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| children(cx),
-                    )]
-                },
-            )
+            cx.container(props, move |cx| {
+                vec![cx.flex(
+                    FlexProps {
+                        layout: Default::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: item_gap,
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| children(cx),
+                )]
+            })
         }
     }
 
@@ -619,10 +624,14 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
-            let style = text_style(&theme);
-            let (fg, muted) = colors(&theme);
+            let (style, fg, muted) = {
+                let theme = Theme::global(&*cx.app);
+                let style = text_style(theme);
+                let (fg, muted) = colors(theme);
+                (style, fg, muted)
+            };
             let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let label = self.label.clone();
             let text_px = style.size;
@@ -641,6 +650,8 @@ pub mod primitives {
                 self.command.as_ref(),
             );
 
+            let chrome = self.chrome;
+            let layout = self.layout;
             if let Some(command) = self.command
                 && !disabled_by_gating
             {
@@ -648,11 +659,10 @@ pub mod primitives {
                     cx.pressable_dispatch_command_if_enabled(command.clone());
                     let color = if st.hovered { fg } else { muted };
                     vec![cx.container(
-                        decl_style::container_props(
-                            &theme,
-                            self.chrome.clone(),
-                            self.layout.clone(),
-                        ),
+                        {
+                            let theme = Theme::global(&*cx.app);
+                            decl_style::container_props(theme, chrome.clone(), layout.clone())
+                        },
                         move |cx| {
                             let mut text = ui::text(cx, label.clone())
                                 .text_size_px(text_px)
@@ -674,27 +684,28 @@ pub mod primitives {
                     )]
                 })
             } else {
-                cx.container(
-                    decl_style::container_props(&theme, self.chrome, self.layout),
-                    move |cx| {
-                        let mut text = ui::text(cx, label)
-                            .text_size_px(text_px)
-                            .font_weight(font_weight)
-                            .text_color(ColorRef::Color(muted))
-                            .wrap(wrap)
-                            .overflow(overflow);
+                let props = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::container_props(theme, chrome, layout)
+                };
+                cx.container(props, move |cx| {
+                    let mut text = ui::text(cx, label)
+                        .text_size_px(text_px)
+                        .font_weight(font_weight)
+                        .text_color(ColorRef::Color(muted))
+                        .wrap(wrap)
+                        .overflow(overflow);
 
-                        if let Some(line_height) = line_height {
-                            text = text.line_height_px(line_height);
-                        }
+                    if let Some(line_height) = line_height {
+                        text = text.line_height_px(line_height);
+                    }
 
-                        if let Some(letter_spacing_em) = letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
+                    if let Some(letter_spacing_em) = letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
 
-                        vec![text.into_element(cx)]
-                    },
-                )
+                    vec![text.into_element(cx)]
+                })
             }
         }
     }
@@ -733,10 +744,15 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
-            let style = text_style(&theme);
-            let (fg, _muted) = colors(&theme);
+            let (style, fg, props) = {
+                let theme = Theme::global(&*cx.app);
+                let style = text_style(theme);
+                let (fg, _muted) = colors(theme);
+                let props = decl_style::container_props(theme, self.chrome, self.layout);
+                (style, fg, props)
+            };
             let label = self.label;
             let text_px = style.size;
             let font_weight = style.weight;
@@ -747,27 +763,24 @@ pub mod primitives {
             } else {
                 (TextWrap::Word, TextOverflow::Clip)
             };
-            cx.container(
-                decl_style::container_props(&theme, self.chrome, self.layout),
-                move |cx| {
-                    let mut text = ui::text(cx, label)
-                        .text_size_px(text_px)
-                        .font_weight(font_weight)
-                        .text_color(ColorRef::Color(fg))
-                        .wrap(wrap)
-                        .overflow(overflow);
+            cx.container(props, move |cx| {
+                let mut text = ui::text(cx, label)
+                    .text_size_px(text_px)
+                    .font_weight(font_weight)
+                    .text_color(ColorRef::Color(fg))
+                    .wrap(wrap)
+                    .overflow(overflow);
 
-                    if let Some(line_height) = line_height {
-                        text = text.line_height_px(line_height);
-                    }
+                if let Some(line_height) = line_height {
+                    text = text.line_height_px(line_height);
+                }
 
-                    if let Some(letter_spacing_em) = letter_spacing_em {
-                        text = text.letter_spacing_em(letter_spacing_em);
-                    }
+                if let Some(letter_spacing_em) = letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
 
-                    vec![text.into_element(cx)]
-                },
-            )
+                vec![text.into_element(cx)]
+            })
         }
     }
 
@@ -815,9 +828,24 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
-            let (_fg, muted) = colors(&theme);
+            let (muted, props) = {
+                let theme = Theme::global(&*cx.app);
+                let (_fg, muted) = colors(theme);
+                let props = ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: fret_ui::element::Length::Px(Px(14.0)),
+                            height: fret_ui::element::Length::Px(Px(14.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..decl_style::container_props(theme, self.chrome, self.layout)
+                };
+                (muted, props)
+            };
 
             let icon = match self.kind {
                 BreadcrumbSeparatorKind::ChevronRight => ids::ui::CHEVRON_RIGHT,
@@ -833,20 +861,7 @@ pub mod primitives {
             );
 
             // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
-            cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: fret_ui::element::Length::Px(Px(14.0)),
-                            height: fret_ui::element::Length::Px(Px(14.0)),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    ..decl_style::container_props(&theme, self.chrome, self.layout)
-                },
-                move |_cx| vec![icon_el],
-            )
+            cx.container(props, move |_cx| vec![icon_el])
         }
     }
 
@@ -877,14 +892,19 @@ pub mod primitives {
             self
         }
 
+        #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
-            let (_fg, muted) = colors(&theme);
-            let size = self.size.unwrap_or_else(|| {
-                theme
-                    .metric_by_key("component.breadcrumb.ellipsis_size")
-                    .unwrap_or(Px(36.0))
-            });
+            let (muted, size, wrapper_props) = {
+                let theme = Theme::global(&*cx.app);
+                let (_fg, muted) = colors(theme);
+                let size = self.size.unwrap_or_else(|| {
+                    theme
+                        .metric_by_key("component.breadcrumb.ellipsis_size")
+                        .unwrap_or(Px(36.0))
+                });
+                let wrapper_props = decl_style::container_props(theme, self.chrome, self.layout);
+                (muted, size, wrapper_props)
+            };
 
             let mut props = FlexProps {
                 layout: Default::default(),
@@ -905,10 +925,9 @@ pub mod primitives {
                 Some(fret_ui_kit::ColorRef::Color(muted)),
             );
 
-            cx.container(
-                decl_style::container_props(&theme, self.chrome, self.layout),
-                move |cx| vec![cx.flex(props, move |_cx| vec![icon])],
-            )
+            cx.container(wrapper_props, move |cx| {
+                vec![cx.flex(props, move |_cx| vec![icon])]
+            })
         }
     }
 }

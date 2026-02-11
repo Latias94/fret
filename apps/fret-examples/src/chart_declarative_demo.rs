@@ -59,6 +59,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
                     column: 3,
                 },
             ],
+            ..Default::default()
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -204,5 +205,5 @@ fn view(
 
     let mut props = ChartCanvasPanelProps::new(st.spec.clone());
     props.engine = Some(st.engine.clone());
-    vec![chart_canvas_panel(cx, props)].into()
+    chart_canvas_panel(cx, props).into()
 }

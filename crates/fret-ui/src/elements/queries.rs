@@ -91,7 +91,7 @@ pub fn bounds_for_element<H: UiHost>(
 /// declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer anchored overlay policies
-/// that must track render transforms (ADR 0083) while keeping layout authoritative.
+/// that must track render transforms (ADR 0082) while keeping layout authoritative.
 pub fn visual_bounds_for_element<H: UiHost>(
     app: &mut H,
     window: AppWindowId,

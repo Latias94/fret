@@ -1,0 +1,114 @@
+---
+title: AI Elements Port (`fret-ui-ai`) — Milestones
+status: active
+date: 2026-02-06
+scope: ecosystem/fret-ui-ai, diag gates, upstream parity tracking
+---
+
+# AI Elements Port (`fret-ui-ai`) — Milestones
+
+This document is a **one-screen milestone board** for the AI Elements port.
+
+Source of truth for detailed TODOs: `docs/workstreams/ai-elements-port-todo.md`.
+Narrative + contracts: `docs/workstreams/ai-elements-port.md`.
+
+## Definition of done (port-level)
+
+We consider a component family “ported” when:
+
+1. **Outcomes match upstream** for the documented behaviors (not API/props).
+2. **Stable selectors** exist for automation (`test_id` on roots/rows/actions).
+3. At least one **regression gate** exists:
+   - a `fretboard diag` script for interactive/stateful surfaces, and/or
+   - a targeted Rust invariant test for non-interactive geometry/contract rules.
+4. The surface lives in the **correct layer** (mechanisms vs shadcn recipes vs AI policy).
+
+## Milestones
+
+### M0 — Foundations (contracts + crate shape)
+
+Acceptance criteria:
+
+- `ecosystem/fret-ui-ai` public surface area is shaped around **composition** (container/content/actions),
+  not monolith widgets.
+- Minimal **data model v0** exists (message role + parts + tool calls + sources + citations).
+- Minimal **`fret.ai.*` token namespace** exists (keep it small; prefer shadcn tokens first).
+- UI Gallery has at least one **AI demo page** wired (so we can dogfood quickly).
+
+Status: In progress (foundation exists; keep tightening contracts).
+
+### M1 — Chat MVP (conversation + message + prompt)
+
+Scope:
+
+- `conversation.tsx`, `message.tsx`, `prompt-input.tsx` parity pass.
+- `tool.tsx` parity pass for “collapsible tool call” outcomes.
+- Markdown streaming outcome parity (append + finalize) via `ecosystem/fret-markdown`.
+
+Acceptance criteria:
+
+- Keyboard-first prompt input gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`).
+- Tool call disclosure gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`).
+- Streaming finalize gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`).
+
+Status: In progress.
+
+### M2 — Tooling UIs (sources + citations)
+
+Scope:
+
+- `sources.tsx` Collapsible outcomes.
+- `inline-citation.tsx` HoverCard + pager outcomes.
+
+Acceptance criteria:
+
+- Sources Collapsible gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`).
+- Inline citation HoverCard gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`).
+- Citation highlight gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`).
+
+Status: Done (gates passing).
+
+### M3 — Code artifacts (developer-facing outputs)
+
+Scope:
+
+- `code-block.tsx`, `snippet.tsx`, `file-tree.tsx` (and supporting utilities).
+
+Acceptance criteria:
+
+- Code fences render with stable per-block actions (copy / expand / download) and preserve per-block
+  state during streaming growth.
+- `CodeBlock` / `Snippet` are backed by `ecosystem/fret-code-view` (no new engines).
+- `FileTree` is virtualized and keyed correctly (stable identity; no state jumping).
+
+Status: Planned.
+
+### M4 — Workflow surfaces (optional; only if we can reuse existing crates)
+
+Scope:
+
+- Minimal chrome recipes over existing ecosystem crates (`fret-node`, `fret-canvas`, docking/viewports).
+
+Acceptance criteria:
+
+- No “new engines” in `fret-ui-ai`; only composition/policy wrappers.
+
+Status: Defer until a concrete consumer exists.
+
+### M5 — Voice surfaces (defer until there is a concrete consumer)
+
+Scope:
+
+- `audio-player`, `mic-selector`, `speech-input`, `transcription`, `voice-selector`.
+
+Acceptance criteria:
+
+- Backends/policies are explicit; UI remains intent-driven (apps own side effects).
+
+Status: Defer until a concrete consumer exists.
+
+## Next-step checklist (recommended weekly cadence)
+
+- Update the upstream “Version stamp” first when `repo-ref/ai-elements` changes.
+- Pick 1–2 upstream components max, align outcomes, then add/repair gates immediately.
+- Keep `docs/workstreams/ai-elements-port-todo.md` honest (mark blockers with a concrete bundle + step id).

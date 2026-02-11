@@ -302,16 +302,14 @@ impl AiChat {
         } else {
             let mut transcript = AiConversationTranscript::from_arc(messages_value.clone())
                 .scroll_handle(handle.clone())
-                .stick_to_bottom(self.stick_to_bottom);
+                .stick_to_bottom(self.stick_to_bottom)
+                .tail_padding(fret_core::Px(360.0));
 
             if revision != 0 {
                 transcript = transcript.content_revision(revision);
             }
             if let Some(prefix) = self.message_test_id_prefix.clone() {
                 transcript = transcript.test_id_message_prefix(prefix);
-            }
-            if let Some(id) = self.transcript_root_test_id.clone() {
-                transcript = transcript.debug_root_test_id(id);
             }
             if let Some(prefix) = self.transcript_row_test_id_prefix.clone() {
                 transcript = transcript.debug_row_test_id_prefix(prefix);
@@ -354,6 +352,18 @@ impl AiChat {
         );
         transcript_container.layout.overflow = fret_ui::element::Overflow::Clip;
         let transcript_container = cx.container(transcript_container, |_cx| vec![transcript_stack]);
+        let transcript_container = if let Some(id) = self.transcript_root_test_id.clone() {
+            cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(id),
+                    ..Default::default()
+                },
+                move |_cx| vec![transcript_container],
+            )
+        } else {
+            transcript_container
+        };
 
         let download_row = self.show_download.then(|| {
             let disabled = self.disabled;

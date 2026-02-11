@@ -184,7 +184,10 @@ fn build_layouts_for_group(
         if category_col != key.category_col as usize {
             continue;
         }
-        if datasets.dataset(series.dataset).is_none() {
+        if datasets
+            .dataset(model.root_dataset_id(series.dataset))
+            .is_none()
+        {
             continue;
         }
         series_in_group.push(series.id);
@@ -390,6 +393,9 @@ mod tests {
                         column: 3,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -538,6 +544,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -667,6 +676,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -796,6 +808,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

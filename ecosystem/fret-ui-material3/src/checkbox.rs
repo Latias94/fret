@@ -139,10 +139,13 @@ impl Checkbox {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let size = checkbox_tokens::size_tokens(&theme);
+            let size = {
+                let theme = Theme::global(&*cx.app);
+                checkbox_tokens::size_tokens(theme)
+            };
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -162,33 +165,38 @@ impl Checkbox {
                     }
                 }));
 
-                let corner_radii = theme
-                    .corners_by_key("md.sys.shape.corner.full")
-                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
+                let checked = cx
+                    .get_model_copied(&self.checked, Invalidation::Layout)
+                    .unwrap_or(false);
+
+                let (corner_radii, layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = theme
+                        .corners_by_key("md.sys.shape.corner.full")
+                        .unwrap_or_else(|| Corners::all(Px(9999.0)));
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring =
+                        material_focus_ring_for_component(theme, "md.comp.checkbox", corner_radii);
+
+                    (corner_radii, layout, focus_ring)
+                };
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Checkbox),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
-                        checked: Some(
-                            cx.get_model_copied(&self.checked, Invalidation::Layout)
-                                .unwrap_or(false),
-                        ),
+                        checked: Some(checked),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        "md.comp.checkbox",
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -218,51 +226,70 @@ impl Checkbox {
                         }
 
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                        let mut chrome =
-                            checkbox_tokens::chrome(&theme, checked, enabled, interaction);
-                        let token_container_bg = chrome.container_bg;
-                        chrome.container_bg = resolve_override_slot_opt_with(
-                            self.style.container_background.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_container_bg,
-                        );
-                        let token_outline_color = chrome.outline_color;
-                        chrome.outline_color = resolve_override_slot_opt_with(
-                            self.style.outline_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_outline_color,
-                        );
-                        let token_icon_color = chrome.icon_color;
-                        chrome.icon_color = resolve_override_slot_with(
-                            self.style.icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || token_icon_color,
-                        );
 
-                        let state_layer_target = checkbox_tokens::state_layer_target_opacity(
-                            &theme,
-                            checked,
-                            enabled,
-                            interaction,
-                        );
-                        let state_layer_color =
-                            checkbox_tokens::state_layer_color(&theme, checked, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                        let (
+                            chrome,
+                            state_layer_target,
+                            state_layer_color,
+                            ripple_base_opacity,
+                            config,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let ripple_base_opacity =
-                            checkbox_tokens::pressed_state_layer_opacity(&theme, checked);
-                        let config = material_pressable_indication_config(
-                            &theme,
-                            Some(Px(size.state_layer.0 * 0.5)),
-                        );
+                            let mut chrome =
+                                checkbox_tokens::chrome(theme, checked, enabled, interaction);
+                            let token_container_bg = chrome.container_bg;
+                            chrome.container_bg = resolve_override_slot_opt_with(
+                                self.style.container_background.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_container_bg,
+                            );
+                            let token_outline_color = chrome.outline_color;
+                            chrome.outline_color = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_outline_color,
+                            );
+                            let token_icon_color = chrome.icon_color;
+                            chrome.icon_color = resolve_override_slot_with(
+                                self.style.icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || token_icon_color,
+                            );
+
+                            let state_layer_target = checkbox_tokens::state_layer_target_opacity(
+                                theme,
+                                checked,
+                                enabled,
+                                interaction,
+                            );
+                            let state_layer_color =
+                                checkbox_tokens::state_layer_color(theme, checked, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let ripple_base_opacity =
+                                checkbox_tokens::pressed_state_layer_opacity(theme, checked);
+                            let config = material_pressable_indication_config(
+                                theme,
+                                Some(Px(size.state_layer.0 * 0.5)),
+                            );
+
+                            (
+                                chrome,
+                                state_layer_target,
+                                state_layer_color,
+                                ripple_base_opacity,
+                                config,
+                            )
+                        };
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,

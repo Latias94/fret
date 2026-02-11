@@ -56,9 +56,9 @@ Out of scope:
 - Cross-window drag sessions: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - Multi-window + DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
 - Docking arbitration matrix: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- Multi-window degradation policy: `docs/adr/0084-multi-window-degradation-policy.md`
+- Multi-window degradation policy: `docs/adr/0083-multi-window-degradation-policy.md`
 - Platform capabilities (runtime): `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
-- Window styles / utility windows (future): `docs/adr/0154-window-styles-and-utility-windows.md` (Proposed)
+- Window styles / utility windows (future): `docs/adr/0139-window-styles-and-utility-windows.md` (Proposed)
 
 ## Parity checklist (platform-agnostic outcomes)
 
@@ -124,7 +124,7 @@ Ordering above the source window during tracked interactions is:
 
 - easy on some platforms,
 - difficult or restricted on others,
-- requires explicit window-style requests for tool windows in the long run (ADR 0154).
+- requires explicit window-style requests for tool windows in the long run (ADR 0139).
 
 ## Platform notes (risk hotspots)
 

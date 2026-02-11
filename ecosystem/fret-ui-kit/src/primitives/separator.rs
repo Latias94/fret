@@ -50,19 +50,23 @@ impl Separator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let (border, thickness, mut layout) = {
+            let theme = Theme::global(&*cx.app);
 
-        let border = theme
-            .color_by_key("border")
-            .unwrap_or_else(|| theme.color_required("border"));
-        let thickness = self.thickness.unwrap_or_else(|| {
-            theme
-                .metric_by_key("component.separator.px")
-                .unwrap_or(Px(1.0))
-        });
+            let border = theme
+                .color_by_key("border")
+                .unwrap_or_else(|| theme.color_required("border"));
+            let thickness = self.thickness.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.separator.px")
+                    .unwrap_or(Px(1.0))
+            });
+            let layout = decl_style::layout_style(theme, self.layout);
 
-        let mut layout = decl_style::layout_style(&theme, self.layout);
+            (border, thickness, layout)
+        };
         match self.orientation {
             SeparatorOrientation::Horizontal => {
                 layout.size = SizeStyle {
@@ -103,6 +107,7 @@ impl Separator {
     }
 }
 
+#[track_caller]
 pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     Separator::new().into_element(cx)
 }

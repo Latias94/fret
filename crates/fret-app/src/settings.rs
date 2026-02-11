@@ -272,7 +272,7 @@ pub fn apply_settings_globals(app: &mut crate::App, settings: &SettingsFileV1) {
 }
 
 fn parse_locale_or_default(input: &str) -> fret_runtime::fret_i18n::LocaleId {
-    parse_locale_if_well_formed(input).unwrap_or_else(fret_runtime::fret_i18n::LocaleId::default)
+    parse_locale_if_well_formed(input).unwrap_or_default()
 }
 
 fn parse_locale_if_well_formed(input: &str) -> Option<fret_runtime::fret_i18n::LocaleId> {

@@ -34,7 +34,7 @@ fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-launch = { path = "../../crates/fret-launch" }
+fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
@@ -44,6 +44,8 @@ fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }
 fret-executor = { path = "../../ecosystem/fret-executor" }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
+fret-router = { path = "../../ecosystem/fret-router", features = ["query-integration"] }
+fret-router-ui = { path = "../../ecosystem/fret-router-ui" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] }
 bytemuck.workspace = true
 glam.workspace = true

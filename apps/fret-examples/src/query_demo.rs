@@ -18,7 +18,6 @@ fn demo_key() -> QueryKey<DemoData> {
 
 struct QueryDemoState {
     fail_mode: Model<bool>,
-    router: MessageRouter<QueryDemoMsg>,
 }
 
 #[derive(Debug, Clone)]
@@ -29,38 +28,56 @@ enum QueryDemoMsg {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("query-demo", init_window, view, |d| {
-        d.on_command(on_command)
-    })?
-    .with_main_window("query_demo", (560.0, 360.0))
-    .init_app(|app| {
-        shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-            app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-            shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        );
-    })
-    .run()?;
+    fret_kit::mvu::app::<QueryDemoProgram>("query-demo")?
+        .with_main_window("query_demo", (560.0, 360.0))
+        .init_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            );
+        })
+        .run()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> QueryDemoState {
-    let prefix = format!("query-demo.{window:?}.");
-    QueryDemoState {
-        fail_mode: app.models_mut().insert(false),
-        router: MessageRouter::new(prefix),
+struct QueryDemoProgram;
+
+impl MvuProgram for QueryDemoProgram {
+    type State = QueryDemoState;
+    type Message = QueryDemoMsg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+        init_window(app, window)
+    }
+
+    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+        update(app, state, message);
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, state, msg)
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).clone();
-    st.router.clear();
+fn init_window(app: &mut App, _window: AppWindowId) -> QueryDemoState {
+    QueryDemoState {
+        fail_mode: app.models_mut().insert(false),
+    }
+}
 
-    let fail_mode = cx
-        .watch_model(&st.fail_mode)
-        .layout()
-        .copied()
-        .unwrap_or(false);
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut QueryDemoState,
+    msg: &mut MessageRouter<QueryDemoMsg>,
+) -> Elements {
+    let theme = Theme::global(&*cx.app).snapshot();
+
+    let fail_mode = cx.watch_model(&st.fail_mode).layout().copied_or_default();
 
     let key = demo_key();
     let policy = QueryPolicy {
@@ -83,8 +100,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
     let state = cx
         .watch_model(handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(|| QueryState::<DemoData>::default());
+        .cloned_or_else(QueryState::<DemoData>::default);
 
     let status_label = match state.status {
         QueryStatus::Idle => "Idle",
@@ -134,17 +150,17 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
 
     let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
         .variant(shadcn::ButtonVariant::Secondary)
-        .on_click(st.router.cmd(QueryDemoMsg::ToggleFailMode))
+        .on_click(msg.cmd(QueryDemoMsg::ToggleFailMode))
         .into_element(cx);
 
     let invalidate_btn = shadcn::Button::new("Invalidate")
         .variant(shadcn::ButtonVariant::Default)
-        .on_click(st.router.cmd(QueryDemoMsg::Invalidate))
+        .on_click(msg.cmd(QueryDemoMsg::Invalidate))
         .into_element(cx);
 
     let invalidate_ns_btn = shadcn::Button::new("Invalidate namespace")
         .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(st.router.cmd(QueryDemoMsg::InvalidateNamespace))
+        .on_click(msg.cmd(QueryDemoMsg::InvalidateNamespace))
         .into_element(cx);
 
     let buttons = ui::h_flex(cx, |_cx| {
@@ -228,38 +244,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
-fn on_command(
-    app: &mut App,
-    _services: &mut dyn UiServices,
-    window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    st: &mut QueryDemoState,
-    cmd: &CommandId,
-) {
-    let Some(msg) = st.router.try_take(cmd) else {
-        return;
-    };
-
+fn update(app: &mut App, st: &mut QueryDemoState, msg: QueryDemoMsg) {
     match msg {
         QueryDemoMsg::Invalidate => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, demo_key());
             });
-            app.request_redraw(window);
         }
         QueryDemoMsg::InvalidateNamespace => {
             let key = demo_key();
             let _ = with_query_client(app, |client, _app| {
                 client.invalidate_namespace(key.namespace());
             });
-            app.request_redraw(window);
         }
         QueryDemoMsg::ToggleFailMode => {
             let _ = app.models_mut().update(&st.fail_mode, |v| *v = !*v);
-            app.request_redraw(window);
         }
     }
 }

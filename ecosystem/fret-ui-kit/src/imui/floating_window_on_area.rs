@@ -745,9 +745,7 @@ where
                         Vec::new()
                     },
                 )
-                .attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(test_id.clone()),
-                )
+                .test_id(test_id.clone())
             };
 
             let mut stacked: Vec<AnyElement> = Vec::new();

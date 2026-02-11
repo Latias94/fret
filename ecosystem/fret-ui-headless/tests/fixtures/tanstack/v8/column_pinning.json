@@ -147,44 +147,71 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -308,44 +335,71 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -469,47 +523,641 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
+          }
+        }
+      }
+    },
+    {
+      "id": "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells",
+      "options": {},
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": []
+        },
+        "columnVisibility": {
+          "a": false
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_pinning": {
+          "left": [
+            "a"
+          ],
+          "center": [
+            "b",
+            "c"
+          ],
+          "right": [],
+          "can_pin": {
+            "a": true,
+            "b": false,
+            "c": true,
+            "ab": true
+          },
+          "pin_position": {
+            "a": "left",
+            "b": null,
+            "c": null,
+            "ab": "left"
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0,
+            "ab": -1
+          },
+          "is_some_columns_pinned": true,
+          "is_some_left_columns_pinned": true,
+          "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "right": []
+          }
+        }
+      }
+    },
+    {
+      "id": "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells",
+      "options": {},
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "right": []
+        },
+        "columnVisibility": {
+          "b": false
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_pinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "center": [
+            "c"
+          ],
+          "right": [],
+          "can_pin": {
+            "a": true,
+            "b": false,
+            "c": true,
+            "ab": true
+          },
+          "pin_position": {
+            "a": "left",
+            "b": "left",
+            "c": null,
+            "ab": "left"
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 1,
+            "c": 0,
+            "ab": -1
+          },
+          "is_some_columns_pinned": true,
+          "is_some_left_columns_pinned": true,
+          "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "center": [
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "right": []
+          }
+        }
+      }
+    },
+    {
+      "id": "column_pinning_group_leafs_pinned_both_sides_prefers_left",
+      "options": {},
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": [
+            "b"
+          ]
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_pinning": {
+          "left": [
+            "a"
+          ],
+          "center": [
+            "c"
+          ],
+          "right": [
+            "b"
+          ],
+          "can_pin": {
+            "a": true,
+            "b": false,
+            "c": true,
+            "ab": true
+          },
+          "pin_position": {
+            "a": "left",
+            "b": "right",
+            "c": null,
+            "ab": "left"
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0,
+            "ab": -1
+          },
+          "is_some_columns_pinned": true,
+          "is_some_left_columns_pinned": true,
+          "is_some_right_columns_pinned": true
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              },
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "center": [
+              {
+                "id": "1_c",
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ],
+            "right": [
+              {
+                "id": "1_b",
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
+              }
+            ]
           }
         }
       }
@@ -728,46 +1376,73 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": [
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ]
           }
@@ -979,45 +1654,72 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "center": [
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -1231,45 +1933,72 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "center": [
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -1483,45 +2212,72 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "center": [
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -1732,44 +2488,71 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -1996,45 +2779,72 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "center": [
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []
@@ -2258,44 +3068,71 @@
             "all": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "visible": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "left": [],
             "center": [
               {
                 "id": "1_a",
-                "column_id": "a"
+                "column_id": "a",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_b",
-                "column_id": "b"
+                "column_id": "b",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               },
               {
                 "id": "1_c",
-                "column_id": "c"
+                "column_id": "c",
+                "is_grouped": false,
+                "is_placeholder": false,
+                "is_aggregated": false
               }
             ],
             "right": []

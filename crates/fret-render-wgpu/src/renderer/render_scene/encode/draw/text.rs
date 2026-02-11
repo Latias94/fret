@@ -64,11 +64,12 @@ pub(in super::super) fn encode_text(
             );
             let bg = resolve_decoration_color(d.paint_span, d.color);
             super::encode_quad(
+                renderer,
                 state,
                 rect,
-                bg,
+                fret_core::Paint::Solid(bg),
                 Edges::all(Px(0.0)),
-                Color::TRANSPARENT,
+                fret_core::Paint::Solid(Color::TRANSPARENT),
                 Corners::all(Px(0.0)),
             );
         }
@@ -204,11 +205,12 @@ pub(in super::super) fn encode_text(
             );
             let bg = resolve_decoration_color(d.paint_span, d.color);
             super::encode_quad(
+                renderer,
                 state,
                 rect,
-                bg,
+                fret_core::Paint::Solid(bg),
                 Edges::all(Px(0.0)),
-                Color::TRANSPARENT,
+                fret_core::Paint::Solid(Color::TRANSPARENT),
                 Corners::all(Px(0.0)),
             );
         }

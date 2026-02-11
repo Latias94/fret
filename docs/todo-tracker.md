@@ -18,6 +18,27 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/workspace-crate-boundaries-v1.md`
   - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 
+## P0 - Adaptive layout (container queries)
+
+- Lock and implement frame-lagged container queries so responsive recipes adapt to **panel width**
+  (docking/editor reality), not only viewport width.
+  - ADR: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
+  - Workstream:
+    - `docs/workstreams/container-queries-v1.md`
+    - `docs/workstreams/container-queries-v1-todo.md`
+    - `docs/workstreams/container-queries-v1-milestones.md`
+
+## P0 - Environment queries (viewport/device capabilities)
+
+- Lock and implement a typed environment query mechanism so viewport/device-driven responsive
+  behavior (mobile shells, pointer capability gates, safe-area) is not encoded as ad-hoc
+  `cx.bounds` magic numbers.
+  - ADR: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
+  - Workstream:
+    - `docs/workstreams/environment-queries-v1.md`
+    - `docs/workstreams/environment-queries-v1-todo.md`
+    - `docs/workstreams/environment-queries-v1-milestones.md`
+
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:
@@ -51,7 +72,7 @@ It complements (but does not replace) ADRs:
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render-wgpu/src/text.rs`
   - Current: `crates/fret-render-wgpu/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
   - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
@@ -59,7 +80,7 @@ It complements (but does not replace) ADRs:
 
 - **Web/WASM bootstrap fonts are insufficient** (done)
   - Problem: `fret-fonts` currently bundles a mono subset only; general UI text needs a UI sans baseline (and eventually emoji).
-  - ADRs: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - ADRs: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-fonts/src/lib.rs`, `crates/fret-launch/src/runner/web.rs`
   - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
   - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
@@ -68,14 +89,14 @@ It complements (but does not replace) ADRs:
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Code: `crates/fret-render-wgpu/src/text.rs`
   - Current: `crates/fret-render-wgpu/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
   - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
-  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`
+  - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0152-polychrome-glyphs-and-emoji-pipeline-v1.md`
   - Code: `crates/fret-render-wgpu/src/text.rs`
   - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
   - Current: automated conformance (unit) covers VS16/ZWJ/flags/keycaps (`crates/fret-render-wgpu/src/text.rs`).
@@ -106,12 +127,12 @@ It complements (but does not replace) ADRs:
 
 - **Unify rich text under attributed spans (shaping vs paint split)**
   - Goal: make Markdown/code highlighting structurally compatible with wrapping and geometry queries without “many Text nodes”.
-  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+  - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
   - Workstream: `docs/workstreams/text-system-v2-parley.md`
 
 - **Stop theme-only changes from forcing reshaping/re-wrapping**
   - Problem: current v1 `RichText` run colors participate in shaping/layout cache keys, so recolors can trigger expensive rework.
-  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0109-rich-text-runs-and-text-quality-v2.md`
+  - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0107-rich-text-runs-and-text-quality-v2.md`
   - Workstream: `docs/workstreams/text-system-v2-parley.md`
 
 - **Wrapper-owned wrapping and truncation (not backend-owned)**
@@ -122,7 +143,7 @@ It complements (but does not replace) ADRs:
 - **Text quality baseline: gamma/contrast tuning + subpixel coherence**
   - Problem: current text shaders apply raw atlas coverage without contrast/gamma correction, which can look "soft" under DPI scaling and on light-on-dark surfaces.
   - Problem: subpixel glyph variants are selected during shaping using local glyph positions, but final device-pixel placement also depends on the element origin/transform; a mismatch can cause jitter/blur when scrolling or when origins land on fractional device pixels.
-  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0109-rich-text-runs-and-text-quality-v2.md`
+  - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0107-rich-text-runs-and-text-quality-v2.md`
   - References:
     - Zed blade shader gamma/contrast helpers: `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
     - Zed subpixel variant constants: `repo-ref/zed/crates/gpui/src/text_system.rs`
@@ -137,7 +158,7 @@ It complements (but does not replace) ADRs:
 
 - **Budgeted, evictable glyph atlases**
   - Problem: append-only atlas growth is a long-session risk; eviction must be deterministic and observable.
-  - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+  - ADRs: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`, `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Workstream: `docs/workstreams/text-system-v2-parley.md`
 
 ## P0 - Themes / Token Consistency / shadcn Alignment
@@ -149,7 +170,7 @@ It complements (but does not replace) ADRs:
 
 - **Zed-aligned shortcut display policy for menus** (done)
   - Problem: shortcut labels in menus should be stable and understandable; they should not flicker based on live focus, and should remain consistent with command palette display.
-  - ADRs: `docs/adr/0183-os-menubar-effect-setmenubar.md`, `docs/adr/0023-command-metadata-and-menus.md`, `docs/adr/0021-keymap-file-format-and-merge.md`, `docs/adr/0022-when-expressions.md`
+  - ADRs: `docs/adr/0168-os-menubar-effect-setmenubar.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`
   - Workstream: `docs/workstreams/os-menubar.md` (MVP 2)
   - Reference: Zed/GPUI `repo-ref/zed/crates/gpui/src/platform/mac/platform.rs` (`bindings_for_action` selection comment)
   - Evidence: `crates/fret-runtime/src/keymap.rs` (`display_shortcut_for_command_sequence`), used by OS menubar + command palette + in-window menu surfaces.
@@ -162,7 +183,7 @@ It complements (but does not replace) ADRs:
 
 - **Standard menu roles and system menus (macOS-first)**
   - Problem: macOS expects standard menus (App/Window/Services) and native edit actions; relying on menu titles is fragile and blocks localization/customization.
-  - ADR: `docs/adr/0185-menu-roles-system-menus-and-os-actions.md`
+  - ADR: `docs/adr/0170-menu-roles-system-menus-and-os-actions.md`
   - Current:
     - Roles/system menus are modeled (`MenuRole`, `SystemMenuType`) and `menubar.json` v2 can express them.
     - macOS runner honors roles (Window/App/Help) and Services system menu, and uses `OsAction` for standard edit selectors.
@@ -176,7 +197,7 @@ It complements (but does not replace) ADRs:
 
 - **Define quit semantics for menu + window close** (done)
   - Problem: `Effect::QuitApp` exits the native event loop immediately; we need a clear policy for "Quit" vs closing windows (and unsaved changes prompts) in the golden path.
-  - ADRs: `docs/adr/0001-app-effects.md`, `docs/adr/0094-window-close-and-web-runner-destroy.md`
+  - ADRs: `docs/adr/0001-app-effects.md`, `docs/adr/0093-window-close-and-web-runner-destroy.md`
   - Workstream: `docs/workstreams/os-menubar.md` (MVP 3 gap)
   - Current: native `QuitApp` requests are mediated by `before_close_window` (prompt gate) and then force-close all windows before exiting, so quit works with "unsaved changes" prompts without re-entrancy.
   - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs` (`Effect::QuitApp`, `WindowRequest::Close` + `exit_on_main_window_close`), `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (global `app.quit` handling).
@@ -191,7 +212,7 @@ It complements (but does not replace) ADRs:
 - **Tabs can trigger layout recursion / stack overflow**
   - Symptom: `shadcn::Tabs` can crash the app at startup with `thread 'main' has overflowed its stack` (observed on Windows).
   - Hypothesis: a `TabsContent` sizing recipe (`flex: 1` / "fill remaining space") can cause deep layout recursion when composed under parents without a definite main-axis size.
-  - ADRs: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`, `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+  - ADRs: `docs/adr/0113-available-space-and-non-reentrant-measurement.md`, `docs/adr/0114-window-scoped-layout-engine-and-viewport-roots.md`
   - Roadmap: `docs/layout-engine-refactor-roadmap.md`
   - Code: `ecosystem/fret-ui-shadcn/src/tabs.rs`, `crates/fret-ui/src/declarative/host_widget/layout.rs`
   - Current: `TabsContent` no longer uses a default `flex: 1` sizing recipe (to avoid runaway recursion in invalid compositions).
@@ -230,7 +251,7 @@ It complements (but does not replace) ADRs:
 
 - **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
   - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
-  - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+  - ADRs: `docs/adr/0089-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
   - Targets (examples to audit/move):
     - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
     - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
@@ -373,7 +394,7 @@ It complements (but does not replace) ADRs:
 
 - **Enforce "hover/focus/pressed is Paint-only" across primitives and ecosystem**
   - Goal: pointer hover changes should not trigger `Invalidation::Layout` (avoid view-cache busting and layout solve churn).
-  - ADRs: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+  - ADRs: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
   - TODO:
     - add a diagnostic report for "Hover → Layout invalidations" (top offenders + element paths);
     - add a regression test that a `HoverRegion` toggle only invalidates paint unless a component opts in;
@@ -381,7 +402,7 @@ It complements (but does not replace) ADRs:
 
 - **Standardize stable identity (keying) + cache boundaries for expensive subtrees**
   - Goal: ensure per-frame rebuild does not allocate/re-measure large subtrees unnecessarily (markdown/code-view/tab strips/lists).
-  - ADRs: `docs/adr/1163-view-cache-subtree-reuse-and-state-retention.md`, `docs/adr/1155-cache-root-tracing-contract-v1.md`
+  - ADRs: `docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md`, `docs/adr/0216-cache-root-tracing-contract-v1.md`
   - TODO:
     - require `cx.keyed(...)` for list-like rendering and block rendering (e.g. Markdown blocks via `BlockId`);
     - promote `ViewCache` usage in demos for heavy blocks (Markdown, code-view) and audit hover does not bust cache roots;
@@ -402,7 +423,7 @@ It complements (but does not replace) ADRs:
 
 - **Hotpatch "golden path" validation loop (dx + smoke demo)**
   - Goal: keep an always-working end-to-end Subsecond patch loop for native dev.
-  - ADRs: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+  - ADRs: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
   - Tooling: `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
   - TODO: add a short checklist and expected log markers (devserver connect, patch applied, safe reload boundary).
   - Bug: after `dx` reports `Hot-patching: ...`, the demo may crash with `thread 'main' has overflowed its stack`.

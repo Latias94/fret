@@ -17,6 +17,32 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
 
 use crate::overlay_motion;
 
+fn apply_disabled_to_trigger(mut trigger: AnyElement, disabled: bool) -> AnyElement {
+    if !disabled {
+        return trigger;
+    }
+
+    trigger.children = trigger
+        .children
+        .into_iter()
+        .map(|child| apply_disabled_to_trigger(child, disabled))
+        .collect();
+
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.enabled = false;
+            props.focusable = false;
+        }
+        ElementKind::Semantics(props) => {
+            props.disabled = true;
+            props.focusable = false;
+        }
+        _ => {}
+    }
+
+    trigger
+}
+
 #[derive(Clone)]
 pub struct Collapsible {
     open: Option<Model<bool>>,
@@ -93,6 +119,7 @@ impl Collapsible {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -102,6 +129,7 @@ impl Collapsible {
         self.into_element_with_open_model(cx, |cx, _open, is_open| trigger(cx, is_open), content)
     }
 
+    #[track_caller]
     pub fn into_element_with_open_model<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -122,7 +150,7 @@ impl Collapsible {
 
             let theme = fret_ui::Theme::global(&*cx.app).clone();
 
-            let trigger = trigger(cx, open.clone(), is_open);
+            let trigger = apply_disabled_to_trigger(trigger(cx, open.clone(), is_open), disabled);
 
             let motion = radix_collapsible::measured_height_motion_for_root(
                 cx,
@@ -180,8 +208,14 @@ impl Collapsible {
                         })
                     });
 
-                    let trigger =
-                        radix_collapsible::apply_collapsible_trigger_controls(trigger, content_id);
+                    let trigger = radix_collapsible::apply_collapsible_trigger_controls_expanded(
+                        trigger, content_id, is_open,
+                    );
+                    let trigger = if disabled {
+                        cx.interactivity_gate(true, false, move |_cx| vec![trigger])
+                    } else {
+                        trigger
+                    };
                     children.push(trigger);
 
                     if let Some(wrapper_el) = wrapper_el {
@@ -248,6 +282,7 @@ impl CollapsibleTrigger {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -308,6 +343,7 @@ impl CollapsibleContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = fret_ui::Theme::global(&*cx.app).clone();
         let wrapper = decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
@@ -397,6 +433,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn render(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -405,6 +454,7 @@ mod tests {
         bounds: Rect,
         open: Option<Model<bool>>,
         default_open: bool,
+        disabled: bool,
     ) -> fret_core::NodeId {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
@@ -422,7 +472,8 @@ mod tests {
                         Collapsible::new(open)
                     } else {
                         Collapsible::uncontrolled(default_open)
-                    };
+                    }
+                    .disabled(disabled);
 
                     collapsible.into_element_with_open_model(
                         cx,
@@ -464,6 +515,7 @@ mod tests {
             bounds,
             Some(open.clone()),
             false,
+            false,
         );
 
         let focusable = ui
@@ -496,6 +548,7 @@ mod tests {
             window,
             bounds,
             Some(open.clone()),
+            false,
             false,
         );
 
@@ -534,6 +587,7 @@ mod tests {
             bounds,
             Some(open.clone()),
             false,
+            false,
         );
         assert!(!snapshot_has_label(&ui, "Content"));
 
@@ -548,6 +602,7 @@ mod tests {
                 window,
                 bounds,
                 Some(open.clone()),
+                false,
                 false,
             );
         }
@@ -564,6 +619,7 @@ mod tests {
             bounds,
             Some(open.clone()),
             false,
+            false,
         );
         assert!(snapshot_has_label(&ui, "Content"));
 
@@ -576,6 +632,7 @@ mod tests {
                 window,
                 bounds,
                 Some(open.clone()),
+                false,
                 false,
             );
         }
@@ -604,7 +661,16 @@ mod tests {
         let mut services = FakeServices::default();
 
         // First render: default_open=true should mount the content subtree.
-        let root = render(&mut ui, &mut app, &mut services, window, bounds, None, true);
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            None,
+            true,
+            false,
+        );
         assert!(snapshot_has_label(&ui, "Content"));
 
         let focusable = ui
@@ -633,7 +699,16 @@ mod tests {
         // After enough frames for close presence to finish, content should unmount and not reopen
         // even though default_open stays true on each render.
         for _ in 0..24 {
-            let _ = render(&mut ui, &mut app, &mut services, window, bounds, None, true);
+            let _ = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                None,
+                true,
+                false,
+            );
         }
         assert!(!snapshot_has_label(&ui, "Content"));
     }
@@ -663,6 +738,7 @@ mod tests {
                 bounds,
                 Some(open.clone()),
                 false,
+                false,
             );
         }
 
@@ -676,6 +752,159 @@ mod tests {
         assert!(
             !trigger_node.controls.is_empty(),
             "expected trigger controls relationship to resolve when content is mounted"
+        );
+    }
+
+    #[test]
+    fn collapsible_root_disabled_marks_trigger_disabled_and_prevents_space_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(open.clone()),
+            false,
+            true,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Button)
+            .expect("trigger node");
+        assert!(
+            trigger_node.flags.disabled,
+            "expected trigger to be disabled when root is disabled"
+        );
+
+        let focusable = ui.first_focusable_descendant_including_declarative(&mut app, window, root);
+        assert!(
+            focusable.is_none(),
+            "disabled root should make trigger non-focusable"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(open.clone()),
+            false,
+            true,
+        );
+
+        let is_open = app.models().get_copied(&open).unwrap_or(false);
+        assert!(
+            !is_open,
+            "disabled root should prevent trigger activation from toggling open state"
+        );
+    }
+
+    #[test]
+    fn collapsible_custom_trigger_receives_expanded_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render_custom =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+                app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "collapsible-custom-trigger",
+                    |cx| {
+                        vec![Collapsible::new(open.clone()).into_element_with_open_model(
+                            cx,
+                            |cx, open, _is_open| {
+                                crate::Button::new("Toggle")
+                                    .toggle_model(open)
+                                    .into_element(cx)
+                            },
+                            |cx| CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
+                        )]
+                    },
+                );
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_custom(&mut ui, &mut app, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Button)
+            .expect("custom trigger node");
+        assert!(
+            !trigger_node.flags.expanded,
+            "custom trigger should expose expanded=false while closed"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        for _ in 0..4 {
+            render_custom(&mut ui, &mut app, &mut services);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Button)
+            .expect("custom trigger node");
+        assert!(
+            trigger_node.flags.expanded,
+            "custom trigger should expose expanded=true while open"
         );
     }
 }

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "scroll-area-demo.root_size",
+      "web_name": "scroll-area-demo",
+      "recipe": "scroll_area_demo_root_size"
+    },
+    {
+      "id": "scroll-area-demo.max_offset_y",
+      "web_name": "scroll-area-demo",
+      "recipe": "scroll_area_demo_max_offset_y"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.max_offset",
+      "web_name": "scroll-area-horizontal-demo",
+      "recipe": "scroll_area_horizontal_demo_max_offset"
+    },
+    {
+      "id": "scroll-area-demo.hover.scrollbar_bounds",
+      "web_name": "scroll-area-demo.hover",
+      "recipe": "scroll_area_demo_scrollbar_bounds_hover"
+    },
+    {
+      "id": "scroll-area-demo.hover.thumb_bg_light",
+      "web_name": "scroll-area-demo.hover",
+      "recipe": "scroll_area_demo_thumb_background_hover_light"
+    },
+    {
+      "id": "scroll-area-demo.hover.thumb_bg_dark",
+      "web_name": "scroll-area-demo.hover",
+      "recipe": "scroll_area_demo_thumb_background_hover_dark"
+    },
+    {
+      "id": "scroll-area-demo.hover_out_delay",
+      "web_name": "scroll-area-demo.hover-out-550ms",
+      "web_name_late": "scroll-area-demo.hover-out-650ms",
+      "recipe": "scroll_area_demo_scrollbar_hides_after_hover_out_delay"
+    },
+    {
+      "id": "scroll-area-demo.scrolled.thumb_bounds",
+      "web_name": "scroll-area-demo.scrolled",
+      "recipe": "scroll_area_demo_thumb_bounds_scrolled"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.hover.scrollbar_bounds",
+      "web_name": "scroll-area-horizontal-demo.hover",
+      "recipe": "scroll_area_horizontal_demo_scrollbar_bounds_hover"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.hover.thumb_bg_light",
+      "web_name": "scroll-area-horizontal-demo.hover",
+      "recipe": "scroll_area_horizontal_demo_thumb_background_hover_light"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.hover.thumb_bg_dark",
+      "web_name": "scroll-area-horizontal-demo.hover",
+      "recipe": "scroll_area_horizontal_demo_thumb_background_hover_dark"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.hover_out_delay",
+      "web_name": "scroll-area-horizontal-demo.hover-out-550ms",
+      "web_name_late": "scroll-area-horizontal-demo.hover-out-650ms",
+      "recipe": "scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay"
+    },
+    {
+      "id": "scroll-area-horizontal-demo.scrolled.thumb_bounds",
+      "web_name": "scroll-area-horizontal-demo.scrolled",
+      "recipe": "scroll_area_horizontal_demo_thumb_bounds_scrolled"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
@@ -30,6 +30,41 @@ fn default_overlay_color() -> Color {
     }
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct AlertDialogOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn alert_dialog_open_change_events(
+    state: &mut AlertDialogOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 /// shadcn/ui `AlertDialog` (v4).
 ///
 /// This is a modal overlay (barrier-backed). Unlike `Dialog`, the overlay is not closable by
@@ -41,6 +76,8 @@ pub struct AlertDialog {
     window_padding: Space,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for AlertDialog {
@@ -51,6 +88,11 @@ impl std::fmt::Debug for AlertDialog {
             .field("window_padding", &self.window_padding)
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -63,6 +105,8 @@ impl AlertDialog {
             window_padding: Space::N4,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -105,6 +149,22 @@ impl AlertDialog {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -138,6 +198,24 @@ impl AlertDialog {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
+                    alert_dialog_open_change_events(
+                        state,
+                        is_open,
+                        motion.present,
+                        motion.animating,
+                    )
+                });
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -184,7 +262,7 @@ impl AlertDialog {
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
                     // Center like `Dialog`, but avoid full-window wrappers that can steal hit tests.
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
@@ -307,6 +385,7 @@ impl AlertDialogTrigger {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -340,6 +419,7 @@ impl AlertDialogContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -401,6 +481,7 @@ impl AlertDialogHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -432,43 +513,65 @@ impl AlertDialogFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui::element::LayoutQueryRegionProps;
         use fret_ui_kit::declarative::stack;
 
-        // Tailwind `sm:` breakpoints apply at the viewport level. Mirror `sm:flex-row` at 640px.
-        let sm_breakpoint = cx.bounds.size.width >= Px(640.0);
+        let children = self.children;
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.alert_dialog.footer",
+            LayoutQueryRegionProps::default(),
+            move |cx, region_id| {
+                // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint). In editor-grade Fret
+                // layouts we prefer container queries so the footer tracks the dialog's committed
+                // width (ADR 0231).
+                //
+                // Note: layout queries are frame-lagged; default to the desktop-friendly branch
+                // while the first committed width is not yet known.
+                let sm_breakpoint = fret_ui_kit::declarative::container_width_at_least(
+                    cx,
+                    region_id,
+                    Invalidation::Layout,
+                    true,
+                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                );
 
-        let props = decl_style::container_props(
-            Theme::global(&*cx.app),
-            ChromeRefinement::default(),
-            LayoutRefinement::default().w_full(),
-        );
+                let props = decl_style::container_props(
+                    Theme::global(&*cx.app),
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default().w_full(),
+                );
 
-        let mut children = self.children;
-        if sm_breakpoint {
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_end()
-                    .items_center(),
-                children,
-            )
-        } else {
-            // Tailwind: `flex-col-reverse gap-2`
-            children.reverse();
-            shadcn_layout::container_vstack(
-                cx,
-                props,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_stretch(),
-                children,
-            )
-        }
+                let mut children = children;
+                if sm_breakpoint {
+                    vec![shadcn_layout::container_hstack(
+                        cx,
+                        props,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .justify_end()
+                            .items_center(),
+                        children,
+                    )]
+                } else {
+                    // Tailwind: `flex-col-reverse gap-2`
+                    children.reverse();
+                    vec![shadcn_layout::container_vstack(
+                        cx,
+                        props,
+                        stack::VStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .items_stretch(),
+                        children,
+                    )]
+                }
+            },
+        )
     }
 }
 
@@ -483,6 +586,7 @@ impl AlertDialogTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -522,6 +626,7 @@ impl AlertDialogDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -601,6 +706,7 @@ impl AlertDialogAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut button = Button::new(self.label)
             .variant(self.variant)
@@ -655,6 +761,7 @@ impl AlertDialogCancel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open_id = self.open.id();
         let mut button = Button::new(self.label)
@@ -727,6 +834,34 @@ mod tests {
         });
     }
 
+    #[test]
+    fn alert_dialog_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = AlertDialogOpenChangeCallbackState::default();
+
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn alert_dialog_open_change_events_complete_without_animation() {
+        let mut state = AlertDialogOpenChangeCallbackState::default();
+
+        let _ = alert_dialog_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -767,6 +902,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

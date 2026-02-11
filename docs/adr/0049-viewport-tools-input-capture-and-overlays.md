@@ -17,7 +17,7 @@ Fret already defines the infrastructure contract for viewport embedding and inpu
 
 - `ViewportInputEvent` is data-only and effect-driven (ADR 0025).
 - `ViewportInputEvent` uses window-local logical pixels ("screen px") as the UI/input source of truth
-  (ADR 0017 / ADR 0147).
+  (ADR 0017 / ADR 0132).
 
 However, without a clear example-editor pattern for “who receives viewport input” and “who draws
 over the viewport”, tool implementations will proliferate ad-hoc glue code and diverge from a

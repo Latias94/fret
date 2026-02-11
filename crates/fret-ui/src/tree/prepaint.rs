@@ -305,7 +305,7 @@ impl<H: UiHost> UiTree<H> {
                                 // don’t prefetch on every frame during slow scroll, while still keeping
                                 // each prefetch rerender bounded.
                                 let prefetch_step = if retained_host {
-                                    // Retained hosts (ADR 0192) can apply window shifts via reconcile
+                                    // Retained hosts (ADR 0177) can apply window shifts via reconcile
                                     // without rerendering a parent cache root, so prefer smaller, more
                                     // frequent prefetches. This bounds single-frame attach/detach bursts.
                                     //
@@ -323,7 +323,7 @@ impl<H: UiHost> UiTree<H> {
                                     //
                                     // For v1 (non-retained), reducing rerender frequency generally wins because
                                     // we cannot attach/detach rows on cache-hit frames without a retained host
-                                    // boundary (ADR 0192).
+                                    // boundary (ADR 0177).
                                     inputs.overscan.saturating_mul(8)
                                 }
                                 .max(prefetch_margin)
@@ -761,7 +761,65 @@ impl<H: UiHost> UiTree<H> {
                     .replay_scratch
                     .extend_from_slice(&self.interaction_cache.prev_records[range]);
                 for i in 0..self.interaction_cache.replay_scratch.len() {
-                    let record = self.interaction_cache.replay_scratch[i];
+                    let mut record = self.interaction_cache.replay_scratch[i];
+                    // View-cache reuse can legitimately skip rerender/layout for the subtree, but
+                    // hit-test-only invalidations (e.g. scroll handle offset changes) still need
+                    // up-to-date interaction transforms so pointer routing stays correct.
+                    //
+                    // If the node was marked hit-test-invalidated this frame, refresh the
+                    // interaction record from live widget state instead of replaying the cached
+                    // inverse transforms.
+                    if self
+                        .nodes
+                        .get(record.node)
+                        .is_some_and(|n| n.invalidation.hit_test)
+                    {
+                        let (bounds, widget) = self
+                            .nodes
+                            .get(record.node)
+                            .map(|n| (n.bounds, n.widget.as_ref()))
+                            .unwrap_or((record.bounds, None));
+
+                        let (
+                            render_transform_inv,
+                            children_render_transform_inv,
+                            clips_hit_test,
+                            corner_radii,
+                        ) = match widget {
+                            Some(widget) => (
+                                widget.render_transform(bounds).and_then(|t| t.inverse()),
+                                widget
+                                    .children_render_transform(bounds)
+                                    .and_then(|t| t.inverse()),
+                                widget.clips_hit_test(bounds),
+                                widget.clip_hit_test_corner_radii(bounds),
+                            ),
+                            None => (None, None, true, None),
+                        };
+
+                        let (
+                            is_focusable,
+                            focus_traversal_children,
+                            can_scroll_descendant_into_view,
+                        ) = widget
+                            .map(|w| {
+                                (
+                                    w.is_focusable(),
+                                    w.focus_traversal_children(),
+                                    w.can_scroll_descendant_into_view(),
+                                )
+                            })
+                            .unwrap_or((false, true, false));
+
+                        record.bounds = bounds;
+                        record.render_transform_inv = render_transform_inv;
+                        record.children_render_transform_inv = children_render_transform_inv;
+                        record.clips_hit_test = clips_hit_test;
+                        record.clip_hit_test_corner_radii = corner_radii;
+                        record.is_focusable = is_focusable;
+                        record.focus_traversal_children = focus_traversal_children;
+                        record.can_scroll_descendant_into_view = can_scroll_descendant_into_view;
+                    }
                     self.interaction_cache.records.push(record);
                     self.apply_interaction_record(&record);
                     self.prepaint_virtual_list_window_from_interaction_record(app, &record);
@@ -1244,7 +1302,7 @@ mod tests {
         let vlist_node = ui.create_node_for_element(element, NoopWidget);
         ui.add_child(cache_root, vlist_node);
 
-        // Mark this VirtualList as a retained host (ADR 0192) so prepaint applies window shifts via
+        // Mark this VirtualList as a retained host (ADR 0177) so prepaint applies window shifts via
         // reconcile rather than rerender.
         crate::elements::with_element_state(
             &mut app,

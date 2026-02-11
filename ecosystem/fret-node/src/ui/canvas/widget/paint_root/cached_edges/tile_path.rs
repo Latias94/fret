@@ -8,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut PaintCx<'_, H>,
         snapshot: &ViewSnapshot,
         geom: &Arc<CanvasGeometry>,
-        index: &Arc<CanvasSpatialIndex>,
+        index: &Arc<CanvasSpatialDerived>,
         hovered_edge: Option<EdgeId>,
         render_cull_rect: Option<Rect>,
         viewport_rect: Rect,

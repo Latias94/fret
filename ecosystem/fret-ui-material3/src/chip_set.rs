@@ -10,10 +10,11 @@
 use std::sync::Arc;
 
 use fret_core::{Axis, KeyCode, LayoutDirection, Modifiers, Px, SemanticsRole};
+use fret_ui::UiHost;
 use fret_ui::action::RovingNavigateResult;
 use fret_ui::element::{AnyElement, RovingFlexProps, SemanticsProps};
 use fret_ui::elements::ElementContext;
-use fret_ui::{Theme, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
 use crate::chip::AssistChip;
 use crate::filter_chip::FilterChip;
@@ -145,6 +146,7 @@ impl ChipSet {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let ChipSet {
             items,
@@ -156,9 +158,8 @@ impl ChipSet {
             test_id,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
-        let layout_direction =
-            resolved_layout_direction(cx, theme_default_layout_direction(&theme));
+        let default_layout_direction = cx.with_theme(|theme| theme_default_layout_direction(theme));
+        let layout_direction = resolved_layout_direction(cx, default_layout_direction);
 
         let disabled_items: Arc<[bool]> = Arc::from(
             items

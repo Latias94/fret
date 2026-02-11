@@ -4,12 +4,12 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeMarker;
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::prelude::path_start_end_tangents;
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -55,6 +55,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -138,7 +151,7 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
         s.interaction.only_render_visible_elements = false;
@@ -174,7 +187,7 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
         .flatten()
         .expect("custom path must exist");
     assert!(
-        super::super::path_start_end_tangents(&custom.commands).is_none(),
+        path_start_end_tangents(&custom.commands).is_none(),
         "commands must not provide tangents (this test expects fallback tangents)"
     );
 

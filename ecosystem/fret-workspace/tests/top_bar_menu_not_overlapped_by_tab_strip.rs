@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
 };
+use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -12,6 +13,19 @@ use std::sync::Arc;
 
 #[derive(Default)]
 struct FakeServices;
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
 
 impl TextService for FakeServices {
     fn prepare(

@@ -11,6 +11,7 @@
 //! - Range (two-thumb) slider.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, KeyCode, LayoutDirection, MouseButton, Px, Rect,
@@ -34,6 +35,13 @@ use crate::foundation::indication::material_pressable_indication_config;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::slider as slider_tokens;
+
+fn default_range_slider_a11y_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL
+        .get_or_init(|| Arc::<str>::from("range slider"))
+        .clone()
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -300,6 +308,7 @@ impl Slider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         slider(
             cx,
@@ -375,6 +384,7 @@ impl RangeSlider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         range_slider(
             cx,
@@ -435,8 +445,6 @@ pub fn slider<H: UiHost>(
     let dragging_model = dragging_model.expect("slider dragging model");
     let hovered_model = hovered_model.expect("slider hovered model");
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let enabled = !disabled;
     let dragging = cx
         .get_model_copied(&dragging_model, Invalidation::Paint)
@@ -445,13 +453,31 @@ pub fn slider<H: UiHost>(
         .get_model_copied(&hovered_model, Invalidation::Paint)
         .unwrap_or(false);
 
-    let active_track_h = slider_tokens::active_track_height(&theme);
-    let inactive_track_h = slider_tokens::inactive_track_height(&theme);
+    let (
+        active_track_h,
+        inactive_track_h,
+        track_shape,
+        handle_h,
+        handle_shape,
+        default_layout_direction,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+        let active_track_h = slider_tokens::active_track_height(theme);
+        let inactive_track_h = slider_tokens::inactive_track_height(theme);
+        let track_shape = slider_tokens::track_shape(theme);
+        let handle_h = slider_tokens::handle_height(theme);
+        let handle_shape = slider_tokens::handle_shape(theme);
+        let default_layout_direction = theme_default_layout_direction(theme);
+        (
+            active_track_h,
+            inactive_track_h,
+            track_shape,
+            handle_h,
+            handle_shape,
+            default_layout_direction,
+        )
+    };
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
-    let track_shape = slider_tokens::track_shape(&theme);
-
-    let handle_h = slider_tokens::handle_height(&theme);
-    let handle_shape = slider_tokens::handle_shape(&theme);
 
     let value_now = cx
         .get_model_copied(&value, Invalidation::Paint)
@@ -459,7 +485,6 @@ pub fn slider<H: UiHost>(
         .clamp(min, max);
     let value_now = quantize_value(value_now, min, max, step);
     let t_value = value_to_t(value_now, min, max);
-    let default_layout_direction = theme_default_layout_direction(&theme);
 
     let mut semantics = SemanticsProps::default();
     semantics.layout.size.width = Length::Fill;
@@ -469,7 +494,23 @@ pub fn slider<H: UiHost>(
     semantics.test_id = test_id;
     semantics.focusable = !disabled;
     semantics.disabled = disabled;
-    semantics.value = Some(Arc::from(format!("{value_now:.3}")));
+
+    #[derive(Default)]
+    struct DerivedValueString {
+        bits: u32,
+        value: Option<Arc<str>>,
+    }
+
+    let value_text = cx.with_state(DerivedValueString::default, |st| {
+        let bits = value_now.to_bits();
+        if st.value.is_none() || st.bits != bits {
+            st.bits = bits;
+            st.value = Some(Arc::from(format!("{value_now:.3}")));
+        }
+        st.value.as_ref().expect("value").clone()
+    });
+
+    semantics.value = Some(value_text);
 
     cx.semantics_with_id(semantics, move |cx, semantics_id| {
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
@@ -498,45 +539,72 @@ pub fn slider<H: UiHost>(
         states.set(WidgetState::Focused, has_focus);
         states.set(WidgetState::FocusVisible, is_focus_visible);
 
-        let active_track_default =
-            slider_tokens::active_track_color(&theme, enabled, token_interaction);
-        let inactive_track_default =
-            slider_tokens::inactive_track_color(&theme, enabled, token_interaction);
-        let handle_default = slider_tokens::handle_color(&theme, enabled, token_interaction);
+        let (
+            active_track_color,
+            inactive_track_color,
+            handle_color,
+            state_layer_target,
+            state_layer_color,
+            state_layer_size,
+            config,
+            handle_w,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let active_track_color = resolve_override_slot_with(
-            style.active_track_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || active_track_default,
-        );
-        let inactive_track_color = resolve_override_slot_with(
-            style.inactive_track_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || inactive_track_default,
-        );
-        let handle_color = resolve_override_slot_with(
-            style.handle_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || handle_default,
-        );
+            let active_track_default =
+                slider_tokens::active_track_color(theme, enabled, token_interaction);
+            let inactive_track_default =
+                slider_tokens::inactive_track_color(theme, enabled, token_interaction);
+            let handle_default = slider_tokens::handle_color(theme, enabled, token_interaction);
 
-        let state_layer_target = if enabled && dragging {
-            slider_tokens::pressed_state_layer_opacity(&theme)
-        } else {
-            slider_tokens::state_layer_target_opacity(&theme, enabled, token_interaction)
+            let active_track_color = resolve_override_slot_with(
+                style.active_track_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || active_track_default,
+            );
+            let inactive_track_color = resolve_override_slot_with(
+                style.inactive_track_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || inactive_track_default,
+            );
+            let handle_color = resolve_override_slot_with(
+                style.handle_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || handle_default,
+            );
+
+            let state_layer_target = if enabled && dragging {
+                slider_tokens::pressed_state_layer_opacity(theme)
+            } else {
+                slider_tokens::state_layer_target_opacity(theme, enabled, token_interaction)
+            };
+            let state_layer_default = slider_tokens::state_layer_color(theme, token_interaction);
+            let state_layer_color = resolve_override_slot_with(
+                style.state_layer_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || state_layer_default,
+            );
+            let state_layer_size = slider_tokens::state_layer_size(theme);
+            let config = material_pressable_indication_config(theme, None);
+
+            let handle_w = slider_tokens::handle_width(theme, enabled, token_interaction);
+
+            (
+                active_track_color,
+                inactive_track_color,
+                handle_color,
+                state_layer_target,
+                state_layer_color,
+                state_layer_size,
+                config,
+                handle_w,
+            )
         };
-        let state_layer_default = slider_tokens::state_layer_color(&theme, token_interaction);
-        let state_layer_color = resolve_override_slot_with(
-            style.state_layer_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || state_layer_default,
-        );
-        let state_layer_size = slider_tokens::state_layer_size(&theme);
-        let config = material_pressable_indication_config(&theme, None);
+
         let now_frame = cx.frame_id.0;
         let (state_layer_opacity, state_layer_want_frames) =
             cx.with_state(Runtime::default, |st| {
@@ -552,8 +620,6 @@ pub fn slider<H: UiHost>(
                 st.state_layer.advance(now_frame);
                 (st.state_layer.value(), st.state_layer.is_active())
             });
-
-        let handle_w = slider_tokens::handle_width(&theme, enabled, token_interaction);
 
         let value_on_key = value.clone();
         cx.key_on_key_down_for(
@@ -684,10 +750,40 @@ pub fn slider<H: UiHost>(
             }
         });
 
+        let (
+            value_indicator_bottom_space,
+            value_indicator_container_color,
+            value_indicator_label_style,
+            value_indicator_label_color,
+            tick_size,
+            tick_shape,
+            tick_active_color,
+            tick_active_opacity,
+            tick_inactive_color,
+            tick_inactive_opacity,
+        ) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                slider_tokens::value_indicator_bottom_space(theme),
+                slider_tokens::value_indicator_container_color(theme),
+                slider_tokens::value_indicator_label_style(theme),
+                slider_tokens::value_indicator_label_color(theme),
+                slider_tokens::tick_mark_size(theme),
+                slider_tokens::tick_mark_shape(theme),
+                slider_tokens::tick_mark_color(theme, enabled, true),
+                slider_tokens::tick_mark_opacity(theme, enabled, true),
+                slider_tokens::tick_mark_color(theme, enabled, false),
+                slider_tokens::tick_mark_opacity(theme, enabled, false),
+            )
+        };
+
         let mut pointer_props = PointerRegionProps::default();
         pointer_props.layout.size.width = Length::Fill;
         pointer_props.layout.size.height = Length::Fill;
-        enforce_minimum_interactive_size(&mut pointer_props.layout, &theme);
+        {
+            let theme = Theme::global(&*cx.app);
+            enforce_minimum_interactive_size(&mut pointer_props.layout, theme);
+        }
         pointer_props.enabled = enabled;
 
         vec![cx.pointer_region(pointer_props, move |cx| {
@@ -699,7 +795,6 @@ pub fn slider<H: UiHost>(
             canvas_props.layout.size.width = Length::Fill;
             canvas_props.layout.size.height = Length::Px(handle_h);
 
-            let theme_for_canvas = theme.clone();
             let content = cx.canvas(canvas_props, move |p| {
                 let bounds = p.bounds();
                 if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
@@ -734,9 +829,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: left_color,
+                        background: fret_core::Paint::Solid(left_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -754,9 +849,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: right_color,
+                        background: fret_core::Paint::Solid(right_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -776,9 +871,12 @@ pub fn slider<H: UiHost>(
                         p.scene().push(fret_core::SceneOp::Quad {
                             order: DrawOrder(2),
                             rect,
-                            background: alpha_mul(state_layer_color, state_layer_opacity),
+                            background: fret_core::Paint::Solid(alpha_mul(
+                                state_layer_color,
+                                state_layer_opacity,
+                            )),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: Corners::all(Px(size.0 * 0.5)),
                         });
                     }
@@ -804,9 +902,6 @@ pub fn slider<H: UiHost>(
                     if let Some(tick_count) = tick_count {
                         let tick_count = tick_count.clamp(1, 201);
 
-                        let tick_size = slider_tokens::tick_mark_size(&theme_for_canvas);
-                        let tick_shape = slider_tokens::tick_mark_shape(&theme_for_canvas);
-
                         let center_y = Px(track_y.0 + track_h.0 * 0.5);
                         let y = Px((center_y.0 - tick_size.0 * 0.5).clamp(
                             bounds.origin.y.0,
@@ -831,13 +926,11 @@ pub fn slider<H: UiHost>(
                             } else {
                                 tick_t <= (t + 1e-6)
                             };
-                            let color =
-                                slider_tokens::tick_mark_color(&theme_for_canvas, enabled, active);
-                            let opacity = slider_tokens::tick_mark_opacity(
-                                &theme_for_canvas,
-                                enabled,
-                                active,
-                            );
+                            let (color, opacity) = if active {
+                                (tick_active_color, tick_active_opacity)
+                            } else {
+                                (tick_inactive_color, tick_inactive_opacity)
+                            };
 
                             let rect = Rect::new(
                                 fret_core::Point::new(x, y),
@@ -846,9 +939,9 @@ pub fn slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: alpha_mul(color, opacity),
+                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
                                 border: Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
                                 corner_radii: tick_shape,
                             });
                         }
@@ -869,9 +962,9 @@ pub fn slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(3),
                         rect: handle,
-                        background: handle_color,
+                        background: fret_core::Paint::Solid(handle_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: handle_shape,
                     });
                 }
@@ -894,7 +987,7 @@ pub fn slider<H: UiHost>(
 
                 let bubble_w = Px(48.0);
                 let bubble_h = Px(28.0);
-                let bottom_space = slider_tokens::value_indicator_bottom_space(&theme);
+                let bottom_space = value_indicator_bottom_space;
 
                 let last = cx.last_bounds_for_element(semantics_id);
                 let (left, top) = if let Some(bounds) = last {
@@ -914,7 +1007,7 @@ pub fn slider<H: UiHost>(
                 container.layout.size.width = Length::Px(bubble_w);
                 container.layout.size.height = Length::Px(bubble_h);
                 container.layout.overflow = fret_ui::element::Overflow::Visible;
-                container.background = Some(slider_tokens::value_indicator_container_color(&theme));
+                container.background = Some(value_indicator_container_color);
                 container.corner_radii = Corners::all(Px(9999.0));
 
                 let mut row = RowProps::default();
@@ -923,8 +1016,8 @@ pub fn slider<H: UiHost>(
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
 
-                let text_style = slider_tokens::value_indicator_label_style(&theme);
-                let text_color = slider_tokens::value_indicator_label_color(&theme);
+                let text_style = value_indicator_label_style;
+                let text_color = value_indicator_label_color;
 
                 let mut text = TextProps::new(label);
                 text.layout.size.width = Length::Fill;
@@ -1012,7 +1105,6 @@ pub fn range_slider<H: UiHost>(
     let hovered_model = hovered_model.expect("range slider hovered model");
     let active_thumb_model = active_thumb_model.expect("range slider active thumb model");
 
-    let theme = Theme::global(&*cx.app).clone();
     let enabled = !disabled;
 
     let dragging = cx
@@ -1027,7 +1119,30 @@ pub fn range_slider<H: UiHost>(
     let values_now = clamp_range_pair(values_now, min, max, step);
     let t0_value = value_to_t(values_now[0], min, max);
     let t1_value = value_to_t(values_now[1], min, max);
-    let default_layout_direction = theme_default_layout_direction(&theme);
+    let (
+        default_layout_direction,
+        active_track_h,
+        inactive_track_h,
+        track_shape,
+        handle_h,
+        handle_shape,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+        let default_layout_direction = theme_default_layout_direction(theme);
+        let active_track_h = slider_tokens::active_track_height(theme);
+        let inactive_track_h = slider_tokens::inactive_track_height(theme);
+        let track_shape = slider_tokens::track_shape(theme);
+        let handle_h = slider_tokens::handle_height(theme);
+        let handle_shape = slider_tokens::handle_shape(theme);
+        (
+            default_layout_direction,
+            active_track_h,
+            inactive_track_h,
+            track_shape,
+            handle_h,
+            handle_shape,
+        )
+    };
 
     let mut semantics = SemanticsProps::default();
     semantics.layout.size.width = Length::Fill;
@@ -1037,18 +1152,31 @@ pub fn range_slider<H: UiHost>(
     semantics.test_id = test_id.clone();
     semantics.focusable = false;
     semantics.disabled = !enabled;
-    semantics.value = Some(Arc::from(format!(
-        "{:.3}..{:.3}",
-        values_now[0], values_now[1]
-    )));
 
-    let active_track_h = slider_tokens::active_track_height(&theme);
-    let inactive_track_h = slider_tokens::inactive_track_height(&theme);
+    #[derive(Default)]
+    struct DerivedRangeValueString {
+        start_bits: u32,
+        end_bits: u32,
+        value: Option<Arc<str>>,
+    }
+
+    let range_value_text = cx.with_state(DerivedRangeValueString::default, |st| {
+        let start_bits = values_now[0].to_bits();
+        let end_bits = values_now[1].to_bits();
+        if st.value.is_none() || st.start_bits != start_bits || st.end_bits != end_bits {
+            st.start_bits = start_bits;
+            st.end_bits = end_bits;
+            st.value = Some(Arc::from(format!(
+                "{:.3}..{:.3}",
+                values_now[0], values_now[1]
+            )));
+        }
+        st.value.as_ref().expect("value").clone()
+    });
+
+    semantics.value = Some(range_value_text);
+
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
-    let track_shape = slider_tokens::track_shape(&theme);
-
-    let handle_h = slider_tokens::handle_height(&theme);
-    let handle_shape = slider_tokens::handle_shape(&theme);
 
     cx.semantics_with_id(semantics, move |cx, group_semantics_id| {
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
@@ -1062,7 +1190,68 @@ pub fn range_slider<H: UiHost>(
 
         let thumb_label_base: Arc<str> = a11y_label
             .clone()
-            .unwrap_or_else(|| Arc::from("range slider"));
+            .unwrap_or_else(default_range_slider_a11y_label);
+
+        #[derive(Default)]
+        struct DerivedThumbStrings {
+            label_base: Option<Arc<str>>,
+            test_id_base: Option<Arc<str>>,
+            start_label: Option<Arc<str>>,
+            end_label: Option<Arc<str>>,
+            start_test_id: Option<Arc<str>>,
+            end_test_id: Option<Arc<str>>,
+        }
+
+        let (start_label, end_label, start_test_id, end_test_id) =
+            cx.with_state(DerivedThumbStrings::default, |st| {
+                if st.start_label.is_none()
+                    || st.label_base.as_deref() != Some(thumb_label_base.as_ref())
+                    || st.test_id_base.as_deref() != test_id.as_deref()
+                {
+                    st.label_base = Some(thumb_label_base.clone());
+                    st.test_id_base = test_id.clone();
+                    st.start_label =
+                        Some(Arc::from(format!("{} start", thumb_label_base.as_ref())));
+                    st.end_label = Some(Arc::from(format!("{} end", thumb_label_base.as_ref())));
+                    st.start_test_id = test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{}.start", id.as_ref())));
+                    st.end_test_id = test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{}.end", id.as_ref())));
+                }
+                (
+                    st.start_label.as_ref().expect("start_label").clone(),
+                    st.end_label.as_ref().expect("end_label").clone(),
+                    st.start_test_id.clone(),
+                    st.end_test_id.clone(),
+                )
+            });
+
+        #[derive(Default)]
+        struct DerivedThumbValues {
+            start_bits: u32,
+            end_bits: u32,
+            start: Option<Arc<str>>,
+            end: Option<Arc<str>>,
+        }
+
+        let (start_value_text, end_value_text) = cx.with_state(DerivedThumbValues::default, |st| {
+            let start_bits = values_now[0].to_bits();
+            let end_bits = values_now[1].to_bits();
+            if st.start.is_none() || st.start_bits != start_bits {
+                st.start_bits = start_bits;
+                st.start = Some(Arc::from(format!("{:.3}", values_now[0])));
+            }
+            if st.end.is_none() || st.end_bits != end_bits {
+                st.end_bits = end_bits;
+                st.end = Some(Arc::from(format!("{:.3}", values_now[1])));
+            }
+            (
+                st.start.as_ref().expect("start_value").clone(),
+                st.end.as_ref().expect("end_value").clone(),
+            )
+        });
 
         let last = cx.last_bounds_for_element(group_semantics_id);
         let (start_left, end_left) = if let Some(bounds) = last {
@@ -1086,11 +1275,11 @@ pub fn range_slider<H: UiHost>(
         start_thumb_semantics.layout.size.width = Length::Px(handle_h);
         start_thumb_semantics.layout.size.height = Length::Px(handle_h);
         start_thumb_semantics.role = SemanticsRole::Slider;
-        start_thumb_semantics.label = Some(Arc::from(format!("{thumb_label_base} start")));
-        start_thumb_semantics.test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}.start")));
+        start_thumb_semantics.label = Some(start_label);
+        start_thumb_semantics.test_id = start_test_id;
         start_thumb_semantics.focusable = enabled;
         start_thumb_semantics.disabled = !enabled;
-        start_thumb_semantics.value = Some(Arc::from(format!("{:.3}", values_now[0])));
+        start_thumb_semantics.value = Some(start_value_text);
 
         let start_thumb = cx.semantics_with_id(start_thumb_semantics, |cx, semantics_id| {
             start_thumb_id = Some(semantics_id);
@@ -1152,11 +1341,11 @@ pub fn range_slider<H: UiHost>(
         end_thumb_semantics.layout.size.width = Length::Px(handle_h);
         end_thumb_semantics.layout.size.height = Length::Px(handle_h);
         end_thumb_semantics.role = SemanticsRole::Slider;
-        end_thumb_semantics.label = Some(Arc::from(format!("{thumb_label_base} end")));
-        end_thumb_semantics.test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}.end")));
+        end_thumb_semantics.label = Some(end_label);
+        end_thumb_semantics.test_id = end_test_id;
         end_thumb_semantics.focusable = enabled;
         end_thumb_semantics.disabled = !enabled;
-        end_thumb_semantics.value = Some(Arc::from(format!("{:.3}", values_now[1])));
+        end_thumb_semantics.value = Some(end_value_text);
 
         let end_thumb = cx.semantics_with_id(end_thumb_semantics, |cx, semantics_id| {
             end_thumb_id = Some(semantics_id);
@@ -1249,51 +1438,89 @@ pub fn range_slider<H: UiHost>(
         states.set(WidgetState::Focused, has_focus);
         states.set(WidgetState::FocusVisible, is_focus_visible);
 
-        let active_track_default =
-            slider_tokens::active_track_color(&theme, enabled, interaction_active);
-        let inactive_track_default =
-            slider_tokens::inactive_track_color(&theme, enabled, interaction_active);
+        let (
+            active_track_color,
+            inactive_track_color,
+            handle_color_active,
+            handle_color_inactive,
+            state_layer_target,
+            state_layer_color,
+            state_layer_size,
+            config,
+            handle_w_active,
+            handle_w_inactive,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let active_track_color = resolve_override_slot_with(
-            style.active_track_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || active_track_default,
-        );
-        let inactive_track_color = resolve_override_slot_with(
-            style.inactive_track_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || inactive_track_default,
-        );
+            let active_track_default =
+                slider_tokens::active_track_color(theme, enabled, interaction_active);
+            let inactive_track_default =
+                slider_tokens::inactive_track_color(theme, enabled, interaction_active);
 
-        let handle_color_active = resolve_override_slot_with(
-            style.handle_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || slider_tokens::handle_color(&theme, enabled, interaction_active),
-        );
-        let handle_color_inactive = resolve_override_slot_with(
-            style.handle_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || slider_tokens::handle_color(&theme, enabled, slider_tokens::SliderInteraction::None),
-        );
+            let active_track_color = resolve_override_slot_with(
+                style.active_track_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || active_track_default,
+            );
+            let inactive_track_color = resolve_override_slot_with(
+                style.inactive_track_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || inactive_track_default,
+            );
 
-        let state_layer_target = if enabled && dragging {
-            slider_tokens::pressed_state_layer_opacity(&theme)
-        } else {
-            slider_tokens::state_layer_target_opacity(&theme, enabled, interaction_active)
+            let handle_color_active = resolve_override_slot_with(
+                style.handle_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || slider_tokens::handle_color(theme, enabled, interaction_active),
+            );
+            let handle_color_inactive = resolve_override_slot_with(
+                style.handle_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || {
+                    slider_tokens::handle_color(
+                        theme,
+                        enabled,
+                        slider_tokens::SliderInteraction::None,
+                    )
+                },
+            );
+
+            let state_layer_target = if enabled && dragging {
+                slider_tokens::pressed_state_layer_opacity(theme)
+            } else {
+                slider_tokens::state_layer_target_opacity(theme, enabled, interaction_active)
+            };
+            let state_layer_default = slider_tokens::state_layer_color(theme, interaction_active);
+            let state_layer_color = resolve_override_slot_with(
+                style.state_layer_color.as_ref(),
+                states,
+                |c| c.resolve(theme),
+                || state_layer_default,
+            );
+            let state_layer_size = slider_tokens::state_layer_size(theme);
+            let config = material_pressable_indication_config(theme, None);
+
+            let handle_w_active = slider_tokens::handle_width(theme, enabled, interaction_active);
+            let handle_w_inactive =
+                slider_tokens::handle_width(theme, enabled, slider_tokens::SliderInteraction::None);
+
+            (
+                active_track_color,
+                inactive_track_color,
+                handle_color_active,
+                handle_color_inactive,
+                state_layer_target,
+                state_layer_color,
+                state_layer_size,
+                config,
+                handle_w_active,
+                handle_w_inactive,
+            )
         };
-        let state_layer_default = slider_tokens::state_layer_color(&theme, interaction_active);
-        let state_layer_color = resolve_override_slot_with(
-            style.state_layer_color.as_ref(),
-            states,
-            |c| c.resolve(&theme),
-            || state_layer_default,
-        );
-        let state_layer_size = slider_tokens::state_layer_size(&theme);
-        let config = material_pressable_indication_config(&theme, None);
         let now_frame = cx.frame_id.0;
         let target_start = if active_thumb == 0 {
             state_layer_target
@@ -1340,10 +1567,6 @@ pub fn range_slider<H: UiHost>(
         } else {
             state_layer_opacity_end
         };
-
-        let handle_w_active = slider_tokens::handle_width(&theme, enabled, interaction_active);
-        let handle_w_inactive =
-            slider_tokens::handle_width(&theme, enabled, slider_tokens::SliderInteraction::None);
 
         let values_on_pointer = values.clone();
         let dragging_on_pointer = dragging_model.clone();
@@ -1501,10 +1724,40 @@ pub fn range_slider<H: UiHost>(
             }
         });
 
+        let (
+            value_indicator_bottom_space,
+            value_indicator_container_color,
+            value_indicator_label_style,
+            value_indicator_label_color,
+            tick_size,
+            tick_shape,
+            tick_active_color,
+            tick_active_opacity,
+            tick_inactive_color,
+            tick_inactive_opacity,
+        ) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                slider_tokens::value_indicator_bottom_space(theme),
+                slider_tokens::value_indicator_container_color(theme),
+                slider_tokens::value_indicator_label_style(theme),
+                slider_tokens::value_indicator_label_color(theme),
+                slider_tokens::tick_mark_size(theme),
+                slider_tokens::tick_mark_shape(theme),
+                slider_tokens::tick_mark_color(theme, enabled, true),
+                slider_tokens::tick_mark_opacity(theme, enabled, true),
+                slider_tokens::tick_mark_color(theme, enabled, false),
+                slider_tokens::tick_mark_opacity(theme, enabled, false),
+            )
+        };
+
         let mut pointer_props = PointerRegionProps::default();
         pointer_props.layout.size.width = Length::Fill;
         pointer_props.layout.size.height = Length::Fill;
-        enforce_minimum_interactive_size(&mut pointer_props.layout, &theme);
+        {
+            let theme = Theme::global(&*cx.app);
+            enforce_minimum_interactive_size(&mut pointer_props.layout, theme);
+        }
         pointer_props.enabled = enabled;
 
         vec![cx.pointer_region(pointer_props, move |cx| {
@@ -1516,7 +1769,6 @@ pub fn range_slider<H: UiHost>(
             canvas_props.layout.size.width = Length::Fill;
             canvas_props.layout.size.height = Length::Px(handle_h);
 
-            let theme_for_canvas = theme.clone();
             let content = cx.canvas(canvas_props, move |p| {
                 let bounds = p.bounds();
                 if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
@@ -1550,9 +1802,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: inactive_track_color,
+                        background: fret_core::Paint::Solid(inactive_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1570,9 +1822,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: inactive_track_color,
+                        background: fret_core::Paint::Solid(inactive_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1586,9 +1838,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: active_track_color,
+                        background: fret_core::Paint::Solid(active_track_color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: corners,
                     });
                 }
@@ -1610,8 +1862,6 @@ pub fn range_slider<H: UiHost>(
                     }
                     if let Some(tick_count) = tick_count {
                         let tick_count = tick_count.clamp(1, 201);
-                        let tick_size = slider_tokens::tick_mark_size(&theme_for_canvas);
-                        let tick_shape = slider_tokens::tick_mark_shape(&theme_for_canvas);
                         let center_y = Px(track_y.0 + track_h.0 * 0.5);
                         let y = Px((center_y.0 - tick_size.0 * 0.5).clamp(
                             bounds.origin.y.0,
@@ -1632,13 +1882,11 @@ pub fn range_slider<H: UiHost>(
                             ));
 
                             let active = tick_t >= (t_left - 1e-6) && tick_t <= (t_right + 1e-6);
-                            let color =
-                                slider_tokens::tick_mark_color(&theme_for_canvas, enabled, active);
-                            let opacity = slider_tokens::tick_mark_opacity(
-                                &theme_for_canvas,
-                                enabled,
-                                active,
-                            );
+                            let (color, opacity) = if active {
+                                (tick_active_color, tick_active_opacity)
+                            } else {
+                                (tick_inactive_color, tick_inactive_opacity)
+                            };
                             let rect = Rect::new(
                                 fret_core::Point::new(x, y),
                                 Size::new(tick_size, tick_size),
@@ -1646,9 +1894,9 @@ pub fn range_slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: alpha_mul(color, opacity),
+                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
                                 border: Edges::all(Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT,
                                 corner_radii: tick_shape,
                             });
                         }
@@ -1675,9 +1923,12 @@ pub fn range_slider<H: UiHost>(
                         p.scene().push(fret_core::SceneOp::Quad {
                             order: DrawOrder(2),
                             rect,
-                            background: alpha_mul(state_layer_color, state_layer_opacity),
+                            background: fret_core::Paint::Solid(alpha_mul(
+                                state_layer_color,
+                                state_layer_opacity,
+                            )),
                             border: Edges::all(Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: Corners::all(Px(size.0 * 0.5)),
                         });
                     }
@@ -1699,9 +1950,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(3),
                         rect,
-                        background: color,
+                        background: fret_core::Paint::Solid(color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
                         corner_radii: handle_shape,
                     });
                 };
@@ -1735,7 +1986,7 @@ pub fn range_slider<H: UiHost>(
 
                 let bubble_w = Px(48.0);
                 let bubble_h = Px(28.0);
-                let bottom_space = slider_tokens::value_indicator_bottom_space(&theme);
+                let bottom_space = value_indicator_bottom_space;
 
                 let last = cx.last_bounds_for_element(group_semantics_id);
                 let (left, top) = if let Some(bounds) = last {
@@ -1755,7 +2006,7 @@ pub fn range_slider<H: UiHost>(
                 container.layout.size.width = Length::Px(bubble_w);
                 container.layout.size.height = Length::Px(bubble_h);
                 container.layout.overflow = fret_ui::element::Overflow::Visible;
-                container.background = Some(slider_tokens::value_indicator_container_color(&theme));
+                container.background = Some(value_indicator_container_color);
                 container.corner_radii = Corners::all(Px(9999.0));
 
                 let mut row = RowProps::default();
@@ -1764,8 +2015,8 @@ pub fn range_slider<H: UiHost>(
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
 
-                let text_style = slider_tokens::value_indicator_label_style(&theme);
-                let text_color = slider_tokens::value_indicator_label_color(&theme);
+                let text_style = value_indicator_label_style;
+                let text_color = value_indicator_label_color;
 
                 let mut text = TextProps::new(label);
                 text.layout.size.width = Length::Fill;

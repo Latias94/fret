@@ -7,7 +7,7 @@ developing Input Dispatch v2 in parallel. It is kept on `main` as a historical r
 workstream breakdown and evidence anchors.
 
 - Related: `docs/workstreams/os-menubar.md`
-- Cross-cutting contracts: `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- Cross-cutting contracts: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 
 ## Tracking Format
 

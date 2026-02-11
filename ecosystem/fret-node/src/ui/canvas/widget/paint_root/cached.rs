@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 
 #[path = "cached_edges/mod.rs"]
 mod cached_edges;
@@ -54,23 +54,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let viewport_origin_x = viewport_rect.origin.x.0;
         let viewport_origin_y = viewport_rect.origin.y.0;
         let only_render_visible_elements = snapshot.interaction.only_render_visible_elements;
-        let render_cull_rect = if !only_render_visible_elements {
-            None
-        } else {
-            let margin_screen = self.style.render_cull_margin_px;
-            if !margin_screen.is_finite()
-                || margin_screen <= 0.0
-                || !viewport_w.is_finite()
-                || !viewport_h.is_finite()
-                || viewport_w <= 0.0
-                || viewport_h <= 0.0
-            {
-                None
-            } else {
-                let margin = margin_screen / zoom;
-                Some(inflate_rect(viewport_rect, margin))
-            }
-        };
+        let render_cull_rect = self.compute_render_cull_rect(&snapshot, cx.bounds);
 
         cx.scene.push(SceneOp::PushClipRect {
             rect: viewport_rect,
@@ -79,9 +63,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: viewport_rect,
-            background: self.style.background,
+            background: fret_core::Paint::Solid(self.style.background),
+
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
+
             corner_radii: Corners::all(Px(0.0)),
         });
 

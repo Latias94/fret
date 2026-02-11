@@ -15,7 +15,7 @@ Goal: an editor-grade tree surface (file tree, scene outliner) that stays fast f
   - `Model<TreeState>` for UI state (selected + expanded)
 - Virtualization:
   - `VirtualListScrollHandle` stored in element-local state
-  - retained-host VirtualList window shifts (virt-003 / ADR 0192) to avoid full rerenders at window boundaries
+  - retained-host VirtualList window shifts (virt-003 / ADR 0162) to avoid full rerenders at window boundaries
 - View:
   - `fret_ui_kit::declarative::file_tree::file_tree_view_retained_v0(...)`
   - `FileTreeViewProps` for row height / overscan / keep-alive budgets and debug `test_id`s

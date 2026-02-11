@@ -98,14 +98,13 @@ impl SearchView {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let input_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let input_id_out_for_bar = input_id_out.clone();
 
@@ -155,10 +154,13 @@ impl SearchView {
                 .get_model_copied(&self.open, fret_ui::Invalidation::Layout)
                 .unwrap_or(false);
 
-            let close_grace_frames = Some(crate::motion::ms_to_frames(
-                dropdown_menu_tokens::close_duration_ms(&theme),
-            ));
-            let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
+            let close_grace_frames = {
+                let theme = Theme::global(&*cx.app);
+                Some(crate::motion::ms_to_frames(
+                    dropdown_menu_tokens::close_duration_ms(theme),
+                ))
+            };
+            let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -175,8 +177,9 @@ impl SearchView {
                 return bar;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(
-                cx.bounds,
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
                 self.window_margin,
             );
 
@@ -190,19 +193,26 @@ impl SearchView {
                 fret_ui_kit::primitives::popper::Align::Start,
                 Px(0.0),
             )
-            .with_collision_padding(dropdown_menu_tokens::collision_padding(&theme));
+            .with_collision_padding({
+                let theme = Theme::global(&*cx.app);
+                dropdown_menu_tokens::collision_padding(theme)
+            });
 
             let layout = fret_ui_kit::primitives::popper::popper_content_layout_sized(
                 outer, anchor, desired, placement,
             );
 
             let overlay_rect = layout.rect;
-            let container_color = search_view_tokens::container_color(&theme);
-            let container_shape = search_view_tokens::docked_container_shape(&theme);
-            let elevation = search_view_tokens::container_elevation(&theme);
-            let shadow = shadow_for_elevation_with_color(&theme, elevation, None, container_shape);
-
-            let divider_color = search_view_tokens::divider_color(&theme);
+            let (container_color, container_shape, shadow, divider_color) = {
+                let theme = Theme::global(&*cx.app);
+                let container_color = search_view_tokens::container_color(theme);
+                let container_shape = search_view_tokens::docked_container_shape(theme);
+                let elevation = search_view_tokens::container_elevation(theme);
+                let shadow =
+                    shadow_for_elevation_with_color(theme, elevation, None, container_shape);
+                let divider_color = search_view_tokens::divider_color(theme);
+                (container_color, container_shape, shadow, divider_color)
+            };
 
             let overlay_test_id = self.overlay_test_id.clone();
             let overlay_panel = fret_ui_kit::primitives::popper_content::popper_wrapper_panel_at(

@@ -1,7 +1,7 @@
 # Unified Authoring Builder Surface (v1) Workstream
 
 This workstream tracks the incremental rollout of the ecosystem-owned authoring builder surface
-proposed in `docs/adr/0175-unified-authoring-builder-surface-v1.md`.
+proposed in `docs/adr/0160-unified-authoring-builder-surface-v1.md`.
 
 The goal is to make “write UI in Rust” feel closer to GPUI-style ergonomics while preserving Fret’s
 mechanism/policy boundaries (ADR 0066) and token-first styling semantics.
@@ -13,7 +13,7 @@ mechanism/policy boundaries (ADR 0066) and token-first styling semantics.
 - A consistent vocabulary:
   - chrome/styling via `ChromeRefinement`
   - layout via `LayoutRefinement`
-- Patch-only roots still offer a single terminal: `ui().into_element(cx, ...)` (ADR 0175)
+- Patch-only roots still offer a single terminal: `ui().into_element(cx, ...)` (ADR 0160)
 
 ## Status (Current Snapshot)
 

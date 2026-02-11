@@ -18,6 +18,13 @@ use fret_runtime::{
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+
+fn paint_alpha(paint: &fret_core::Paint) -> f32 {
+    match paint {
+        fret_core::Paint::Solid(c) => c.a,
+        _ => 1.0,
+    }
+}
 use fret_ui_material3::tokens::v30::{
     ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
 };
@@ -311,6 +318,19 @@ impl fret_core::SvgService for FakeUiServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for FakeUiServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         false
     }
 }
@@ -713,6 +733,16 @@ fn pointer_move(pointer_id: PointerId, position: Point) -> Event {
         buttons: MouseButtons::default(),
         modifiers: Modifiers::default(),
         pointer_type: PointerType::Mouse,
+    })
+}
+
+fn pointer_move_touch(pointer_id: PointerId, position: Point) -> Event {
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: MouseButtons::default(),
+        modifiers: Modifiers::default(),
+        pointer_type: PointerType::Touch,
     })
 }
 
@@ -2832,7 +2862,7 @@ fn radio_selected_dot_is_centered_in_outline() {
 
                 let border_any =
                     border.top.0 > 0.0 || border.right.0 > 0.0 || border.bottom.0 > 0.0;
-                if border_any && background.a <= 0.01 {
+                if border_any && paint_alpha(background) <= 0.01 {
                     if outline.is_none_or(|r| rect.size.width.0 < r.size.width.0 + 1e-3) {
                         outline = Some(*rect);
                     }
@@ -2840,7 +2870,7 @@ fn radio_selected_dot_is_centered_in_outline() {
                 }
 
                 if border == &Edges::all(Px(0.0))
-                    && background.a > 0.5
+                    && paint_alpha(background) > 0.5
                     && rect.size.width.0 <= 12.0
                     && rect.size.height.0 <= 12.0
                 {
@@ -2960,7 +2990,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3100,7 +3130,7 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3306,8 +3336,8 @@ fn switch_keyboard_ripple_origin_ignores_stale_pointer_down() {
                     };
                     if order != DrawOrder(1)
                         || border != Edges::all(Px(0.0))
-                        || background.a <= 0.001
-                        || background.a >= 0.9
+                        || paint_alpha(&background) <= 0.001
+                        || paint_alpha(&background) >= 0.9
                         || (rect.size.width.0 - rect.size.height.0).abs() >= 0.25
                     {
                         continue;
@@ -3458,7 +3488,9 @@ fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
                     background,
                     border,
                     ..
-                } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => Some(background.a),
+                } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => {
+                    Some(paint_alpha(background))
+                }
                 _ => None,
             })
             .next()
@@ -4174,7 +4206,7 @@ fn menu_style_overrides_apply_to_container_and_label() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
         }),
         "expected MenuStyle.container_background to affect at least one quad background"
     );
@@ -4454,7 +4486,7 @@ fn dialog_style_overrides_apply_to_container_and_text() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
         }),
         "expected DialogStyle.container_background to affect at least one quad background"
     );
@@ -4837,6 +4869,30 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
 
+    fn render_tooltip_root(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) -> NodeId {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with_elements(cx, |cx| {
+                    let trigger = Button::new("Trigger")
+                        .test_id("tooltip-trigger")
+                        .into_element(cx);
+                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tooltip)]
+                })
+        })
+    }
+
     let cases = [
         (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
         (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
@@ -4874,23 +4930,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
             window,
             bounds,
             true,
-            |ui, app, services| {
-                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    TooltipProvider::new()
-                        .delay_duration_frames(0)
-                        .skip_delay_duration_frames(0)
-                        .with_elements(cx, |cx| {
-                            let trigger = Button::new("Trigger")
-                                .test_id("tooltip-trigger")
-                                .into_element(cx);
-                            let tooltip = PlainTooltip::new(trigger, "Tip")
-                                .open_delay_frames(Some(0))
-                                .close_delay_frames(Some(0))
-                                .into_element(cx);
-                            vec![with_padding(cx, Px(24.0), tooltip)]
-                        })
-                })
-            },
+            |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
         );
 
         let trigger_node: NodeId = ui
@@ -4928,31 +4968,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
                 window,
                 bounds,
                 false,
-                |ui, app, services| {
-                    fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "root",
-                        |cx| {
-                            TooltipProvider::new()
-                                .delay_duration_frames(0)
-                                .skip_delay_duration_frames(0)
-                                .with_elements(cx, |cx| {
-                                    let trigger = Button::new("Trigger")
-                                        .test_id("tooltip-trigger")
-                                        .into_element(cx);
-                                    let tooltip = PlainTooltip::new(trigger, "Tip")
-                                        .open_delay_frames(Some(0))
-                                        .close_delay_frames(Some(0))
-                                        .into_element(cx);
-                                    vec![with_padding(cx, Px(24.0), tooltip)]
-                                })
-                        },
-                    )
-                },
+                |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
             );
 
             let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
@@ -4981,31 +4997,7 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
                 window,
                 bounds,
                 false,
-                |ui, app, services| {
-                    fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "root",
-                        |cx| {
-                            TooltipProvider::new()
-                                .delay_duration_frames(0)
-                                .skip_delay_duration_frames(0)
-                                .with_elements(cx, |cx| {
-                                    let trigger = Button::new("Trigger")
-                                        .test_id("tooltip-trigger")
-                                        .into_element(cx);
-                                    let tooltip = PlainTooltip::new(trigger, "Tip")
-                                        .open_delay_frames(Some(0))
-                                        .close_delay_frames(Some(0))
-                                        .into_element(cx);
-                                    vec![with_padding(cx, Px(24.0), tooltip)]
-                                })
-                        },
-                    )
-                },
+                |ui, app, services| render_tooltip_root(ui, app, services, window, bounds),
             );
 
             let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
@@ -5149,6 +5141,100 @@ fn rich_tooltip_opens_and_closes_on_hover_smoke() {
         }
     }
     assert!(closed, "expected rich tooltip to close after unhover");
+}
+
+#[test]
+fn tooltip_does_not_open_on_touch_move() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with_elements(cx, |cx| {
+                    let trigger = Button::new("Trigger")
+                        .test_id("tooltip-trigger")
+                        .into_element(cx);
+                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tooltip)]
+                })
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("tooltip-trigger") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected tooltip-trigger in semantics snapshot");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected tooltip-trigger bounds");
+    let hover_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move_touch(PointerId(1), hover_at),
+    );
+
+    for _ in 0..6 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        assert!(
+            !stack
+                .stack
+                .iter()
+                .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible),
+            "expected tooltip to remain closed when primary pointer is touch"
+        );
+    }
 }
 
 #[test]

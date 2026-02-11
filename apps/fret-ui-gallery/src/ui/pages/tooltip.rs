@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(560.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let make_tooltip = |cx: &mut ElementContext<'_, App>,
@@ -80,7 +78,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .open_delay_frames(10)
             .close_delay_frames(10)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tooltip-demo"));
+            .test_id("ui-gallery-tooltip-demo");
             let demo = {
                 let body = centered(cx, demo_tooltip);
                 section(cx, "Demo", body)
@@ -98,7 +96,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     ]
                 },
             )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tooltip-sides"));
+            .test_id("ui-gallery-tooltip-sides");
             let side = {
                 let body = centered(cx, side_row);
                 section(cx, "Side", body)
@@ -129,9 +127,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .open_delay_frames(10)
             .close_delay_frames(10)
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-tooltip-keyboard"),
-            );
+            .test_id("ui-gallery-tooltip-keyboard");
             let with_keyboard = {
                 let body = centered(cx, keyboard_tooltip);
                 section(cx, "With Keyboard Shortcut", body)
@@ -158,9 +154,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .open_delay_frames(10)
             .close_delay_frames(10)
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-tooltip-disabled"),
-            );
+            .test_id("ui-gallery-tooltip-disabled");
             let disabled = {
                 let body = centered(cx, disabled_tooltip);
                 section(cx, "Disabled Button", body)
@@ -204,7 +198,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     )
                 },
             )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tooltip-rtl"));
+            .test_id("ui-gallery-tooltip-rtl");
             let rtl = {
                 let body = centered(cx, rtl_row);
                 section(cx, "RTL", body)
@@ -218,9 +212,8 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                     .layout(LayoutRefinement::default().w_full()),
                 |_cx| vec![preview_hint, demo, side, with_keyboard, disabled, rtl],
             );
-            let component_shell = shell(cx, component_stack).attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-tooltip-component"),
-            );
+            let component_shell =
+                shell(cx, component_stack).test_id("ui-gallery-tooltip-component");
             vec![component_shell]
         })
         .into_iter()

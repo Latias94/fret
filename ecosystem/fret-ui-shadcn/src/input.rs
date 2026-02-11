@@ -204,6 +204,7 @@ impl Input {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         input_with_style(
             cx,
@@ -278,12 +279,12 @@ fn input_with_style<H: UiHost>(
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app);
     let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
     let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
 
     let resolved = resolve_input_chrome(
-        &theme,
+        theme,
         size,
         &chrome_override,
         InputTokenKeys {
@@ -303,7 +304,7 @@ fn input_with_style<H: UiHost>(
     chrome.background = resolved.background;
     chrome.border_color = resolved.border_color;
     chrome.border_color_focused = resolved.border_color_focused;
-    chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
+    chrome.focus_ring = Some(decl_style::focus_ring(theme, resolved.radius));
     chrome.text_color = resolved.text_color;
     chrome.placeholder_color = theme
         .color_by_key("muted-foreground")
@@ -312,18 +313,18 @@ fn input_with_style<H: UiHost>(
     chrome.selection_color = resolved.selection_color;
 
     if let Some(bg) = style_override.background {
-        chrome.background = bg.resolve(&theme);
+        chrome.background = bg.resolve(theme);
     }
     if let Some(border) = style_override.border_color {
-        chrome.border_color = border.resolve(&theme);
+        chrome.border_color = border.resolve(theme);
     }
     if let Some(border) = style_override.border_color_focused {
-        chrome.border_color_focused = border.resolve(&theme);
+        chrome.border_color_focused = border.resolve(theme);
     }
     if let Some(ring_color) = style_override.focus_ring_color
         && let Some(mut ring) = chrome.focus_ring.take()
     {
-        ring.color = ring_color.resolve(&theme);
+        ring.color = ring_color.resolve(theme);
         chrome.focus_ring = Some(ring);
     }
 
@@ -390,7 +391,7 @@ fn input_with_style<H: UiHost>(
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
-    decl_style::apply_layout_refinement(&theme, layout_override, &mut props.layout);
+    decl_style::apply_layout_refinement(theme, layout_override, &mut props.layout);
 
     if disabled {
         cx.opacity(0.5, move |cx| vec![cx.text_input(props)])

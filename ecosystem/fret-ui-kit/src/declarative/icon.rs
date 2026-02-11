@@ -202,6 +202,19 @@ mod tests {
         fn release(&mut self, _blob: TextBlobId) {}
     }
 
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
     #[test]
     fn icon_prefers_preloaded_svg_ids() {
         let icon_id = IconId::new_static("ui.close");

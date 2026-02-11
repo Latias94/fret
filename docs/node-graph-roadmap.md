@@ -5,10 +5,10 @@ tracks staged work, prioritization, and concrete TODOs for the node graph substr
 
 Authoritative contracts:
 
-- Node graph editor + typed connections: `docs/adr/0135-node-graph-editor-and-typed-connections.md`
+- Node graph editor + typed connections: `docs/adr/0126-node-graph-editor-and-typed-connections.md`
 - Undo/redo + transactions: `docs/adr/0024-undo-redo-and-edit-transactions.md`
 - Action hooks / policy boundary: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
-- Pan/zoom transform + hit-testing: `docs/adr/0083-render-transform-hit-testing.md`
+- Pan/zoom transform + hit-testing: `docs/adr/0082-render-transform-hit-testing.md`
 
 Conformance:
 
@@ -69,7 +69,7 @@ Now / Next / Later (high level):
   - context menus + conversion picker/searcher flows (staged).
 - Derived internals separation:
   - `MeasuredGeometryStore` / `NodeGraphInternalsStore` are UI-only and not serialized.
-- Canvas portal (Stage 2 from ADR 0135):
+- Canvas portal (Stage 2 from ADR 0126):
   - `NodeGraphPortalHost` mounts `fret-ui` subtrees per node in screen space.
   - Portal commands are mediated through a handler and commit `GraphTransaction` for undo/redo.
   - Editors:
@@ -117,8 +117,8 @@ Suggested mapping (high level):
 Exit criteria:
 
 - A repeatable interaction checklist + at least one automated conformance test set.
-- Portal command routing semantics locked (ADR 0135) and implemented consistently across editors.
-- View-state persistence contract decided (ADR 0135 open question resolved or deferred explicitly).
+- Portal command routing semantics locked (ADR 0126) and implemented consistently across editors.
+- View-state persistence contract decided (ADR 0126 open question resolved or deferred explicitly).
 
 ### NG1 — Editor Usability (P1)
 
@@ -172,9 +172,10 @@ Legend:
 ### Long-term
 
 - [~] Subgraph graph references + cycle-safe import.
-  - ADR: `docs/adr/0197-subgraph-graph-references-and-cycle-safe-import.md`
+  - ADR: `docs/adr/0182-subgraph-graph-references-and-cycle-safe-import.md`
   - Core closure + tests: `ecosystem/fret-node/src/core/imports.rs`, `ecosystem/fret-node/src/core/tests.rs`
   - Subgraph node contract + binding tests: `ecosystem/fret-node/src/core/subgraph.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Copy/paste includes referenced imports for subgraph nodes and preserves `graph_id` targets after paste: `ecosystem/fret-node/src/ops/fragment.rs`, `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
   - Import edit ops (Add/Remove/Alias): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Blackboard variables + typed symbol references (domain-ready).
@@ -185,10 +186,11 @@ Legend:
     - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
     - Tests: `ecosystem/fret-node/src/core/tests.rs`
     - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
+    - Copy/paste remaps symbol-ref targets to pasted symbol IDs (no source-graph ID leakage): `ecosystem/fret-node/src/ops/tests.rs` (`fragment_paste_transaction_remaps_symbol_ref_targets_to_pasted_symbols`)
   - UI overlays (editor affordances):
     - Blackboard (symbols) overlay: `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
       - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
-      - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, and graph edits are deferred until confirm.
+      - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, Enter-without-change is no-op, and graph edits are deferred until confirm.
     - Symbol rename overlay (TextInput-hosted): `ecosystem/fret-node/src/ui/overlays/group_rename.rs` (`SymbolRenameOverlay`)
       - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
       - Gates: Enter commit, Escape cancel + focus restore, and Enter no-op when text is unchanged.
@@ -196,8 +198,12 @@ Legend:
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
+  - [x] Culling metrics gate: node candidate/visible counts are exported from render-data collection and tested to decrease under `only_render_visible_elements=true`.
+    - Metrics plumbing: `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/types.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
+    - Test hook + shared cull-rect helper: `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
+    - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
 - [x] Deterministic graph diff/patch set for collaboration (MVP).
-  - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+  - ADR: `docs/adr/0183-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
   - Patch units:
     - Ports: setter ops for soft fields (`connectable*`, `ty`, `data`); structural changes use remove+add (and restore `SetNodePorts` + re-add incident edges when needed).

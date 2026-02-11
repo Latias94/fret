@@ -313,7 +313,7 @@ impl ComponentsGalleryDriver {
                         }
                     };
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
                     let padding = theme.metric_required("metric.padding.md");
 
                     let mut root_layout = LayoutStyle::default();
@@ -398,6 +398,7 @@ impl ComponentsGalleryDriver {
                                         })),
                                         props,
                                         header_label,
+                                        None,
                                         cell_at,
                                         Some(Arc::<str>::from(
                                             "components-gallery-table-header-",
@@ -418,7 +419,8 @@ impl ComponentsGalleryDriver {
                 }
 
                 cx.observe_model(&tree_state, Invalidation::Layout);
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = cx.theme_snapshot();
+                let theme_name = Theme::global(&*cx.app).name.clone();
                 let selected = cx
                     .app
                     .models()
@@ -531,7 +533,7 @@ impl ComponentsGalleryDriver {
                                     ),
                                     cx.text(Arc::<str>::from(format!(
                                         "Theme config: {}",
-                                        theme.name
+                                        theme_name
                                     ))),
                                     cx.flex(
                                         FlexProps {
@@ -1881,7 +1883,16 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 
         let semantics_snapshot = state.ui.semantics_snapshot();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(app, window, bounds, scale_factor, semantics_snapshot)
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                Some(&state.ui),
+                semantics_snapshot,
+                element_runtime,
+            )
         });
 
         if drive.request_redraw {

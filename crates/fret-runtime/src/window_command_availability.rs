@@ -20,6 +20,34 @@ impl WindowCommandAvailabilityService {
         self.by_window.insert(window, availability);
     }
 
+    pub fn update_snapshot(
+        &mut self,
+        window: AppWindowId,
+        f: impl FnOnce(&mut WindowCommandAvailability),
+    ) {
+        let availability = self.by_window.entry(window).or_default();
+        f(availability);
+    }
+
+    pub fn set_edit_availability(&mut self, window: AppWindowId, can_undo: bool, can_redo: bool) {
+        self.update_snapshot(window, |availability| {
+            availability.edit_can_undo = can_undo;
+            availability.edit_can_redo = can_redo;
+        });
+    }
+
+    pub fn set_router_availability(
+        &mut self,
+        window: AppWindowId,
+        can_back: bool,
+        can_forward: bool,
+    ) {
+        self.update_snapshot(window, |availability| {
+            availability.router_can_back = can_back;
+            availability.router_can_forward = can_forward;
+        });
+    }
+
     pub fn remove_window(&mut self, window: AppWindowId) {
         self.by_window.remove(&window);
     }
@@ -33,6 +61,8 @@ impl WindowCommandAvailabilityService {
 pub struct WindowCommandAvailability {
     pub edit_can_undo: bool,
     pub edit_can_redo: bool,
+    pub router_can_back: bool,
+    pub router_can_forward: bool,
 }
 
 impl Default for WindowCommandAvailability {
@@ -40,6 +70,8 @@ impl Default for WindowCommandAvailability {
         Self {
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
         }
     }
 }

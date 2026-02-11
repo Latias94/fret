@@ -4,7 +4,7 @@
 //! - It provides reusable math/state helpers (pan/zoom transforms, drag phases, pixel policies).
 //! - It does not prescribe interaction maps, snapping rules, or domain models.
 //!
-//! ADR reference: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`.
+//! ADR reference: `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`.
 
 #![forbid(unsafe_code)]
 

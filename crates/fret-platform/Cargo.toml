@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Platform-agnostic windowing and input contracts for Fret runners."
 
 [dependencies]
-fret-core = { path = "../fret-core" }
+fret-core = { version = "0.1.0", path = "../fret-core" }

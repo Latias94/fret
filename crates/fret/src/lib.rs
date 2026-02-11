@@ -8,7 +8,7 @@
 //! - `fret-kit` (app entry points)
 //! - `fretboard` (dev tooling)
 //!
-//! See ADR 0111: `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`.
+//! See ADR 0109: `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`.
 //!
 //! Default features are intentionally minimal (`core` only). Enable additional feature bundles
 //! explicitly, or use `fret-kit` for the batteries-included golden path.

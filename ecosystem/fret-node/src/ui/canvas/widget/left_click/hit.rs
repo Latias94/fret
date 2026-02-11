@@ -4,8 +4,10 @@ use fret_ui::UiHost;
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 use crate::rules::EdgeEndpoint;
 
-use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::{NodeResizeHandle, ViewSnapshot};
+use crate::ui::canvas::widget::{
+    HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Hit {
@@ -60,9 +62,9 @@ pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                         continue;
                     };
                     let rect0 = this.group_rect_with_preview(*group_id, group.rect);
-                    let rect = super::super::group_resize::group_rect_to_px(rect0);
+                    let rect = crate::ui::canvas::widget::group_resize::group_rect_to_px(rect0);
                     let handle = this.resize_handle_rect(rect, zoom);
-                    if super::super::group_resize::group_resize_handle_hit(
+                    if crate::ui::canvas::widget::group_resize::group_resize_handle_hit(
                         handle, position, zoom, 6.0,
                     ) {
                         return Hit::GroupResize(*group_id, rect0);
@@ -75,7 +77,7 @@ pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                         continue;
                     };
                     let rect0 = this.group_rect_with_preview(*group_id, group.rect);
-                    if !super::super::pending_group_drag::group_header_hit(
+                    if !crate::ui::canvas::widget::pending_group_drag::group_header_hit(
                         rect0, header_h, zoom, position,
                     ) {
                         continue;

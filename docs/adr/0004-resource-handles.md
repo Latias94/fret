@@ -72,7 +72,7 @@ Notes:
 - This matches the GPUI-style principle that resources are managed at a flush point and UI code only holds stable IDs.
 - Higher-level asset caches (key → async load → register → notify redraw) are expected to live above this minimal
   primitive (similar to GPUI’s `use_asset`), but the core boundary stays effects-based and portable.
-- `color_info` / `alpha_mode` are stable metadata types (`fret_core::ImageColorInfo`, `fret_core::AlphaMode`) aligned with ADR 0126.
+- `color_info` / `alpha_mode` are stable metadata types (`fret_core::ImageColorInfo`, `fret_core::AlphaMode`) aligned with ADR 0124.
 
 Zed/GPUI reference (non-normative):
 

@@ -2,7 +2,8 @@ use super::super::frame::*;
 use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
-use std::time::Instant;
+use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
+use fret_core::time::Instant;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -65,9 +66,11 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: bounds,
-                        background: props.background.unwrap_or(Color::TRANSPARENT),
+                        background: Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT)),
                         border: props.border,
-                        border_color: props.border_color.unwrap_or(Color::TRANSPARENT),
+                        border_paint: Paint::Solid(
+                            props.border_color.unwrap_or(Color::TRANSPARENT),
+                        ),
                         corner_radii: props.corner_radii,
                     });
                 }
@@ -91,9 +94,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(1),
                             rect: bounds,
-                            background: Color::TRANSPARENT,
+                            background: Paint::Solid(Color::TRANSPARENT),
                             border: props.border,
-                            border_color,
+                            border_paint: Paint::Solid(border_color),
                             corner_radii: props.corner_radii,
                         });
                     }
@@ -139,14 +142,7 @@ impl ElementHostWidget {
                     None,
                 );
             }
-            ElementInstance::HitTestGate(props) => {
-                paint_children_clipped_if(
-                    cx,
-                    matches!(props.layout.overflow, Overflow::Clip),
-                    None,
-                );
-            }
-            ElementInstance::FocusTraversalGate(props) => {
+            ElementInstance::LayoutQueryRegion(props) => {
                 paint_children_clipped_if(
                     cx,
                     matches!(props.layout.overflow, Overflow::Clip),
@@ -332,21 +328,9 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let scale_bits = cx.scale_factor.to_bits();
-                // Use the widest wrap width we have seen for this text node this frame.
-                //
-                // Some layout paths measure text against a slightly wider available width than the
-                // final snapped bounds (e.g. fractional DPI). If we prepare against the narrower
-                // bounds width, wrapping can add extra lines that overflow the measured height,
-                // causing intra-window text overlap.
-                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
-                    self.text_cache
-                        .last_measure_width
-                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
-                        .unwrap_or(cx.bounds.size.width)
-                } else {
-                    cx.bounds.size.width
-                };
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -356,6 +340,18 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
+                let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let text_changed = self.text_cache.last_text.as_ref() != Some(&props.text);
@@ -365,7 +361,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || text_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || text_changed
                     || style_changed
@@ -383,23 +388,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        text_changed,
-                        false,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            text_changed,
+                            false,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
@@ -412,8 +463,6 @@ impl ElementHostWidget {
                             "Text",
                             props.text.len().min(u32::MAX as usize) as u32,
                             constraints,
-                            metrics,
-                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -436,12 +485,9 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let origin = crate::pixel_snap::snap_point_round(
-                    fret_core::Point::new(
-                        cx.bounds.origin.x,
-                        cx.bounds.origin.y + metrics.baseline,
-                    ),
-                    cx.scale_factor,
+                let origin = fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    cx.bounds.origin.y + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -464,15 +510,9 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let scale_bits = cx.scale_factor.to_bits();
-                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
-                    self.text_cache
-                        .last_measure_width
-                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
-                        .unwrap_or(cx.bounds.size.width)
-                } else {
-                    cx.bounds.size.width
-                };
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -482,6 +522,18 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
+                let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -491,7 +543,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || rich_changed
                     || style_changed
@@ -509,23 +570,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        false,
-                        rich_changed,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            false,
+                            rich_changed,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
@@ -538,8 +645,6 @@ impl ElementHostWidget {
                             "StyledText",
                             props.rich.text.len().min(u32::MAX as usize) as u32,
                             constraints,
-                            metrics,
-                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -563,12 +668,9 @@ impl ElementHostWidget {
                     return;
                 };
 
-                let origin = crate::pixel_snap::snap_point_round(
-                    fret_core::Point::new(
-                        cx.bounds.origin.x,
-                        cx.bounds.origin.y + metrics.baseline,
-                    ),
-                    cx.scale_factor,
+                let origin = fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    cx.bounds.origin.y + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -591,15 +693,9 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
-                let scale_bits = cx.scale_factor.to_bits();
-                let max_width = if self.text_cache.measured_scale_factor_bits == Some(scale_bits) {
-                    self.text_cache
-                        .last_measure_width
-                        .map(|w| Px(w.0.max(cx.bounds.size.width.0)))
-                        .unwrap_or(cx.bounds.size.width)
-                } else {
-                    cx.bounds.size.width
-                };
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -609,6 +705,18 @@ impl ElementHostWidget {
                 cx.tree
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
+                let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                    && cx.tree.interactive_resize_is_small_step()
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -618,7 +726,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || rich_changed
                     || style_changed
@@ -636,23 +753,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        false,
-                        rich_changed,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            false,
+                            rich_changed,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
@@ -665,8 +828,6 @@ impl ElementHostWidget {
                             "SelectableText",
                             props.rich.text.len().min(u32::MAX as usize) as u32,
                             constraints,
-                            metrics,
-                            cx.bounds,
                             reasons_mask,
                             elapsed,
                         );
@@ -797,9 +958,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect,
-                            background: bg,
+                            background: Paint::Solid(bg),
                             border: fret_core::Edges::all(fret_core::Px(0.0)),
-                            border_color: Color::TRANSPARENT,
+                            border_paint: Paint::Solid(Color::TRANSPARENT),
                             corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
                         });
                     }
@@ -831,21 +992,18 @@ impl ElementHostWidget {
                             cx.scene.push(SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: sel_color,
+                                background: Paint::Solid(sel_color),
                                 border: fret_core::Edges::all(fret_core::Px(0.0)),
-                                border_color: Color::TRANSPARENT,
+                                border_paint: Paint::Solid(Color::TRANSPARENT),
                                 corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
                             });
                         }
                     }
                 }
 
-                let origin = crate::pixel_snap::snap_point_round(
-                    fret_core::Point::new(
-                        cx.bounds.origin.x,
-                        cx.bounds.origin.y + metrics.baseline,
-                    ),
-                    cx.scale_factor,
+                let origin = fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    cx.bounds.origin.y + metrics.baseline,
                 );
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
@@ -1147,6 +1305,7 @@ impl ElementHostWidget {
                         order: DrawOrder(0),
                         rect: cx.bounds,
                         image: props.image,
+                        fit: props.fit,
                         opacity,
                     });
                 }
@@ -1263,9 +1422,9 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: color,
+                        background: Paint::Solid(color),
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: Paint::Solid(Color::TRANSPARENT),
                         corner_radii: fret_core::Corners::all(r),
                     });
                 }
@@ -1481,9 +1640,9 @@ impl ElementHostWidget {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(20_000),
                     rect,
-                    background: bg,
+                    background: Paint::Solid(bg),
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: Paint::Solid(Color::TRANSPARENT),
                     corner_radii: fret_core::Corners::all(Px(999.0)),
                 });
             }

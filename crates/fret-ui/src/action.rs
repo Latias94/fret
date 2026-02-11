@@ -239,6 +239,19 @@ pub trait UiActionHost {
     fn next_timer_token(&mut self) -> TimerToken;
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken;
 
+    /// Publish router navigation availability for the given window.
+    ///
+    /// This is an object-safe hook used by ecosystem layers (for example `fret-router-ui`) to
+    /// keep cross-surface command gating (menus, command palette, shortcuts) in sync without
+    /// requiring generic access to host globals.
+    fn set_router_command_availability(
+        &mut self,
+        _window: AppWindowId,
+        _can_back: bool,
+        _can_forward: bool,
+    ) {
+    }
+
     /// Record a transient, per-element event for the current dispatch cycle.
     ///
     /// This is a mechanism-only escape hatch intended for cases where an action hook needs to
@@ -375,6 +388,20 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
+    }
+
+    fn set_router_command_availability(
+        &mut self,
+        window: AppWindowId,
+        can_back: bool,
+        can_forward: bool,
+    ) {
+        self.app.with_global_mut(
+            fret_runtime::WindowCommandAvailabilityService::default,
+            |svc, _app| {
+                svc.set_router_availability(window, can_back, can_forward);
+            },
+        );
     }
 
     fn record_transient_event(&mut self, cx: ActionCx, key: u64) {

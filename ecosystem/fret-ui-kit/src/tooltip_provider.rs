@@ -11,6 +11,7 @@ use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelay
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TooltipProviderConfig {
     pub delay_duration_ticks: u64,
+    pub close_delay_duration_ticks: Option<u64>,
     pub skip_delay_duration_ticks: u64,
     pub disable_hoverable_content: bool,
 }
@@ -19,9 +20,15 @@ impl TooltipProviderConfig {
     pub fn new(delay_duration_ticks: u64, skip_delay_duration_ticks: u64) -> Self {
         Self {
             delay_duration_ticks,
+            close_delay_duration_ticks: None,
             skip_delay_duration_ticks,
             disable_hoverable_content: false,
         }
+    }
+
+    pub fn close_delay_duration_ticks(mut self, ticks: u64) -> Self {
+        self.close_delay_duration_ticks = Some(ticks);
+        self
     }
 
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
@@ -324,6 +331,25 @@ mod tests {
                 note_closed(cx, 120);
                 assert_eq!(open_delay_ticks(cx, 121), 0);
                 assert_eq!(open_delay_ticks(cx, 151), 10);
+            });
+        });
+    }
+
+    #[test]
+    fn provider_close_delay_ticks_are_exposed_in_config() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let cfg = TooltipProviderConfig::new(10, 30).close_delay_duration_ticks(7);
+            with_tooltip_provider(cx, cfg, |cx| {
+                let got = current_config(cx);
+                assert_eq!(got.delay_duration_ticks, 10);
+                assert_eq!(got.skip_delay_duration_ticks, 30);
+                assert_eq!(got.close_delay_duration_ticks, Some(7));
             });
         });
     }

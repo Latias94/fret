@@ -1,5 +1,5 @@
-use super::super::paint_render_data::RenderData;
-use super::super::*;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -192,9 +192,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect,
-                background: Color::TRANSPARENT,
+                background: fret_core::Paint::TRANSPARENT,
+
                 border: Edges::all(Px(border_w)),
-                border_color: color,
+                border_paint: fret_core::Paint::Solid(color),
+
                 corner_radii: Corners::all(Px(r)),
             });
 
@@ -211,17 +213,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect: h_rect,
-                background: color,
+                background: fret_core::Paint::Solid(color),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect: v_rect,
-                background: color,
+                background: fret_core::Paint::Solid(color),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
         };

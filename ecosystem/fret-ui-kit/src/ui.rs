@@ -115,6 +115,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -142,6 +143,7 @@ impl<H: UiHost, B> FlexBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
 
@@ -293,6 +295,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
@@ -305,6 +308,7 @@ impl<H: UiHost, B> ContainerBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
@@ -428,17 +432,21 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let container = decl_style::container_props(&theme, self.chrome, self.layout);
+        let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
+            let theme = Theme::global(&*cx.app);
+            let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
-        let corner_bg = theme
-            .color_by_key("scrollbar.corner.background")
-            .or_else(|| theme.color_by_key("scrollbar.track.background"))
-            .unwrap_or(fret_core::Color::TRANSPARENT);
+            let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+            let thumb = theme.color_required("scrollbar.thumb.background");
+            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+            let corner_bg = theme
+                .color_by_key("scrollbar.corner.background")
+                .or_else(|| theme.color_by_key("scrollbar.track.background"))
+                .unwrap_or(fret_core::Color::TRANSPARENT);
+            (container, scrollbar_w, thumb, thumb_hover, corner_bg)
+        };
 
         let axis = self.axis;
         let show_scrollbar_x = self.show_scrollbar_x;
@@ -573,13 +581,17 @@ impl<H: UiHost, B> ScrollAreaBoxBuild<H, B>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let container = decl_style::container_props(&theme, self.chrome, self.layout);
-        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-        let thumb = theme.color_required("scrollbar.thumb.background");
-        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
-        let corner_bg = theme.color_required("scrollbar.track.background");
+        let (container, scrollbar_w, thumb, thumb_hover, corner_bg) = {
+            let theme = Theme::global(&*cx.app);
+            let container = decl_style::container_props(theme, self.chrome, self.layout);
+            let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+            let thumb = theme.color_required("scrollbar.thumb.background");
+            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+            let corner_bg = theme.color_required("scrollbar.track.background");
+            (container, scrollbar_w, thumb, thumb_hover, corner_bg)
+        };
 
         let axis = self.axis;
         let show_scrollbar_x = self.show_scrollbar_x;
@@ -780,6 +792,7 @@ where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
+    #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
         let container = decl_style::container_props(theme, self.chrome, self.layout);
@@ -868,55 +881,76 @@ impl UiSupportsLayout for TextBox {}
 
 impl UiIntoElement for TextBox {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let TextBox {
+            layout: layout_refinement,
+            text,
+            preset,
+            size_override,
+            line_height_override,
+            weight_override,
+            letter_spacing_em_override,
+            color_override,
+            wrap,
+            overflow,
+        } = self;
 
-        let mut style = match self.preset {
-            TextPreset::Xs => decl_text::text_xs_style(&theme),
-            TextPreset::Sm => decl_text::text_sm_style(&theme),
-            TextPreset::Base => decl_text::text_base_style(&theme),
-            TextPreset::Prose => decl_text::text_prose_style(&theme),
-            TextPreset::Label => {
-                let (style, _) = decl_text::label_style(&theme);
-                style
-            }
+        let (mut style, mut layout, default_label_line_height, resolved_color) = {
+            let theme = Theme::global(&*cx.app);
+
+            let (style, label_line_height) = match preset {
+                TextPreset::Xs => (decl_text::text_xs_style(theme), None),
+                TextPreset::Sm => (decl_text::text_sm_style(theme), None),
+                TextPreset::Base => (decl_text::text_base_style(theme), None),
+                TextPreset::Prose => (decl_text::text_prose_style(theme), None),
+                TextPreset::Label => {
+                    let (style, line_height) = decl_text::label_style(theme);
+                    (style, Some(line_height))
+                }
+            };
+
+            let layout = decl_style::layout_style(theme, layout_refinement);
+
+            let resolved_color = color_override
+                .as_ref()
+                .map(|c| c.resolve(theme))
+                .or_else(|| {
+                    (preset == TextPreset::Label).then(|| {
+                        theme
+                            .color_by_key("foreground")
+                            .unwrap_or_else(|| theme.color_required("foreground"))
+                    })
+                });
+
+            (style, layout, label_line_height, resolved_color)
         };
 
-        if let Some(size) = self.size_override {
+        if let Some(size) = size_override {
             style.size = size;
         }
-        if let Some(height) = self.line_height_override {
+        if let Some(height) = line_height_override {
             style.line_height = Some(height);
         }
-        if let Some(weight) = self.weight_override {
+        if let Some(weight) = weight_override {
             style.weight = weight;
         }
-        if let Some(letter_spacing_em) = self.letter_spacing_em_override {
+        if let Some(letter_spacing_em) = letter_spacing_em_override {
             style.letter_spacing_em = Some(letter_spacing_em);
         }
 
-        let mut layout = decl_style::layout_style(&theme, self.layout);
-        if self.preset == TextPreset::Label && matches!(layout.size.height, Length::Auto) {
-            let line_height = self
-                .line_height_override
-                .unwrap_or_else(|| decl_text::label_style(&theme).1);
+        if preset == TextPreset::Label && matches!(layout.size.height, Length::Auto) {
+            let line_height = line_height_override
+                .or(default_label_line_height)
+                .unwrap_or(Px(0.0));
             layout.size.height = Length::Px(line_height);
         }
 
-        let color = self.color_override.map(|c| c.resolve(&theme)).or_else(|| {
-            (self.preset == TextPreset::Label).then(|| {
-                theme
-                    .color_by_key("foreground")
-                    .unwrap_or_else(|| theme.color_required("foreground"))
-            })
-        });
-
         cx.text_props(TextProps {
             layout,
-            text: self.text,
+            text,
             style: Some(style),
-            color,
-            wrap: self.wrap,
-            overflow: self.overflow,
+            color: resolved_color,
+            wrap,
+            overflow,
         })
     }
 }
@@ -984,18 +1018,28 @@ impl UiSupportsLayout for RawTextBox {}
 
 impl UiIntoElement for RawTextBox {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let RawTextBox {
+            layout: layout_refinement,
+            text,
+            color_override,
+            wrap,
+            overflow,
+        } = self;
 
-        let layout = decl_style::layout_style(&theme, self.layout);
-        let color = self.color_override.map(|c| c.resolve(&theme));
+        let (layout, color) = {
+            let theme = Theme::global(&*cx.app);
+            let layout = decl_style::layout_style(theme, layout_refinement);
+            let color = color_override.as_ref().map(|c| c.resolve(theme));
+            (layout, color)
+        };
 
         cx.text_props(TextProps {
             layout,
-            text: self.text,
+            text,
             style: None,
             color,
-            wrap: self.wrap,
-            overflow: self.overflow,
+            wrap,
+            overflow,
         })
     }
 }

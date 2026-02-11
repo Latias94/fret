@@ -69,7 +69,12 @@ pub fn pending_shortcut_hint_overlay<H: UiHost>(
                     gap: fret_core::Px(6.0),
                     ..Default::default()
                 },
-                |cx| lines.into_iter().map(|line| cx.text(line)).collect(),
+                |cx| {
+                    lines
+                        .into_iter()
+                        .map(|line| cx.text(line))
+                        .collect::<Vec<_>>()
+                },
             );
             vec![col]
         },

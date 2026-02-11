@@ -83,6 +83,7 @@ impl FormField {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let id = self.id;
         let a11y_label = self.label.clone();

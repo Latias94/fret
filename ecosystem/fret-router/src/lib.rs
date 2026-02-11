@@ -13,6 +13,14 @@ mod path;
 mod query;
 #[cfg(feature = "query-integration")]
 mod query_integration;
+mod route_tree;
+mod router_state;
+mod search;
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "web-history", feature = "hash-routing")
+))]
+mod web_adapters;
 
 pub use alias::{AliasResolveError, QueryKeyAlias, RouteAliasRule, RouteAliasTable};
 pub use base_path::{apply_base_path, normalize_base_path, strip_base_path};
@@ -30,9 +38,29 @@ pub use query::{
 };
 #[cfg(feature = "query-integration")]
 pub use query_integration::{
-    NamespaceInvalidationRule, RouteChangePolicy, collect_invalidated_namespaces,
-    route_change_matches, route_query_key, route_query_key_with,
+    NamespaceInvalidationRule, RouteChangePolicy, RoutePrefetchPlanItem, RoutePrefetchRule,
+    RouteTransitionPlan, collect_invalidated_namespaces, plan_route_transition,
+    prefetch_intent_query_key, route_change_matches, route_query_key, route_query_key_with,
 };
+pub use route_tree::{
+    RouteAmbiguity, RouteMatch, RouteMatchResult, RouteMatchResultWithSearch, RouteMatchWithSearch,
+    RouteNode, RouteSearchValidationFailure, RouteTree, RouteTreeDiagnostics, RouteTreeError,
+};
+pub use router_state::{
+    HistoryAdapter, RouteBeforeLoadFn, RouteHookContext, RouteHooks, RouteHooksTable,
+    RouteLoaderFn, RouteMatchSnapshot, RoutePrefetchIntent, Router, RouterBlockReason,
+    RouterBuildLocationError, RouterEvent, RouterGuardContext, RouterGuardDecision, RouterGuardFn,
+    RouterNavigateToError, RouterState, RouterTransition, RouterTransitionCause, RouterUpdate,
+    RouterUpdateWithPrefetchIntents,
+};
+pub use search::{
+    RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, SearchValue,
+    ValidateSearchFn,
+};
+#[cfg(all(target_arch = "wasm32", feature = "hash-routing"))]
+pub use web_adapters::HashHistoryAdapter;
+#[cfg(all(target_arch = "wasm32", feature = "web-history"))]
+pub use web_adapters::WebHistoryAdapter;
 
 #[cfg(all(
     target_arch = "wasm32",

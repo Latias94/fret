@@ -1,5 +1,5 @@
-use super::super::paint_render_data::RenderData;
-use super::super::*;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     #[allow(clippy::too_many_arguments)]
@@ -8,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx: &mut PaintCx<'_, H>,
         snapshot: &ViewSnapshot,
         geom: Arc<CanvasGeometry>,
-        index: Arc<CanvasSpatialIndex>,
+        index: Arc<CanvasSpatialDerived>,
         hovered_edge: Option<EdgeId>,
         render_cull_rect: Option<Rect>,
         view_interacting: bool,

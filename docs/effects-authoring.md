@@ -1,10 +1,10 @@
 # Effects Authoring (EffectLayer)
 
 This document describes how to author scoped UI post-processing effects using the portable effect semantics
-defined in `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
+defined in `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
 
 For the recommended user-facing story (Tier A vs Tier B) and the recipe authoring pattern, see:
-`docs/adr/0149-effect-recipes-and-tier-selection-v1.md`.
+`docs/adr/0134-effect-recipes-and-tier-selection-v1.md`.
 
 ## TL;DR
 
@@ -12,15 +12,15 @@ For the recommended user-facing story (Tier A vs Tier B) and the recipe authorin
 - `bounds` is a **computation bound**, not an implicit clip; use the existing clip stack (e.g. overflow clip + rounded corners)
   to define clipping behavior (ADR 0078).
 - For heavy GPU panels (video playback, game viewports, NLE-class effects), prefer Tier A (`RenderTargetId` + `SceneOp::ViewportSurface`)
-  instead of trying to expose `wgpu` to components (ADR 0125).
+  instead of trying to expose `wgpu` to components (ADR 0123).
   - Declarative helper: `cx.viewport_surface(...)` (`crates/fret-ui/src/elements/cx.rs`)
 
 ## Scheduling and timers (avoid split-brain)
 
 Keep timing-driven behavior aligned with Fret's runner-owned scheduling model:
 
-- UI-visible timers/animation ticks SHOULD be scheduled via effects (e.g. `Effect::SetTimer`, `Effect::RequestAnimationFrame`) so they participate in the Effect pipeline and runner flush points (ADR 0034, ADR 0112).
-- The execution `Dispatcher` may expose a low-level `dispatch_after` primitive, but this is primarily for executor utilities/harnesses; user-facing UI timing should not depend on runner-specific scheduling hooks directly (ADR 0190).
+- UI-visible timers/animation ticks SHOULD be scheduled via effects (e.g. `Effect::SetTimer`, `Effect::RequestAnimationFrame`) so they participate in the Effect pipeline and runner flush points (ADR 0034, ADR 0110).
+- The execution `Dispatcher` may expose a low-level `dispatch_after` primitive, but this is primarily for executor utilities/harnesses; user-facing UI timing should not depend on runner-specific scheduling hooks directly (ADR 0175).
 
 ## Declarative usage (recommended)
 
@@ -49,7 +49,7 @@ Notes:
 - `EffectMode::Backdrop` samples the already-rendered content behind the effect boundary.
 - `EffectMode::FilterContent` renders the subtree to an offscreen intermediate and filters that output.
 - Use `EffectLayerProps.quality` (`Auto/Low/Medium/High`) when you need predictable trade-offs; otherwise keep `Auto` and
-  rely on budgets + deterministic degradation (ADR 0120).
+  rely on budgets + deterministic degradation (ADR 0118).
 
 ## Glass recipe template (fret-ui-kit)
 

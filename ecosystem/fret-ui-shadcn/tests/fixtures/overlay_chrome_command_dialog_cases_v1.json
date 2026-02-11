@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "command-dialog.panel_chrome", "web_name": "command-dialog", "recipe": "panel_chrome" },
+
+    { "id": "command-dialog.focus-first.light.focused_item_chrome", "web_name": "command-dialog.focus-first", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "command-dialog.focus-first.dark.focused_item_chrome", "web_name": "command-dialog.focus-first", "theme": "dark", "recipe": "focused_item_chrome" },
+    { "id": "command-dialog.focus-first.vp375x240.light.focused_item_chrome", "web_name": "command-dialog.focus-first-vp375x240", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "command-dialog.focus-first.vp375x240.dark.focused_item_chrome", "web_name": "command-dialog.focus-first-vp375x240", "theme": "dark", "recipe": "focused_item_chrome" },
+
+    { "id": "command-dialog.highlight-first.vp375x240.light.highlighted_option_chrome", "web_name": "command-dialog.highlight-first-vp375x240", "theme": "light", "recipe": "highlighted_option_chrome" },
+    { "id": "command-dialog.highlight-first.vp375x240.dark.highlighted_option_chrome", "web_name": "command-dialog.highlight-first-vp375x240", "theme": "dark", "recipe": "highlighted_option_chrome" }
+  ]
+}

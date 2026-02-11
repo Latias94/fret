@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -189,7 +188,7 @@ use super::route_math::{
 };
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
-use super::spatial::CanvasSpatialIndex;
+use super::spatial::CanvasSpatialDerived;
 use super::state::{
     ContextMenuState, ContextMenuTarget, DerivedBaseKey, DragPreviewCache, DragPreviewKind,
     GeometryCache, GeometryCacheKey, InteractionState, InternalsCacheKey, InternalsViewKey,
@@ -328,6 +327,70 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
     const STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES: u64 = 60 * 30;
     const STATIC_SCENE_TILE_CACHE_MAX_ENTRIES: usize = 16;
+
+    fn compute_render_cull_rect(&self, snapshot: &ViewSnapshot, bounds: Rect) -> Option<Rect> {
+        if !snapshot.interaction.only_render_visible_elements {
+            return None;
+        }
+
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 1.0e-6 {
+            return None;
+        }
+
+        let viewport = Self::viewport_from_pan_zoom(bounds, snapshot.pan, zoom);
+        let viewport_rect = viewport.visible_canvas_rect();
+        let viewport_w = viewport_rect.size.width.0;
+        let viewport_h = viewport_rect.size.height.0;
+        let margin_screen = self.style.render_cull_margin_px;
+
+        if !margin_screen.is_finite()
+            || margin_screen <= 0.0
+            || !viewport_w.is_finite()
+            || !viewport_h.is_finite()
+            || viewport_w <= 0.0
+            || viewport_h <= 0.0
+        {
+            return None;
+        }
+
+        let margin = margin_screen / zoom;
+        Some(inflate_rect(viewport_rect, margin))
+    }
+
+    #[cfg(test)]
+    fn debug_derived_build_counters(&self) -> super::state::DerivedBuildCounters {
+        self.geometry.counters
+    }
+
+    #[cfg(test)]
+    fn debug_render_metrics_for_bounds<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        bounds: Rect,
+    ) -> paint_render_data::RenderMetrics {
+        let snapshot = self.sync_view_state(host);
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 1.0e-6 {
+            return paint_render_data::RenderMetrics::default();
+        }
+
+        let render_cull_rect = self.compute_render_cull_rect(&snapshot, bounds);
+        let (geom, index) = self.canvas_derived(host, &snapshot);
+        self.collect_render_data(
+            host,
+            &snapshot,
+            geom,
+            index,
+            render_cull_rect,
+            zoom,
+            None,
+            true,
+            true,
+            true,
+        )
+        .metrics
+    }
 
     fn view_interacting(&self) -> bool {
         self.interaction.viewport_move_debounce.is_some()

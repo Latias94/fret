@@ -1,3 +1,4 @@
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use super::{input, paint};
 use fret_core::Point;
@@ -46,14 +47,16 @@ fn replace_buffer_resets_state() {
         };
         st.dragging = true;
         st.drag_pointer = Some(fret_core::PointerId(1));
-        st.drag_last_pointer_pos = Some(fret_core::Point::new(Px(12.0), Px(34.0)));
-        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(56.0));
+        st.drag_autoscroll_timer = Some(TimerToken(123));
+        st.drag_autoscroll_viewport_pos = Some(fret_core::Point::new(Px(12.0), Px(34.0)));
         st.row_text_cache.insert(
             0,
             (
                 RowTextCacheEntry {
                     text: Arc::from("hello"),
                     range: 0..5,
+                    fold_map: None,
+                    preedit_range: None,
                 },
                 1,
             ),
@@ -66,8 +69,10 @@ fn replace_buffer_resets_state() {
                     row_range: 0..5,
                     blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![(0, Px(0.0))],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -87,11 +92,8 @@ fn replace_buffer_resets_state() {
     assert!(st.undo_group.is_none());
     assert!(!st.dragging);
     assert_eq!(st.drag_pointer, None);
-    assert_eq!(st.drag_last_pointer_pos, None);
-    assert_eq!(
-        st.drag_last_scroll_offset,
-        fret_core::Point::new(Px(0.0), Px(0.0))
-    );
+    assert!(st.drag_autoscroll_timer.is_none());
+    assert!(st.drag_autoscroll_viewport_pos.is_none());
     assert_eq!(st.row_text_cache.len(), 0);
     assert_eq!(st.row_text_cache_queue.len(), 0);
     assert_eq!(st.row_geom_cache.len(), 0);
@@ -100,30 +102,30 @@ fn replace_buffer_resets_state() {
 
 #[test]
 fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
-    let delta = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(130.0));
+    let delta = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(50.0));
     assert_eq!(delta, Px(0.0));
 }
 
 #[test]
 fn drag_autoscroll_delta_y_uses_direction_and_clamp() {
-    let up = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(110.0));
+    let up = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(20.0));
     assert!(up.0 < 0.0);
 
-    let down = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(190.0));
+    let down = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(80.0));
     assert!(down.0 > 0.0);
 
-    let capped = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(10_000.0));
+    let capped = drag_autoscroll_delta_y(Px(100.0), Px(30.0), Px(10_000.0));
     assert!((capped.0 - 3.0).abs() < 1e-6);
 }
 
 #[test]
 fn drag_autoscroll_delta_y_handles_zero_sizes() {
     assert_eq!(
-        drag_autoscroll_delta_y(Px(0.0), Px(100.0), Px(0.0), Px(20.0)),
+        drag_autoscroll_delta_y(Px(0.0), Px(100.0), Px(20.0)),
         Px(0.0)
     );
     assert_eq!(
-        drag_autoscroll_delta_y(Px(20.0), Px(0.0), Px(0.0), Px(20.0)),
+        drag_autoscroll_delta_y(Px(20.0), Px(0.0), Px(20.0)),
         Px(0.0)
     );
 }
@@ -227,15 +229,17 @@ fn caret_stops_hit_test_handles_non_monotonic_x() {
 }
 
 #[test]
-fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
+fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let doc = DocId::new();
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
         row_range: 0..buffer.len_bytes(),
         blob: fret_core::TextBlobId::default(),
         caret_stops: Vec::new(),
+        fold_map: None,
         caret_rect_top: None,
         caret_rect_height: None,
+        has_preedit: true,
         preedit: Some(RowPreeditMapping {
             insert_at: 2,
             preedit_len: 2,
@@ -243,15 +247,152 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     };
 
     // Before the injection point maps 1:1.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 0), 0);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 2), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 0), 0);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 2), 2);
 
     // Inside the injected preedit snaps to the injection point.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 3), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 3), 2);
 
     // After the injected preedit shifts by `preedit_len`.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 4), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 5), 3);
+}
+
+#[test]
+fn row_fold_map_maps_between_buffer_and_display() {
+    let map = geom::RowFoldMap::new(vec![geom::RowFoldSpan {
+        buffer_range: 1..4,
+        // U+2026 is 3 bytes in UTF-8, so a placeholder "…" at offset 1 occupies [1,4).
+        display_range: 1..4,
+    }]);
+
+    assert_eq!(map.buffer_local_to_display_local(0), 0);
+    assert_eq!(map.buffer_local_to_display_local(1), 1);
+    assert_eq!(map.buffer_local_to_display_local(2), 1);
+    assert_eq!(map.buffer_local_to_display_local(3), 1);
+    assert_eq!(map.buffer_local_to_display_local(4), 4);
+    assert_eq!(map.buffer_local_to_display_local(5), 5);
+
+    assert_eq!(map.display_local_to_buffer_local(0), 0);
+    assert_eq!(map.display_local_to_buffer_local(1), 1);
+    assert_eq!(map.display_local_to_buffer_local(2), 1);
+    assert_eq!(map.display_local_to_buffer_local(3), 1);
+    assert_eq!(map.display_local_to_buffer_local(4), 4);
+    assert_eq!(map.display_local_to_buffer_local(5), 5);
+}
+
+#[test]
+fn row_fold_map_handles_inlay_insertions() {
+    let map = geom::RowFoldMap::new(vec![geom::RowFoldSpan {
+        buffer_range: 2..2,
+        display_range: 2..6,
+    }]);
+
+    assert_eq!(map.buffer_local_to_display_local(2), 2);
+    assert_eq!(map.buffer_local_to_display_local(3), 7);
+
+    assert_eq!(map.display_local_to_buffer_local(2), 2);
+    assert_eq!(map.display_local_to_buffer_local(3), 2);
+    assert_eq!(map.display_local_to_buffer_local(6), 2);
+    assert_eq!(map.display_local_to_buffer_local(7), 3);
+}
+
+#[test]
+fn caret_left_right_skips_folded_ranges() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        input::move_caret_right(&mut st, false);
+        assert_eq!(st.selection.caret(), 4);
+
+        input::move_caret_left(&mut st, false);
+        assert_eq!(st.selection.caret(), 1);
+    }
+}
+
+#[test]
+fn caret_left_right_skips_folded_ranges_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(2));
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        input::move_caret_right(&mut st, false);
+        assert_eq!(st.selection.caret(), 4);
+
+        input::move_caret_left(&mut st, false);
+        assert_eq!(st.selection.caret(), 1);
+    }
+}
+
+#[test]
+fn enabling_folds_snaps_caret_out_of_folded_range() {
+    let handle = CodeEditorHandle::new("abcdef");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+    }
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.caret(), 1);
+}
+
+#[test]
+fn enabling_folds_snaps_caret_out_of_folded_range_under_soft_wrap() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(2));
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+    }
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.caret(), 1);
 }
 
 #[test]
@@ -278,8 +419,10 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -298,8 +441,10 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -318,8 +463,10 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
+                    has_preedit: false,
                     preedit: None,
                 },
                 1,
@@ -333,6 +480,171 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
         input::move_caret_vertical(&mut st, 1, false, Px(8.0));
         assert_eq!(st.selection.caret(), 12, "row 2, local index 2");
         assert_eq!(st.caret_preferred_x, Some(Px(20.0)));
+    }
+}
+
+#[test]
+fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
+    let handle = CodeEditorHandle::new("aaaaaa\nbbbbbb\ncccccc");
+    handle.set_soft_wrap_cols(Some(4));
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        assert_eq!(
+            st.display_map.row_count(),
+            6,
+            "3 lines * 2 wrapped rows each"
+        );
+
+        // Seed geometry for the second and third logical lines (rows 2..6).
+        for row in 2..6 {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.row_geom_cache.insert(
+                row,
+                (
+                    RowGeom {
+                        row_range: range.clone(),
+                        blob: fret_core::TextBlobId::default(),
+                        caret_stops: vec![(0, Px(0.0))],
+                        fold_map: None,
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        has_preedit: false,
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache_queue.push_back((row, 1));
+        }
+
+        // Capture the original ranges so we can assert on the shifted values after the edit.
+        (2..6)
+            .map(|row| {
+                (
+                    row,
+                    st.row_geom_cache.get(&row).unwrap().0.row_range.clone(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let at = 6; // End of the first logical line.
+        let edit = Edit::Insert {
+            at,
+            text: "zzzz".to_string(),
+        };
+        let caret = at + 4;
+        input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            edit,
+            Selection {
+                anchor: caret,
+                focus: caret,
+            },
+        )
+        .expect("edit must apply");
+        assert_eq!(
+            st.display_map.row_count(),
+            7,
+            "inserting four chars grows the first line from 2 -> 3 wrapped rows"
+        );
+    }
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.row_geom_cache.len(),
+        4,
+        "unaffected lines keep row geometry cached"
+    );
+
+    for (old_row, old_range) in before {
+        let new_row = old_row + 1;
+        let (geom, _) = st
+            .row_geom_cache
+            .get(&new_row)
+            .expect("shifted row present");
+        assert_eq!(
+            geom.row_range,
+            (old_range.start + 4)..(old_range.end + 4),
+            "byte ranges shift by the inserted text length"
+        );
+    }
+}
+
+#[test]
+fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
+    let handle = CodeEditorHandle::new("hello\nworld\nagain");
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        assert_eq!(st.display_map.row_count(), 3);
+
+        for row in 1..3 {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.row_geom_cache.insert(
+                row,
+                (
+                    RowGeom {
+                        row_range: range.clone(),
+                        blob: fret_core::TextBlobId::default(),
+                        caret_stops: vec![(0, Px(0.0))],
+                        fold_map: None,
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        has_preedit: false,
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache_queue.push_back((row, 1));
+        }
+        (1..3)
+            .map(|row| {
+                (
+                    row,
+                    st.row_geom_cache.get(&row).unwrap().0.row_range.clone(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let edit = Edit::Insert {
+            at: 0,
+            text: "123".to_string(),
+        };
+        input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            edit,
+            Selection {
+                anchor: 3,
+                focus: 3,
+            },
+        )
+        .expect("edit must apply");
+        assert_eq!(
+            st.display_map.row_count(),
+            3,
+            "non-wrapping edits keep row count stable"
+        );
+    }
+
+    let st = handle.state.borrow();
+    assert_eq!(st.row_geom_cache.len(), 2);
+    for (row, old_range) in before {
+        let (geom, _) = st.row_geom_cache.get(&row).expect("row present");
+        assert_eq!(
+            geom.row_range,
+            (old_range.start + 3)..(old_range.end + 3),
+            "byte ranges shift by the inserted text length"
+        );
     }
 }
 
@@ -409,6 +721,89 @@ fn ctrl_page_down_bubbles_and_keeps_preedit() {
 }
 
 #[test]
+fn ctrl_a_selects_all() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+    handle.set_caret(3);
+
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let cell_w = Cell::new(Px(10.0));
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::KeyA,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+    );
+    assert!(handled);
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.anchor, 0);
+    assert_eq!(st.selection.focus, st.buffer.len_bytes());
+}
+
+#[test]
+fn read_only_allows_navigation_but_blocks_edits() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_caret(5);
+    handle.set_interaction(CodeEditorInteractionOptions::read_only());
+
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let cell_w = Cell::new(Px(10.0));
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::Backspace,
+        Modifiers::default(),
+    );
+    assert!(handled);
+    assert_eq!(handle.with_buffer(|b| b.text_string()), "hello");
+    assert_eq!(handle.selection().caret(), 5);
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::ArrowLeft,
+        Modifiers::default(),
+    );
+    assert!(handled);
+    assert_eq!(handle.selection().caret(), 4);
+
+    {
+        let mut st = handle.state.borrow_mut();
+        assert!(input::insert_text(&mut st, "x").is_none());
+        assert!(!input::undo(&mut st));
+        assert!(!input::redo(&mut st));
+    }
+    assert_eq!(handle.with_buffer(|b| b.text_string()), "hello");
+}
+
+#[test]
 fn caret_rect_offsets_for_preedit_cursor() {
     let handle = CodeEditorHandle::new("hello");
     let preedit = PreeditState {
@@ -430,12 +825,101 @@ fn caret_rect_offsets_for_preedit_cursor() {
         Size::new(Px(500.0), Px(500.0)),
     );
 
-    let st = handle.state.borrow();
+    let mut st = handle.state.borrow_mut();
     let rect =
-        caret_rect_for_selection(&st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
 
     assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
     assert_eq!(rect.origin.y, Px(0.0));
+}
+
+#[test]
+fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
+    let handle = CodeEditorHandle::new("abc");
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        st.preedit = None;
+        st.row_geom_cache.insert(
+            0,
+            (
+                RowGeom {
+                    row_range: 0..3,
+                    blob: fret_core::TextBlobId::default(),
+                    caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    fold_map: None,
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    has_preedit: true,
+                    preedit: Some(RowPreeditMapping {
+                        insert_at: 0,
+                        preedit_len: 2,
+                    }),
+                },
+                1,
+            ),
+        );
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let rect =
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+    assert_eq!(rect.origin.x, Px(10.0), "fallback col (1) * cell_w (10px)");
+}
+
+#[test]
+fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
+    let handle = CodeEditorHandle::new("abc");
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.preedit = None;
+        st.row_geom_cache.insert(
+            0,
+            (
+                RowGeom {
+                    row_range: 0..3,
+                    blob: fret_core::TextBlobId::default(),
+                    caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    fold_map: None,
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    has_preedit: true,
+                    preedit: Some(RowPreeditMapping {
+                        insert_at: 0,
+                        preedit_len: 2,
+                    }),
+                },
+                1,
+            ),
+        );
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let caret = caret_for_pointer(
+        &mut st,
+        0,
+        bounds,
+        fret_core::Point::new(Px(15.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(
+        caret, 1,
+        "expected fallback monospace hit-test (x=15 -> col 1)"
+    );
 }
 
 #[test]
@@ -482,8 +966,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
         st.preedit = None;
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(composition, None);
     assert_eq!(value.as_str(), "hello 😀 world");
     assert_eq!(
@@ -522,11 +1006,128 @@ fn a11y_window_includes_preedit_and_reports_composition_range() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "heabllo");
     assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
     assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
+}
+
+#[test]
+fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        st.preedit = Some(PreeditState {
+            text: "AB".to_string(),
+            cursor: Some((2, 2)),
+        });
+    }
+
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert_eq!(value.as_str(), "ABhello");
+    assert_eq!(composition, Some((0, 2)));
+
+    let text_len = st.buffer.len_bytes();
+    let caret = st
+        .buffer
+        .clamp_to_char_boundary_left(st.selection.caret().min(text_len));
+    let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+
+    let mapped = map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 3);
+    assert_eq!(
+        mapped, 1,
+        "display offset after preedit should map into base text"
+    );
+
+    let inside_preedit =
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 1);
+    assert_eq!(
+        inside_preedit, 0,
+        "display offset inside preedit snaps to insertion caret"
+    );
+
+    let clamped_end =
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
+    assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_window_includes_decorations_when_composed() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_compose_inline_preedit(true);
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..3,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    handle.set_caret(1);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((2, 2)));
+
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
+}
+
+#[test]
+fn a11y_preedit_offset_mapping_honors_window_start() {
+    let handle = CodeEditorHandle::new("0123456789");
+    let st = handle.state.borrow();
+
+    let start = 2;
+    let end = 8;
+    let caret = 5;
+    let preedit_len = 2;
+
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 0),
+        start
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 3),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 4),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 5),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 6),
+        caret + 1
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 7),
+        caret + 2
+    );
 }
 
 #[test]
@@ -837,6 +1438,73 @@ fn move_word_right_respects_text_boundary_mode_for_apostrophe() {
     }
 }
 
+#[test]
+fn pointer_down_double_click_matches_identifier_boundary_under_soft_wrap_for_mixed_scripts() {
+    let mixed_identifier = format!("{}_foo42", "\u{53D8}\u{91CF}");
+    let text = format!("can't {mixed_identifier}.bar");
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    handle.set_soft_wrap_cols(Some(6));
+
+    let mut st = handle.state.borrow_mut();
+    st.preedit = Some(PreeditState {
+        text: "AB".to_string(),
+        cursor: Some((2, 2)),
+    });
+
+    let caret = text.find("foo42").expect("expected mixed identifier token") + 1;
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+    let (expect_start, expect_end) =
+        select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+
+    input::apply_pointer_down_selection(&mut st, row, caret, 2, false);
+
+    let selected = st
+        .buffer
+        .slice_to_string(expect_start..expect_end)
+        .unwrap_or_default();
+    assert_eq!(st.preedit, None);
+    assert_eq!(selected.as_str(), mixed_identifier.as_str());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expect_start,
+            focus: expect_end,
+        }
+    );
+}
+
+#[test]
+fn move_word_navigation_uses_same_boundaries_under_soft_wrap_with_punctuation() {
+    let text = format!("can't {}_foo42.bar", "\u{53D8}\u{91CF}");
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    handle.set_soft_wrap_cols(Some(5));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    let mut expected = 0usize;
+    for _ in 0..4 {
+        expected = move_word_right_in_buffer(&st.buffer, expected, st.active_text_boundary_mode)
+            .min(st.buffer.len_bytes());
+        assert!(input::move_word(&mut st, 1, false));
+        assert_eq!(st.selection.anchor, st.selection.focus);
+        assert_eq!(st.selection.caret(), expected);
+    }
+
+    for _ in 0..4 {
+        expected = move_word_left_in_buffer(&st.buffer, expected, st.active_text_boundary_mode)
+            .min(st.buffer.len_bytes());
+        assert!(input::move_word(&mut st, -1, false));
+        assert_eq!(st.selection.anchor, st.selection.focus);
+        assert_eq!(st.selection.caret(), expected);
+    }
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn rust_syntax_spans_are_materialized_for_rows() {
@@ -858,6 +1526,116 @@ fn rust_syntax_spans_are_materialized_for_rows() {
     assert!(
         any_highlight,
         "expected at least one highlighted span for rust"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn set_language_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        0,
+        "new handles should not reset syntax caches"
+    );
+
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let _ = paint::cached_row_syntax_spans(&mut st, 0, 256);
+        let _ = paint::cached_row_syntax_spans(&mut st, 1, 256);
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1"
+        );
+    }
+
+    let resets_before = handle.cache_stats().syntax_resets;
+
+    // The UI layer may call set_language during render; that must be a no-op when the language is
+    // unchanged to avoid per-frame cache resets and re-highlighting work.
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    assert_eq!(
+        handle.cache_stats().syntax_resets,
+        resets_before,
+        "idempotent set_language must not reset syntax caches"
+    );
+
+    {
+        let st = handle.state.borrow();
+        assert!(
+            st.syntax_row_cache.contains_key(&0),
+            "expected syntax cache entry for row 0 to survive idempotent set_language"
+        );
+        assert!(
+            st.syntax_row_cache.contains_key(&1),
+            "expected syntax cache entry for row 1 to survive idempotent set_language"
+        );
+    }
+}
+
+#[test]
+fn set_line_folds_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let placeholder = Arc::<str>::from("…");
+    let spans = vec![FoldSpan {
+        range: 1..3,
+        placeholder,
+    }];
+
+    handle.set_line_folds(0, spans.clone());
+
+    let (folds_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.folds_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_folds(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.folds_epoch, folds_epoch_before,
+        "idempotent set_line_folds must not bump folds_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_folds must not reset row text caches"
+    );
+}
+
+#[test]
+fn set_line_inlays_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let spans = vec![InlaySpan {
+        byte: 2,
+        text: Arc::<str>::from("<inlay>"),
+    }];
+
+    handle.set_line_inlays(0, spans.clone());
+
+    let (inlays_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.inlays_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_inlays(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.inlays_epoch, inlays_epoch_before,
+        "idempotent set_line_inlays must not bump inlays_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_inlays must not reset row text caches"
     );
 }
 
@@ -1020,4 +1798,162 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_deletion() {
         "expected shifted far-row cache to hit"
     );
     assert!(Arc::ptr_eq(&spans_after, &spans_150));
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_invalidates_bounded_window_around_edit() {
+    let mut text = String::new();
+    for _ in 0..300 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let line_10 = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_50 = paint::cached_row_syntax_spans(&mut st, 50, max_entries);
+    let line_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let line_200 = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+
+    assert!(st.syntax_row_cache.contains_key(&10));
+    assert!(st.syntax_row_cache.contains_key(&50));
+    assert!(st.syntax_row_cache.contains_key(&150));
+    assert!(st.syntax_row_cache.contains_key(&200));
+
+    let edit_line = 100usize;
+    let at = st
+        .buffer
+        .line_start(edit_line)
+        .expect("expected line start");
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Insert {
+            at,
+            text: "x".to_string(),
+        },
+        Selection {
+            anchor: at + 1,
+            focus: at + 1,
+        },
+    )
+    .expect("apply edit");
+
+    assert!(
+        st.syntax_row_cache.contains_key(&10),
+        "expected far-row entry outside the invalidation window to survive"
+    );
+    assert!(
+        st.syntax_row_cache.contains_key(&200),
+        "expected far-row entry outside the invalidation window to survive"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&50),
+        "expected entry inside the lookback/lookahead invalidation window to be evicted"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&150),
+        "expected entry inside the lookback/lookahead invalidation window to be evicted"
+    );
+
+    let hits_before = st.cache_stats.syntax_hits;
+    let line_10_after = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_200_after = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+    assert!(
+        st.cache_stats.syntax_hits >= hits_before + 2,
+        "expected preserved far-row cache to hit"
+    );
+    assert!(Arc::ptr_eq(&line_10_after, &line_10));
+    assert!(Arc::ptr_eq(&line_200_after, &line_200));
+
+    let _ = line_50;
+    let _ = line_150;
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_multiple_newline_insertion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Insert {
+            at: 0,
+            text: "\n\n\n".to_string(),
+        },
+        Selection {
+            anchor: 3,
+            focus: 3,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 153;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_multiple_line_deletion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    assert!(
+        st.syntax_row_cache.contains_key(&150),
+        "expected far-row cache entries to be populated"
+    );
+
+    let end = st.buffer.line_start(3).expect("expected a line start");
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Delete { range: 0..end },
+        Selection {
+            anchor: 0,
+            focus: 0,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 147;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
 }

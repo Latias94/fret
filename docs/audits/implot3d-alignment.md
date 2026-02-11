@@ -15,7 +15,7 @@ architecture constraints:
 
 ## Current State (What We Already Have)
 
-- Embedded viewport surface (ADR 0098):
+- Embedded viewport surface (ADR 0097):
   - `Plot3dCanvas` emits `SceneOp::ViewportSurface` targeting an engine-owned `RenderTargetId`.
   - Input is forwarded as `Effect::ViewportInput(ViewportInputEvent)` using `ViewportMapping`.
   - Evidence: `ecosystem/fret-plot3d/src/retained.rs`
@@ -84,13 +84,13 @@ two-tier architecture:
 
 - Provide a reusable renderer type (e.g. `Plot3dRenderer`) that the app/driver calls from
   `record_engine_frame`.
-- Keep large data work budgeted and cacheable (similar spirit to `delinea` / ADR 1132):
+- Keep large data work budgeted and cacheable (similar spirit to `delinea` / ADR 0194):
   - progressive mesh uploads,
   - pixel-bounded LOD for dense line/point clouds,
   - stable per-item GPU resources keyed by IDs + revision counters.
 
 This keeps Plot3D portable and makes “real 3D” depth-correct rendering possible without changing
-`SceneOp` contracts (ADR 0098 rationale).
+`SceneOp` contracts (ADR 0097 rationale).
 
 ## Proposed Milestones (Practical, Testable)
 

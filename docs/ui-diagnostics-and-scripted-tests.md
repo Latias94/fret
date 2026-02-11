@@ -26,9 +26,15 @@ The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
 Related ADRs:
 
-- ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- ADR 0159: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
+
+Implementation pointers (where the code lives today):
+
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Script/selector/result types (serde): `crates/fret-diag-protocol`
+- CLI tooling engine (pack/stats/gates/compare): `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 
 ## Quick Start (manual bundle dump)
 
@@ -91,6 +97,30 @@ Workflow tip:
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
+
+## DevTools GUI (preview)
+
+This repo includes a WIP DevTools GUI app at `apps/fret-devtools` that wraps the same inspect/pick/scripts/bundles
+contracts with a low-friction, real-time UI (including web runner support via WebSocket transport).
+
+Run the DevTools GUI (it hosts a loopback-only WS server):
+
+- `cargo run -p fret-devtools`
+
+Connect a target app (native):
+
+- set `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/`
+- set `FRET_DEVTOOLS_TOKEN=<token>`
+
+Connect a target app (web runner):
+
+- add `?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>` to the URL
+
+Notes:
+
+- The GUI prints a ready-to-copy `ws://.../?fret_devtools_token=...` URL on startup.
+- `FRET_DEVTOOLS_WS_PORT` overrides the default port (`7331`).
+- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains `bundle.json`.
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
@@ -121,6 +151,24 @@ Workflow tip:
   ]
 }
 ```
+
+Optional: generate scripts from typed Rust templates
+
+If you prefer authoring scripts in Rust (type-safe selectors + reusable helpers) but still want the portable/reviewable
+JSON artifact, use `fret-diag-scriptgen`:
+
+```bash
+cargo run -p fret-diag-scriptgen -- list
+cargo run -p fret-diag-scriptgen -- write todo-baseline-v2
+```
+
+This writes a JSON file under `.fret/diag/scripts/` by default and prints the path. You can then run it via:
+
+```bash
+cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
+```
+
+Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
 
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
@@ -169,6 +217,39 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
     - Or launch a fresh process per script (clean state, slower):
 
       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+
+Web runner note:
+
+- `diag perf` uses the filesystem-trigger transport, so for web runner workflows you typically:
+  1) run the script via `apps/fret-devtools` (or any devtools-ws-capable driver) to export bundles under `.fret/diag/exports/`, then
+  2) compute a baseline from those bundle paths:
+     - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
+
+### Web runner: exporting bundles headlessly (Trunk + devtools-ws)
+
+This is the simplest repeatable workflow for producing `.fret/diag/exports/<timestamp>/bundle.json` from a web/WASM app.
+
+1. Start the loopback devtools WS hub (prints the token):
+
+   - `cargo run -p fret-devtools-ws`
+
+2. Serve the WASM app with Trunk:
+
+   - `cd apps/fret-ui-gallery-web`
+   - `trunk serve --port 8080`
+
+3. Open the app URL with WS parameters:
+
+   - `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+
+4. Export a bundle by running a script that includes a `capture_bundle` step:
+
+   - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --token <token>`
+
+The command prints the export directory path, and writes:
+
+- `.fret/diag/exports/<timestamp>/bundle.json`
+
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
@@ -272,11 +353,11 @@ At a high level:
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
-  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0190 “ephemeral prepaint items” workflows)
+  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0175 “ephemeral prepaint items” workflows)
   - `debug.virtual_list_windows`: VirtualList window telemetry (used to triage scroll-induced work)
     - `debug.virtual_list_windows[*].source`: whether the record was emitted from `layout` or `prepaint`
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
-  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
+  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0132)
   - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
@@ -310,7 +391,7 @@ Semantics export:
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
-- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0192).
+- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
 
@@ -395,7 +476,7 @@ Recent additions:
 
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
-- `exists_any_window` / `not_exists_any_window` (predicate-only; evaluate a selector across all known windows)
+- `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 
 Notes:
 
@@ -411,13 +492,6 @@ Schema v2 keeps the same `steps` array shape, but adds higher-level intent steps
 (selectors + window-bounds predicates), and can internally perform multi-frame behavior (wait/retry loops) without forcing
 authors to hand-write brittle `wait_frames` chains.
 
-Multi-window note:
-
-- Scripts may optionally set a top-level `window` policy:
-  - `"any"` (default): attach to the first window that observes the script trigger.
-  - `"focused"`: attach to the first focused window that observes the script trigger (useful for docking/multi-window repros).
-  - `"lowest_id"`: attach to the window with the lowest `AppWindowId` (useful when focus is unstable during window creation).
-
 Supported intent steps (v2):
 
 - `ensure_visible` (wait until visible/within window bounds)
@@ -426,32 +500,13 @@ Supported intent steps (v2):
 - `menu_select` (wait + open menu + click item)
 - `menu_select_path` (wait + open nested menus + click final item)
 - `drag_to` (drag between two semantics targets)
-- `drag_pointer_path` (drag a continuous press along a segmented path; useful for docking tear-off roundtrips)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
 
-Note: `drag_pointer` and `drag_pointer_path` also emit `Event::InternalDrag` (`over` per move + final `drop`). This is
+Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
 diagnostics runs, and is ignored unless a matching cross-window drag session is active.
-
-`drag_pointer_path` also supports an optional per-segment `internal_drag_target` selector. When present and it resolves to
-an element in a different window, the harness routes that segment's `Event::InternalDrag` events to the target window and
-updates the active cross-window `DragSession.current_window` accordingly (diagnostics-only), enabling deterministic
-multi-window hover gates.
-
-Example:
-
-```json
-{
-  "type": "drag_pointer_path",
-  "target": { "kind": "test_id", "id": "main-anchor" },
-  "segments": [
-    { "delta_x": 240.0, "delta_y": 0.0, "steps": 24 },
-    { "delta_x": 0.0, "delta_y": 240.0, "steps": 24, "internal_drag_target": { "kind": "test_id", "id": "aux-dock" } }
-  ]
-}
-```
 
 Example: right click a context menu trigger
 
@@ -650,10 +705,6 @@ you can gate on forwarded viewport input events exported in `bundle.json`:
 
 - `--check-viewport-input-min N` counts `debug.viewport_input[]` events in snapshots after `--warmup-frames`.
 - `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
-- `--check-dock-drag-cross-window-max N` fails if more than `N` snapshots have `debug.docking_interaction.dock_drag.cross_window_hover=true` (helps catch “hover leaked to another OS window” regressions during docking tear-off).
-- `--check-dock-drag-source-windows-min N` counts distinct `debug.docking_interaction.dock_drag.source_window` values (helps ensure a scenario actually exercised multiple windows).
-- `--check-dock-drag-current-windows-min N` counts distinct `debug.docking_interaction.dock_drag.current_window` values (stronger signal that a dock drag actually hovered across OS windows).
-- `--check-dock-drop-resolve-min N` counts snapshots where `debug.docking_interaction.dock_drop_resolve` is present (helps ensure a scenario actually exercised drop-target resolution).
 - `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 
 ### Matrix runner (uncached vs cached)
@@ -671,7 +722,7 @@ Notes:
 
 Recommended (CI/automation):
 
-- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+- `python3 tools/diag_matrix_ui_gallery.py --out-dir target/fret-diag --warmup-frames 5 --release --json`
 
 ### Bundle comparison (cached vs uncached)
 

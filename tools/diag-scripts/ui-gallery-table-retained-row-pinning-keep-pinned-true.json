@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "type_text", "text": "table retained" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-pin-top" } },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "RowPinning: top=[0] bottom=[]"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-next-page" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-10" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-table-retained-row-pinning-keep-pinned-true" }
+  ]
+}

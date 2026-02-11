@@ -1,3 +1,5 @@
+#![allow(clippy::arc_with_non_send_sync)]
+
 use fret_app::{
     ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
     LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
@@ -5,7 +7,8 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, TimerToken, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, SemanticsRole,
+    TimerToken, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -16,12 +19,14 @@ use fret_launch::{
 };
 use fret_query::{QueryPolicy, with_query_client};
 use fret_router::{
-    NamespaceInvalidationRule, RouteChangePolicy, RouteLocation, collect_invalidated_namespaces,
-    route_query_key,
+    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
+    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
+    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
 };
 use fret_runtime::{
-    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailability,
-    WindowCommandAvailabilityService, WindowCommandEnabledService,
+    DefaultKeybinding, ImageUpdateToken, KeyChord, MenuItemToggle, MenuItemToggleKind,
+    PlatformCapabilities, PlatformFilter, WindowCommandAvailabilityService,
+    WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -43,12 +48,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
 
-#[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+    UiGalleryMarkdownEditorHandlesStore,
 };
 use crate::spec::*;
 use crate::ui;
@@ -56,60 +61,196 @@ use crate::ui;
 const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
 const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
 
+#[cfg(target_arch = "wasm32")]
+type UiGalleryHistory = fret_router::WebHistoryAdapter;
+
+#[cfg(not(target_arch = "wasm32"))]
+type UiGalleryHistory = fret_router::MemoryHistory;
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+enum UiGalleryRouteId {
+    Root,
+    Gallery,
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct UiGalleryPagePrefetchSeed {
     selected_page: Arc<str>,
 }
 
-fn route_location_for_page(page: &Arc<str>) -> RouteLocation {
-    RouteLocation::from_path("/gallery")
+fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
+    let location = RouteLocation::from_path("/gallery")
         .with_query_value("page", Some(page.to_string()))
-        .with_query_value("source", Some("nav".to_string()))
+        .with_query_value("source", Some("nav".to_string()));
+
+    if let Some(demo) = from.query_value("demo") {
+        location.with_query_value("demo", Some(demo.to_string()))
+    } else {
+        location
+    }
 }
 
-fn apply_route_query_side_effects(
+fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
+    let page = location.query_value("page")?;
+    page_spec(page).is_some().then_some(Arc::<str>::from(page))
+}
+
+fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
+    let tree = Arc::new(RouteTree::new(
+        RouteNode::new(UiGalleryRouteId::Root, "/")
+            .expect("root route should build")
+            .with_children(vec![
+                RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
+                    .expect("gallery route should build"),
+            ]),
+    ));
+
+    let search_table = Arc::new(RouteSearchTable::new());
+
+    #[cfg(target_arch = "wasm32")]
+    let history = UiGalleryHistory::new().expect("web history adapter should resolve a location");
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let history = UiGalleryHistory::new(RouteLocation::parse("/"));
+
+    let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+        .expect("ui gallery router should build");
+
+    router.route_hooks_mut().insert(
+        UiGalleryRouteId::Gallery,
+        RouteHooks {
+            before_load: None,
+            loader: Some(Arc::new(|ctx| {
+                vec![fret_router::RoutePrefetchIntent {
+                    route: ctx.matched.route,
+                    namespace: UI_GALLERY_PAGE_CONTENT_NS,
+                    location: ctx.to.clone(),
+                    extra: None,
+                }]
+            })),
+        },
+    );
+
+    router
+}
+
+fn apply_page_route_side_effects_via_router(
     app: &mut App,
     window: AppWindowId,
-    previous_page: Option<Arc<str>>,
+    action: NavigationAction,
     current_page: Arc<str>,
+    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
 ) {
-    let previous_route = previous_page
-        .as_ref()
-        .map(route_location_for_page)
-        .unwrap_or_default();
-    let current_route = route_location_for_page(&current_page);
+    let current_route = route_location_for_page(&router.state().location, &current_page);
+    let update = router.navigate_with_prefetch_intents(action, Some(current_route.canonicalized()));
+    apply_page_router_update_side_effects(app, window, current_page, router, update);
+}
 
-    let invalidated = collect_invalidated_namespaces(
-        &previous_route,
-        &current_route,
-        &[
-            NamespaceInvalidationRule::new(
-                UI_GALLERY_PAGE_CONTENT_NS,
-                RouteChangePolicy::PathOrQueryChanged,
-            ),
-            NamespaceInvalidationRule::new(
-                UI_GALLERY_NAV_INDEX_NS,
-                RouteChangePolicy::QueryChanged,
-            ),
-        ],
-    );
+#[cfg(not(target_arch = "wasm32"))]
+fn sync_gallery_page_history_command_enabled(
+    app: &mut App,
+    window: AppWindowId,
+    history: &UiGalleryHistory,
+) {
+    let can_back = history.can_back();
+    let can_forward = history.can_forward();
+
+    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
+    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
+
+    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+        if can_back {
+            svc.clear_command(window, &cmd_back);
+        } else {
+            svc.set_enabled(window, cmd_back.clone(), false);
+        }
+
+        if can_forward {
+            svc.clear_command(window, &cmd_forward);
+        } else {
+            svc.set_enabled(window, cmd_forward.clone(), false);
+        }
+    });
+}
+
+#[cfg(target_arch = "wasm32")]
+fn sync_gallery_page_history_command_enabled(
+    app: &mut App,
+    window: AppWindowId,
+    _history: &UiGalleryHistory,
+) {
+    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
+    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
+
+    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+        svc.clear_command(window, &cmd_back);
+        svc.clear_command(window, &cmd_forward);
+    });
+}
+
+fn apply_page_router_update_side_effects(
+    app: &mut App,
+    window: AppWindowId,
+    current_page: Arc<str>,
+    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
+    update: Result<
+        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
+        fret_router::RouteSearchValidationFailure,
+    >,
+) {
+    sync_gallery_page_history_command_enabled(app, window, router.history());
+
+    let Ok(update) = update else {
+        return;
+    };
+
+    let RouterUpdateWithPrefetchIntents { update, intents } = update;
+
+    let invalidated = if let RouterUpdate::Changed(transition) = &update {
+        collect_invalidated_namespaces(
+            &transition.from,
+            &transition.to,
+            &[
+                NamespaceInvalidationRule::new(
+                    UI_GALLERY_PAGE_CONTENT_NS,
+                    RouteChangePolicy::PathOrQueryChanged,
+                ),
+                NamespaceInvalidationRule::new(
+                    UI_GALLERY_NAV_INDEX_NS,
+                    RouteChangePolicy::QueryChanged,
+                ),
+            ],
+        )
+    } else {
+        Vec::new()
+    };
+
+    if invalidated.is_empty() && intents.is_empty() {
+        return;
+    }
 
     let _ = with_query_client(app, |client, app| {
         for namespace in invalidated {
             client.invalidate_namespace(namespace);
         }
 
-        let seed = UiGalleryPagePrefetchSeed {
-            selected_page: current_page.clone(),
-        };
-        let key = route_query_key::<String>(UI_GALLERY_PAGE_CONTENT_NS, &current_route);
-        let policy = QueryPolicy::default();
-        let _ = client.prefetch(app, window, key, policy, move |_token| {
-            Ok::<String, fret_query::QueryError>(format!(
-                "ui_gallery.page_prefetch:{}",
-                seed.selected_page
-            ))
-        });
+        for intent in intents {
+            if intent.namespace != UI_GALLERY_PAGE_CONTENT_NS {
+                continue;
+            }
+
+            let seed = UiGalleryPagePrefetchSeed {
+                selected_page: current_page.clone(),
+            };
+            let key = prefetch_intent_query_key::<String, _>(&intent);
+            let policy = QueryPolicy::default();
+            let _ = client.prefetch(app, window, key, policy, move |_token| {
+                Ok::<String, fret_query::QueryError>(format!(
+                    "ui_gallery.page_prefetch:{}",
+                    seed.selected_page
+                ))
+            });
+        }
     });
 }
 
@@ -125,7 +266,6 @@ struct PendingTaffyDumpRequest {
     filename_tag: Arc<str>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
@@ -147,13 +287,14 @@ struct UiGalleryDebugWindowService {
 
 const DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER: TimerToken = TimerToken(0x7569_6761_6c6c_6572);
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone)]
 struct UiGalleryHarnessModelIds {
     selected_page: Model<Arc<str>>,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
 }
@@ -189,6 +330,7 @@ struct UiGalleryWindowState {
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
     pending_taffy_dump: Option<PendingTaffyDumpRequest>,
+    page_router: Router<UiGalleryRouteId, UiGalleryHistory>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
@@ -240,12 +382,22 @@ struct UiGalleryWindowState {
     avatar_demo_image: Model<Option<ImageId>>,
     avatar_demo_image_token: Option<ImageUploadToken>,
     avatar_demo_image_retry_count: u8,
+    image_fit_demo_wide_image: Model<Option<ImageId>>,
+    image_fit_demo_wide_token: Option<ImageUploadToken>,
+    image_fit_demo_tall_image: Model<Option<ImageId>>,
+    image_fit_demo_tall_token: Option<ImageUploadToken>,
+    image_fit_demo_streaming_image: Model<Option<ImageId>>,
+    image_fit_demo_streaming_token: Option<ImageUploadToken>,
+    image_fit_demo_streaming_frame: u64,
+    image_fit_demo_streaming_size: (u32, u32),
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -285,10 +437,67 @@ struct UiGalleryWindowState {
 #[derive(Default)]
 struct UiGalleryDriver;
 
+#[derive(Debug, Clone)]
+pub(crate) struct UiGalleryImageSourceDemoAssets {
+    pub wide_png: fret_ui_assets::ImageSource,
+    pub tall_png: fret_ui_assets::ImageSource,
+    pub square_png: fret_ui_assets::ImageSource,
+}
+
 impl UiGalleryDriver {
     const AVATAR_DEMO_IMAGE_WIDTH: u32 = 96;
     const AVATAR_DEMO_IMAGE_HEIGHT: u32 = 96;
     const AVATAR_DEMO_IMAGE_RETRY_MAX: u8 = 8;
+
+    const IMAGE_FIT_DEMO_WIDE_SIZE: (u32, u32) = (320, 180);
+    const IMAGE_FIT_DEMO_TALL_SIZE: (u32, u32) = (180, 320);
+    const IMAGE_FIT_DEMO_STREAMING_SIZE: (u32, u32) = (320, 200);
+
+    fn ensure_image_source_demo_assets_installed(app: &mut App) {
+        if app.global::<UiGalleryImageSourceDemoAssets>().is_some() {
+            return;
+        }
+
+        // Encode a few tiny demo images to PNG and load them through the ecosystem `ImageSource`
+        // path. This exercises the decode/load + `ImageAssetCache` integration without requiring
+        // external files.
+        let wide_rgba = Self::generate_fit_demo_image_rgba8(
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.0,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.1,
+            (120, 190, 255),
+        );
+        let tall_rgba = Self::generate_fit_demo_image_rgba8(
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.0,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.1,
+            (255, 160, 120),
+        );
+        let square_rgba = Self::generate_avatar_demo_image_rgba8(
+            Self::AVATAR_DEMO_IMAGE_WIDTH,
+            Self::AVATAR_DEMO_IMAGE_HEIGHT,
+        );
+
+        let wide_png = Self::encode_rgba8_png_bytes(
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.0,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE.1,
+            &wide_rgba,
+        );
+        let tall_png = Self::encode_rgba8_png_bytes(
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.0,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE.1,
+            &tall_rgba,
+        );
+        let square_png = Self::encode_rgba8_png_bytes(
+            Self::AVATAR_DEMO_IMAGE_WIDTH,
+            Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            &square_rgba,
+        );
+
+        app.set_global(UiGalleryImageSourceDemoAssets {
+            wide_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(wide_png)),
+            tall_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(tall_png)),
+            square_png: fret_ui_assets::ImageSource::from_bytes(Arc::<[u8]>::from(square_png)),
+        });
+    }
 
     fn enqueue_avatar_demo_image_register(
         app: &mut App,
@@ -309,21 +518,25 @@ impl UiGalleryDriver {
         });
     }
 
-    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
-        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
-        cmds.open = Some(CommandId::new(CMD_APP_OPEN));
-        cmds.save = Some(CommandId::new(CMD_APP_SAVE));
-        cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
-        cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-        cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
-        cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
-        cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
-        cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
-        cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
-        cmds.switch_locale = Some(CommandId::new(
-            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
-        ));
+    fn enqueue_image_fit_demo_image_register(
+        app: &mut App,
+        window: AppWindowId,
+        token: ImageUploadToken,
+        size: (u32, u32),
+        accent: (u8, u8, u8),
+    ) {
+        app.push_effect(Effect::ImageRegisterRgba8 {
+            window,
+            token,
+            width: size.0,
+            height: size.1,
+            bytes: Self::generate_fit_demo_image_rgba8(size.0, size.1, accent),
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
+        });
+    }
 
+    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
         let resolve_menu_title = |key: &'static str, fallback: &'static str| -> Arc<str> {
             app.global::<fret_runtime::fret_i18n::I18nService>()
                 .map(|i18n| {
@@ -336,12 +549,29 @@ impl UiGalleryDriver {
                 })
                 .unwrap_or_else(|| Arc::from(fallback))
         };
-        cmds.file_menu_title = Some(resolve_menu_title("workspace-menu-file", "File"));
-        cmds.edit_menu_title = Some(resolve_menu_title("workspace-menu-edit", "Edit"));
-        cmds.view_menu_title = Some(resolve_menu_title("workspace-menu-view", "View"));
-        cmds.window_menu_title = Some(resolve_menu_title("workspace-menu-window", "Window"));
 
-        if Platform::current() == Platform::Macos {
+        let platform = Platform::current();
+        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands {
+            open: Some(CommandId::new(CMD_APP_OPEN)),
+            save: Some(CommandId::new(CMD_APP_SAVE)),
+            undo: Some(CommandId::new(fret_app::core_commands::EDIT_UNDO)),
+            redo: Some(CommandId::new(fret_app::core_commands::EDIT_REDO)),
+            cut: Some(CommandId::new(fret_app::core_commands::EDIT_CUT)),
+            copy: Some(CommandId::new(fret_app::core_commands::EDIT_COPY)),
+            paste: Some(CommandId::new(fret_app::core_commands::EDIT_PASTE)),
+            select_all: Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL)),
+            command_palette: Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE)),
+            switch_locale: Some(CommandId::new(
+                fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
+            )),
+            file_menu_title: Some(resolve_menu_title("workspace-menu-file", "File")),
+            edit_menu_title: Some(resolve_menu_title("workspace-menu-edit", "Edit")),
+            view_menu_title: Some(resolve_menu_title("workspace-menu-view", "View")),
+            window_menu_title: Some(resolve_menu_title("workspace-menu-window", "Window")),
+            ..Default::default()
+        };
+
+        if platform == Platform::Macos {
             cmds.app_menu_title = Some(Arc::from("Fret"));
             cmds.include_services_menu = true;
             cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
@@ -437,60 +667,57 @@ impl UiGalleryDriver {
             .menus
             .iter_mut()
             .find(|m| m.role == Some(MenuRole::File) || m.title.as_ref() == "File")
-        {
-            if let Some(MenuItem::Submenu {
+            && let Some(MenuItem::Submenu {
                 title: _, items, ..
             }) = menu.items.iter_mut().find(
                 |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Recent"),
-            ) {
-                *items = if recent_items.is_empty() {
-                    vec![MenuItem::Label {
-                        title: Arc::from("No recent items"),
-                    }]
-                } else {
-                    recent_items
-                        .iter()
-                        .take(10)
-                        .enumerate()
-                        .map(|(index, _title)| MenuItem::Command {
-                            command: Self::recent_open_command(index),
-                            when: None,
-                            toggle: None,
-                        })
-                        .collect()
-                };
-            }
+            )
+        {
+            *items = if recent_items.is_empty() {
+                vec![MenuItem::Label {
+                    title: Arc::from("No recent items"),
+                }]
+            } else {
+                recent_items
+                    .iter()
+                    .take(10)
+                    .enumerate()
+                    .map(|(index, _title)| MenuItem::Command {
+                        command: Self::recent_open_command(index),
+                        when: None,
+                        toggle: None,
+                    })
+                    .collect()
+            };
         }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             let windows = Self::window_menu_items(app);
             let focused_window = Self::focused_window_menu_item(app);
-            if !windows.is_empty() {
-                if let Some(menu) = menu_bar
+            if !windows.is_empty()
+                && let Some(menu) = menu_bar
                     .menus
                     .iter_mut()
                     .find(|m| m.role == Some(MenuRole::Window) || m.title.as_ref() == "Window")
-                {
-                    if let Some(MenuItem::Submenu { title: _, items, .. }) =
-                        menu.items.iter_mut().find(|i| {
-                            matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows")
-                        })
-                    {
-                        *items = windows
-                            .into_iter()
-                            .enumerate()
-                            .map(|(index, window_id)| MenuItem::Command {
-                                command: Self::window_activate_command(index),
-                                when: None,
-                                toggle: Some(MenuItemToggle {
-                                    kind: MenuItemToggleKind::Radio,
-                                    checked: Some(window_id) == focused_window,
-                                }),
-                            })
-                            .collect();
-                    }
-                }
+                && let Some(MenuItem::Submenu {
+                    title: _, items, ..
+                }) = menu.items.iter_mut().find(
+                    |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows"),
+                )
+            {
+                *items = windows
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, window_id)| MenuItem::Command {
+                        command: Self::window_activate_command(index),
+                        when: None,
+                        toggle: Some(MenuItemToggle {
+                            kind: MenuItemToggleKind::Radio,
+                            checked: Some(window_id) == focused_window,
+                        }),
+                    })
+                    .collect();
             }
         }
 
@@ -566,6 +793,17 @@ impl UiGalleryDriver {
                     ],
                 },
                 MenuItem::Separator,
+                MenuItem::Command {
+                    command: CommandId::new(CMD_GALLERY_PAGE_BACK),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_GALLERY_PAGE_FORWARD),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Separator,
                 MenuItem::Submenu {
                     title: Arc::from("Debug"),
                     when: None,
@@ -613,7 +851,7 @@ impl UiGalleryDriver {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
 
-        let _ = app.with_global_mut(
+        app.with_global_mut(
             || UndoService::<ValueTx<f32>>::with_limit(256),
             |undo_svc, _app| {
                 undo_svc.set_active_document(window, doc.clone());
@@ -636,13 +874,7 @@ impl UiGalleryDriver {
         }
 
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
-            svc.set_snapshot(
-                window,
-                WindowCommandAvailability {
-                    edit_can_undo,
-                    edit_can_redo,
-                },
-            );
+            svc.set_edit_availability(window, edit_can_undo, edit_can_redo);
         });
     }
 
@@ -674,6 +906,61 @@ impl UiGalleryDriver {
             }
         }
 
+        out
+    }
+
+    fn generate_fit_demo_image_rgba8(width: u32, height: u32, accent: (u8, u8, u8)) -> Vec<u8> {
+        let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
+        let w = (width.saturating_sub(1)).max(1) as f32;
+        let h = (height.saturating_sub(1)).max(1) as f32;
+
+        let cx = (width / 2) as i32;
+        let cy = (height / 2) as i32;
+
+        for y in 0..height {
+            for x in 0..width {
+                let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                let fx = x as f32 / w;
+                let fy = y as f32 / h;
+
+                let mut r = (20.0 + (accent.0 as f32) * (0.25 + 0.75 * fx)) as u8;
+                let mut g = (20.0 + (accent.1 as f32) * (0.25 + 0.75 * (1.0 - fy))) as u8;
+                let mut b =
+                    (20.0 + (accent.2 as f32) * (0.25 + 0.75 * (0.5 + 0.5 * (fx - fy)))) as u8;
+
+                let border = x < 2 || y < 2 || x + 2 >= width || y + 2 >= height;
+                if border {
+                    r = 245;
+                    g = 245;
+                    b = 245;
+                }
+
+                let dx = (x as i32 - cx).abs();
+                let dy = (y as i32 - cy).abs();
+                if dx <= 1 || dy <= 1 {
+                    r = 10;
+                    g = 10;
+                    b = 10;
+                }
+
+                out[idx] = r;
+                out[idx + 1] = g;
+                out[idx + 2] = b;
+                out[idx + 3] = 255;
+            }
+        }
+
+        out
+    }
+
+    fn encode_rgba8_png_bytes(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
+        use image::codecs::png::PngEncoder;
+        use image::{ColorType, ImageEncoder as _};
+
+        let mut out: Vec<u8> = Vec::new();
+        PngEncoder::new(&mut out)
+            .write_image(rgba, width, height, ColorType::Rgba8.into())
+            .expect("png encode must succeed for demo bytes");
         out
     }
 
@@ -766,6 +1053,8 @@ impl UiGalleryDriver {
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
+        let page_router = build_ui_gallery_page_router();
+
         let start_page = ui_gallery_start_page().unwrap_or_else(|| {
             if std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
@@ -775,6 +1064,11 @@ impl UiGalleryDriver {
                 Arc::<str>::from(PAGE_INTRO)
             }
         });
+
+        #[cfg(target_arch = "wasm32")]
+        let start_page = page_from_gallery_location(&page_router.state().location)
+            .unwrap_or_else(|| start_page.clone());
+
         let selected_page = app.models_mut().insert(start_page.clone());
 
         let mut workspace_tabs_init = vec![
@@ -875,9 +1169,41 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("item-1")));
 
+        Self::ensure_image_source_demo_assets_installed(app);
+
         let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
         let avatar_demo_image_token = app.next_image_upload_token();
         Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
+
+        let image_fit_demo_wide_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_wide_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_wide_token,
+            Self::IMAGE_FIT_DEMO_WIDE_SIZE,
+            (120, 190, 255),
+        );
+
+        let image_fit_demo_tall_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_tall_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_tall_token,
+            Self::IMAGE_FIT_DEMO_TALL_SIZE,
+            (255, 160, 120),
+        );
+
+        let image_fit_demo_streaming_image = app.models_mut().insert(None::<ImageId>);
+        let image_fit_demo_streaming_token = app.next_image_upload_token();
+        Self::enqueue_image_fit_demo_image_register(
+            app,
+            window,
+            image_fit_demo_streaming_token,
+            Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
+            (140, 230, 170),
+        );
 
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -885,6 +1211,8 @@ impl UiGalleryDriver {
         let code_editor_syntax_rust = app.models_mut().insert(true);
         let code_editor_boundary_identifier = app.models_mut().insert(true);
         let code_editor_soft_wrap = app.models_mut().insert(false);
+        let code_editor_folds = app.models_mut().insert(false);
+        let code_editor_inlays = app.models_mut().insert(false);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -959,11 +1287,12 @@ impl UiGalleryDriver {
 
         Self::sync_undo_availability(app, window, &undo_doc);
 
-        let state = UiGalleryWindowState {
+        let mut state = UiGalleryWindowState {
             ui,
             root: None,
             debug_hud: DebugHudState::default(),
             pending_taffy_dump: None,
+            page_router,
             selected_page,
             workspace_tabs,
             workspace_dirty_tabs,
@@ -1013,12 +1342,22 @@ impl UiGalleryDriver {
             avatar_demo_image,
             avatar_demo_image_token: Some(avatar_demo_image_token),
             avatar_demo_image_retry_count: 0,
+            image_fit_demo_wide_image,
+            image_fit_demo_wide_token: Some(image_fit_demo_wide_token),
+            image_fit_demo_tall_image,
+            image_fit_demo_tall_token: Some(image_fit_demo_tall_token),
+            image_fit_demo_streaming_image,
+            image_fit_demo_streaming_token: Some(image_fit_demo_streaming_token),
+            image_fit_demo_streaming_frame: 0,
+            image_fit_demo_streaming_size: Self::IMAGE_FIT_DEMO_STREAMING_SIZE,
             progress,
             checkbox,
             switch,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
             code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -1055,6 +1394,40 @@ impl UiGalleryDriver {
             last_config_files_status_seq: 0,
         };
 
+        if let Some(selected) = app.models().get_cloned(&state.selected_page) {
+            #[cfg(target_arch = "wasm32")]
+            {
+                let current_page = page_from_gallery_location(&state.page_router.state().location);
+                if current_page.is_some_and(|page| page.as_ref() == selected.as_ref()) {
+                    let update = state.page_router.init_with_prefetch_intents();
+                    apply_page_router_update_side_effects(
+                        app,
+                        window,
+                        selected,
+                        &mut state.page_router,
+                        update,
+                    );
+                } else {
+                    apply_page_route_side_effects_via_router(
+                        app,
+                        window,
+                        NavigationAction::Replace,
+                        selected,
+                        &mut state.page_router,
+                    );
+                }
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            apply_page_route_side_effects_via_router(
+                app,
+                window,
+                NavigationAction::Replace,
+                selected,
+                &mut state.page_router,
+            );
+        }
+
         #[cfg(not(target_arch = "wasm32"))]
         app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
             store.per_window.insert(
@@ -1064,6 +1437,8 @@ impl UiGalleryDriver {
                     code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
                     code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
                     code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                    code_editor_folds: state.code_editor_folds.clone(),
+                    code_editor_inlays: state.code_editor_inlays.clone(),
                     text_input: state.text_input.clone(),
                     text_area: state.text_area.clone(),
                 },
@@ -1081,12 +1456,123 @@ impl UiGalleryDriver {
         state
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn sync_page_router_from_external_history(
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut UiGalleryWindowState,
+    ) {
+        let Ok(update) = state.page_router.sync_with_prefetch_intents() else {
+            return;
+        };
+
+        if !update.update.changed() {
+            return;
+        }
+
+        let next_page = page_from_gallery_location(&state.page_router.state().location)
+            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let next_page_for_selected = next_page.clone();
+        let next_page_for_tabs = next_page.clone();
+
+        let _ = app
+            .models_mut()
+            .update(&state.selected_page, |v| *v = next_page_for_selected);
+        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+            if !tabs
+                .iter()
+                .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
+            {
+                tabs.push(next_page_for_tabs.clone());
+            }
+        });
+
+        let cmd: Arc<str> = Arc::from(format!(
+            "{}{}",
+            CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+            next_page_for_tabs.as_ref()
+        ));
+        state
+            .workspace_tab_close_by_command
+            .insert(cmd, next_page_for_tabs);
+
+        apply_page_router_update_side_effects(
+            app,
+            window,
+            next_page.clone(),
+            &mut state.page_router,
+            Ok(update),
+        );
+
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from(format!("gallery.page_history.sync({})", next_page.as_ref()));
+        });
+    }
+
     fn handle_nav_command(
         app: &mut App,
         state: &mut UiGalleryWindowState,
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
+        if matches!(
+            command.as_str(),
+            CMD_GALLERY_PAGE_BACK | CMD_GALLERY_PAGE_FORWARD
+        ) {
+            let action = if command.as_str() == CMD_GALLERY_PAGE_BACK {
+                NavigationAction::Back
+            } else {
+                NavigationAction::Forward
+            };
+            let update = state
+                .page_router
+                .navigate_with_prefetch_intents(action, None);
+
+            let next_page = page_from_gallery_location(&state.page_router.state().location)
+                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+            let next_page_for_selected = next_page.clone();
+            let next_page_for_tabs = next_page.clone();
+
+            let _ = app
+                .models_mut()
+                .update(&state.selected_page, |v| *v = next_page_for_selected);
+            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                if !tabs
+                    .iter()
+                    .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
+                {
+                    tabs.push(next_page_for_tabs.clone());
+                }
+            });
+
+            let cmd: Arc<str> = Arc::from(format!(
+                "{}{}",
+                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                next_page_for_tabs.as_ref()
+            ));
+            state
+                .workspace_tab_close_by_command
+                .insert(cmd, next_page_for_tabs);
+
+            apply_page_router_update_side_effects(
+                app,
+                window,
+                next_page.clone(),
+                &mut state.page_router,
+                update,
+            );
+
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from(format!(
+                    "gallery.page_history.{}({})",
+                    action,
+                    next_page.as_ref()
+                ));
+            });
+
+            return true;
+        }
+
         let Some(page) = page_id_for_nav_command(command.as_str()) else {
             return false;
         };
@@ -1094,7 +1580,6 @@ impl UiGalleryDriver {
         let page: Arc<str> = Arc::from(page);
         let page_for_selected = page.clone();
         let page_for_tabs = page.clone();
-        let previous_page = app.models().get_cloned(&state.selected_page);
         let _ = app
             .models_mut()
             .update(&state.selected_page, |v| *v = page_for_selected);
@@ -1113,7 +1598,13 @@ impl UiGalleryDriver {
             .workspace_tab_close_by_command
             .insert(cmd, page_for_tabs);
 
-        apply_route_query_side_effects(app, window, previous_page, page.clone());
+        apply_page_route_side_effects_via_router(
+            app,
+            window,
+            NavigationAction::Push,
+            page.clone(),
+            &mut state.page_router,
+        );
         true
     }
 
@@ -1169,13 +1660,18 @@ impl UiGalleryDriver {
                     });
 
                 if let Some(next) = next_selected {
-                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
                     let current_page = app
                         .models()
                         .get_cloned(&state.selected_page)
                         .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                    apply_route_query_side_effects(app, window, previous_page, current_page);
+                    apply_page_route_side_effects_via_router(
+                        app,
+                        window,
+                        NavigationAction::Replace,
+                        current_page,
+                        &mut state.page_router,
+                    );
                 }
 
                 true
@@ -1204,13 +1700,18 @@ impl UiGalleryDriver {
                     (index + tabs.len() - 1) % tabs.len()
                 };
                 if let Some(next) = tabs.get(next_index).cloned() {
-                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
                     let current_page = app
                         .models()
                         .get_cloned(&state.selected_page)
                         .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                    apply_route_query_side_effects(app, window, previous_page, current_page);
+                    apply_page_route_side_effects_via_router(
+                        app,
+                        window,
+                        NavigationAction::Replace,
+                        current_page,
+                        &mut state.page_router,
+                    );
                     return true;
                 }
                 false
@@ -1481,7 +1982,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before + 10.0).min(100.0);
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -1499,7 +2000,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before - 10.0).max(0.0);
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -1517,7 +2018,7 @@ impl UiGalleryDriver {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = 35.0;
                 let _ = app.models_mut().update(&state.progress, |v| *v = after);
-                let _ = app.with_global_mut(
+                app.with_global_mut(
                     || UndoService::<ValueTx<f32>>::with_limit(256),
                     |undo_svc, _app| {
                         undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -1741,6 +2242,9 @@ impl UiGalleryDriver {
 
         Self::sync_undo_availability(app, window, &state.undo_doc);
 
+        #[cfg(target_arch = "wasm32")]
+        Self::sync_page_router_from_external_history(app, window, state);
+
         let availability = app
             .global::<WindowCommandAvailabilityService>()
             .and_then(|svc| svc.snapshot(window))
@@ -1811,12 +2315,17 @@ impl UiGalleryDriver {
         let tabs_value = state.tabs_value.clone();
         let accordion_value = state.accordion_value.clone();
         let avatar_demo_image = state.avatar_demo_image.clone();
+        let image_fit_demo_wide_image = state.image_fit_demo_wide_image.clone();
+        let image_fit_demo_tall_image = state.image_fit_demo_tall_image.clone();
+        let image_fit_demo_streaming_image = state.image_fit_demo_streaming_image.clone();
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
         let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
         let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
         let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
+        let code_editor_folds = state.code_editor_folds.clone();
+        let code_editor_inlays = state.code_editor_inlays.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -2208,6 +2717,9 @@ impl UiGalleryDriver {
                                             tabs_value.clone(),
                                             accordion_value.clone(),
                                             avatar_demo_image.clone(),
+                                            image_fit_demo_wide_image.clone(),
+                                            image_fit_demo_tall_image.clone(),
+                                            image_fit_demo_streaming_image.clone(),
                                             progress.clone(),
                                             checkbox.clone(),
                                             switch.clone(),
@@ -2246,6 +2758,8 @@ impl UiGalleryDriver {
                                             code_editor_syntax_rust.clone(),
                                             code_editor_boundary_identifier.clone(),
                                             code_editor_soft_wrap.clone(),
+                                            code_editor_folds.clone(),
+                                            code_editor_inlays.clone(),
                                         )
                                     }
                                 })]
@@ -2307,6 +2821,9 @@ impl UiGalleryDriver {
                                         tabs_value.clone(),
                                         accordion_value.clone(),
                                         avatar_demo_image.clone(),
+                                        image_fit_demo_wide_image.clone(),
+                                        image_fit_demo_tall_image.clone(),
+                                        image_fit_demo_streaming_image.clone(),
                                         progress.clone(),
                                         checkbox.clone(),
                                         switch.clone(),
@@ -2345,6 +2862,8 @@ impl UiGalleryDriver {
                                         code_editor_syntax_rust.clone(),
                                         code_editor_boundary_identifier.clone(),
                                         code_editor_soft_wrap.clone(),
+                                        code_editor_folds.clone(),
+                                        code_editor_inlays.clone(),
                                     )
                                 }
                             })
@@ -2770,17 +3289,26 @@ impl UiGalleryDriver {
                     if show_debug_hud {
                         let debug_hud_lines = debug_hud_lines.clone();
                         content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
-                            let mut hud_layout = fret_ui::element::LayoutStyle::default();
-                            hud_layout.position = fret_ui::element::PositionStyle::Absolute;
-                            hud_layout.inset.top = Some(Px(8.0));
-                            hud_layout.inset.right = Some(Px(8.0));
-                            hud_layout.size.width = fret_ui::element::Length::Px(Px(520.0));
-                            hud_layout.size.height = fret_ui::element::Length::Px(Px(220.0));
+                            let hud_layout = fret_ui::element::LayoutStyle {
+                                position: fret_ui::element::PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    top: Some(Px(8.0)),
+                                    right: Some(Px(8.0)),
+                                    ..Default::default()
+                                },
+                                size: fret_ui::element::SizeStyle {
+                                    width: fret_ui::element::Length::Px(Px(520.0)),
+                                    height: fret_ui::element::Length::Px(Px(220.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
 
-                            let mut gate = fret_ui::element::InteractivityGateProps::default();
-                            gate.layout = hud_layout;
-                            gate.present = true;
-                            gate.interactive = false;
+                            let gate = fret_ui::element::InteractivityGateProps {
+                                layout: hud_layout,
+                                present: true,
+                                interactive: false,
+                            };
 
                             cx.interactivity_gate_props(gate, |cx| {
                                 let mut container_props = decl_style::container_props(
@@ -2885,6 +3413,22 @@ impl UiGalleryDriver {
 }
 
 pub fn build_app() -> App {
+    fn ui_gallery_project_root() -> std::path::PathBuf {
+        let raw = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+            .and_then(|v| (!v.is_empty()).then_some(v));
+        let Some(raw) = raw else {
+            return std::path::PathBuf::from(".");
+        };
+
+        let trimmed = raw.to_string_lossy();
+        let trimmed = trimmed.trim();
+        if trimmed.is_empty() {
+            return std::path::PathBuf::from(".");
+        }
+
+        std::path::PathBuf::from(trimmed)
+    }
+
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(UiGalleryRecentItemsService::default());
@@ -2894,7 +3438,8 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
 
-    let config_paths = LayeredConfigPaths::for_project_root(".");
+    let project_root = ui_gallery_project_root();
+    let config_paths = LayeredConfigPaths::for_project_root(&project_root);
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
         fret_app::settings::apply_settings_globals(&mut app, &settings);
     }
@@ -2974,6 +3519,88 @@ pub fn build_app() -> App {
             .with_keywords(["menu", "menubar", "in-window", "off"]),
     );
     app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_PAGE_BACK),
+        CommandMeta::new("Page Back")
+            .with_category("Gallery")
+            .with_keywords(["gallery", "page", "back", "history", "navigate"])
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Macos,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::BracketLeft,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+            ]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_PAGE_FORWARD),
+        CommandMeta::new("Page Forward")
+            .with_category("Gallery")
+            .with_keywords(["gallery", "page", "forward", "history", "navigate"])
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Macos,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::BracketRight,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+            ]),
+    );
+    app.commands_mut().register(
         CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
         CommandMeta::new("Debug: Recent (add item)")
             .with_category("Debug")
@@ -3035,64 +3662,206 @@ pub fn build_app() -> App {
         menu_bar: UiGalleryDriver::build_menu_bar(&app),
     });
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
-                let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
-                let ids = store.per_window.get(&window)?;
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc: &mut UiDiagnosticsService, _app| {
+        svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
+            let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+            let ids = store.per_window.get(&window)?;
 
-                let selected_page = app.models().get_cloned(&ids.selected_page)?;
-                let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
-                let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
-                let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
-                let text_input = app.models().get_cloned(&ids.text_input)?;
-                let text_area = app.models().get_cloned(&ids.text_area)?;
+            let selected_page = app.models().get_cloned(&ids.selected_page)?;
+            let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
+            let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
+            let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+            let folds = app.models().get_cloned(&ids.code_editor_folds)?;
+            let inlays = app.models().get_cloned(&ids.code_editor_inlays)?;
+            let text_input = app.models().get_cloned(&ids.text_input)?;
+            let text_area = app.models().get_cloned(&ids.text_area)?;
 
-                let torture = app
-                    .global::<UiGalleryCodeEditorHandlesStore>()
-                    .and_then(|store| store.per_window.get(&window))
-                    .map(|handle| {
-                        let text = handle.with_buffer(|b| b.text_string());
-                        let selection = handle.selection();
-                        let anchor = selection.anchor.min(text.len()) as u64;
-                        let caret = selection.caret().min(text.len()) as u64;
-                        serde_json::json!({
-                            "schema_version": 1,
-                            "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
-                            "text_len_bytes": text.len() as u64,
-                            "selection": { "anchor": anchor, "caret": caret },
+            let (torture, markdown_editor_source): (Option<serde_json::Value>, Option<serde_json::Value>) = {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let torture = app
+                        .global::<UiGalleryCodeEditorHandlesStore>()
+                        .and_then(|store| store.per_window.get(&window))
+                        .map(|handle| {
+                            let text = handle.with_buffer(|b| b.text_string());
+                            let selection = handle.selection();
+                            let anchor = selection.anchor.min(text.len()) as u64;
+                            let caret = selection.caret().min(text.len()) as u64;
+                            let stats = handle.cache_stats();
+                            let paint_perf = handle.paint_perf_frame().map(|frame| {
+                                serde_json::json!({
+                                    "schema_version": 1,
+                                    "frame_seq": frame.frame_seq,
+                                    "visible_start": frame.visible_start,
+                                    "visible_end": frame.visible_end,
+                                    "visible_rows": frame.visible_rows,
+                                    "rows_painted": frame.rows_painted,
+                                    "rows_drew_rich": frame.rows_drew_rich,
+                                    "quads_background": frame.quads_background,
+                                    "quads_selection": frame.quads_selection,
+                                    "quads_caret": frame.quads_caret,
+                                    "us_total": frame.us_total,
+                                    "us_row_text": frame.us_row_text,
+                                    "us_baseline_measure": frame.us_baseline_measure,
+                                    "us_syntax_spans": frame.us_syntax_spans,
+                                    "us_rich_materialize": frame.us_rich_materialize,
+                                    "us_text_draw": frame.us_text_draw,
+                                    "us_selection_rects": frame.us_selection_rects,
+                                    "us_caret_x": frame.us_caret_x,
+                                    "us_caret_stops": frame.us_caret_stops,
+                                    "us_caret_rect": frame.us_caret_rect,
+                                })
+                            });
+                            let preedit_active = handle.preedit_active();
+                            let allow_decorations_under_inline_preedit =
+                                handle.allow_decorations_under_inline_preedit();
+                            let compose_inline_preedit = handle.compose_inline_preedit();
+                            let interaction = handle.interaction();
+                            let buffer_revision = handle.buffer_revision().0;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
+                            serde_json::json!({
+                                "schema_version": 1,
+                                "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                                "preedit_active": preedit_active,
+                                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                                "compose_inline_preedit": compose_inline_preedit,
+                                "interaction": {
+                                    "enabled": interaction.enabled,
+                                    "focusable": interaction.focusable,
+                                    "selectable": interaction.selectable,
+                                    "editable": interaction.editable,
+                                },
+                                "buffer_revision": buffer_revision,
+                                "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
+                                "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
+                                "text_len_bytes": text.len() as u64,
+                                "selection": { "anchor": anchor, "caret": caret },
+                                "cache_stats": {
+                                    "row_text_get_calls": stats.row_text_get_calls,
+                                    "row_text_hits": stats.row_text_hits,
+                                    "row_text_misses": stats.row_text_misses,
+                                    "row_text_evictions": stats.row_text_evictions,
+                                    "row_text_resets": stats.row_text_resets,
+                                    "row_rich_get_calls": stats.row_rich_get_calls(),
+                                    "row_rich_hits": stats.row_rich_hits(),
+                                    "row_rich_misses": stats.row_rich_misses(),
+                                    "row_rich_evictions": stats.row_rich_evictions(),
+                                    "row_rich_resets": stats.row_rich_resets(),
+                                    "geom_pointer_hit_test_fallbacks": stats.geom_pointer_hit_test_fallbacks,
+                                    "geom_caret_rect_fallbacks": stats.geom_caret_rect_fallbacks,
+                                    "geom_vertical_move_fallbacks": stats.geom_vertical_move_fallbacks,
+                                    "syntax_get_calls": stats.syntax_get_calls,
+                                    "syntax_hits": stats.syntax_hits,
+                                    "syntax_misses": stats.syntax_misses,
+                                    "syntax_evictions": stats.syntax_evictions,
+                                    "syntax_resets": stats.syntax_resets,
+                                },
+                                "paint_perf": paint_perf,
+                            })
                         })
-                    });
+                        ;
 
-                let mut out = serde_json::Map::new();
-                out.insert("schema_version".to_string(), serde_json::json!(1));
-                out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
-                out.insert(
-                    "selected_page".to_string(),
-                    serde_json::Value::String(selected_page.to_string()),
-                );
-                out.insert(
-                    "code_editor".to_string(),
-                    serde_json::json!({
-                        "syntax_rust": syntax_rust,
-                        "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
-                        "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
-                        "torture": torture,
-                    }),
-                );
-                out.insert(
-                    "text_widgets".to_string(),
-                    serde_json::json!({
-                        "text_input_chars": text_input.chars().count(),
-                        "text_area_chars": text_area.chars().count(),
-                    }),
-                );
+                    let markdown_editor_source = app
+                        .global::<UiGalleryMarkdownEditorHandlesStore>()
+                        .and_then(|store| store.per_window.get(&window))
+                        .map(|handle| {
+                            let text = handle.with_buffer(|b| b.text_string());
+                            let selection = handle.selection();
+                            let anchor = selection.anchor.min(text.len()) as u64;
+                            let caret = selection.caret().min(text.len()) as u64;
+                            let preedit_active = handle.preedit_active();
+                            let interaction = handle.interaction();
+                            let buffer_revision = handle.buffer_revision().0 as u64;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let fold_fixture_span_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .and_then(|line| {
+                                    let start = line.find("Editor").unwrap_or(2).min(line.len());
+                                    let end = line.len();
+                                    (start < end).then_some(serde_json::json!({
+                                        "start": start as u64,
+                                        "end": end as u64,
+                                    }))
+                                });
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
+                            let inlay_fixture_byte_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .map(|line| 2usize.min(line.len()) as u64)
+                                .unwrap_or(0);
+                            serde_json::json!({
+                                "schema_version": 1,
+                                "preedit_active": preedit_active,
+                                "interaction": {
+                                    "enabled": interaction.enabled,
+                                    "focusable": interaction.focusable,
+                                    "selectable": interaction.selectable,
+                                    "editable": interaction.editable,
+                                },
+                                "buffer_revision": buffer_revision,
+                                "folds": {
+                                    "enabled": folds,
+                                    "line0_placeholder_present": fold_placeholder_present,
+                                    "fixture_span_line0": fold_fixture_span_line0,
+                                },
+                                "inlays": {
+                                    "enabled": inlays,
+                                    "line0_present": inlay_present,
+                                    "fixture_byte_line0": inlay_fixture_byte_line0,
+                                },
+                                "text_len_bytes": text.len() as u64,
+                                "selection": { "anchor": anchor, "caret": caret },
+                            })
+                        })
+                        ;
 
-                Some(serde_json::Value::Object(out))
-            })));
-        });
-    }
+                    (torture, markdown_editor_source)
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    (None, None)
+                }
+            };
+
+            let mut out = serde_json::Map::new();
+            out.insert("schema_version".to_string(), serde_json::json!(1));
+            out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
+            out.insert(
+                "selected_page".to_string(),
+                serde_json::Value::String(selected_page.to_string()),
+            );
+            out.insert(
+                "code_editor".to_string(),
+                serde_json::json!({
+                    "syntax_rust": syntax_rust,
+                    "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
+                    "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                    "folds_fixture": folds,
+                    "inlays_fixture": inlays,
+                    "torture": torture,
+                    "markdown_editor_source": markdown_editor_source,
+                }),
+            );
+            out.insert(
+                "text_widgets".to_string(),
+                serde_json::json!({
+                    "text_input_chars": text_input.chars().count(),
+                    "text_area_chars": text_area.chars().count(),
+                }),
+            );
+
+            Some(serde_json::Value::Object(out))
+        })));
+    });
 
     app
 }
@@ -3138,7 +3907,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
-    UiGalleryDriver::default()
+    UiGalleryDriver
 }
 
 #[cfg(test)]
@@ -3148,14 +3917,26 @@ mod stack_overflow_tests;
 pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
+    let project_root = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+        .and_then(|v| (!v.is_empty()).then_some(v))
+        .map(|v| {
+            let s = v.to_string_lossy();
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                std::path::PathBuf::from(".")
+            } else {
+                std::path::PathBuf::from(trimmed)
+            }
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
 
     fret_bootstrap::BootstrapBuilder::new(app, build_driver())
         .configure(move |c| {
             *c = config;
         })
         .with_default_diagnostics()
-        .with_default_config_files()?
-        .with_config_files_watcher(Duration::from_millis(500))
+        .with_default_config_files_for_root(&project_root)?
+        .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
@@ -3170,6 +3951,36 @@ pub fn run() -> anyhow::Result<()> {
 impl WinitAppDriver for UiGalleryDriver {
     type WindowState = UiGalleryWindowState;
 
+    fn gpu_ready(
+        &mut self,
+        app: &mut App,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+    ) {
+        let wants_bootstrap_fonts =
+            std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
+        if !wants_bootstrap_fonts {
+            return;
+        }
+
+        let fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        let _ = renderer.add_fonts(fonts);
+
+        let update = fret_runtime::apply_font_catalog_update(
+            app,
+            renderer.all_font_names(),
+            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+        );
+        let _ = renderer.set_text_font_families(&update.config);
+        app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
+        app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+            renderer.text_font_stack_key(),
+        ));
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
     }
@@ -3179,14 +3990,12 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            context
-                .app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    svc.record_model_changes(context.window, changed);
-                });
-        }
+        context.app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| {
+                svc.record_model_changes(context.window, changed);
+            },
+        );
         context
             .state
             .ui
@@ -3198,14 +4007,12 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            context
-                .app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                    svc.record_global_changes(app, context.window, changed);
-                });
-        }
+        context.app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
+                svc.record_global_changes(app, context.window, changed);
+            },
+        );
         context
             .state
             .ui
@@ -3216,65 +4023,65 @@ impl WinitAppDriver for UiGalleryDriver {
                 .app
                 .global::<fret_app::ConfigFilesWatcherStatus>()
                 .map(|svc| (svc.seq(), svc.last_tick().cloned()))
+            && seq != 0
+            && context.state.last_config_files_status_seq != seq
         {
-            if seq != 0 && context.state.last_config_files_status_seq != seq {
-                context.state.last_config_files_status_seq = seq;
+            context.state.last_config_files_status_seq = seq;
 
-                if let Some(tick) = tick {
-                    let has_error = tick.settings_error.is_some()
-                        || tick.keymap_error.is_some()
-                        || tick.menu_bar_error.is_some()
-                        || tick.actionable_keymap_conflicts > 0;
+            if let Some(tick) = tick {
+                let has_error = tick.settings_error.is_some()
+                    || tick.keymap_error.is_some()
+                    || tick.menu_bar_error.is_some()
+                    || tick.actionable_keymap_conflicts > 0;
 
-                    let title = if has_error {
-                        "Config reload failed"
-                    } else {
-                        "Config reloaded"
-                    };
+                let title = if has_error {
+                    "Config reload failed"
+                } else {
+                    "Config reloaded"
+                };
 
-                    let mut details: Vec<String> = Vec::new();
-                    if tick.reloaded_settings {
-                        details.push("settings.json".to_string());
-                    }
-                    if tick.reloaded_keymap {
-                        details.push("keymap.json".to_string());
-                    }
-                    if tick.reloaded_menu_bar {
-                        details.push("menubar.json".to_string());
-                    }
-                    if let Some(err) = tick.settings_error.as_deref() {
-                        details.push(format!("settings: {err}"));
-                    }
-                    if let Some(err) = tick.keymap_error.as_deref() {
-                        details.push(format!("keymap: {err}"));
-                    }
-                    if let Some(err) = tick.menu_bar_error.as_deref() {
-                        details.push(format!("menubar: {err}"));
-                    }
-                    if tick.actionable_keymap_conflicts > 0 {
-                        details.push(format!(
-                            "keymap conflicts: {}",
-                            tick.actionable_keymap_conflicts
-                        ));
-                    }
+                let mut details: Vec<String> = Vec::new();
+                if tick.reloaded_settings {
+                    details.push("settings.json".to_string());
+                }
+                if tick.reloaded_keymap {
+                    details.push("keymap.json".to_string());
+                }
+                if tick.reloaded_menu_bar {
+                    details.push("menubar.json".to_string());
+                }
+                if let Some(err) = tick.settings_error.as_deref() {
+                    details.push(format!("settings: {err}"));
+                }
+                if let Some(err) = tick.keymap_error.as_deref() {
+                    details.push(format!("keymap: {err}"));
+                }
+                if let Some(err) = tick.menu_bar_error.as_deref() {
+                    details.push(format!("menubar: {err}"));
+                }
+                if tick.actionable_keymap_conflicts > 0 {
+                    details.push(format!(
+                        "keymap conflicts: {}",
+                        tick.actionable_keymap_conflicts
+                    ));
+                }
 
-                    let description = if details.is_empty() {
-                        None
-                    } else {
-                        Some(details.join(" | "))
-                    };
+                let description = if details.is_empty() {
+                    None
+                } else {
+                    Some(details.join(" | "))
+                };
 
-                    let sonner = shadcn::Sonner::global(context.app);
-                    let mut host = UiActionHostAdapter { app: context.app };
-                    let opts = shadcn::ToastMessageOptions::new()
-                        .description(description.unwrap_or_else(|| "OK".to_string()))
-                        .duration(Duration::from_secs(6));
+                let sonner = shadcn::Sonner::global(context.app);
+                let mut host = UiActionHostAdapter { app: context.app };
+                let opts = shadcn::ToastMessageOptions::new()
+                    .description(description.unwrap_or_else(|| "OK".to_string()))
+                    .duration(Duration::from_secs(6));
 
-                    if has_error {
-                        sonner.toast_error_message(&mut host, context.window, title, opts);
-                    } else {
-                        sonner.toast_success_message(&mut host, context.window, title, opts);
-                    }
+                if has_error {
+                    sonner.toast_error_message(&mut host, context.window, title, opts);
+                } else {
+                    sonner.toast_success_message(&mut host, context.window, title, opts);
                 }
             }
         }
@@ -3314,7 +4121,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         if command.as_str() == fret_app::core_commands::EDIT_UNDO {
             let mut did_apply = false;
-            let _ = app.with_global_mut(
+            app.with_global_mut(
                 || UndoService::<ValueTx<f32>>::with_limit(256),
                 |undo_svc, app| {
                     undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -3340,7 +4147,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         if command.as_str() == fret_app::core_commands::EDIT_REDO {
             let mut did_apply = false;
-            let _ = app.with_global_mut(
+            app.with_global_mut(
                 || UndoService::<ValueTx<f32>>::with_limit(256),
                 |undo_svc, app| {
                     undo_svc.set_active_document(window, state.undo_doc.clone());
@@ -3556,8 +4363,8 @@ impl WinitAppDriver for UiGalleryDriver {
                     let result =
                         Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
                             let paths = LayeredConfigPaths::for_project_root(".");
-                            let (settings, _report) = load_layered_settings(&paths)
-                                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                            let (settings, _report) =
+                                load_layered_settings(&paths).map_err(std::io::Error::other)?;
                             fret_app::settings::apply_settings_globals(app, &settings);
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
@@ -3702,14 +4509,14 @@ impl WinitAppDriver for UiGalleryDriver {
                     shadcn::ToastRequest::new("Action toast")
                         .id(shadcn::ToastId(103))
                         .description("Try the action/cancel buttons.")
-                        .action(shadcn::ToastAction {
-                            label: Arc::from("Undo"),
-                            command: CommandId::new(CMD_TOAST_ACTION),
-                        })
-                        .cancel(shadcn::ToastAction {
-                            label: Arc::from("Cancel"),
-                            command: CommandId::new(CMD_TOAST_CANCEL),
-                        })
+                        .action(shadcn::ToastAction::new(
+                            "Undo",
+                            CommandId::new(CMD_TOAST_ACTION),
+                        ))
+                        .cancel(shadcn::ToastAction::new(
+                            "Cancel",
+                            CommandId::new(CMD_TOAST_CANCEL),
+                        ))
                         .duration(Some(Duration::from_secs(6))),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
@@ -3845,6 +4652,50 @@ impl WinitAppDriver for UiGalleryDriver {
                     let _ = app
                         .models_mut()
                         .update(&state.avatar_demo_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(
+                            *image,
+                            (
+                                Self::AVATAR_DEMO_IMAGE_WIDTH,
+                                Self::AVATAR_DEMO_IMAGE_HEIGHT,
+                            ),
+                        );
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_wide_token == Some(*token) {
+                    state.image_fit_demo_wide_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_wide_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_WIDE_SIZE);
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_tall_token == Some(*token) {
+                    state.image_fit_demo_tall_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_tall_image, |v| *v = Some(*image));
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_TALL_SIZE);
+                    });
+                    app.request_redraw(window);
+                }
+
+                if state.image_fit_demo_streaming_token == Some(*token) {
+                    state.image_fit_demo_streaming_token = None;
+                    let _ = app
+                        .models_mut()
+                        .update(&state.image_fit_demo_streaming_image, |v| {
+                            *v = Some(*image);
+                        });
+                    fret_ui_kit::with_image_metadata_store_mut(app, |store| {
+                        store.set_intrinsic_size_px(*image, Self::IMAGE_FIT_DEMO_STREAMING_SIZE);
+                    });
                     app.request_redraw(window);
                 }
             }
@@ -3863,6 +4714,25 @@ impl WinitAppDriver for UiGalleryDriver {
                         tracing::error!(message, "ui-gallery avatar demo image register failed");
                         app.request_redraw(window);
                     }
+                }
+
+                if state.image_fit_demo_wide_token == Some(*token) {
+                    state.image_fit_demo_wide_token = None;
+                    tracing::error!(message, "ui-gallery image fit wide image register failed");
+                    app.request_redraw(window);
+                }
+                if state.image_fit_demo_tall_token == Some(*token) {
+                    state.image_fit_demo_tall_token = None;
+                    tracing::error!(message, "ui-gallery image fit tall image register failed");
+                    app.request_redraw(window);
+                }
+                if state.image_fit_demo_streaming_token == Some(*token) {
+                    state.image_fit_demo_streaming_token = None;
+                    tracing::error!(
+                        message,
+                        "ui-gallery image fit streaming image register failed"
+                    );
+                    app.request_redraw(window);
                 }
             }
             Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {
@@ -3895,7 +4765,6 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
             }
             Event::WindowFocusChanged(focused) => {
-                #[cfg(not(target_arch = "wasm32"))]
                 app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
                     if *focused {
                         store.focused_window = Some(window);
@@ -3907,7 +4776,6 @@ impl WinitAppDriver for UiGalleryDriver {
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
             }
             Event::WindowCloseRequested => {
-                #[cfg(not(target_arch = "wasm32"))]
                 app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
                     store.per_window.remove(&window);
                     if store.focused_window == Some(window) {
@@ -3943,17 +4811,27 @@ impl WinitAppDriver for UiGalleryDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let (inspection_active, diag_enabled) = app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    (svc.wants_inspection_active(window), svc.is_enabled())
-                });
-            state.ui.set_inspection_active(inspection_active);
-            state.ui.set_debug_enabled(diag_enabled);
-        }
+        let (inspection_active, diag_enabled) = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| {
+                (svc.wants_inspection_active(window), svc.is_enabled())
+            },
+        );
+        state.ui.set_inspection_active(inspection_active);
+        state.ui.set_debug_enabled(diag_enabled);
 
         scene.clear();
+
+        if app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
+        {
+            // Diagnostics scripts select targets by semantics bounds. We must ensure we have a
+            // fresh semantics snapshot for the current frame *before* we drive scripted input;
+            // otherwise, scripts may act on a 1-frame-stale snapshot and mis-predict visibility
+            // in virtualized lists (estimate -> measured jumps).
+            state.ui.request_semantics_snapshot();
+        }
+
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
@@ -3973,10 +4851,7 @@ impl WinitAppDriver for UiGalleryDriver {
                     request.filename_tag.as_ref(),
                 )
             } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "missing UiTree root",
-                ))
+                Err(std::io::Error::other("missing UiTree root"))
             };
 
             let sonner = shadcn::Sonner::global(app);
@@ -4004,94 +4879,136 @@ impl WinitAppDriver for UiGalleryDriver {
             }
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let semantics_snapshot = state.ui.semantics_snapshot();
-            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.drive_script_for_window(app, window, bounds, scale_factor, semantics_snapshot)
-            });
-
-            for effect in drive.effects {
-                app.push_effect(effect);
-            }
-
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-
-            let mut injected_any = false;
-            for event in drive.events {
-                injected_any = true;
-                state.ui.dispatch_event(app, services, &event);
-            }
-
-            if injected_any {
-                // Script-driven events bypass the winit event loop, so we must apply any generated
-                // command effects (e.g. Tab => focus traversal) before we record snapshots.
-                //
-                // Keep non-command effects queued for the runner to handle after `render` returns.
-                let mut deferred_effects: Vec<Effect> = Vec::new();
-                loop {
-                    let effects = app.flush_effects();
-                    if effects.is_empty() {
-                        break;
-                    }
-
-                    let mut applied_any_command = false;
-                    for effect in effects {
-                        match effect {
-                            Effect::Command { window: w, command } => {
-                                if w.is_none() || w == Some(window) {
-                                    self.handle_command(
-                                        WinitCommandContext {
-                                            app,
-                                            services,
-                                            window,
-                                            state,
-                                        },
-                                        command,
-                                    );
-                                    applied_any_command = true;
-                                } else {
-                                    deferred_effects.push(Effect::Command { window: w, command });
-                                }
-                            }
-                            other => deferred_effects.push(other),
-                        }
-                    }
-
-                    if !applied_any_command {
-                        break;
-                    }
-                }
-                for effect in deferred_effects {
-                    app.push_effect(effect);
-                }
-
-                state.ui.request_semantics_snapshot();
-                let mut frame = fret_ui::UiFrameCx::new(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    scale_factor,
-                );
-                frame.layout_all();
-            }
-        }
-
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        if app
+            .models()
+            .get_cloned(&state.selected_page)
+            .is_some_and(|page| page.as_ref() == PAGE_IMAGE_OBJECT_FIT)
+            && let Some(image) = app
+                .models()
+                .get_cloned(&state.image_fit_demo_streaming_image)
+                .flatten()
         {
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let (width, height) = state.image_fit_demo_streaming_size;
+
+            let bar_w = 24u32;
+            let max_x = width.saturating_sub(bar_w).max(1);
+            let bar_x = (state.image_fit_demo_streaming_frame as u32) % max_x;
+
+            let mut bytes = vec![0u8; (bar_w as usize) * (height as usize) * 4];
+            for px in bytes.chunks_exact_mut(4) {
+                px[0] = 240;
+                px[1] = 90;
+                px[2] = 80;
+                px[3] = 255;
+            }
+
+            app.push_effect(Effect::ImageUpdateRgba8 {
+                window: Some(window),
+                token: ImageUpdateToken(state.image_fit_demo_streaming_frame),
+                image,
+                stream_generation: 0,
+                width,
+                height,
+                update_rect_px: Some(RectPx::new(bar_x, 0, bar_w, height)),
+                bytes_per_row: bar_w * 4,
+                bytes,
+                color_info: ImageColorInfo::srgb_rgba(),
+                alpha_mode: AlphaMode::Opaque,
+            });
+
+            state.image_fit_demo_streaming_frame =
+                state.image_fit_demo_streaming_frame.saturating_add(1);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
+        // VirtualList) have their realized item subtrees available for hit-testing.
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.drive_script_for_window(
+                    &*app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    Some(&state.ui),
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            },
+        );
+
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            // Script-driven events bypass the winit event loop, so we must apply any generated
+            // command effects (e.g. Tab => focus traversal) before we record snapshots.
+            //
+            // Keep non-command effects queued for the runner to handle after `render` returns.
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                self.handle_command(
+                                    WinitCommandContext {
+                                        app,
+                                        services,
+                                        window,
+                                        state,
+                                    },
+                                    command,
+                                );
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
+            }
+        }
+
+        app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.record_snapshot(
                     app,
@@ -4106,8 +5023,8 @@ impl WinitAppDriver for UiGalleryDriver {
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));
                 }
-            });
-        }
+            },
+        );
     }
 
     fn window_create_spec(

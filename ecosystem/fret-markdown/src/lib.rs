@@ -8,7 +8,8 @@ use fret_core::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
+    PositionStyle, PressableKeyActivation, PressableProps, ScrollAxis, ScrollProps,
+    SelectableTextProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -21,6 +22,8 @@ pub mod imui;
 #[cfg(feature = "mathjax-svg")]
 mod mathjax_svg_support;
 mod mermaid;
+#[cfg(feature = "mermaid")]
+mod mermaid_svg_support;
 mod open_url;
 mod pulldown_render;
 #[cfg(test)]
@@ -449,6 +452,11 @@ fn render_code_block<H: UiHost + 'static>(
     }
     if let Some(render_actions) = &components.code_block_actions {
         header = header.push_right(render_actions(cx, info.clone()));
+    }
+
+    #[cfg(feature = "mermaid")]
+    if is_mermaid_language(info.language.as_deref()) {
+        return mermaid_svg_support::render_mermaid_code_fence(cx, &theme, info, options, header);
     }
 
     fret_code_view::code_block_with_header_slots(
@@ -1914,10 +1922,11 @@ fn render_inline_token<H: UiHost>(
             let display_text = Arc::<str>::from(raw_text.clone());
 
             let mut props = PressableProps::default();
-            props.a11y.role = Some(SemanticsRole::Button);
+            props.a11y.role = Some(SemanticsRole::Link);
             props.a11y.label = Some(link_text.clone());
+            props.key_activation = PressableKeyActivation::EnterOnly;
 
-            return cx.pressable(props, |cx, _state| {
+            let el = cx.pressable(props, |cx, _state| {
                 let href = href.clone();
                 let link_text = link_text.clone();
                 let on_link_activate = on_link_activate.clone();
@@ -1945,6 +1954,7 @@ fn render_inline_token<H: UiHost>(
                     display_text.clone(),
                 )]
             });
+            return el.attach_semantics(SemanticsDecoration::default().value(href));
         }
     }
 
@@ -2066,10 +2076,11 @@ fn render_image_placeholder<H: UiHost>(
         let display_text = label.clone();
 
         let mut props = PressableProps::default();
-        props.a11y.role = Some(SemanticsRole::Button);
+        props.a11y.role = Some(SemanticsRole::Link);
         props.a11y.label = Some(link_text.clone());
+        props.key_activation = PressableKeyActivation::EnterOnly;
 
-        return cx.pressable(props, |cx, _state| {
+        let el = cx.pressable(props, |cx, _state| {
             let href = href.clone();
             let activate_text = link_text.clone();
             let display_text = display_text.clone();
@@ -2102,6 +2113,7 @@ fn render_image_placeholder<H: UiHost>(
                 overflow: TextOverflow::Clip,
             })]
         });
+        return el.attach_semantics(SemanticsDecoration::default().value(href));
     }
 
     cx.text_props(TextProps {

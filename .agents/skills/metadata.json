@@ -1,8 +1,8 @@
 {
   "name": "fret-skills",
-  "version": "0.3.6",
+  "version": "0.3.8",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-04",
+  "last_updated": "2026-02-09",
   "skills": {
     "foundation": [
       "fret-component-authoring",
@@ -41,11 +41,23 @@
     "debugging": [
       "fret-diag-workflow"
     ],
+    "release": [
+      "fret-release-check-and-publish"
+    ],
+    "performance": [
+      "fret-perf-workflow",
+      "fret-perf-attribution"
+    ],
     "parity": [
       "fret-shadcn-source-alignment"
     ],
     "recipes": [
       "fret-shadcn-app-recipes"
+    ],
+    "quality": [
+      "fret-crate-audits",
+      "fret-boundary-checks",
+      "fret-fixture-driven-harnesses"
     ]
   },
   "triggers": {
@@ -167,6 +179,51 @@
       "capture_bundle",
       "capture_screenshot",
       "FRET_DIAG"
+    ],
+    "release": [
+      "release-plz",
+      "release-pr",
+      "cargo publish",
+      "crates.io",
+      "version_group",
+      "CARGO_REGISTRY_TOKEN",
+      "trusted publishing",
+      "publish dry-run"
+    ],
+    "perf": [
+      "perf",
+      "performance",
+      "benchmark",
+      "profiling",
+      "profile",
+      "frame time",
+      "frametime",
+      "stutter",
+      "jank",
+      "hitch",
+      "gpu",
+      "wgpu",
+      "tracy",
+      "renderdoc",
+      "resize",
+      "scroll",
+      "pointer-move",
+      "diag perf",
+      "perf baseline",
+      "perf gates"
+    ],
+    "quality": [
+      "crate audit",
+      "audit crate",
+      "code quality",
+      "best practices",
+      "layering",
+      "crate boundaries",
+      "dependency policy",
+      "forbidden deps",
+      "fixtures",
+      "fixture-driven",
+      "data-driven harness"
     ],
     "shadcn_radix": [
       "shadcn",

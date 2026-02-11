@@ -2,6 +2,7 @@ use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY, WindowSpanAnchor};
 use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId, VisualMapId};
+use crate::link::BrushXExportPolicy;
 use crate::spec::FilterMode;
 use crate::transform::RowRange;
 
@@ -123,6 +124,9 @@ pub enum Action {
     },
     SetLinkGroup {
         group: Option<LinkGroupId>,
+    },
+    SetLinkBrushXExportPolicy {
+        policy: BrushXExportPolicy,
     },
     SetDatasetRowRange {
         dataset: DatasetId,

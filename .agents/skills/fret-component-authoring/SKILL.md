@@ -8,6 +8,21 @@ description: Component authoring in Fret (`fret-ui` + `fret-ui-kit`). Use when b
 Fret is **declarative-first**. The primary component authoring API is `fret_ui::ElementContext`.
 Upper layers should stay in `fret-ui-kit` / `fret-ui-shadcn` and keep `crates/fret-ui` mechanism-only.
 
+## When to use
+
+- Building or refactoring a declarative element/component.
+- Debugging “state sticks to the wrong row” / identity issues.
+- Debugging invalidation bugs (“model updated but UI didn’t re-layout/repaint”).
+- Adopting the `UiBuilder` (`ui()`) patch surface for ecosystem components.
+
+## Workflow
+
+1. Ensure stable identity (`keyed` / `scope` / `named`) before adding state.
+2. Store cross-frame local state with `with_state*` (not global statics).
+3. Read models with explicit invalidation (`Layout` vs `Paint`) so updates are observed.
+4. Keep interaction policy in ecosystem layers (action hooks) rather than `crates/fret-ui`.
+5. Add at least one regression artifact (unit test or `fretboard diag` script) for tricky behavior.
+
 ## Overview
 
 **Key concepts:**
@@ -16,7 +31,7 @@ Upper layers should stay in `fret-ui-kit` / `fret-ui-shadcn` and keep `crates/fr
 - **Element-local state:** `cx.with_state(...)` / `cx.with_state_for(...)`
 - **Model observation:** a model read must also register invalidation (`Layout` vs `Paint`)
 - **Action hooks:** interaction policy is owned by components (ADR 0074)
-- **Unified authoring surface:** `UiBuilder` via `value.ui().px_3().w_full().into_element(cx)` (ADR 0175)
+- **Unified authoring surface:** `UiBuilder` via `value.ui().px_3().w_full().into_element(cx)` (ADR 0145)
 
 ## Quick start
 
@@ -78,7 +93,7 @@ If a component should be styleable/layoutable like shadcn recipes, implement the
 - `UiIntoElement` (renders to `AnyElement`)
 - `UiSupportsChrome` / `UiSupportsLayout` (enables fluent methods)
 
-Reference: `docs/component-authoring-contracts.md` (“Unified authoring builder surface”, ADR 0175).
+Reference: `docs/component-authoring-contracts.md` (“Unified authoring builder surface”, ADR 0145).
 
 ### Iterator borrow pitfall: use `*_build` constructors
 
@@ -90,13 +105,13 @@ When authoring children from an iterator that captures `&mut cx`, use:
 
 This avoids borrow-checker conflicts while keeping rendering keyed/stable.
 
-## Anti-patterns (avoid)
+## Common pitfalls
 
 - Reading models during render without registering invalidation.
 - Using retained widgets as a public component authoring model (see ADR 0066).
 - Putting interaction policy (dismiss rules, focus restore, typeahead matching) into `crates/fret-ui`.
 
-## References (start here)
+## Evidence anchors
 
 - Architecture overview: `docs/architecture.md`
 - Component authoring contracts: `docs/component-authoring-contracts.md`
@@ -104,5 +119,11 @@ This avoids borrow-checker conflicts while keeping rendering keyed/stable.
 - Runtime contract surface map: `docs/runtime-contract-matrix.md`
 - Key APIs:
   - `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
-  - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiBuilder`, ADR 0175)
+  - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiBuilder`, ADR 0145)
   - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`ActionHooksExt`)
+
+## Related skills
+
+- `fret-action-hooks` (press/dismiss/roving/typeahead/timers policy wiring)
+- `fret-layout-and-style` (layout/style tokens and `UiBuilder` usage)
+- `fret-diag-workflow` (turn tricky state bugs into scripted repro gates)

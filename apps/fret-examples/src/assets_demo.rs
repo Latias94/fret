@@ -122,9 +122,7 @@ fn on_event(
 }
 
 fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElements {
-    cx.watch_global::<Theme>().layout().observe();
-
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = cx.theme().clone();
 
     let checker_rgba = checkerboard_rgba8(96, 96, 12);
     let (image_key, image, image_status) = image_asset_state::use_rgba8_image_state(
@@ -245,7 +243,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn render_image_panel(

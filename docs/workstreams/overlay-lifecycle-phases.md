@@ -140,4 +140,4 @@ Synthesis observability:
 Entry points:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
-- `apps/fretboard/src/diag.rs` (suite + matrix runner)
+- `crates/fret-diag/src/lib.rs` (suite + matrix runner; `apps/fretboard/src/diag.rs` is a thin wrapper)

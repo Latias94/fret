@@ -25,7 +25,7 @@ impl<H: UiHost> UiTree<H> {
                     if !bounds_tree_enabled
                         && cache.path.first().copied() == Some(root)
                         && let Some(hit) = {
-                            let started = self.debug_enabled.then(std::time::Instant::now);
+                            let started = self.debug_enabled.then(fret_core::time::Instant::now);
                             let hit = self.try_hit_test_along_cached_path(&cache.path, position);
                             if let Some(started) = started {
                                 self.debug_stats.hit_test_cached_path_time += started.elapsed();
@@ -85,16 +85,30 @@ impl<H: UiHost> UiTree<H> {
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         // Avoid recursion: deep UI trees can overflow the stack during hit testing.
         enum Frame {
-            Visit(NodeId, Point),
+            Visit {
+                node: NodeId,
+                position: Point,
+                /// When true, treat this node as hit-test clipped by its bounds even if the node
+                /// itself does not clip hit testing.
+                force_clip_to_bounds: bool,
+            },
             SelfCheck(NodeId, Point),
         }
 
         let mut stack: Vec<Frame> = Vec::new();
-        stack.push(Frame::Visit(node, position));
+        stack.push(Frame::Visit {
+            node,
+            position,
+            force_clip_to_bounds: false,
+        });
 
         while let Some(frame) = stack.pop() {
             match frame {
-                Frame::Visit(node, position) => {
+                Frame::Visit {
+                    node,
+                    position,
+                    force_clip_to_bounds,
+                } => {
                     let Some(n) = self.nodes.get(node) else {
                         continue;
                     };
@@ -130,7 +144,7 @@ impl<H: UiHost> UiTree<H> {
                         position
                     };
 
-                    if clips_hit_test {
+                    if clips_hit_test || force_clip_to_bounds {
                         if !n.bounds.contains(position_local) {
                             continue;
                         }
@@ -159,7 +173,11 @@ impl<H: UiHost> UiTree<H> {
                         // Children should be hit-tested before the node itself.
                         stack.push(Frame::SelfCheck(node, position_local));
                         for &child in n.children.iter() {
-                            stack.push(Frame::Visit(child, child_position));
+                            stack.push(Frame::Visit {
+                                node: child,
+                                position: child_position,
+                                force_clip_to_bounds,
+                            });
                         }
                         continue;
                     }
@@ -196,7 +214,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         position: Point,
     ) -> Option<NodeId> {
-        let started = self.debug_enabled.then(std::time::Instant::now);
+        let started = self.debug_enabled.then(fret_core::time::Instant::now);
         let (query, query_stats) =
             self.hit_test_bounds_trees
                 .query(root, position, self.debug_enabled);
@@ -238,7 +256,7 @@ impl<H: UiHost> UiTree<H> {
 
         match query {
             super::bounds_tree::HitTestBoundsTreeQuery::Disabled => {
-                let started = self.debug_enabled.then(std::time::Instant::now);
+                let started = self.debug_enabled.then(fret_core::time::Instant::now);
                 let hit = self.hit_test(root, position);
                 if let Some(started) = started {
                     self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();
@@ -247,7 +265,7 @@ impl<H: UiHost> UiTree<H> {
             }
             super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
             super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
-                let started = self.debug_enabled.then(std::time::Instant::now);
+                let started = self.debug_enabled.then(fret_core::time::Instant::now);
                 let accepted = self.hit_test_node_self_only(candidate, position)
                     && self.hit_test_candidate_reachable_from_root(root, candidate, position);
                 if let Some(started) = started {
@@ -262,7 +280,7 @@ impl<H: UiHost> UiTree<H> {
                             .hit_test_bounds_tree_candidate_rejected
                             .saturating_add(1);
                     }
-                    let started = self.debug_enabled.then(std::time::Instant::now);
+                    let started = self.debug_enabled.then(fret_core::time::Instant::now);
                     let hit = self.hit_test(root, position);
                     if let Some(started) = started {
                         self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();
@@ -460,6 +478,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn try_hit_test_along_cached_path(&self, path: &[NodeId], position: Point) -> Option<NodeId> {
         let mut position = position;
+        let force_clip_to_bounds = false;
 
         for (idx, &node) in path.iter().enumerate() {
             let n = self.nodes.get(node)?;
@@ -491,7 +510,7 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 position
             };
-            if clips_hit_test {
+            if clips_hit_test || force_clip_to_bounds {
                 if !n.bounds.contains(position_local) {
                     return None;
                 }

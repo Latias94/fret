@@ -1,4 +1,5 @@
 use bytemuck::{Pod, Zeroable};
+use fret_core::scene::MAX_STOPS;
 use fret_core::scene::UvRect;
 use std::sync::Arc;
 use std::time::Duration;
@@ -51,14 +52,30 @@ pub(super) struct ScaleParamsUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct PaintGpu {
+    pub(super) kind: u32,
+    pub(super) tile_mode: u32,
+    pub(super) color_space: u32,
+    pub(super) stop_count: u32,
+    pub(super) params0: [f32; 4],
+    pub(super) params1: [f32; 4],
+    pub(super) params2: [f32; 4],
+    pub(super) params3: [f32; 4],
+    pub(super) stop_colors: [[f32; 4]; MAX_STOPS],
+    pub(super) stop_offsets0: [f32; 4],
+    pub(super) stop_offsets1: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct QuadInstance {
     pub(super) rect: [f32; 4],
     pub(super) transform0: [f32; 4],
     pub(super) transform1: [f32; 4],
-    pub(super) color: [f32; 4],
+    pub(super) fill_paint: PaintGpu,
+    pub(super) border_paint: PaintGpu,
     pub(super) corner_radii: [f32; 4],
     pub(super) border: [f32; 4],
-    pub(super) border_color: [f32; 4],
 }
 
 #[repr(C)]
@@ -198,6 +215,12 @@ pub struct RenderPerfSnapshot {
 
     pub scene_encoding_cache_hits: u64,
     pub scene_encoding_cache_misses: u64,
+
+    // Tier B materials (ADR 0235) observability (best-effort).
+    pub material_quad_ops: u64,
+    pub material_distinct: u64,
+    pub material_unknown_ids: u64,
+    pub material_degraded_due_to_budget: u64,
 }
 
 #[derive(Debug, Default)]
@@ -278,6 +301,11 @@ pub(super) struct RenderPerfStats {
 
     pub(super) scene_encoding_cache_hits: u64,
     pub(super) scene_encoding_cache_misses: u64,
+
+    pub(super) material_quad_ops: u64,
+    pub(super) material_distinct: u64,
+    pub(super) material_unknown_ids: u64,
+    pub(super) material_degraded_due_to_budget: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -513,6 +541,11 @@ pub(super) struct SceneEncoding {
     pub(super) uniforms: Vec<ViewportUniform>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
+
+    pub(super) material_quad_ops: u64,
+    pub(super) material_distinct: u64,
+    pub(super) material_unknown_ids: u64,
+    pub(super) material_degraded_due_to_budget: u64,
 }
 
 impl SceneEncoding {
@@ -525,6 +558,10 @@ impl SceneEncoding {
         self.uniforms.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();
+        self.material_quad_ops = 0;
+        self.material_distinct = 0;
+        self.material_unknown_ids = 0;
+        self.material_degraded_due_to_budget = 0;
     }
 }
 

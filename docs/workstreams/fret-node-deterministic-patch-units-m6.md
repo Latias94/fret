@@ -14,7 +14,7 @@ The goal is not "minimal diffs at all costs". The goal is:
 
 Related contract ADR:
 
-- `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+- `docs/adr/0183-deterministic-graph-diff-and-patch-units.md`
 
 ## Why this exists
 
@@ -55,7 +55,7 @@ Out of scope:
 
 Evidence:
 
-- `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+- `docs/adr/0183-deterministic-graph-diff-and-patch-units.md`
 - `ecosystem/fret-node/src/ops/diff.rs`
 - `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`)
 
@@ -93,7 +93,7 @@ Evidence:
 
 ### M6A — Lock the patch unit shape (docs + tests)
 
-- [x] ADR 0198: patch unit shape + determinism contract.
+- [x] ADR 0183: patch unit shape + determinism contract.
 - [x] Conformance tests for determinism + roundtrip.
 - [x] Conformance tests for destructive cascades (node/port deletion).
 - [x] Conformance tests for structural port change apply-safety (remove+add + restore).

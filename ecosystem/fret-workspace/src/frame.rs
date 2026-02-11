@@ -89,6 +89,7 @@ impl WorkspaceFrame {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
         let background = self.background.or_else(|| theme.color_by_key("background"));
@@ -199,6 +200,7 @@ impl WorkspaceTopBar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
         let bg = theme
@@ -311,6 +313,7 @@ impl WorkspaceStatusBar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(cx.app);
         let bg = theme

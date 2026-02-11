@@ -32,6 +32,7 @@ impl Kbd {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         kbd_with_patch(cx, self.text, self.chrome, self.layout)
     }
@@ -129,6 +130,7 @@ impl KbdGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);

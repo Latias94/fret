@@ -72,6 +72,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -114,7 +127,7 @@ mod tests {
         ) -> NodeId {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
                 let show_second = cx.watch_model(&show_second).copied().unwrap_or(true);
-                let active_index = cx.watch_model(&active_index).cloned().unwrap_or_default();
+                let active_index = cx.watch_model(&active_index).cloned_or_default();
 
                 let count = if show_second { 2 } else { 1 };
 
@@ -343,7 +356,7 @@ mod tests {
             input_id_out: Rc<Cell<Option<GlobalElementId>>>,
         ) -> NodeId {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
-                let active_index = cx.watch_model(&active_index).cloned().unwrap_or_default();
+                let active_index = cx.watch_model(&active_index).cloned_or_default();
 
                 let mut option_elements: Vec<GlobalElementId> = Vec::new();
                 let option = |cx: &mut fret_ui::ElementContext<'_, App>,

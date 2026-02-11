@@ -328,7 +328,7 @@ impl<'a> CanvasPainter<'a> {
     ///
     /// - `key` must be stable across frames for the *same* logical text instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
-    ///   explicit policy decision of the caller (ADR 0156).
+    ///   explicit policy decision of the caller (ADR 0141).
     #[allow(clippy::too_many_arguments)]
     pub fn text(
         &mut self,
@@ -364,6 +364,7 @@ impl<'a> CanvasPainter<'a> {
     /// This is intended for repeated labels where callers do not have a stable per-instance key.
     /// High-entropy or scroll-driven surfaces (code editors, large virtual lists, etc.) should
     /// prefer `text(...)` with stable keys to avoid churn in the shared cache.
+    #[allow(clippy::too_many_arguments)]
     pub fn shared_text(
         &mut self,
         order: DrawOrder,
@@ -429,6 +430,7 @@ impl<'a> CanvasPainter<'a> {
     }
 
     /// Variant of `shared_text` that returns its prepared `TextBlobId`.
+    #[allow(clippy::too_many_arguments)]
     pub fn shared_text_with_blob(
         &mut self,
         order: DrawOrder,
@@ -524,7 +526,7 @@ impl<'a> CanvasPainter<'a> {
     ///
     /// - `key` must be stable across frames for the *same* logical path instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
-    ///   explicit policy decision of the caller (ADR 0156).
+    ///   explicit policy decision of the caller (ADR 0141).
     #[allow(clippy::too_many_arguments)]
     pub fn path(
         &mut self,
@@ -992,6 +994,16 @@ impl CanvasCache {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
 
+        let fingerprint_constraints = match constraints.wrap {
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => {
+                CanvasTextConstraints {
+                    max_width: None,
+                    ..constraints
+                }
+            }
+            _ => constraints,
+        };
+
         let cache_key = CanvasTextCacheKey { key, scale_bits };
         let entry = self.text_by_key.entry(cache_key).or_default();
         entry.last_used_frame = self.frame;
@@ -999,7 +1011,7 @@ impl CanvasCache {
         let fingerprint = HostedTextFingerprint {
             content: content.clone(),
             style: style.clone(),
-            constraints,
+            constraints: fingerprint_constraints,
             font_stack_key,
             scale_bits,
         };
@@ -1012,9 +1024,9 @@ impl CanvasCache {
             }
 
             let text_constraints = TextConstraints {
-                max_width: constraints.max_width,
-                wrap: constraints.wrap,
-                overflow: constraints.overflow,
+                max_width: fingerprint_constraints.max_width,
+                wrap: fingerprint_constraints.wrap,
+                overflow: fingerprint_constraints.overflow,
                 scale_factor: raster_scale_factor,
             };
 
@@ -1195,8 +1207,14 @@ struct CanvasTextConstraintsKey {
 
 impl CanvasTextConstraintsKey {
     fn from_constraints(constraints: CanvasTextConstraints) -> Self {
+        let max_width_bits = match constraints.wrap {
+            // `TextWrap::None` does not change shaping results based on width unless we need to
+            // materialize an overflow policy (ellipsis). Callers clip at higher levels.
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            _ => constraints.max_width.map(|w| w.0.to_bits()),
+        };
         Self {
-            max_width_bits: constraints.max_width.map(|w| w.0.to_bits()),
+            max_width_bits,
             wrap: constraints.wrap,
             overflow: constraints.overflow,
         }
@@ -1230,10 +1248,22 @@ struct TextDraw {
     metrics: TextMetrics,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 enum HostedTextContent {
     Plain(Arc<str>),
     Rich(AttributedText),
+}
+
+impl PartialEq for HostedTextContent {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Plain(a), Self::Plain(b)) => Arc::ptr_eq(a, b) || a.as_ref() == b.as_ref(),
+            (Self::Rich(a), Self::Rich(b)) => {
+                (Arc::ptr_eq(&a.text, &b.text) && Arc::ptr_eq(&a.spans, &b.spans)) || a == b
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -88,8 +86,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             base = base.refine_viewport_layout(LayoutRefinement::default().h_px(viewport_h));
         }
 
-        base.into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        base.into_element(cx).test_id(test_id)
     };
 
     let demo_content = carousel(
@@ -290,8 +287,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-carousel-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-carousel-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

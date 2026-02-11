@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "sonner-demo",
+      "web_name": "sonner-demo",
+      "kind": "message",
+      "title": "Event has been created",
+      "description": "Sunday, December 03, 2023 at 9:00 AM",
+      "action_label": "Undo",
+      "action_command": "sonner.toast.undo"
+    },
+    {
+      "id": "sonner-demo.vp1440x240",
+      "web_name": "sonner-demo.vp1440x240",
+      "kind": "message",
+      "title": "Event has been created",
+      "description": "Sunday, December 03, 2023 at 9:00 AM",
+      "action_label": "Undo",
+      "action_command": "sonner.toast.undo"
+    },
+    {
+      "id": "sonner-types",
+      "web_name": "sonner-types",
+      "kind": "message",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.vp1440x240",
+      "web_name": "sonner-types.vp1440x240",
+      "kind": "message",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.default",
+      "web_name": "sonner-types.default",
+      "kind": "message",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.success",
+      "web_name": "sonner-types.success",
+      "kind": "success",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.info",
+      "web_name": "sonner-types.info",
+      "kind": "info",
+      "title": "Be at the area 10 minutes before the event time"
+    },
+    {
+      "id": "sonner-types.warning",
+      "web_name": "sonner-types.warning",
+      "kind": "warning",
+      "title": "Event start time cannot be earlier than 8am"
+    },
+    {
+      "id": "sonner-types.error",
+      "web_name": "sonner-types.error",
+      "kind": "error",
+      "title": "Event has not been created"
+    },
+    {
+      "id": "sonner-types.promise-loading",
+      "web_name": "sonner-types.promise-loading",
+      "kind": "promise",
+      "title": "Loading..."
+    },
+    {
+      "id": "sonner-types.vp1440x240-default",
+      "web_name": "sonner-types.vp1440x240-default",
+      "kind": "message",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.vp1440x240-success",
+      "web_name": "sonner-types.vp1440x240-success",
+      "kind": "success",
+      "title": "Event has been created"
+    },
+    {
+      "id": "sonner-types.vp1440x240-info",
+      "web_name": "sonner-types.vp1440x240-info",
+      "kind": "info",
+      "title": "Be at the area 10 minutes before the event time"
+    },
+    {
+      "id": "sonner-types.vp1440x240-warning",
+      "web_name": "sonner-types.vp1440x240-warning",
+      "kind": "warning",
+      "title": "Event start time cannot be earlier than 8am"
+    },
+    {
+      "id": "sonner-types.vp1440x240-error",
+      "web_name": "sonner-types.vp1440x240-error",
+      "kind": "error",
+      "title": "Event has not been created"
+    }
+  ]
+}
+

@@ -27,6 +27,7 @@ contracts early to avoid large rewrites later.
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
 - Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
+- Audit notes index (non-authoritative): `docs/audits/README.md`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`
 
@@ -55,6 +56,7 @@ so the default authoring story lives in ecosystem crates.
   - Typed UI → app routing (dynamic per-item actions): `fret-kit::mvu::MessageRouter<M>`
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+- Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`
   - Persistence (sqlite/sqlx): `docs/integrating-sqlite-and-sqlx.md`
@@ -100,7 +102,7 @@ so the default authoring story lives in ecosystem crates.
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
-   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
+   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0092): `docs/adr/0092-crate-structure-core-backends-apps.md`
 - UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render-wgpu/src/renderer/mod.rs`

@@ -5,7 +5,10 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, NodeId, Rect};
+use fret_core::{
+    AppWindowId, Color, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId,
+    PointerType, Rect,
+};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -13,9 +16,28 @@ use slotmap::Key as _;
 use std::sync::Arc as StdArc;
 
 use crate::element::AnyElement;
+#[cfg(feature = "diagnostics")]
+use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
+use super::hash::stable_hash;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum EnvironmentQueryKey {
+    ViewportSize,
+    ScaleFactor,
+    ColorScheme,
+    PrefersReducedMotion,
+    TextScaleFactor,
+    PrefersReducedTransparency,
+    AccentColor,
+    PrefersContrast,
+    ForcedColorsMode,
+    PrimaryPointerType,
+    SafeAreaInsets,
+    OcclusionInsets,
+}
 
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone)]
@@ -37,16 +59,119 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+    pub observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot>,
+    pub layout_query_regions: Vec<LayoutQueryRegionDiagnosticsSnapshot>,
+    pub environment: EnvironmentQueryDiagnosticsSnapshot,
+    pub observed_environment: Vec<ElementObservedEnvironmentDiagnosticsSnapshot>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
-    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0177).
     ///
-    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0176).
     pub retained_keep_alive_roots_len: u32,
     pub retained_keep_alive_roots_head: Vec<NodeId>,
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+    pub overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub enum OverlayPlacementDiagnosticsRecord {
+    /// Anchored panel placement solved via `overlay_placement` (e.g. popper-like overlays).
+    AnchoredPanel(OverlayAnchoredPanelPlacementDiagnosticsRecord),
+    /// A higher-level overlay placed via an external policy (e.g. Radix Select item-aligned mode).
+    PlacedRect(OverlayPlacedRectDiagnosticsRecord),
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct OverlayAnchoredPanelPlacementDiagnosticsRecord {
+    pub frame_id: FrameId,
+    pub overlay_root_name: Option<StdArc<str>>,
+    pub anchor_element: Option<GlobalElementId>,
+    pub content_element: Option<GlobalElementId>,
+    pub trace: AnchoredPanelLayoutTrace,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct OverlayPlacedRectDiagnosticsRecord {
+    pub frame_id: FrameId,
+    pub overlay_root_name: Option<StdArc<str>>,
+    pub anchor_element: Option<GlobalElementId>,
+    pub content_element: Option<GlobalElementId>,
+    pub outer: Rect,
+    pub anchor: Rect,
+    pub placed: Rect,
+    pub side: Option<Side>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct LayoutQueryRegionDiagnosticsSnapshot {
+    pub region: GlobalElementId,
+    pub name: Option<StdArc<str>>,
+    pub revision: u64,
+    pub changed_this_frame: bool,
+    /// Last committed bounds (i.e. what `layout_query_bounds` reads).
+    pub committed_bounds: Option<Rect>,
+    /// Best-effort current bounds observed during the current frame.
+    pub current_bounds: Option<Rect>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ElementObservedLayoutQueriesDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub deps_fingerprint: u64,
+    pub regions: Vec<ObservedLayoutQueryRegionDiagnosticsSnapshot>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ObservedLayoutQueryRegionDiagnosticsSnapshot {
+    pub region: GlobalElementId,
+    pub invalidation: Invalidation,
+    pub region_revision: u64,
+    pub region_changed_this_frame: bool,
+    pub region_name: Option<StdArc<str>>,
+    pub region_committed_bounds: Option<Rect>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct EnvironmentQueryDiagnosticsSnapshot {
+    pub viewport_bounds: Rect,
+    pub scale_factor: f32,
+    pub color_scheme: Option<ColorScheme>,
+    pub prefers_reduced_motion: Option<bool>,
+    pub text_scale_factor: Option<f32>,
+    pub prefers_reduced_transparency: Option<bool>,
+    pub accent_color: Option<Color>,
+    pub contrast_preference: Option<ContrastPreference>,
+    pub forced_colors_mode: Option<ForcedColorsMode>,
+    pub primary_pointer_type: PointerType,
+    pub safe_area_insets: Option<Edges>,
+    pub occlusion_insets: Option<Edges>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ElementObservedEnvironmentDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub deps_fingerprint: u64,
+    pub keys: Vec<ObservedEnvironmentKeyDiagnosticsSnapshot>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ObservedEnvironmentKeyDiagnosticsSnapshot {
+    pub key: StdArc<str>,
+    pub invalidation: Invalidation,
+    pub key_revision: u64,
+    pub key_changed_this_frame: bool,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -79,6 +204,57 @@ impl ElementRuntime {
 
     pub fn set_gc_lag_frames(&mut self, frames: u64) {
         self.gc_lag_frames = frames;
+    }
+
+    pub fn set_window_prefers_reduced_motion(
+        &mut self,
+        window: AppWindowId,
+        prefers_reduced_motion: Option<bool>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_prefers_reduced_motion(prefers_reduced_motion);
+    }
+
+    pub fn set_window_color_scheme(&mut self, window: AppWindowId, scheme: Option<ColorScheme>) {
+        self.for_window_mut(window)
+            .set_committed_color_scheme(scheme);
+    }
+
+    pub fn set_window_contrast_preference(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ContrastPreference>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_contrast_preference(value);
+    }
+
+    pub fn set_window_forced_colors_mode(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ForcedColorsMode>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_forced_colors_mode(value);
+    }
+
+    pub fn set_window_primary_pointer_type(
+        &mut self,
+        window: AppWindowId,
+        pointer_type: PointerType,
+    ) {
+        self.for_window_mut(window)
+            .record_committed_primary_pointer_type(pointer_type);
+    }
+
+    pub fn set_window_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.for_window_mut(window)
+            .record_committed_safe_area_insets(insets);
+    }
+
+    pub fn set_window_occlusion_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.for_window_mut(window)
+            .record_committed_occlusion_insets(insets);
     }
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
@@ -160,6 +336,18 @@ pub struct WindowElementState {
     pub(super) observed_models_next: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) observed_layout_queries_rendered:
+        HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
+    pub(super) observed_layout_queries_next:
+        HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
+    pub(super) observed_environment_rendered:
+        HashMap<GlobalElementId, Vec<(EnvironmentQueryKey, Invalidation)>>,
+    pub(super) observed_environment_next:
+        HashMap<GlobalElementId, Vec<(EnvironmentQueryKey, Invalidation)>>,
+    layout_query_region_revisions: HashMap<GlobalElementId, u64>,
+    layout_query_regions_changed_this_frame: HashSet<GlobalElementId>,
+    environment_revisions: HashMap<EnvironmentQueryKey, u64>,
+    environment_changed_this_frame: HashSet<EnvironmentQueryKey>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
     scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
@@ -174,6 +362,18 @@ pub struct WindowElementState {
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
+    committed_viewport_bounds: Rect,
+    committed_scale_factor: f32,
+    committed_color_scheme: Option<ColorScheme>,
+    committed_prefers_reduced_motion: Option<bool>,
+    committed_text_scale_factor: Option<f32>,
+    committed_prefers_reduced_transparency: Option<bool>,
+    committed_accent_color: Option<Color>,
+    committed_contrast_preference: Option<ContrastPreference>,
+    committed_forced_colors_mode: Option<ForcedColorsMode>,
+    committed_primary_pointer_type: Option<PointerType>,
+    committed_safe_area_insets: Option<Edges>,
+    committed_occlusion_insets: Option<Edges>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -186,6 +386,8 @@ pub struct WindowElementState {
     debug_identity: DebugIdentityRegistry,
     #[cfg(feature = "diagnostics")]
     debug_node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+    #[cfg(feature = "diagnostics")]
+    overlay_placement: Vec<OverlayPlacementDiagnosticsRecord>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -213,6 +415,11 @@ pub struct NodeEntryRootOverwrite {
     pub file: &'static str,
     pub line: u32,
     pub column: u32,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct LayoutQueryRegionMarker {
+    pub name: Option<Arc<str>>,
 }
 
 impl WindowElementState {
@@ -355,6 +562,19 @@ impl WindowElementState {
             &mut self.observed_globals_next,
         );
         self.observed_globals_next.clear();
+        std::mem::swap(
+            &mut self.observed_layout_queries_rendered,
+            &mut self.observed_layout_queries_next,
+        );
+        self.observed_layout_queries_next.clear();
+        self.layout_query_regions_changed_this_frame.clear();
+
+        std::mem::swap(
+            &mut self.observed_environment_rendered,
+            &mut self.observed_environment_next,
+        );
+        self.observed_environment_next.clear();
+        self.environment_changed_this_frame.clear();
 
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
         // caching:
@@ -386,6 +606,20 @@ impl WindowElementState {
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
             self.debug_node_entry_root_overwrites
                 .retain(|r| r.frame_id.0 >= cutoff);
+
+            // Keep a small rolling window of placement records so scripted diagnostics can snapshot
+            // placement decisions even when scripts are processed earlier in the frame.
+            const KEEP_FRAMES: u64 = 120;
+            let cutoff = frame_id.0.saturating_sub(KEEP_FRAMES);
+            self.overlay_placement.retain(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => r.frame_id.0 >= cutoff,
+                OverlayPlacementDiagnosticsRecord::PlacedRect(r) => r.frame_id.0 >= cutoff,
+            });
+            const MAX_RECORDS: usize = 512;
+            if self.overlay_placement.len() > MAX_RECORDS {
+                let extra = self.overlay_placement.len() - MAX_RECORDS;
+                self.overlay_placement.drain(0..extra);
+            }
         }
     }
 
@@ -447,6 +681,94 @@ impl WindowElementState {
     pub(crate) fn has_state<S: Any>(&self, element: GlobalElementId) -> bool {
         let key = (element, TypeId::of::<S>());
         self.state_any_ref(&key).is_some()
+    }
+
+    pub(crate) fn layout_query_region_revision(&self, element: GlobalElementId) -> u64 {
+        self.layout_query_region_revisions
+            .get(&element)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn layout_query_deps_fingerprint_rendered(&self, root: GlobalElementId) -> u64 {
+        self.layout_query_deps_fingerprint_from_list(
+            self.observed_layout_queries_rendered.get(&root),
+        )
+    }
+
+    pub(crate) fn layout_query_deps_fingerprint_next(&self, root: GlobalElementId) -> u64 {
+        self.layout_query_deps_fingerprint_from_list(self.observed_layout_queries_next.get(&root))
+    }
+
+    fn layout_query_deps_fingerprint_from_list(
+        &self,
+        deps: Option<&Vec<(GlobalElementId, Invalidation)>>,
+    ) -> u64 {
+        let Some(deps) = deps else {
+            return 0;
+        };
+        if deps.is_empty() {
+            return 0;
+        }
+
+        let mut entries: Vec<(u64, u64, u8)> = deps
+            .iter()
+            .map(|(region, inv)| {
+                (
+                    region.0,
+                    self.layout_query_region_revision(*region),
+                    *inv as u8,
+                )
+            })
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+        stable_hash(&entries)
+    }
+
+    pub(crate) fn environment_deps_fingerprint_rendered(&self, root: GlobalElementId) -> u64 {
+        self.environment_deps_fingerprint_from_list(self.observed_environment_rendered.get(&root))
+    }
+
+    pub(crate) fn environment_deps_fingerprint_next(&self, root: GlobalElementId) -> u64 {
+        self.environment_deps_fingerprint_from_list(self.observed_environment_next.get(&root))
+    }
+
+    fn environment_revision(&self, key: EnvironmentQueryKey) -> u64 {
+        self.environment_revisions.get(&key).copied().unwrap_or(0)
+    }
+
+    fn environment_deps_fingerprint_from_list(
+        &self,
+        deps: Option<&Vec<(EnvironmentQueryKey, Invalidation)>>,
+    ) -> u64 {
+        let Some(deps) = deps else {
+            return 0;
+        };
+        if deps.is_empty() {
+            return 0;
+        }
+
+        let key_id = |k: EnvironmentQueryKey| match k {
+            EnvironmentQueryKey::ViewportSize => 0u8,
+            EnvironmentQueryKey::ScaleFactor => 1u8,
+            EnvironmentQueryKey::ColorScheme => 2u8,
+            EnvironmentQueryKey::PrefersReducedMotion => 3u8,
+            EnvironmentQueryKey::PrimaryPointerType => 4u8,
+            EnvironmentQueryKey::SafeAreaInsets => 5u8,
+            EnvironmentQueryKey::OcclusionInsets => 6u8,
+            EnvironmentQueryKey::PrefersContrast => 7u8,
+            EnvironmentQueryKey::ForcedColorsMode => 8u8,
+            EnvironmentQueryKey::TextScaleFactor => 9u8,
+            EnvironmentQueryKey::PrefersReducedTransparency => 10u8,
+            EnvironmentQueryKey::AccentColor => 11u8,
+        };
+
+        let mut entries: Vec<(u8, u64, u8)> = deps
+            .iter()
+            .map(|(key, inv)| (key_id(*key), self.environment_revision(*key), *inv as u8))
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+        stable_hash(&entries)
     }
 
     pub(super) fn take_state_box(
@@ -600,6 +922,33 @@ impl WindowElementState {
         self.observed_globals_next.insert(element, list.clone());
     }
 
+    pub(crate) fn touch_observed_layout_queries_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_layout_queries_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_layout_queries_rendered.get(&element) else {
+            return;
+        };
+        self.observed_layout_queries_next
+            .insert(element, list.clone());
+    }
+
+    pub(crate) fn touch_observed_environment_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_environment_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_environment_rendered.get(&element) else {
+            return;
+        };
+        self.observed_environment_next.insert(element, list.clone());
+    }
+
     pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
         self.view_cache_reuse_roots.insert(root);
     }
@@ -738,7 +1087,7 @@ impl WindowElementState {
                 continue;
             };
             entry.last_seen_frame = frame_id;
-            // Touching a retained subtree must not reassign cross-root ownership (ADR 0191).
+            // Touching a retained subtree must not reassign cross-root ownership (ADR 0176).
             // If the element is already owned by a different root, keep the original owner and
             // rely on diagnostics to flag the mismatch rather than "repairing" it implicitly.
             if entry.root == root_id {
@@ -862,7 +1211,7 @@ impl WindowElementState {
         {
             assert_eq!(
                 prev.root, entry.root,
-                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0176)",
                 prev.root, entry.root
             );
         }
@@ -922,6 +1271,35 @@ impl WindowElementState {
 
     pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
         self.cur_bounds.insert(element, bounds);
+
+        if !self.has_state::<LayoutQueryRegionMarker>(element) {
+            return;
+        }
+        if self
+            .layout_query_regions_changed_this_frame
+            .contains(&element)
+        {
+            return;
+        }
+
+        // Container queries are primarily sensitive to container size. Ignore origin changes to
+        // avoid rebuild storms when regions move due to reflow or scrolling.
+        const EPS_PX: f32 = 0.5;
+        let changed = match self.prev_bounds.get(&element).copied() {
+            None => true,
+            Some(prev) => {
+                (prev.size.width.0 - bounds.size.width.0).abs() > EPS_PX
+                    || (prev.size.height.0 - bounds.size.height.0).abs() > EPS_PX
+            }
+        };
+
+        if changed {
+            self.layout_query_region_revisions
+                .entry(element)
+                .and_modify(|v| *v = v.saturating_add(1))
+                .or_insert(1);
+            self.layout_query_regions_changed_this_frame.insert(element);
+        }
     }
 
     pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {
@@ -957,6 +1335,226 @@ impl WindowElementState {
             .or_else(|| self.prev_visual_bounds.get(&element).copied())
     }
 
+    pub(crate) fn committed_viewport_bounds(&self) -> Rect {
+        self.committed_viewport_bounds
+    }
+
+    pub(crate) fn committed_scale_factor(&self) -> f32 {
+        self.committed_scale_factor
+    }
+
+    pub(crate) fn committed_color_scheme(&self) -> Option<ColorScheme> {
+        self.committed_color_scheme
+    }
+
+    pub(crate) fn committed_prefers_reduced_motion(&self) -> Option<bool> {
+        self.committed_prefers_reduced_motion
+    }
+
+    pub(crate) fn committed_text_scale_factor(&self) -> Option<f32> {
+        self.committed_text_scale_factor
+    }
+
+    pub(crate) fn committed_prefers_reduced_transparency(&self) -> Option<bool> {
+        self.committed_prefers_reduced_transparency
+    }
+
+    pub(crate) fn committed_accent_color(&self) -> Option<Color> {
+        self.committed_accent_color
+    }
+
+    pub(crate) fn committed_contrast_preference(&self) -> Option<ContrastPreference> {
+        self.committed_contrast_preference
+    }
+
+    pub(crate) fn committed_forced_colors_mode(&self) -> Option<ForcedColorsMode> {
+        self.committed_forced_colors_mode
+    }
+
+    pub(crate) fn committed_primary_pointer_type(&self) -> PointerType {
+        self.committed_primary_pointer_type
+            .unwrap_or(PointerType::Unknown)
+    }
+
+    pub(crate) fn committed_safe_area_insets(&self) -> Option<Edges> {
+        self.committed_safe_area_insets
+    }
+
+    pub(crate) fn committed_occlusion_insets(&self) -> Option<Edges> {
+        self.committed_occlusion_insets
+    }
+
+    pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
+        if self.committed_prefers_reduced_motion == value {
+            return;
+        }
+        self.committed_prefers_reduced_motion = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersReducedMotion)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn set_committed_text_scale_factor(&mut self, value: Option<f32>) {
+        let changed = match (self.committed_text_scale_factor, value) {
+            (Some(a), Some(b)) => (a - b).abs() > 0.0001,
+            (None, None) => false,
+            _ => true,
+        };
+        if !changed {
+            return;
+        }
+
+        self.committed_text_scale_factor = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::TextScaleFactor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::TextScaleFactor);
+    }
+
+    pub(crate) fn set_committed_prefers_reduced_transparency(&mut self, value: Option<bool>) {
+        if self.committed_prefers_reduced_transparency == value {
+            return;
+        }
+        self.committed_prefers_reduced_transparency = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersReducedTransparency)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersReducedTransparency);
+    }
+
+    pub(crate) fn set_committed_accent_color(&mut self, value: Option<Color>) {
+        if self.committed_accent_color == value {
+            return;
+        }
+        self.committed_accent_color = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::AccentColor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::AccentColor);
+    }
+
+    pub(crate) fn set_committed_color_scheme(&mut self, value: Option<ColorScheme>) {
+        if self.committed_color_scheme == value {
+            return;
+        }
+        self.committed_color_scheme = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ColorScheme)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ColorScheme);
+    }
+
+    pub(crate) fn set_committed_contrast_preference(&mut self, value: Option<ContrastPreference>) {
+        if self.committed_contrast_preference == value {
+            return;
+        }
+        self.committed_contrast_preference = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersContrast)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersContrast);
+    }
+
+    pub(crate) fn set_committed_forced_colors_mode(&mut self, value: Option<ForcedColorsMode>) {
+        if self.committed_forced_colors_mode == value {
+            return;
+        }
+        self.committed_forced_colors_mode = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ForcedColorsMode)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ForcedColorsMode);
+    }
+
+    pub(crate) fn record_committed_primary_pointer_type(&mut self, pointer_type: PointerType) {
+        if self.committed_primary_pointer_type == Some(pointer_type) {
+            return;
+        }
+        self.committed_primary_pointer_type = Some(pointer_type);
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrimaryPointerType)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrimaryPointerType);
+    }
+
+    pub(crate) fn record_committed_safe_area_insets(&mut self, insets: Option<Edges>) {
+        if self.committed_safe_area_insets == insets {
+            return;
+        }
+        self.committed_safe_area_insets = insets;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::SafeAreaInsets)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::SafeAreaInsets);
+    }
+
+    pub(crate) fn record_committed_occlusion_insets(&mut self, insets: Option<Edges>) {
+        if self.committed_occlusion_insets == insets {
+            return;
+        }
+        self.committed_occlusion_insets = insets;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::OcclusionInsets)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::OcclusionInsets);
+    }
+
+    pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
+        // Environment-driven responsiveness is typically sensitive to viewport size. Ignore origin
+        // changes so panning/multi-monitor movement cannot trigger rebuild storms.
+        const EPS_PX: f32 = 0.5;
+        let prev = self.committed_viewport_bounds.size;
+        let next = bounds.size;
+        let changed = (prev.width.0 - next.width.0).abs() > EPS_PX
+            || (prev.height.0 - next.height.0).abs() > EPS_PX;
+
+        self.committed_viewport_bounds = bounds;
+        if !changed {
+            return;
+        }
+
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ViewportSize)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ViewportSize);
+    }
+
+    pub(crate) fn record_committed_scale_factor(&mut self, scale_factor: f32) {
+        if (self.committed_scale_factor - scale_factor).abs() < 0.0001 {
+            return;
+        }
+        self.committed_scale_factor = scale_factor;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ScaleFactor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ScaleFactor);
+    }
+
     pub(crate) fn wants_continuous_frames(&self) -> bool {
         self.continuous_frames.load(Ordering::Relaxed) > 0
     }
@@ -970,6 +1568,28 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let invalidation_sort_key = |inv: Invalidation| match inv {
+            Invalidation::Layout => 0u8,
+            Invalidation::Paint => 1u8,
+            Invalidation::HitTest => 2u8,
+            Invalidation::HitTestOnly => 3u8,
+        };
+
+        let env_key_label = |key: EnvironmentQueryKey| match key {
+            EnvironmentQueryKey::ViewportSize => "viewport_size",
+            EnvironmentQueryKey::ScaleFactor => "scale_factor",
+            EnvironmentQueryKey::ColorScheme => "color_scheme",
+            EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+            EnvironmentQueryKey::TextScaleFactor => "text_scale_factor",
+            EnvironmentQueryKey::PrefersReducedTransparency => "prefers_reduced_transparency",
+            EnvironmentQueryKey::AccentColor => "accent_color",
+            EnvironmentQueryKey::PrefersContrast => "prefers_contrast",
+            EnvironmentQueryKey::ForcedColorsMode => "forced_colors_mode",
+            EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
+            EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
+            EnvironmentQueryKey::OcclusionInsets => "occlusion_insets",
+        };
+
         let bounds_for = |element: Option<GlobalElementId>| {
             element.and_then(|id| {
                 self.prev_bounds
@@ -988,6 +1608,122 @@ impl WindowElementState {
         };
         let node_for = |element: Option<GlobalElementId>| {
             element.and_then(|id| self.node_entry(id).map(|e| e.node))
+        };
+
+        let layout_query_region_name_for = |element: GlobalElementId| -> Option<StdArc<str>> {
+            let key = (element, TypeId::of::<LayoutQueryRegionMarker>());
+            self.state_any_ref(&key)
+                .and_then(|any| any.downcast_ref::<LayoutQueryRegionMarker>())
+                .and_then(|marker| marker.name.clone())
+        };
+
+        let mut layout_query_regions: Vec<LayoutQueryRegionDiagnosticsSnapshot> = self
+            .nodes
+            .iter()
+            .filter(|(_, entry)| entry.last_seen_frame == self.prepared_frame)
+            .map(|(&element, _)| element)
+            .filter(|&element| self.has_state::<LayoutQueryRegionMarker>(element))
+            .map(|element| {
+                let committed_bounds = self.prev_bounds.get(&element).copied();
+                let current_bounds = self.cur_bounds.get(&element).copied().or(committed_bounds);
+                LayoutQueryRegionDiagnosticsSnapshot {
+                    region: element,
+                    name: layout_query_region_name_for(element),
+                    revision: self.layout_query_region_revision(element),
+                    changed_this_frame: self
+                        .layout_query_regions_changed_this_frame
+                        .contains(&element),
+                    committed_bounds,
+                    current_bounds,
+                }
+            })
+            .collect();
+        layout_query_regions.sort_by_key(|r| r.region.0);
+
+        let mut observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot> =
+            self.observed_layout_queries_next
+                .iter()
+                .map(|(element, list)| {
+                    let deps_fingerprint = self.layout_query_deps_fingerprint_from_list(Some(list));
+                    let mut regions: Vec<ObservedLayoutQueryRegionDiagnosticsSnapshot> = list
+                        .iter()
+                        .map(
+                            |(region, inv)| ObservedLayoutQueryRegionDiagnosticsSnapshot {
+                                region: *region,
+                                invalidation: *inv,
+                                region_revision: self.layout_query_region_revision(*region),
+                                region_changed_this_frame: self
+                                    .layout_query_regions_changed_this_frame
+                                    .contains(region),
+                                region_name: layout_query_region_name_for(*region),
+                                region_committed_bounds: self.prev_bounds.get(region).copied(),
+                            },
+                        )
+                        .collect();
+                    regions.sort_by(|a, b| {
+                        a.region.0.cmp(&b.region.0).then_with(|| {
+                            let key = |inv: Invalidation| match inv {
+                                Invalidation::Layout => 0u8,
+                                Invalidation::Paint => 1u8,
+                                Invalidation::HitTest => 2u8,
+                                Invalidation::HitTestOnly => 3u8,
+                            };
+                            key(a.invalidation).cmp(&key(b.invalidation))
+                        })
+                    });
+
+                    ElementObservedLayoutQueriesDiagnosticsSnapshot {
+                        element: *element,
+                        deps_fingerprint,
+                        regions,
+                    }
+                })
+                .collect();
+        observed_layout_queries.sort_by_key(|e| e.element.0);
+
+        let mut observed_environment: Vec<ElementObservedEnvironmentDiagnosticsSnapshot> = self
+            .observed_environment_next
+            .iter()
+            .map(|(element, list)| {
+                let deps_fingerprint = self.environment_deps_fingerprint_from_list(Some(list));
+                let mut keys: Vec<ObservedEnvironmentKeyDiagnosticsSnapshot> = list
+                    .iter()
+                    .map(|(key, inv)| ObservedEnvironmentKeyDiagnosticsSnapshot {
+                        key: StdArc::<str>::from(env_key_label(*key)),
+                        invalidation: *inv,
+                        key_revision: self.environment_revision(*key),
+                        key_changed_this_frame: self.environment_changed_this_frame.contains(key),
+                    })
+                    .collect();
+                keys.sort_by(|a, b| {
+                    a.key.as_ref().cmp(b.key.as_ref()).then_with(|| {
+                        invalidation_sort_key(a.invalidation)
+                            .cmp(&invalidation_sort_key(b.invalidation))
+                    })
+                });
+
+                ElementObservedEnvironmentDiagnosticsSnapshot {
+                    element: *element,
+                    deps_fingerprint,
+                    keys,
+                }
+            })
+            .collect();
+        observed_environment.sort_by_key(|e| e.element.0);
+
+        let environment = EnvironmentQueryDiagnosticsSnapshot {
+            viewport_bounds: self.committed_viewport_bounds,
+            scale_factor: self.committed_scale_factor,
+            color_scheme: self.committed_color_scheme,
+            prefers_reduced_motion: self.committed_prefers_reduced_motion,
+            text_scale_factor: self.committed_text_scale_factor,
+            prefers_reduced_transparency: self.committed_prefers_reduced_transparency,
+            accent_color: self.committed_accent_color,
+            contrast_preference: self.committed_contrast_preference,
+            forced_colors_mode: self.committed_forced_colors_mode,
+            primary_pointer_type: self.committed_primary_pointer_type(),
+            safe_area_insets: self.committed_safe_area_insets,
+            occlusion_insets: self.committed_occlusion_insets,
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1107,6 +1843,10 @@ impl WindowElementState {
                     )
                 })
                 .collect(),
+            observed_layout_queries,
+            layout_query_regions,
+            environment,
+            observed_environment,
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,
@@ -1114,7 +1854,93 @@ impl WindowElementState {
             retained_keep_alive_roots_head,
             retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
+            overlay_placement: self.overlay_placement.clone(),
         }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_overlay_placement_anchored_panel(
+        &mut self,
+        frame_id: FrameId,
+        overlay_root_name: Option<StdArc<str>>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        trace: AnchoredPanelLayoutTrace,
+    ) {
+        let name = overlay_root_name.clone();
+        let next = OverlayPlacementDiagnosticsRecord::AnchoredPanel(
+            OverlayAnchoredPanelPlacementDiagnosticsRecord {
+                frame_id,
+                overlay_root_name,
+                anchor_element,
+                content_element,
+                trace,
+            },
+        );
+
+        if let Some(existing) = self
+            .overlay_placement
+            .iter_mut()
+            .rev()
+            .find(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::AnchoredPanel(r) => {
+                    r.overlay_root_name == name
+                        && r.anchor_element == anchor_element
+                        && r.content_element == content_element
+                }
+                _ => false,
+            })
+        {
+            *existing = next;
+            return;
+        }
+
+        self.overlay_placement.push(next);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn record_overlay_placement_placed_rect(
+        &mut self,
+        frame_id: FrameId,
+        overlay_root_name: Option<StdArc<str>>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        outer: Rect,
+        anchor: Rect,
+        placed: Rect,
+        side: Option<Side>,
+    ) {
+        let name = overlay_root_name.clone();
+        let next =
+            OverlayPlacementDiagnosticsRecord::PlacedRect(OverlayPlacedRectDiagnosticsRecord {
+                frame_id,
+                overlay_root_name,
+                anchor_element,
+                content_element,
+                outer,
+                anchor,
+                placed,
+                side,
+            });
+
+        if let Some(existing) = self
+            .overlay_placement
+            .iter_mut()
+            .rev()
+            .find(|rec| match rec {
+                OverlayPlacementDiagnosticsRecord::PlacedRect(r) => {
+                    r.overlay_root_name == name
+                        && r.anchor_element == anchor_element
+                        && r.content_element == content_element
+                }
+                _ => false,
+            })
+        {
+            *existing = next;
+            return;
+        }
+
+        self.overlay_placement.push(next);
     }
 
     #[cfg(feature = "diagnostics")]
@@ -1290,6 +2116,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn primary_pointer_type_defaults_to_unknown_until_observed() {
+        let mut state = WindowElementState::default();
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Unknown);
+
+        state.record_committed_primary_pointer_type(PointerType::Touch);
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Touch);
+    }
+
+    #[test]
     fn transient_events_survive_one_frame_and_clear_on_read() {
         let mut state = WindowElementState::default();
         let element = GlobalElementId(123);
@@ -1351,6 +2186,264 @@ mod tests {
                 last_seen_frame: FrameId(1),
                 root: GlobalElementId(2),
             },
+        );
+    }
+
+    #[test]
+    fn primary_pointer_type_is_unknown_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Unknown);
+    }
+
+    #[test]
+    fn primary_pointer_type_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_primary_pointer_type(PointerType::Mouse);
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::PrimaryPointerType)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::PrimaryPointerType)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_primary_pointer_type(PointerType::Mouse);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrimaryPointerType)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_primary_pointer_type(PointerType::Touch);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrimaryPointerType)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn color_scheme_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ColorScheme)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ColorScheme)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_color_scheme(Some(ColorScheme::Dark));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn prefers_contrast_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::PrefersContrast)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::PrefersContrast)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_contrast_preference(Some(ContrastPreference::More));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn forced_colors_mode_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ForcedColorsMode)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ForcedColorsMode)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::Active));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn safe_area_insets_is_none_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_safe_area_insets(), None);
+    }
+
+    #[test]
+    fn safe_area_insets_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_safe_area_insets(Some(Edges::all(fret_core::Px(4.0))));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::SafeAreaInsets)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::SafeAreaInsets)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_safe_area_insets(Some(Edges::all(fret_core::Px(4.0))));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::SafeAreaInsets)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_safe_area_insets(None);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::SafeAreaInsets)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn occlusion_insets_is_none_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_occlusion_insets(), None);
+    }
+
+    #[test]
+    fn occlusion_insets_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::OcclusionInsets)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::OcclusionInsets)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_occlusion_insets(None);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
+                .copied()
+                .unwrap(),
+            first_revision + 1
         );
     }
 }

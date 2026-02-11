@@ -41,14 +41,22 @@
 //! # }
 //! ```
 
-use std::path::Path;
+use std::rc::Rc;
 use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use fret_app::SettingsFileV1;
+#[cfg(not(target_arch = "wasm32"))]
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
+use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError};
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
+#[cfg(not(target_arch = "wasm32"))]
 use fret_icons::IconRegistry;
 
 #[derive(Debug, thiserror::Error)]
@@ -95,7 +103,7 @@ pub fn install_default_i18n_backend(app: &mut App) {
     app.set_global(service);
 }
 
-fn default_i18n_lookup() -> Arc<dyn I18nLookup + 'static> {
+fn default_i18n_lookup() -> Rc<dyn I18nLookup + 'static> {
     let mut catalog = FluentCatalog::new();
     catalog
         .add_locale_ftl(
@@ -110,8 +118,8 @@ fn default_i18n_lookup() -> Arc<dyn I18nLookup + 'static> {
         )
         .expect("zh-CN i18n resource must load");
 
-    let lookup = FluentLookup::new(Arc::new(catalog));
-    Arc::new(lookup)
+    let lookup = FluentLookup::new(Rc::new(catalog));
+    Rc::new(lookup)
 }
 
 const DEFAULT_I18N_FTL_EN_US: &str = r#"
@@ -287,13 +295,34 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             .with_layered_menu_bar(".")?)
     }
 
+    pub fn with_default_config_files_for_root(
+        self,
+        project_root: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        let project_root = project_root.as_ref();
+        Ok(self
+            .with_layered_settings(project_root)?
+            .with_command_default_keybindings()
+            .with_layered_keymap(project_root)?
+            .with_layered_menu_bar(project_root)?)
+    }
+
     /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` / `menubar.json` files.
     ///
     /// This uses a repeating `Effect::SetTimer` and checks file metadata (mtime/len) on each tick.
     /// It is intended for local dev workflows and stays portable (no platform-specific watcher deps).
-    pub fn with_config_files_watcher(mut self, poll_interval: Duration) -> Self {
+    pub fn with_config_files_watcher(self, poll_interval: Duration) -> Self {
+        self.with_config_files_watcher_for_root(poll_interval, ".")
+    }
+
+    pub fn with_config_files_watcher_for_root(
+        mut self,
+        poll_interval: Duration,
+        project_root: impl AsRef<Path>,
+    ) -> Self {
+        let project_root = project_root.as_ref().to_path_buf();
         self.inner = self.inner.init_app(move |app| {
-            fret_app::ConfigFilesWatcher::install(app, poll_interval, ".");
+            fret_app::ConfigFilesWatcher::install(app, poll_interval, &project_root);
         });
         self
     }
@@ -580,12 +609,15 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    feature = "ui-app-driver",
-    feature = "diagnostics"
-))]
+#[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
+
+#[cfg(all(
+    feature = "ui-app-driver",
+    feature = "diagnostics",
+    feature = "diagnostics-ws"
+))]
+mod ui_diagnostics_ws_bridge;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
 pub fn init_diagnostics() {

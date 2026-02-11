@@ -16,7 +16,7 @@ Primary goal: make overlay behavior deterministic and regression-tested before d
 - Runtime contract matrix (placement + semantics expectations): `docs/runtime-contract-matrix.md`
 - Focus scopes + traversal: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - Overlay dismiss policy: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-- Modal vs non-modal overlays: `docs/adr/0095-menu-open-modality-and-entry-focus.md`
+- Modal vs non-modal overlays: `docs/adr/0094-menu-open-modality-and-entry-focus.md`
 
 ## Tracking Format
 
@@ -27,8 +27,8 @@ Each TODO is labeled:
 
 ## Baseline (Existing Harnesses)
 
-- Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
-- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
+- Scripted UI regressions: `crates/fret-diag/src/lib.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
+- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `crates/fret-diag/src/lib.rs`)
 - View-cache reuse gating: `--check-view-cache-reuse-min <n>`
 - Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
 - Matrix runner: `fretboard diag matrix ui-gallery` (runs cached+uncached variants and compares per-script bundles)

@@ -1,6 +1,7 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
 use std::ops::Range;
+use std::time::Instant;
 
 use super::*;
 use fret_core::TextMetrics;
@@ -21,15 +22,38 @@ pub(super) fn paint_row(
 ) {
     st.last_bounds = Some(painter.bounds());
 
-    let (row_range, line) = cached_row_text_with_range(st, row, text_cache_max_entries);
+    let perf_enabled = st.paint_perf_enabled;
+    let row_started = perf_enabled.then(Instant::now);
+
+    if perf_enabled {
+        st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
+    }
+
+    let (row_range, line, row_folds, row_preedit_range) = if perf_enabled {
+        let started = Instant::now();
+        let out = cached_row_text_with_range(st, row, text_cache_max_entries);
+        st.paint_perf_frame.us_row_text = st
+            .paint_perf_frame
+            .us_row_text
+            .saturating_add(started.elapsed().as_micros() as u64);
+        out
+    } else {
+        cached_row_text_with_range(st, row, text_cache_max_entries)
+    };
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Color::TRANSPARENT,
+        background: fret_core::Paint::TRANSPARENT,
+
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
+
         corner_radii: Corners::all(Px(0.0)),
     });
+    if perf_enabled {
+        st.paint_perf_frame.quads_background =
+            st.paint_perf_frame.quads_background.saturating_add(1);
+    }
 
     // Align the text baseline within the row rect.
     //
@@ -38,10 +62,21 @@ pub(super) fn paint_row(
     // font's actual line height. Measure a representative line to compute a stable baseline and
     // vertically center the glyph box within the row.
     let scale_factor = painter.scale_factor();
+    // Keep a stable (generous) max width for shaping so window resize drag doesn't force every
+    // visible row to re-prepare text blobs on each pixel delta.
+    //
+    // We still rely on viewport scissoring for correctness; the max width is an upper bound to
+    // avoid shaping arbitrarily long unwrapped lines.
+    let stable_max_width = if cell_w.0 > 0.01 {
+        // ~512 monospace columns is enough for typical editor viewports and keeps the cache key
+        // stable across small/medium resizes.
+        Px((cell_w.0 * 512.0).max(rect.size.width.0))
+    } else {
+        rect.size.width
+    };
     let scale_bits = scale_factor.to_bits();
-    let max_width = rect.size.width;
     let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
-        cache.max_width == max_width
+        cache.max_width == stable_max_width
             && cache.row_h == row_h
             && cache.scale_bits == scale_bits
             && &cache.text_style == text_style
@@ -55,14 +90,21 @@ pub(super) fn paint_row(
     } else {
         let (services, _) = painter.services_and_scene();
         let measure_constraints = fret_core::TextConstraints {
-            max_width: Some(max_width),
+            max_width: Some(stable_max_width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             scale_factor,
         };
+        let started = perf_enabled.then(Instant::now);
         let metrics = services
             .text()
             .measure_str(" ", text_style, measure_constraints);
+        if let Some(started) = started {
+            st.paint_perf_frame.us_baseline_measure = st
+                .paint_perf_frame
+                .us_baseline_measure
+                .saturating_add(started.elapsed().as_micros() as u64);
+        }
         let measured_h = if metrics.size.height.0 > 0.01 {
             metrics.size.height
         } else {
@@ -71,7 +113,7 @@ pub(super) fn paint_row(
             Px(row_h.0.max(16.0))
         };
         st.baseline_measure_cache = Some(BaselineMeasureCache {
-            max_width,
+            max_width: stable_max_width,
             row_h,
             scale_bits,
             text_style: text_style.clone(),
@@ -88,7 +130,7 @@ pub(super) fn paint_row(
     let scope = painter.key_scope(&"fret-code-editor-row-text");
     let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
     let constraints = CanvasTextConstraints {
-        max_width: Some(rect.size.width),
+        max_width: Some(stable_max_width),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
@@ -98,102 +140,254 @@ pub(super) fn paint_row(
     let mut row_blob_metrics = None::<TextMetrics>;
 
     if let Some(preedit) = &st.preedit {
-        let caret = st.selection.caret().min(st.buffer.len_bytes());
-        let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
-        if caret_pt.row == row {
-            let mut caret_in_line = caret.saturating_sub(row_range.start).min(line.len());
-            caret_in_line =
-                fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
+        if st.compose_inline_preedit {
+            if let Some(range) = row_preedit_range.clone() {
+                let rich = materialize_preedit_rich_text_for_range(
+                    Arc::clone(&line),
+                    range,
+                    preedit,
+                    fg,
+                    selection_bg,
+                );
+                let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+                let (blob, metrics) = painter.rich_text_with_blob(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    scale_factor,
+                );
+                row_blob = Some(blob);
+                row_blob_metrics = Some(metrics);
+                drew_rich = true;
+            }
+        } else {
+            let caret = st.selection.caret().min(st.buffer.len_bytes());
+            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
+            if caret_pt.row == row {
+                let caret_local = caret.saturating_sub(row_range.start);
+                let mut caret_in_line = caret_local.min(line.len());
+                if let Some(folds) = row_folds.as_ref() {
+                    caret_in_line = folds
+                        .buffer_local_to_display_local(caret_local)
+                        .min(line.len());
+                }
+                caret_in_line =
+                    fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
 
-            let rich = materialize_preedit_rich_text(
-                Arc::clone(&line),
-                caret_in_line,
-                preedit,
-                fg,
-                selection_bg,
-            );
-            let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-            let (blob, metrics) = painter.rich_text_with_blob(
-                key,
-                DrawOrder(2),
-                origin,
-                rich,
-                text_style.clone(),
-                fg,
-                constraints,
-                scale_factor,
-            );
-            row_preedit = Some(RowPreeditMapping {
-                insert_at: caret_in_line,
-                preedit_len: preedit.text.len(),
-            });
-            row_blob = Some(blob);
-            row_blob_metrics = Some(metrics);
-            drew_rich = true;
+                let rich = materialize_preedit_rich_text(
+                    Arc::clone(&line),
+                    caret_in_line,
+                    preedit,
+                    fg,
+                    selection_bg,
+                );
+                let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+                let started = perf_enabled.then(Instant::now);
+                let (blob, metrics) = painter.rich_text_with_blob(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    scale_factor,
+                );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_text_draw = st
+                        .paint_perf_frame
+                        .us_text_draw
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
+                row_preedit = Some(RowPreeditMapping {
+                    insert_at: caret_in_line,
+                    preedit_len: preedit.text.len(),
+                });
+                row_blob = Some(blob);
+                row_blob_metrics = Some(metrics);
+                drew_rich = true;
+            }
         }
     }
+    let row_has_preedit = st.preedit.is_some()
+        && if st.compose_inline_preedit {
+            row_preedit_range.is_some()
+        } else {
+            row_preedit.is_some()
+        };
     #[cfg(feature = "syntax")]
     {
         if !drew_rich {
             let line_idx = st.display_map.display_row_line(row);
-            let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
+            let spans = if perf_enabled {
+                let started = Instant::now();
+                let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
+                st.paint_perf_frame.us_syntax_spans = st
+                    .paint_perf_frame
+                    .us_syntax_spans
+                    .saturating_add(started.elapsed().as_micros() as u64);
+                spans
+            } else {
+                cached_row_syntax_spans(st, line_idx, text_cache_max_entries)
+            };
             if !spans.is_empty() {
+                let rich_cache_max_entries = text_cache_max_entries.min(2048);
+                st.cache_stats.row_rich_get_calls =
+                    st.cache_stats.row_rich_get_calls.saturating_add(1);
+
                 let seg_start_in_line = row_range
                     .start
                     .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start));
                 let seg_end_in_line = seg_start_in_line.saturating_add(line.len());
 
-                let mut clipped: Vec<SyntaxSpan> = Vec::new();
-                for span in spans.as_ref() {
-                    let start = span.range.start.max(seg_start_in_line);
-                    let end = span.range.end.min(seg_end_in_line);
-                    if start >= end {
-                        continue;
+                let theme_revision = {
+                    let theme = painter.theme();
+                    theme.revision()
+                };
+
+                st.row_rich_cache_tick = st.row_rich_cache_tick.saturating_add(1);
+                let tick = st.row_rich_cache_tick;
+
+                if let Some((cached, last_used)) = st.row_rich_cache.get_mut(&row) {
+                    let hit = cached.theme_revision == theme_revision
+                        && cached.row_range == row_range
+                        && Arc::ptr_eq(&cached.line, &line)
+                        && Arc::ptr_eq(&cached.syntax_spans, &spans);
+                    if hit {
+                        *last_used = tick;
+                        st.row_rich_cache_queue.push_back((row, tick));
+                        st.cache_stats.row_rich_hits =
+                            st.cache_stats.row_rich_hits.saturating_add(1);
+
+                        let started = perf_enabled.then(Instant::now);
+                        let (blob, metrics) = painter.rich_text_with_blob(
+                            key,
+                            DrawOrder(2),
+                            origin,
+                            cached.rich.clone(),
+                            text_style.clone(),
+                            fg,
+                            constraints,
+                            scale_factor,
+                        );
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_text_draw = st
+                                .paint_perf_frame
+                                .us_text_draw
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
+                        row_blob = Some(blob);
+                        row_blob_metrics = Some(metrics);
+                        drew_rich = true;
                     }
-                    clipped.push(SyntaxSpan {
-                        range: (start - seg_start_in_line)..(end - seg_start_in_line),
-                        highlight: span.highlight,
-                    });
                 }
 
-                if !clipped.is_empty() {
-                    clipped.sort_by_key(|s| s.range.start);
-                    clipped.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
-                    let mut merged: Vec<SyntaxSpan> = Vec::new();
-                    for span in clipped {
-                        if let Some(last) = merged.last_mut()
-                            && last.highlight == span.highlight
-                            && last.range.end == span.range.start
-                        {
-                            last.range.end = span.range.end;
+                if !drew_rich {
+                    st.cache_stats.row_rich_misses =
+                        st.cache_stats.row_rich_misses.saturating_add(1);
+
+                    let mut clipped: Vec<SyntaxSpan> = Vec::new();
+                    for span in spans.as_ref() {
+                        let start = span.range.start.max(seg_start_in_line);
+                        let end = span.range.end.min(seg_end_in_line);
+                        if start >= end {
                             continue;
                         }
-                        merged.push(span);
+                        clipped.push(SyntaxSpan {
+                            range: (start - seg_start_in_line)..(end - seg_start_in_line),
+                            highlight: span.highlight,
+                        });
                     }
 
-                    let rich = {
-                        let theme = painter.theme();
-                        materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
-                    };
-                    let (blob, metrics) = painter.rich_text_with_blob(
-                        key,
-                        DrawOrder(2),
-                        origin,
-                        rich,
-                        text_style.clone(),
-                        fg,
-                        constraints,
-                        scale_factor,
-                    );
-                    row_blob = Some(blob);
-                    row_blob_metrics = Some(metrics);
-                    drew_rich = true;
+                    if !clipped.is_empty() {
+                        clipped.sort_by_key(|s| s.range.start);
+                        clipped.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+                        let mut merged: Vec<SyntaxSpan> = Vec::new();
+                        for span in clipped {
+                            if let Some(last) = merged.last_mut()
+                                && last.highlight == span.highlight
+                                && last.range.end == span.range.start
+                            {
+                                last.range.end = span.range.end;
+                                continue;
+                            }
+                            merged.push(span);
+                        }
+
+                        let started = perf_enabled.then(Instant::now);
+                        let rich = {
+                            let theme = painter.theme();
+                            materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
+                        };
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_rich_materialize = st
+                                .paint_perf_frame
+                                .us_rich_materialize
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
+                        st.row_rich_cache.insert(
+                            row,
+                            (
+                                RowRichCacheEntry {
+                                    row_range: row_range.clone(),
+                                    line: Arc::clone(&line),
+                                    syntax_spans: Arc::clone(&spans),
+                                    theme_revision,
+                                    rich: rich.clone(),
+                                },
+                                tick,
+                            ),
+                        );
+                        st.row_rich_cache_queue.push_back((row, tick));
+
+                        while st.row_rich_cache.len() > rich_cache_max_entries {
+                            let Some((victim, victim_tick)) = st.row_rich_cache_queue.pop_front()
+                            else {
+                                break;
+                            };
+                            let remove = st
+                                .row_rich_cache
+                                .get(&victim)
+                                .is_some_and(|(_, last_used)| *last_used == victim_tick);
+                            if remove {
+                                st.row_rich_cache.remove(&victim);
+                                st.cache_stats.row_rich_evictions =
+                                    st.cache_stats.row_rich_evictions.saturating_add(1);
+                            }
+                        }
+
+                        let started = perf_enabled.then(Instant::now);
+                        let (blob, metrics) = painter.rich_text_with_blob(
+                            key,
+                            DrawOrder(2),
+                            origin,
+                            rich,
+                            text_style.clone(),
+                            fg,
+                            constraints,
+                            scale_factor,
+                        );
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_text_draw = st
+                                .paint_perf_frame
+                                .us_text_draw
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
+                        row_blob = Some(blob);
+                        row_blob_metrics = Some(metrics);
+                        drew_rich = true;
+                    }
                 }
             }
         }
     }
 
     if !drew_rich {
+        let started = perf_enabled.then(Instant::now);
         let (blob, metrics) = painter.text_with_blob(
             key,
             DrawOrder(2),
@@ -204,6 +398,12 @@ pub(super) fn paint_row(
             constraints,
             scale_factor,
         );
+        if let Some(started) = started {
+            st.paint_perf_frame.us_text_draw = st
+                .paint_perf_frame
+                .us_text_draw
+                .saturating_add(started.elapsed().as_micros() as u64);
+        }
         row_blob = Some(blob);
         row_blob_metrics = Some(metrics);
     }
@@ -214,7 +414,10 @@ pub(super) fn paint_row(
     let mut caret_rect_height = None::<Px>;
     if let (Some(blob), Some(blob_metrics)) = (row_blob, row_blob_metrics.as_ref()) {
         let cached = st.row_geom_cache.get(&row).is_some_and(|(geom, _)| {
-            geom.blob == blob && geom.row_range == row_range && geom.preedit == row_preedit
+            geom.blob == blob
+                && geom.row_range == row_range
+                && geom.has_preedit == row_has_preedit
+                && geom.preedit == row_preedit
         });
         if cached {
             let geom = &st
@@ -228,10 +431,24 @@ pub(super) fn paint_row(
         } else {
             let mut stops: Vec<(usize, Px)> = Vec::new();
             let (services, _) = painter.services_and_scene();
+            let caret_stops_started = perf_enabled.then(Instant::now);
             services.text().caret_stops(blob, &mut stops);
+            if let Some(started) = caret_stops_started {
+                st.paint_perf_frame.us_caret_stops = st
+                    .paint_perf_frame
+                    .us_caret_stops
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
+            let caret_rect_started = perf_enabled.then(Instant::now);
             let caret_rect = services
                 .text()
                 .caret_rect(blob, 0, CaretAffinity::Downstream);
+            if let Some(started) = caret_rect_started {
+                st.paint_perf_frame.us_caret_rect = st
+                    .paint_perf_frame
+                    .us_caret_rect
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
 
             // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
             // Convert it into row-local coordinates by anchoring the box using the *actual* blob
@@ -251,8 +468,10 @@ pub(super) fn paint_row(
                 row_range: row_range.clone(),
                 blob,
                 caret_stops: stops,
+                fold_map: row_folds.clone(),
                 caret_rect_top,
                 caret_rect_height,
+                has_preedit: row_has_preedit,
                 preedit: row_preedit,
             });
             caret_stops = fresh_geom
@@ -271,16 +490,29 @@ pub(super) fn paint_row(
         if global_start < global_end
             && let Some(blob) = row_blob
         {
-            let local_start = global_start.saturating_sub(row_range.start).min(line.len());
-            let local_end = global_end.saturating_sub(row_range.start).min(line.len());
+            let mut local_start = global_start.saturating_sub(row_range.start);
+            let mut local_end = global_end.saturating_sub(row_range.start);
+            if let Some(folds) = &row_folds {
+                local_start = folds.buffer_local_to_display_local(local_start);
+                local_end = folds.buffer_local_to_display_local(local_end);
+            }
+            local_start = local_start.min(line.len());
+            local_end = local_end.min(line.len());
             if local_start < local_end {
                 let (services, _) = painter.services_and_scene();
                 st.selection_rect_scratch.clear();
+                let started = perf_enabled.then(Instant::now);
                 services.text().selection_rects(
                     blob,
                     (local_start, local_end),
                     &mut st.selection_rect_scratch,
                 );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_selection_rects = st
+                        .paint_perf_frame
+                        .us_selection_rects
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
 
                 for local_rect in st.selection_rect_scratch.iter().copied() {
                     let x0 = local_rect.origin.x.0;
@@ -298,11 +530,17 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
+                    if perf_enabled {
+                        st.paint_perf_frame.quads_selection =
+                            st.paint_perf_frame.quads_selection.saturating_add(1);
+                    }
                     drew_selection = true;
                 }
             }
@@ -315,10 +553,18 @@ pub(super) fn paint_row(
             let global_start = sel.start.max(row_range.start).min(row_range.end);
             let global_end = sel.end.max(row_range.start).min(row_range.end);
             if global_start < global_end {
-                let local_start = global_start.saturating_sub(row_range.start);
-                let local_end = global_end.saturating_sub(row_range.start);
+                let mut local_start = global_start.saturating_sub(row_range.start);
+                let mut local_end = global_end.saturating_sub(row_range.start);
+                if let Some(folds) = &row_folds {
+                    local_start = folds.buffer_local_to_display_local(local_start);
+                    local_end = folds.buffer_local_to_display_local(local_end);
+                }
                 let mut ranges: Vec<(usize, usize)> = Vec::new();
                 if let Some(preedit) = row_preedit {
+                    // Paint-time preedit injection: selection indices are expressed in the base
+                    // (pre-injection) row string, but caret stops are measured against the injected
+                    // blob. Split and shift the selection range to keep the injected preedit gap
+                    // unselected.
                     if local_end <= preedit.insert_at {
                         ranges.push((local_start, local_end));
                     } else if local_start >= preedit.insert_at {
@@ -334,7 +580,28 @@ pub(super) fn paint_row(
                         ));
                     }
                 } else {
+                    // View-composed preedit: selection indices are already in the composed row
+                    // string coordinate space. Remove the composed preedit range so we don't select
+                    // uncommitted text.
                     ranges.push((local_start, local_end));
+                    if let Some(gap) = row_preedit_range.as_ref() {
+                        let gap_start = gap.start;
+                        let gap_end = gap.end;
+                        let mut clipped: Vec<(usize, usize)> = Vec::new();
+                        for (a, b) in ranges.drain(..) {
+                            if b <= gap_start || a >= gap_end {
+                                clipped.push((a, b));
+                                continue;
+                            }
+                            if a < gap_start {
+                                clipped.push((a, gap_start));
+                            }
+                            if b > gap_end {
+                                clipped.push((gap_end, b));
+                            }
+                        }
+                        ranges = clipped;
+                    }
                 }
 
                 for (a, b) in ranges {
@@ -353,11 +620,17 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
+                    if perf_enabled {
+                        st.paint_perf_frame.quads_selection =
+                            st.paint_perf_frame.quads_selection.saturating_add(1);
+                    }
                 }
             }
         }
@@ -368,8 +641,11 @@ pub(super) fn paint_row(
             let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
             if caret_pt.row == row {
                 let mut local = caret.saturating_sub(row_range.start);
+                if let Some(folds) = &row_folds {
+                    local = folds.buffer_local_to_display_local(local);
+                }
                 if let Some(preedit) = &st.preedit
-                    && row_preedit.is_some()
+                    && (row_preedit.is_some() || row_preedit_range.is_some())
                 {
                     local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
                 }
@@ -392,9 +668,11 @@ pub(super) fn paint_row(
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: caret_color,
+                    background: fret_core::Paint::Solid(caret_color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -422,9 +700,11 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: selection_bg,
+                        background: fret_core::Paint::Solid(selection_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -435,23 +715,80 @@ pub(super) fn paint_row(
             let caret = st.selection.caret().min(st.buffer.len_bytes());
             let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
             if caret_pt.row == row {
-                let mut col = caret_pt.col;
-                if let Some(preedit) = &st.preedit {
-                    col = col.saturating_add(preedit_cursor_offset_cols(preedit));
-                }
-                let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
-                let caret_rect = Rect::new(
-                    fret_core::Point::new(x, rect.origin.y),
-                    Size::new(Px(1.0), row_h),
-                );
+                let caret_rect = if let Some(blob) = row_blob {
+                    let mut local = caret.saturating_sub(row_range.start);
+                    if let Some(folds) = &row_folds {
+                        local = folds.buffer_local_to_display_local(local);
+                    }
+                    local = local.min(line.len());
+                    if let Some(preedit) = &st.preedit
+                        && (row_preedit.is_some() || row_preedit_range.is_some())
+                    {
+                        local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+                    }
+                    let max_len = if let Some(preedit) = &st.preedit
+                        && (row_preedit.is_some() || row_preedit_range.is_some())
+                    {
+                        if row_preedit.is_some() {
+                            line.len().saturating_add(preedit.text.len())
+                        } else {
+                            line.len()
+                        }
+                    } else {
+                        line.len()
+                    };
+                    local = local.min(max_len);
+
+                    let (services, _) = painter.services_and_scene();
+                    let started = perf_enabled.then(Instant::now);
+                    let x0 = services.text().caret_x(blob, local);
+                    if let Some(started) = started {
+                        st.paint_perf_frame.us_caret_x = st
+                            .paint_perf_frame
+                            .us_caret_x
+                            .saturating_add(started.elapsed().as_micros() as u64);
+                    }
+
+                    let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                        (caret_rect_top, caret_rect_height)
+                        && h.0 > 0.0
+                    {
+                        (top, Px(h.0.min(row_h.0)))
+                    } else {
+                        (Px(0.0), row_h)
+                    };
+                    Rect::new(
+                        fret_core::Point::new(
+                            Px(rect.origin.x.0 + x0.0),
+                            Px(rect.origin.y.0 + caret_top.0),
+                        ),
+                        Size::new(Px(1.0), caret_h),
+                    )
+                } else {
+                    let mut col = caret_pt.col;
+                    if let Some(preedit) = &st.preedit {
+                        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+                    }
+                    let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
+                    Rect::new(
+                        fret_core::Point::new(x, rect.origin.y),
+                        Size::new(Px(1.0), row_h),
+                    )
+                };
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: caret_color,
+                    background: fret_core::Paint::Solid(caret_color),
+
                     border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
                     corner_radii: Corners::all(Px(0.0)),
                 });
+                if perf_enabled {
+                    st.paint_perf_frame.quads_caret =
+                        st.paint_perf_frame.quads_caret.saturating_add(1);
+                }
             }
         }
     }
@@ -459,9 +796,17 @@ pub(super) fn paint_row(
     // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
-    if st.row_geom_cache_rev != rev || st.row_geom_cache_wrap_cols != wrap_cols {
+    let folds_epoch = st.folds_epoch;
+    let inlays_epoch = st.inlays_epoch;
+    if st.row_geom_cache_rev != rev
+        || st.row_geom_cache_wrap_cols != wrap_cols
+        || st.row_geom_cache_folds_epoch != folds_epoch
+        || st.row_geom_cache_inlays_epoch != inlays_epoch
+    {
         st.row_geom_cache_rev = rev;
         st.row_geom_cache_wrap_cols = wrap_cols;
+        st.row_geom_cache_folds_epoch = folds_epoch;
+        st.row_geom_cache_inlays_epoch = inlays_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -491,6 +836,19 @@ pub(super) fn paint_row(
             }
         }
     }
+
+    if perf_enabled {
+        st.paint_perf_frame.rows_drew_rich = st
+            .paint_perf_frame
+            .rows_drew_rich
+            .saturating_add(drew_rich as u64);
+        if let Some(row_started) = row_started {
+            st.paint_perf_frame.us_total = st
+                .paint_perf_frame
+                .us_total
+                .saturating_add(row_started.elapsed().as_micros() as u64);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -506,17 +864,37 @@ pub(super) fn cached_row_text_with_range(
     st: &mut CodeEditorState,
     row: usize,
     max_entries: usize,
-) -> (Range<usize>, Arc<str>) {
+) -> (
+    Range<usize>,
+    Arc<str>,
+    Option<super::geom::RowFoldMap>,
+    Option<Range<usize>>,
+) {
     st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
-    if st.row_text_cache_rev != rev || st.row_text_cache_wrap_cols != wrap_cols {
+    let folds_epoch = st.folds_epoch;
+    let inlays_epoch = st.inlays_epoch;
+    if st.row_text_cache_rev != rev
+        || st.row_text_cache_wrap_cols != wrap_cols
+        || st.row_text_cache_folds_epoch != folds_epoch
+        || st.row_text_cache_inlays_epoch != inlays_epoch
+    {
         st.row_text_cache_rev = rev;
         st.row_text_cache_wrap_cols = wrap_cols;
+        st.row_text_cache_folds_epoch = folds_epoch;
+        st.row_text_cache_inlays_epoch = inlays_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+        #[cfg(feature = "syntax")]
+        {
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
+            st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+        }
     }
 
     st.row_text_cache_tick = st.row_text_cache_tick.saturating_add(1);
@@ -526,23 +904,39 @@ pub(super) fn cached_row_text_with_range(
         *last_used = tick;
         st.row_text_cache_queue.push_back((row, tick));
         st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
-        return (text.range.clone(), Arc::clone(&text.text));
+        return (
+            text.range.clone(),
+            Arc::clone(&text.text),
+            text.fold_map.clone(),
+            text.preedit_range.clone(),
+        );
     }
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
-    let range = st.display_map.display_row_byte_range(&st.buffer, row);
+    let materialized = st.display_map.materialize_display_row_text(&st.buffer, row);
+    let range = materialized.row_range.clone();
     let range_for_return = range.clone();
-    let text: Arc<str> = st
-        .buffer
-        .slice_to_string(range.clone())
-        .unwrap_or_default()
-        .into();
+    let preedit_range = materialized.preedit_range.clone();
+
+    let spans: Vec<super::geom::RowFoldSpan> = materialized
+        .spans
+        .into_iter()
+        .map(|span| super::geom::RowFoldSpan {
+            buffer_range: span.buffer_range,
+            display_range: span.display_range,
+        })
+        .collect();
+    let fold_map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
+    let text = materialized.text;
+
     st.row_text_cache.insert(
         row,
         (
             RowTextCacheEntry {
                 text: Arc::clone(&text),
                 range,
+                fold_map: fold_map.clone(),
+                preedit_range: preedit_range.clone(),
             },
             tick,
         ),
@@ -563,7 +957,7 @@ pub(super) fn cached_row_text_with_range(
         }
     }
 
-    (range_for_return, text)
+    (range_for_return, text, fold_map, preedit_range)
 }
 
 pub(super) fn materialize_preedit_rich_text(
@@ -648,6 +1042,95 @@ pub(super) fn materialize_preedit_rich_text(
                 ..Default::default()
             },
         });
+    }
+
+    if after_len > 0 {
+        spans.push(TextSpan::new(after_len));
+    }
+
+    AttributedText::new(display, spans)
+}
+
+pub(super) fn materialize_preedit_rich_text_for_range(
+    line: Arc<str>,
+    preedit_range: Range<usize>,
+    preedit: &PreeditState,
+    fg: Color,
+    selection_bg: Color,
+) -> AttributedText {
+    let start = preedit_range.start.min(line.len());
+    let end = preedit_range.end.min(line.len()).max(start);
+
+    let display = line.as_ref().to_string();
+
+    let before_len = start;
+    let preedit_len = end.saturating_sub(start);
+    let after_len = display.len().saturating_sub(end);
+
+    let underline = UnderlineStyle {
+        color: Some(fg),
+        style: DecorationLineStyle::Solid,
+    };
+
+    let cursor_range = preedit.cursor.and_then(|(a, b)| {
+        let a = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), a)
+            .min(preedit.text.len());
+        let b = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), b)
+            .min(preedit.text.len());
+        if a == b {
+            return None;
+        }
+        Some(if a <= b { a..b } else { b..a })
+    });
+
+    let mut spans: Vec<TextSpan> = Vec::new();
+    if before_len > 0 {
+        spans.push(TextSpan::new(before_len));
+    }
+
+    if preedit_len > 0 {
+        if let Some(cursor) = cursor_range {
+            let pre_a = cursor.start.min(preedit_len);
+            let pre_b = cursor.end.min(preedit_len);
+            if pre_a > 0 {
+                spans.push(TextSpan {
+                    len: pre_a,
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        underline: Some(underline.clone()),
+                        ..Default::default()
+                    },
+                });
+            }
+            spans.push(TextSpan {
+                len: pre_b.saturating_sub(pre_a),
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    bg: Some(selection_bg),
+                    underline: Some(underline.clone()),
+                    ..Default::default()
+                },
+            });
+            if pre_b < preedit_len {
+                spans.push(TextSpan {
+                    len: preedit_len - pre_b,
+                    shaping: Default::default(),
+                    paint: TextPaintStyle {
+                        underline: Some(underline),
+                        ..Default::default()
+                    },
+                });
+            }
+        } else {
+            spans.push(TextSpan {
+                len: preedit_len,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    underline: Some(underline),
+                    ..Default::default()
+                },
+            });
+        }
     }
 
     if after_len > 0 {
@@ -765,6 +1248,10 @@ pub(super) fn cached_row_syntax_spans(
         st.syntax_row_cache.clear();
         st.syntax_row_cache_queue.clear();
         st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
+        st.row_rich_cache_tick = 0;
+        st.row_rich_cache.clear();
+        st.row_rich_cache_queue.clear();
+        st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
     }
 
     st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);

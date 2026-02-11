@@ -12,7 +12,7 @@
     }
   ],
   "filter_plan": {
-    "revision": 1,
+    "revision": 2,
     "grids": [
       {
         "grid": 1,
@@ -31,26 +31,26 @@
     "data_indices": {
       "len": 10,
       "head": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
       ],
       "tail": [
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
       ],
-      "hash": 10952987118811563378
+      "hash": 14611691505135279722
     },
     "rect_data_indices": {
       "len": 0,
@@ -70,18 +70,33 @@
     ]
   },
   "participation": {
-    "revision": 1,
+    "revision": 2,
     "series": [
       {
         "series": 1,
         "dataset": 2,
-        "revision": 1,
+        "revision": 2,
         "data_revision": 2,
         "selection": {
-          "kind": "range",
-          "start": 0,
-          "end": 10,
-          "view_len": 10
+          "kind": "indices",
+          "view_len": 10,
+          "head": [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "tail": [
+            19,
+            18,
+            17,
+            16,
+            15,
+            14
+          ],
+          "hash": 14611691505135279722
         },
         "x_filter_mode": "Filter",
         "y_filter_mode": "None",

@@ -21,7 +21,7 @@ use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
 use std::slice;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 mod bounds_tree;
 mod commands;
@@ -130,7 +130,6 @@ struct Node<H: UiHost> {
     parent: Option<NodeId>,
     children: Vec<NodeId>,
     bounds: Rect,
-    bounds_written_paint_pass: u64,
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
@@ -209,7 +208,6 @@ impl<H: UiHost> Node<H> {
             parent: None,
             children: Vec::new(),
             bounds: Rect::default(),
-            bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             measure_cache: None,
             invalidation: InvalidationFlags {
@@ -1180,8 +1178,6 @@ pub struct UiDebugPaintTextPrepareHotspot {
     pub element_kind: &'static str,
     pub text_len: u32,
     pub constraints: TextConstraints,
-    pub metrics: fret_core::TextMetrics,
-    pub bounds: fret_core::Rect,
     pub reasons_mask: u16,
     pub prepare_time: Duration,
 }
@@ -1587,6 +1583,10 @@ pub struct UiTree<H: UiHost> {
     layout_invalidations_count: u32,
     last_layout_bounds: Option<Rect>,
     last_layout_scale_factor: Option<f32>,
+    interactive_resize_active: bool,
+    interactive_resize_stable_frames: u8,
+    interactive_resize_last_updated_frame: Option<FrameId>,
+    interactive_resize_last_bounds_delta: Option<(fret_core::Px, fret_core::Px)>,
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
 
@@ -1642,13 +1642,10 @@ pub struct UiTree<H: UiHost> {
     debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
     #[cfg(feature = "diagnostics")]
     debug_text_constraints_prepared: HashMap<NodeId, TextConstraints>,
-    #[cfg(feature = "diagnostics")]
-    debug_text_metrics_measured: HashMap<NodeId, fret_core::TextMetrics>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
-    paint_pass: u64,
     paint_cache: PaintCacheState,
     interaction_cache: prepaint::InteractionCacheState,
 
@@ -1742,7 +1739,7 @@ impl LayoutNodeProfileState {
             node,
             pass_kind,
             bounds,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1803,7 +1800,7 @@ struct LayoutNodeProfileStackEntry {
     node: NodeId,
     pass_kind: crate::layout_pass::LayoutPassKind,
     bounds: Rect,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -1874,7 +1871,7 @@ impl MeasureNodeProfileState {
         self.stack.push(MeasureNodeProfileStackEntry {
             node,
             constraints,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1931,7 +1928,7 @@ impl MeasureNodeProfileState {
 struct MeasureNodeProfileStackEntry {
     node: NodeId,
     constraints: crate::layout_constraints::LayoutConstraints,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -2026,6 +2023,10 @@ impl<H: UiHost> Default for UiTree<H> {
             layout_invalidations_count: 0,
             last_layout_bounds: None,
             last_layout_scale_factor: None,
+            interactive_resize_active: false,
+            interactive_resize_stable_frames: 0,
+            interactive_resize_last_updated_frame: None,
+            interactive_resize_last_bounds_delta: None,
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,
@@ -2079,12 +2080,9 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_text_constraints_measured: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_text_constraints_prepared: HashMap::new(),
-            #[cfg(feature = "diagnostics")]
-            debug_text_metrics_measured: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
-            paint_pass: 1,
             paint_cache: PaintCacheState::default(),
             interaction_cache: prepaint::InteractionCacheState::default(),
             dirty_cache_roots: HashSet::new(),
@@ -2446,7 +2444,6 @@ impl<H: UiHost> UiTree<H> {
             self.debug_reachable_from_layer_roots = None;
             self.debug_text_constraints_measured.clear();
             self.debug_text_constraints_prepared.clear();
-            self.debug_text_metrics_measured.clear();
         }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
@@ -2555,6 +2552,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_hotspot(
         &mut self,
         node: NodeId,
@@ -2562,8 +2560,6 @@ impl<H: UiHost> UiTree<H> {
         element_kind: &'static str,
         text_len: u32,
         constraints: TextConstraints,
-        metrics: fret_core::TextMetrics,
-        bounds: fret_core::Rect,
         reasons_mask: u16,
         prepare_time: Duration,
     ) {
@@ -2577,8 +2573,6 @@ impl<H: UiHost> UiTree<H> {
             element_kind,
             text_len,
             constraints,
-            metrics,
-            bounds,
             reasons_mask,
             prepare_time,
         };
@@ -2594,6 +2588,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_reasons(
         &mut self,
         blob_missing: bool,
@@ -2760,23 +2755,6 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(not(feature = "diagnostics"))]
         {
             let _ = (node, constraints);
-        }
-    }
-
-    pub(crate) fn debug_record_text_metrics_measured(
-        &mut self,
-        node: NodeId,
-        metrics: fret_core::TextMetrics,
-    ) {
-        #[cfg(feature = "diagnostics")]
-        {
-            if self.debug_enabled {
-                self.debug_text_metrics_measured.insert(node, metrics);
-            }
-        }
-        #[cfg(not(feature = "diagnostics"))]
-        {
-            let _ = (node, metrics);
         }
     }
 
@@ -3016,15 +2994,27 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
-        self.debug_layout_engine_solves
-            .push(UiDebugLayoutEngineSolve {
-                root,
-                solve_time,
-                measure_calls,
-                measure_cache_hits,
-                measure_time,
-                top_measures,
-            });
+        // Keep bundles bounded: barrier layouts may solve many child roots in a single frame.
+        const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
+        let record = UiDebugLayoutEngineSolve {
+            root,
+            solve_time,
+            measure_calls,
+            measure_cache_hits,
+            measure_time,
+            top_measures,
+        };
+
+        let idx = self
+            .debug_layout_engine_solves
+            .iter()
+            .position(|h| h.solve_time < record.solve_time)
+            .unwrap_or(self.debug_layout_engine_solves.len());
+        self.debug_layout_engine_solves.insert(idx, record);
+        if self.debug_layout_engine_solves.len() > MAX_LAYOUT_ENGINE_SOLVES {
+            self.debug_layout_engine_solves
+                .truncate(MAX_LAYOUT_ENGINE_SOLVES);
+        }
     }
 
     pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
@@ -3286,42 +3276,6 @@ impl<H: UiHost> UiTree<H> {
         });
     }
 
-    pub(crate) fn sync_hit_test_gate_widget(&mut self, node: NodeId, hit_test: bool) {
-        if self
-            .nodes
-            .get(node)
-            .and_then(|n| n.widget.as_ref())
-            .is_none()
-        {
-            return;
-        }
-        #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_HIT_TEST_GATE_SYNC").is_some() {
-            eprintln!("sync_hit_test_gate_widget: node={node:?} hit_test={hit_test}");
-        }
-        self.with_widget_mut(node, |w, _ui| {
-            w.sync_hit_test_gate(hit_test);
-        });
-    }
-
-    pub(crate) fn sync_focus_traversal_gate_widget(&mut self, node: NodeId, traverse: bool) {
-        if self
-            .nodes
-            .get(node)
-            .and_then(|n| n.widget.as_ref())
-            .is_none()
-        {
-            return;
-        }
-        #[cfg(debug_assertions)]
-        if std::env::var_os("FRET_DEBUG_FOCUS_TRAVERSAL_GATE_SYNC").is_some() {
-            eprintln!("sync_focus_traversal_gate_widget: node={node:?} traverse={traverse}");
-        }
-        self.with_widget_mut(node, |w, _ui| {
-            w.sync_focus_traversal_gate(traverse);
-        });
-    }
-
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;
@@ -3359,11 +3313,15 @@ impl<H: UiHost> UiTree<H> {
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            n.view_cache = ViewCacheFlags {
+            let next = ViewCacheFlags {
                 enabled,
                 contained_layout,
                 layout_definite,
             };
+            if n.view_cache == next {
+                return;
+            }
+            n.view_cache = next;
         }
     }
 
@@ -3510,6 +3468,137 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn interactive_resize_active(&self) -> bool {
+        self.interactive_resize_active
+    }
+
+    pub(crate) fn update_interactive_resize_state_for_layout(
+        &mut self,
+        frame_id: FrameId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
+        if self.interactive_resize_last_updated_frame == Some(frame_id) {
+            return;
+        }
+        self.interactive_resize_last_updated_frame = Some(frame_id);
+
+        let prev_bounds = self.last_layout_bounds;
+        let prev_scale_bits = self.last_layout_scale_factor.map(|v| v.to_bits());
+        let scale_bits = scale_factor.to_bits();
+        let bounds_changed = prev_bounds.is_some_and(|prev| {
+            prev.size.width.0.to_bits() != bounds.size.width.0.to_bits()
+                || prev.size.height.0.to_bits() != bounds.size.height.0.to_bits()
+        });
+        let scale_changed = prev_scale_bits.is_some_and(|prev| prev != scale_bits);
+        let changed = bounds_changed || scale_changed;
+
+        if changed {
+            self.interactive_resize_last_bounds_delta = if bounds_changed {
+                prev_bounds.map(|prev| {
+                    let dw = (bounds.size.width.0 - prev.size.width.0).abs();
+                    let dh = (bounds.size.height.0 - prev.size.height.0).abs();
+                    (fret_core::Px(dw), fret_core::Px(dh))
+                })
+            } else {
+                None
+            };
+            self.interactive_resize_active = true;
+            self.interactive_resize_stable_frames = 0;
+            return;
+        }
+
+        self.interactive_resize_last_bounds_delta = None;
+
+        if !self.interactive_resize_active {
+            return;
+        }
+
+        let stable_frames_required = interactive_resize_stable_frames_required();
+        if stable_frames_required == 0 {
+            self.interactive_resize_active = false;
+            self.interactive_resize_stable_frames = 0;
+            return;
+        }
+
+        self.interactive_resize_stable_frames =
+            self.interactive_resize_stable_frames.saturating_add(1);
+        if self.interactive_resize_stable_frames >= stable_frames_required {
+            self.interactive_resize_active = false;
+            self.interactive_resize_stable_frames = 0;
+        }
+    }
+
+    pub(crate) fn maybe_bucket_text_wrap_max_width(
+        &self,
+        wrap: fret_core::TextWrap,
+        max_width: Option<fret_core::Px>,
+    ) -> Option<fret_core::Px> {
+        let max_width = max_width?;
+        Some(self.maybe_bucket_text_wrap_width(wrap, max_width))
+    }
+
+    pub(crate) fn maybe_bucket_text_wrap_width(
+        &self,
+        wrap: fret_core::TextWrap,
+        width: fret_core::Px,
+    ) -> fret_core::Px {
+        if !self.interactive_resize_active() {
+            return width;
+        }
+        let mut bucket_px = text_wrap_width_bucket_px();
+        if bucket_px <= 1 {
+            // Default interactive-resize behavior: for small width jitters, quantize wrap widths so
+            // we don't churn wrapped text layout every frame while the user is live-resizing.
+            //
+            // This intentionally does not apply to "stress" resizes that jump hundreds of pixels,
+            // where we want accurate layout and can accept the one-off cost.
+            //
+            // The env knob still takes precedence; this is only a default for the common
+            // "drag jitter" class. Treat small-step as symmetric (back-and-forth resizes should
+            // keep the same policy/caches enabled).
+            let small_step = self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                });
+            if !small_step {
+                return width;
+            }
+            bucket_px = text_wrap_width_small_step_bucket_px();
+            if bucket_px <= 1 {
+                return width;
+            }
+        }
+        match wrap {
+            fret_core::TextWrap::Word | fret_core::TextWrap::Grapheme => {
+                let quantum = bucket_px as f32;
+                if quantum <= 0.0 {
+                    return width;
+                }
+                // Use a nearest-bucket snap (round) rather than `floor` so bucketing does not
+                // systematically reduce wrap widths (which would create more lines and increase
+                // layout/paint work under steady drag resizes).
+                let snapped = (width.0 / quantum).round() * quantum;
+                fret_core::Px(snapped.max(0.0))
+            }
+            fret_core::TextWrap::None => width,
+        }
+    }
+
+    pub(crate) fn interactive_resize_is_small_step(&self) -> bool {
+        self.interactive_resize_active()
+            && self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                })
     }
 
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
@@ -4094,6 +4183,69 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    pub fn debug_node_element(&self, node: NodeId) -> Option<GlobalElementId> {
+        self.nodes.get(node).and_then(|n| n.element)
+    }
+
+    pub fn debug_node_clips_hit_test(&self, node: NodeId) -> Option<bool> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        Some(
+            prepaint
+                .as_ref()
+                .map(|p| p.clips_hit_test)
+                .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true)),
+        )
+    }
+
+    pub fn debug_node_can_scroll_descendant_into_view(&self, node: NodeId) -> Option<bool> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        Some(
+            prepaint
+                .as_ref()
+                .map(|p| p.can_scroll_descendant_into_view)
+                .unwrap_or_else(|| {
+                    widget
+                        .map(|w| w.can_scroll_descendant_into_view())
+                        .unwrap_or(false)
+                }),
+        )
+    }
+
+    pub fn debug_node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        if let Some(inv) = prepaint.as_ref().and_then(|p| p.render_transform_inv) {
+            return inv.inverse();
+        }
+        widget.and_then(|w| w.render_transform(n.bounds))
+    }
+
+    pub fn debug_node_children_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        if let Some(inv) = prepaint
+            .as_ref()
+            .and_then(|p| p.children_render_transform_inv)
+        {
+            return inv.inverse();
+        }
+        widget.and_then(|w| w.children_render_transform(n.bounds))
+    }
+
     pub fn debug_text_constraints_snapshot(&self, node: NodeId) -> UiDebugTextConstraintsSnapshot {
         #[cfg(feature = "diagnostics")]
         {
@@ -4111,20 +4263,6 @@ impl<H: UiHost> UiTree<H> {
         UiDebugTextConstraintsSnapshot::default()
     }
 
-    pub fn debug_text_metrics_measured(&self, node: NodeId) -> Option<fret_core::TextMetrics> {
-        #[cfg(feature = "diagnostics")]
-        {
-            return self.debug_text_metrics_measured.get(&node).copied();
-        }
-        #[cfg(not(feature = "diagnostics"))]
-        {
-            let _ = node;
-        }
-
-        #[allow(unreachable_code)]
-        None
-    }
-
     /// Returns the node bounds after applying the accumulated `render_transform` stack.
     ///
     /// This is intended for debugging and tests that need screen-space geometry for overlay
@@ -4140,7 +4278,7 @@ impl<H: UiHost> UiTree<H> {
         let mut transform = Transform2D::IDENTITY;
         for (idx, id) in path.iter().copied().enumerate() {
             let node_transform = self
-                .node_render_transform(id)
+                .debug_node_render_transform(id)
                 .unwrap_or(Transform2D::IDENTITY);
             let at_node = before.compose(node_transform);
             if id == node {
@@ -4148,7 +4286,7 @@ impl<H: UiHost> UiTree<H> {
                 break;
             }
             let child_transform = self
-                .node_children_render_transform(id)
+                .debug_node_children_render_transform(id)
                 .unwrap_or(Transform2D::IDENTITY);
             before = at_node.compose(child_transform);
 
@@ -7043,9 +7181,28 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
 
-                    let node_transform = widget
-                        .and_then(|w| w.render_transform(node.bounds))
-                        .filter(|t| t.inverse().is_some())
+                    // Prefer prepaint-derived transforms when they are known to be valid, but
+                    // fall back to live widget transforms while hit-test invalidations are
+                    // pending.
+                    //
+                    // Hit-testing intentionally avoids `prepaint_hit_test` when `hit_test` is
+                    // invalidated (see `hit_test.rs`) to prevent stale transforms from affecting
+                    // pointer routing. Semantics should follow the same rule so scripted
+                    // diagnostics (which pick click points from semantics bounds) remain aligned
+                    // with the actual hit-test coordinate space.
+                    let prepaint = (!self.inspection_active && !node.invalidation.hit_test)
+                        .then_some(node.prepaint_hit_test)
+                        .flatten();
+
+                    let node_transform = prepaint
+                        .as_ref()
+                        .and_then(|p| p.render_transform_inv)
+                        .and_then(|inv| inv.inverse())
+                        .or_else(|| {
+                            widget
+                                .and_then(|w| w.render_transform(node.bounds))
+                                .filter(|t| t.inverse().is_some())
+                        })
                         .unwrap_or(Transform2D::IDENTITY);
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
@@ -7068,9 +7225,15 @@ impl<H: UiHost> UiTree<H> {
                     let is_text_input = widget.is_some_and(|w| w.is_text_input());
                     let is_focusable = widget.is_some_and(|w| w.is_focusable());
                     let traverse_children = widget.map(|w| w.semantics_children()).unwrap_or(true);
-                    let child_transform = widget
-                        .and_then(|w| w.children_render_transform(node.bounds))
-                        .filter(|t| t.inverse().is_some())
+                    let child_transform = prepaint
+                        .as_ref()
+                        .and_then(|p| p.children_render_transform_inv)
+                        .and_then(|inv| inv.inverse())
+                        .or_else(|| {
+                            widget
+                                .and_then(|w| w.children_render_transform(node.bounds))
+                                .filter(|t| t.inverse().is_some())
+                        })
                         .unwrap_or(Transform2D::IDENTITY);
                     let before_child = at_node.compose(child_transform);
 
@@ -7339,6 +7502,18 @@ fn event_position(event: &Event) -> Option<Point> {
     }
 }
 
+#[cfg(test)]
+fn event_allows_hit_test_path_cache_reuse(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Pointer(PointerEvent::Move { .. })
+            | Event::Pointer(PointerEvent::Wheel { .. })
+            | Event::Pointer(PointerEvent::PinchGesture { .. })
+            | Event::ExternalDrag(_)
+            | Event::InternalDrag(_)
+    )
+}
+
 fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
     // Hover is a cursor-driven affordance (Mouse/Pen). Touch pointers must not perturb hover state,
     // otherwise multi-pointer input can cause spurious hover exits while a mouse cursor remains in
@@ -7352,6 +7527,61 @@ fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
             | fret_core::PointerType::Pen
             | fret_core::PointerType::Unknown
     )
+}
+
+fn interactive_resize_stable_frames_required() -> u8 {
+    static STABLE_FRAMES: OnceLock<u8> = OnceLock::new();
+    *STABLE_FRAMES.get_or_init(|| {
+        std::env::var("FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(2)
+            .min(60)
+    })
+}
+
+fn text_wrap_width_bucket_px() -> u8 {
+    static BUCKET_PX: OnceLock<u8> = OnceLock::new();
+    *BUCKET_PX.get_or_init(|| {
+        // Default: off. Set to a small value (e.g. 2) to bucket wrap widths during interactive
+        // resize and reduce text prepare churn under width jitter.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(0)
+            .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_bucket_px() -> u8 {
+    static BUCKET_PX: OnceLock<u8> = OnceLock::new();
+    *BUCKET_PX.get_or_init(|| {
+        // Default: 32px. Used only for small-step interactive resizes when no explicit bucketing
+        // policy is configured via `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+        //
+        // Set to 0/1 to disable the default small-step bucketing, or to another small value to
+        // tune the tradeoff between resize smoothness and layout accuracy during live-resizing.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(32)
+            .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_max_dw_px() -> u8 {
+    static MAX_DW: OnceLock<u8> = OnceLock::new();
+    *MAX_DW.get_or_init(|| {
+        // Default: 64px. This defines what “small-step” means for the default interactive-resize
+        // wrap-width bucketing. Increasing this makes the bucketing kick in at higher live-resize
+        // speeds, at the cost of less accurate wrapping while the user is dragging.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(64)
+            .max(1)
+            .min(255)
+    })
 }
 
 #[cfg(test)]

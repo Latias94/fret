@@ -18,7 +18,7 @@ This crate is intentionally “runner glue”:
 - `src/state/`: small runner-side state containers (`WinitPlatform`, `WinitInputState`, `WinitWindowState`).
 - `src/window_registry.rs`: window bookkeeping helpers.
 - `src/accessibility.rs`: accessibility integration entrypoints.
-- `src/accessibility_accesskit_winit.rs`: AccessKit + winit specifics.
+- `src/accessibility_accesskit_winit.rs`: AccessKit + winit specifics (currently disabled; waiting for winit/accesskit_winit compatibility).
 - `src/windows_ime.rs`: Windows IME bridge helpers (`cfg(windows)`).
 - `src/state/input/click_tracker_tests.rs`: click tracking regression tests (`cfg(test)`).
 

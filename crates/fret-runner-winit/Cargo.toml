@@ -8,12 +8,13 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Winit-based native event loop runner for Fret."
 
 [dependencies]
-fret-core = { path = "../fret-core" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
 winit.workspace = true
 accesskit.workspace = true
-fret-a11y-accesskit = { path = "../fret-a11y-accesskit" }
+fret-a11y-accesskit = { version = "0.1.0", path = "../fret-a11y-accesskit" }
 tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]
