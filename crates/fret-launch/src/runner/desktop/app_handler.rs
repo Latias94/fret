@@ -1380,6 +1380,52 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.poll_window_environment_if_due(Instant::now());
 
         for (app_window, state) in self.windows.iter_mut() {
+            #[cfg(target_os = "android")]
+            {
+                use winit::platform::android::WindowExtAndroid as _;
+
+                let content_rect = state.window.content_rect();
+                let surface_size = state.window.surface_size();
+                let scale_factor = (state.window.scale_factor() as f32).max(0.0001);
+
+                let surface_w = surface_size.width as i32;
+                let surface_h = surface_size.height as i32;
+
+                let left_px = content_rect.left.max(0).min(surface_w) as f32;
+                let top_px = content_rect.top.max(0).min(surface_h) as f32;
+                let right_px = (surface_w - content_rect.right).max(0).min(surface_w) as f32;
+                let bottom_px = (surface_h - content_rect.bottom).max(0).min(surface_h) as f32;
+
+                let safe_area_insets = fret_core::Edges {
+                    top: Px(top_px / scale_factor),
+                    right: Px(right_px / scale_factor),
+                    bottom: Px(0.0),
+                    left: Px(left_px / scale_factor),
+                };
+                let occlusion_insets = fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(bottom_px / scale_factor),
+                    left: Px(0.0),
+                };
+
+                let mut insets_changed = false;
+                self.app
+                    .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
+                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                            insets_changed = true;
+                        }
+                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
+                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                            insets_changed = true;
+                        }
+                    });
+                if insets_changed {
+                    state.window.request_redraw();
+                }
+            }
+
             let Some(a11y) = state.accessibility.as_mut() else {
                 continue;
             };
