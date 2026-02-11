@@ -3955,13 +3955,26 @@ impl UiDiagnosticsService {
                 .global::<fret_core::RendererTextPerfSnapshot>()
                 .copied()
                 .map(UiRendererTextPerfSnapshotV1::from_core);
-            (icon_svg_cache.is_some() || !canvas.is_empty() || render_text.is_some()).then_some(
-                UiResourceCachesV1 {
-                    icon_svg_cache,
-                    canvas,
-                    render_text,
-                },
-            )
+            let render_text_font_trace = app
+                .global::<fret_core::RendererTextFontTraceSnapshot>()
+                .cloned()
+                .map(|s| {
+                    UiRendererTextFontTraceSnapshotV1::from_core(
+                        s,
+                        self.cfg.redact_text,
+                        self.cfg.max_debug_string_bytes,
+                    )
+                });
+            (icon_svg_cache.is_some()
+                || !canvas.is_empty()
+                || render_text.is_some()
+                || render_text_font_trace.is_some())
+            .then_some(UiResourceCachesV1 {
+                icon_svg_cache,
+                canvas,
+                render_text,
+                render_text_font_trace,
+            })
         };
 
         let renderer_perf = app
@@ -4830,6 +4843,8 @@ pub struct UiResourceCachesV1 {
     pub canvas: Vec<UiCanvasCacheEntryV1>,
     #[serde(default)]
     pub render_text: Option<UiRendererTextPerfSnapshotV1>,
+    #[serde(default)]
+    pub render_text_font_trace: Option<UiRendererTextFontTraceSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -4922,6 +4937,163 @@ impl UiRendererTextPerfSnapshotV1 {
             mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
             color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
             subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceSnapshotV1 {
+    pub frame_id: u64,
+    #[serde(default)]
+    pub entries: Vec<UiRendererTextFontTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceEntryV1 {
+    pub text_preview: String,
+    pub text_len_bytes: u32,
+
+    pub font: String,
+    pub font_size_px: f32,
+    pub scale_factor: f32,
+
+    pub wrap: String,
+    pub overflow: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width_px: Option<f32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locale_bcp47: Option<String>,
+
+    pub missing_glyphs: u32,
+
+    #[serde(default)]
+    pub families: Vec<UiRendererTextFontTraceFamilyUsageV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceFamilyUsageV1 {
+    pub family: String,
+    pub glyphs: u32,
+    pub missing_glyphs: u32,
+    pub class: UiRendererTextFontTraceFamilyClassV1,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiRendererTextFontTraceFamilyClassV1 {
+    Requested,
+    CommonFallback,
+    SystemFallback,
+    Unknown,
+}
+
+impl Default for UiRendererTextFontTraceFamilyClassV1 {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl UiRendererTextFontTraceSnapshotV1 {
+    fn from_core(
+        snapshot: fret_core::RendererTextFontTraceSnapshot,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        fn wrap_to_string(wrap: fret_core::TextWrap) -> &'static str {
+            match wrap {
+                fret_core::TextWrap::None => "none",
+                fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Grapheme => "grapheme",
+            }
+        }
+
+        fn overflow_to_string(overflow: fret_core::TextOverflow) -> &'static str {
+            match overflow {
+                fret_core::TextOverflow::Clip => "clip",
+                fret_core::TextOverflow::Ellipsis => "ellipsis",
+            }
+        }
+
+        fn font_id_to_string(font: &fret_core::FontId) -> String {
+            match font {
+                fret_core::FontId::Ui => "ui".to_string(),
+                fret_core::FontId::Serif => "serif".to_string(),
+                fret_core::FontId::Monospace => "monospace".to_string(),
+                fret_core::FontId::Family(name) => format!("family:{name}"),
+            }
+        }
+
+        fn class_from_core(
+            class: fret_core::RendererTextFontTraceFamilyClass,
+        ) -> UiRendererTextFontTraceFamilyClassV1 {
+            match class {
+                fret_core::RendererTextFontTraceFamilyClass::Requested => {
+                    UiRendererTextFontTraceFamilyClassV1::Requested
+                }
+                fret_core::RendererTextFontTraceFamilyClass::CommonFallback => {
+                    UiRendererTextFontTraceFamilyClassV1::CommonFallback
+                }
+                fret_core::RendererTextFontTraceFamilyClass::SystemFallback => {
+                    UiRendererTextFontTraceFamilyClassV1::SystemFallback
+                }
+                fret_core::RendererTextFontTraceFamilyClass::Unknown => {
+                    UiRendererTextFontTraceFamilyClassV1::Unknown
+                }
+            }
+        }
+
+        let mut entries = snapshot
+            .entries
+            .into_iter()
+            .map(|mut e| {
+                if redact_text {
+                    e.text_preview = "<redacted>".to_string();
+                }
+                truncate_string_bytes(&mut e.text_preview, max_debug_string_bytes);
+                if let Some(locale) = e.locale_bcp47.as_mut() {
+                    truncate_string_bytes(locale, max_debug_string_bytes);
+                }
+
+                let mut families: Vec<UiRendererTextFontTraceFamilyUsageV1> = e
+                    .families
+                    .into_iter()
+                    .map(|mut f| {
+                        truncate_string_bytes(&mut f.family, max_debug_string_bytes);
+                        UiRendererTextFontTraceFamilyUsageV1 {
+                            family: f.family,
+                            glyphs: f.glyphs,
+                            missing_glyphs: f.missing_glyphs,
+                            class: class_from_core(f.class),
+                        }
+                    })
+                    .collect();
+                families.sort_by(|a, b| {
+                    b.glyphs
+                        .cmp(&a.glyphs)
+                        .then_with(|| a.family.cmp(&b.family))
+                });
+
+                UiRendererTextFontTraceEntryV1 {
+                    text_preview: e.text_preview,
+                    text_len_bytes: e.text_len_bytes,
+                    font: font_id_to_string(&e.font),
+                    font_size_px: e.font_size.0,
+                    scale_factor: e.scale_factor,
+                    wrap: wrap_to_string(e.wrap).to_string(),
+                    overflow: overflow_to_string(e.overflow).to_string(),
+                    max_width_px: e.max_width.map(|px| px.0),
+                    locale_bcp47: e.locale_bcp47,
+                    missing_glyphs: e.missing_glyphs,
+                    families,
+                }
+            })
+            .collect::<Vec<_>>();
+        entries.truncate(4096);
+
+        Self {
+            frame_id: snapshot.frame_id.0,
+            entries,
         }
     }
 }

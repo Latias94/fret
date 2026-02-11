@@ -13,6 +13,8 @@ use std::{
 
 use parley::fontique::FamilyId as ParleyFamilyId;
 use parley::fontique::GenericFamily as ParleyGenericFamily;
+use read_fonts::tables::name::NameId;
+use read_fonts::{FontRef, TableProvider as _};
 
 pub(crate) mod parley_shaper;
 pub(crate) mod wrapper;
@@ -115,6 +117,78 @@ fn measure_shaping_cache_min_text_len_bytes() -> usize {
             .unwrap_or(128)
             .min(1_048_576)
     })
+}
+
+fn font_trace_record_all() -> bool {
+    static FLAG: OnceLock<bool> = OnceLock::new();
+    *FLAG.get_or_init(|| {
+        std::env::var("FRET_TEXT_FONT_TRACE_ALL")
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
+    })
+}
+
+fn font_trace_entries_limit() -> usize {
+    static LIMIT: OnceLock<usize> = OnceLock::new();
+    *LIMIT.get_or_init(|| {
+        std::env::var("FRET_TEXT_FONT_TRACE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(64)
+            .min(4096)
+    })
+}
+
+fn font_trace_max_text_bytes() -> usize {
+    static LIMIT: OnceLock<usize> = OnceLock::new();
+    *LIMIT.get_or_init(|| {
+        std::env::var("FRET_TEXT_FONT_TRACE_MAX_TEXT_BYTES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(256)
+            .max(16)
+            .min(16 * 1024)
+    })
+}
+
+fn truncate_text_preview(text: &str, max_bytes: usize) -> String {
+    if max_bytes == 0 || text.len() <= max_bytes {
+        return text.to_string();
+    }
+
+    let mut end = max_bytes.min(text.len());
+    while end > 0 && !text.is_char_boundary(end) {
+        end = end.saturating_sub(1);
+    }
+    let mut out = text[..end].to_string();
+    out.push('…');
+    out
+}
+
+fn classify_trace_family(
+    requested: &fret_core::FontId,
+    family: &str,
+    common_fallback_lower: &HashSet<String>,
+) -> fret_core::RendererTextFontTraceFamilyClass {
+    let is_common = common_fallback_lower.contains(&family.trim().to_ascii_lowercase());
+    match requested {
+        fret_core::FontId::Family(name) => {
+            if name.eq_ignore_ascii_case(family) {
+                fret_core::RendererTextFontTraceFamilyClass::Requested
+            } else if is_common {
+                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
+            } else {
+                fret_core::RendererTextFontTraceFamilyClass::SystemFallback
+            }
+        }
+        _ => {
+            if is_common {
+                fret_core::RendererTextFontTraceFamilyClass::CommonFallback
+            } else {
+                fret_core::RendererTextFontTraceFamilyClass::Unknown
+            }
+        }
+    }
 }
 
 fn default_common_fallback_families() -> &'static [&'static str] {
@@ -359,6 +433,16 @@ pub struct TextShape {
     pub lines: Arc<[TextLine]>,
     pub caret_stops: Arc<[(usize, Px)]>,
     pub missing_glyphs: u32,
+    pub(crate) font_faces: Arc<[TextFontFaceUsage]>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct TextFontFaceUsage {
+    pub(crate) font_data_id: u64,
+    pub(crate) face_index: u32,
+    pub(crate) variation_key: u64,
+    pub(crate) glyphs: u32,
+    pub(crate) missing_glyphs: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -1429,6 +1513,7 @@ pub struct TextSystem {
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
     font_data_by_face: HashMap<(u64, u32), parley::FontData>,
     font_instance_coords_by_face: HashMap<FontFaceKey, Arc<[i16]>>,
+    font_face_family_name_cache: HashMap<(u64, u32), String>,
 
     perf_frame_cache_resets: u64,
     perf_frame_blob_cache_hits: u64,
@@ -1444,6 +1529,9 @@ pub struct TextSystem {
     perf_frame_texts_with_missing_glyphs: u64,
 
     glyph_atlas_epoch: u64,
+
+    font_trace_active: bool,
+    font_trace_entries: VecDeque<fret_core::RendererTextFontTraceEntry>,
 }
 
 enum WrappedForPrepare {
@@ -1781,6 +1869,9 @@ impl TextSystem {
     }
 
     pub fn begin_frame_diagnostics(&mut self) {
+        self.font_trace_active = true;
+        self.font_trace_entries.clear();
+
         self.perf_frame_cache_resets = 0;
         self.perf_frame_blob_cache_hits = 0;
         self.perf_frame_blob_cache_misses = 0;
@@ -1796,6 +1887,16 @@ impl TextSystem {
         self.mask_atlas.begin_frame_diagnostics();
         self.color_atlas.begin_frame_diagnostics();
         self.subpixel_atlas.begin_frame_diagnostics();
+    }
+
+    pub fn font_trace_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFontTraceSnapshot {
+        fret_core::RendererTextFontTraceSnapshot {
+            frame_id,
+            entries: self.font_trace_entries.iter().cloned().collect(),
+        }
     }
 
     pub fn diagnostics_snapshot(
@@ -1991,6 +2092,7 @@ impl TextSystem {
             text_pin_subpixel: vec![Vec::new(); 3],
             font_data_by_face: HashMap::new(),
             font_instance_coords_by_face: HashMap::new(),
+            font_face_family_name_cache: HashMap::new(),
 
             perf_frame_cache_resets: 0,
             perf_frame_blob_cache_hits: 0,
@@ -2006,6 +2108,9 @@ impl TextSystem {
             perf_frame_texts_with_missing_glyphs: 0,
 
             glyph_atlas_epoch: 1,
+
+            font_trace_active: false,
+            font_trace_entries: VecDeque::new(),
         };
 
         out.bootstrap_default_generic_families(sans, serif, mono);
@@ -2124,6 +2229,7 @@ impl TextSystem {
         self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
         self.font_data_by_face.clear();
         self.font_instance_coords_by_face.clear();
+        self.font_face_family_name_cache.clear();
     }
 
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
@@ -2527,18 +2633,20 @@ impl TextSystem {
         let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
-            let hit = match self.blobs.get_mut(id) {
-                Some(blob) => {
-                    self.perf_frame_blob_cache_hits =
-                        self.perf_frame_blob_cache_hits.saturating_add(1);
-                    let was_released = blob.ref_count == 0;
-                    blob.ref_count = blob.ref_count.saturating_add(1);
-                    Some((blob.shape.metrics, was_released, blob.shape.missing_glyphs))
-                }
-                None => None,
-            };
+            let mut hit: Option<(TextMetrics, u32, Arc<TextShape>, bool)> = None;
+            if let Some(blob) = self.blobs.get_mut(id) {
+                self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
+                let was_released = blob.ref_count == 0;
+                blob.ref_count = blob.ref_count.saturating_add(1);
+                hit = Some((
+                    blob.shape.metrics,
+                    blob.shape.missing_glyphs,
+                    blob.shape.clone(),
+                    was_released,
+                ));
+            }
 
-            if let Some((metrics, was_released, missing_glyphs)) = hit {
+            if let Some((metrics, missing_glyphs, shape, was_released)) = hit {
                 if was_released {
                     self.remove_released_blob(id);
                 }
@@ -2549,6 +2657,7 @@ impl TextSystem {
                     self.perf_frame_texts_with_missing_glyphs =
                         self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
                 }
+                self.maybe_record_font_trace_entry(text.as_ref(), style, constraints, &shape);
                 return (id, metrics);
             }
 
@@ -2592,6 +2701,7 @@ impl TextSystem {
                 };
 
                 let mut glyphs: Vec<GlyphInstance> = Vec::new();
+                let mut face_usage: HashMap<FontFaceKey, (u32, u32)> = HashMap::new();
                 let mut missing_glyphs: u32 = 0;
                 let mut lines: Vec<TextLine> = Vec::new();
                 let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
@@ -2674,9 +2784,6 @@ impl TextSystem {
                             });
 
                             for g in line.glyphs {
-                                if g.id == 0 {
-                                    missing_glyphs = missing_glyphs.saturating_add(1);
-                                }
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
@@ -2696,6 +2803,13 @@ impl TextSystem {
                                     self.font_instance_coords_by_face
                                         .entry(face_key)
                                         .or_insert_with(|| g.normalized_coords.clone());
+                                }
+
+                                let usage = face_usage.entry(face_key).or_insert((0, 0));
+                                usage.0 = usage.0.saturating_add(1);
+                                if g.id == 0 {
+                                    missing_glyphs = missing_glyphs.saturating_add(1);
+                                    usage.1 = usage.1.saturating_add(1);
                                 }
 
                                 let pos_y = g.y + line_offset_px;
@@ -2968,9 +3082,6 @@ impl TextSystem {
                             });
 
                             for g in unwrapped.glyphs[s.glyph_range.clone()].iter() {
-                                if g.id == 0 {
-                                    missing_glyphs = missing_glyphs.saturating_add(1);
-                                }
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
@@ -2990,6 +3101,13 @@ impl TextSystem {
                                     self.font_instance_coords_by_face
                                         .entry(face_key)
                                         .or_insert_with(|| g.normalized_coords.clone());
+                                }
+
+                                let usage = face_usage.entry(face_key).or_insert((0, 0));
+                                usage.0 = usage.0.saturating_add(1);
+                                if g.id == 0 {
+                                    missing_glyphs = missing_glyphs.saturating_add(1);
+                                    usage.1 = usage.1.saturating_add(1);
                                 }
 
                                 let pos_y = g.y + line_offset_px;
@@ -3182,12 +3300,31 @@ impl TextSystem {
                     }
                 };
 
+                let mut face_usages: Vec<TextFontFaceUsage> = Vec::with_capacity(face_usage.len());
+                for (face, (glyphs, missing)) in face_usage {
+                    face_usages.push(TextFontFaceUsage {
+                        font_data_id: face.font_data_id,
+                        face_index: face.face_index,
+                        variation_key: face.variation_key,
+                        glyphs,
+                        missing_glyphs: missing,
+                    });
+                }
+                face_usages.sort_by(|a, b| {
+                    b.glyphs
+                        .cmp(&a.glyphs)
+                        .then_with(|| a.font_data_id.cmp(&b.font_data_id))
+                        .then_with(|| a.face_index.cmp(&b.face_index))
+                        .then_with(|| a.variation_key.cmp(&b.variation_key))
+                });
+
                 Arc::new(TextShape {
                     glyphs: Arc::from(glyphs),
                     metrics,
                     lines: Arc::from(lines),
                     caret_stops: Arc::from(first_line_caret_stops),
                     missing_glyphs,
+                    font_faces: Arc::from(face_usages),
                 })
             };
             self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
@@ -3208,6 +3345,7 @@ impl TextSystem {
             self.perf_frame_texts_with_missing_glyphs =
                 self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
         }
+        self.maybe_record_font_trace_entry(text.as_ref(), style, constraints, &shape);
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
@@ -3218,6 +3356,135 @@ impl TextSystem {
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
         (id, metrics)
+    }
+
+    fn maybe_record_font_trace_entry(
+        &mut self,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+        shape: &Arc<TextShape>,
+    ) {
+        if !self.font_trace_active {
+            return;
+        }
+
+        let record_all = font_trace_record_all();
+        if !record_all && shape.missing_glyphs == 0 {
+            return;
+        }
+
+        let max_entries = font_trace_entries_limit();
+        if max_entries == 0 {
+            return;
+        }
+
+        let max_text_bytes = font_trace_max_text_bytes();
+        let text_preview = truncate_text_preview(text, max_text_bytes);
+
+        let mut common_fallback_lower: HashSet<String> = HashSet::new();
+        for f in &self.common_fallback_config {
+            common_fallback_lower.insert(f.trim().to_ascii_lowercase());
+        }
+        for &f in default_common_fallback_families() {
+            common_fallback_lower.insert(f.trim().to_ascii_lowercase());
+        }
+
+        let mut families: Vec<fret_core::RendererTextFontTraceFamilyUsage> =
+            Vec::with_capacity(shape.font_faces.len().max(1));
+        for usage in shape.font_faces.iter() {
+            let family = self
+                .family_name_for_face(usage.font_data_id, usage.face_index)
+                .unwrap_or_else(|| {
+                    format!(
+                        "font_data_id={} face_index={}",
+                        usage.font_data_id, usage.face_index
+                    )
+                });
+
+            let class = classify_trace_family(&style.font, &family, &common_fallback_lower);
+
+            families.push(fret_core::RendererTextFontTraceFamilyUsage {
+                family,
+                glyphs: usage.glyphs,
+                missing_glyphs: usage.missing_glyphs,
+                class,
+            });
+        }
+
+        let entry = fret_core::RendererTextFontTraceEntry {
+            text_preview,
+            text_len_bytes: text.len().min(u32::MAX as usize) as u32,
+            font: style.font.clone(),
+            font_size: style.size,
+            scale_factor: constraints.scale_factor,
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+            max_width: constraints.max_width,
+            locale_bcp47: self.text_locale.clone(),
+            missing_glyphs: shape.missing_glyphs,
+            families,
+        };
+
+        self.font_trace_entries.push_back(entry);
+        while self.font_trace_entries.len() > max_entries {
+            self.font_trace_entries.pop_front();
+        }
+    }
+
+    fn family_name_for_face(&mut self, font_data_id: u64, face_index: u32) -> Option<String> {
+        if let Some(name) = self
+            .font_face_family_name_cache
+            .get(&(font_data_id, face_index))
+            .cloned()
+        {
+            return Some(name);
+        }
+
+        let font_data = self.font_data_by_face.get(&(font_data_id, face_index))?;
+        let face = FontRef::from_index(font_data.data.data(), face_index).ok()?;
+        let name_table = face.name().ok()?;
+        let string_data = name_table.string_data();
+
+        let mut best: Option<(i32, String)> = None;
+        for record in name_table.name_record() {
+            let name_id = record.name_id();
+            let is_typographic_family = name_id == NameId::new(16);
+            let is_family = name_id == NameId::new(1);
+            if !is_typographic_family && !is_family {
+                continue;
+            }
+
+            let Ok(value) = record.string(string_data).map(|s| s.to_string()) else {
+                continue;
+            };
+            let value = value.trim().to_string();
+            if value.is_empty() {
+                continue;
+            }
+
+            let mut score: i32 = 0;
+            score += if is_typographic_family { 200 } else { 180 };
+            if record.is_unicode() {
+                score += 10;
+            }
+            // Prefer Windows + en-US when available.
+            if record.platform_id() == 3 && record.language_id() == 0x0409 {
+                score += 5;
+            }
+            // Prefer shorter strings if otherwise tied.
+            score -= (value.len() as i32).min(128);
+
+            match &best {
+                Some((best_score, _)) if *best_score >= score => {}
+                _ => best = Some((score, value)),
+            }
+        }
+
+        let (_, name) = best?;
+        self.font_face_family_name_cache
+            .insert((font_data_id, face_index), name.clone());
+        Some(name)
     }
 
     pub fn measure(
@@ -5923,6 +6190,64 @@ mod tests {
                 super::GlyphQuadKind::Color => {}
             }
         }
+    }
+
+    #[test]
+    fn font_trace_records_missing_glyphs_for_named_family_when_system_fonts_are_absent() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+        text.text_locale = None;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        text.begin_frame_diagnostics();
+
+        let style = TextStyle {
+            font: fret_core::FontId::family("Inter"),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let (_blob_id, _metrics) = text.prepare("你", &style, constraints);
+        let trace = text.font_trace_snapshot(fret_core::FrameId(1));
+        assert!(
+            !trace.entries.is_empty(),
+            "expected at least one font trace entry"
+        );
+
+        let entry = trace.entries.last().expect("trace entry");
+        assert!(
+            entry.missing_glyphs > 0,
+            "expected missing/tofu glyphs to be recorded in the trace (entry={entry:?})"
+        );
+
+        let inter_usage = entry
+            .families
+            .iter()
+            .find(|f| f.family.to_ascii_lowercase().contains("inter"))
+            .expect("expected Inter family to appear in the trace families");
+        assert!(
+            inter_usage.missing_glyphs > 0,
+            "expected missing/tofu glyphs to be attributed to the resolved family"
+        );
     }
 
     #[test]

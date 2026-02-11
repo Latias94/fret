@@ -1143,6 +1143,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         if render_text_diag_enabled {
                             self.app
                                 .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
+                            self.app
+                                .set_global(renderer.text_font_trace_snapshot(self.frame_id));
                         }
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")

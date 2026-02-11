@@ -6,6 +6,13 @@ impl Renderer {
         self.text_system.begin_frame_diagnostics();
     }
 
+    pub fn text_font_trace_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFontTraceSnapshot {
+        self.text_system.font_trace_snapshot(frame_id)
+    }
+
     pub fn text_diagnostics_snapshot(
         &self,
         frame_id: fret_core::FrameId,
