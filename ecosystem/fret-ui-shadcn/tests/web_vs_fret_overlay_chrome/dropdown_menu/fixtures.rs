@@ -107,8 +107,7 @@ fn bounds_for_web_theme(name: &str, theme: &WebThemeName) -> Rect {
     let web = read_web_golden_open(name);
     web.themes
         .get(theme.as_str())
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),

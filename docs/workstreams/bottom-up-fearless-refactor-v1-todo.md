@@ -37,6 +37,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
+  - Hygiene: keep shared integration-test helpers under `tests/support/` so they do not compile as standalone test crates.
   - Evidence (module split):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support.rs`
@@ -57,12 +58,24 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/assertions.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/input.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/listbox.rs`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/mod.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/overlay.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/context_menu.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/navigation_menu.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/menu_subcontent.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/probes.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/shadow.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/scene.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/semantics.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/viewport.rs`
+  - Evidence (shadcn web golden schema + helpers):
+    - `ecosystem/fret-ui-shadcn/tests/support/web_golden_shadcn.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/repo_root.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_typography.rs`
   - Evidence (overlay chrome web query helpers):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/web.rs` (`web_find_active_element_chrome`, `web_find_menu_item_chrome_by_slot_variant_and_text`, `web_find_open_menu_subtrigger_chrome`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs`
