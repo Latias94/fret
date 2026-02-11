@@ -145,6 +145,8 @@ Notes:
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
 - `TestResults` large-list demo + scroll/activate seam gate exists (`ui-gallery-ai-test-results-large-scroll.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).
+- `WebPreview` chrome v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`
 Remaining work (current focus):
 
 - Tighten parity for `Commit` / `StackTrace` / `TestResults` (layout/styling + copy + extension hooks).
