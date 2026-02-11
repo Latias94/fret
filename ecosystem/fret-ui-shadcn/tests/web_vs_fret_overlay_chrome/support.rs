@@ -10,7 +10,7 @@ mod harness;
 mod input;
 #[path = "support/listbox.rs"]
 mod listbox;
-#[path = "support/overlay_chrome.rs"]
+#[path = "support/overlay_chrome/mod.rs"]
 mod overlay_chrome;
 #[path = "support/probes.rs"]
 mod probes;
