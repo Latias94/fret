@@ -3,12 +3,12 @@ use fret_core::AppWindowId;
 use fret_ui::UiTree;
 use std::sync::Arc;
 
-use super::{DebugHudState, UiGalleryDriver};
+use super::{DebugHudState, inspector};
 
 pub(crate) struct DebugHudBundle {
     pub(crate) show: bool,
     pub(crate) lines: Vec<Arc<str>>,
-    pub(crate) inspector_status: Option<(Arc<str>, Arc<str>, Arc<str>, Arc<str>)>,
+    pub(crate) inspector_status: Option<super::status_bar::InspectorStatus>,
 }
 
 pub(crate) fn compute_debug_hud_bundle(
@@ -194,7 +194,7 @@ pub(crate) fn compute_debug_hud_bundle(
             .models()
             .get_copied(inspector_last_pointer)
             .unwrap_or(None);
-        Some(UiGalleryDriver::compute_inspector_status(
+        Some(inspector::compute_inspector_status(
             app, ui, window, pointer,
         ))
     } else {
