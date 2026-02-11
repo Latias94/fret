@@ -553,6 +553,9 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         require_equal: Option<bool>,
     },
+    RenderTextMissingGlyphsIs {
+        missing_glyphs: u64,
+    },
     VisibleInWindow {
         target: UiSelectorV1,
     },

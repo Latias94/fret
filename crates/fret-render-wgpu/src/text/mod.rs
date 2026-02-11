@@ -358,6 +358,7 @@ pub struct TextShape {
     pub metrics: TextMetrics,
     pub lines: Arc<[TextLine]>,
     pub caret_stops: Arc<[(usize, Px)]>,
+    pub missing_glyphs: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -1439,6 +1440,8 @@ pub struct TextSystem {
     perf_frame_unwrapped_layout_cache_hits: u64,
     perf_frame_unwrapped_layout_cache_misses: u64,
     perf_frame_unwrapped_layouts_created: u64,
+    perf_frame_missing_glyphs: u64,
+    perf_frame_texts_with_missing_glyphs: u64,
 
     glyph_atlas_epoch: u64,
 }
@@ -1788,6 +1791,8 @@ impl TextSystem {
         self.perf_frame_unwrapped_layout_cache_hits = 0;
         self.perf_frame_unwrapped_layout_cache_misses = 0;
         self.perf_frame_unwrapped_layouts_created = 0;
+        self.perf_frame_missing_glyphs = 0;
+        self.perf_frame_texts_with_missing_glyphs = 0;
         self.mask_atlas.begin_frame_diagnostics();
         self.color_atlas.begin_frame_diagnostics();
         self.subpixel_atlas.begin_frame_diagnostics();
@@ -1801,6 +1806,8 @@ impl TextSystem {
             frame_id,
             font_stack_key: self.font_stack_key,
             font_db_revision: self.font_db_revision,
+            frame_missing_glyphs: self.perf_frame_missing_glyphs,
+            frame_texts_with_missing_glyphs: self.perf_frame_texts_with_missing_glyphs,
             blobs_live: self.blobs.len() as u64,
             blob_cache_entries: self.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
@@ -1995,6 +2002,8 @@ impl TextSystem {
             perf_frame_unwrapped_layout_cache_hits: 0,
             perf_frame_unwrapped_layout_cache_misses: 0,
             perf_frame_unwrapped_layouts_created: 0,
+            perf_frame_missing_glyphs: 0,
+            perf_frame_texts_with_missing_glyphs: 0,
 
             glyph_atlas_epoch: 1,
         };
@@ -2524,14 +2533,21 @@ impl TextSystem {
                         self.perf_frame_blob_cache_hits.saturating_add(1);
                     let was_released = blob.ref_count == 0;
                     blob.ref_count = blob.ref_count.saturating_add(1);
-                    Some((blob.shape.metrics, was_released))
+                    Some((blob.shape.metrics, was_released, blob.shape.missing_glyphs))
                 }
                 None => None,
             };
 
-            if let Some((metrics, was_released)) = hit {
+            if let Some((metrics, was_released, missing_glyphs)) = hit {
                 if was_released {
                     self.remove_released_blob(id);
+                }
+                if missing_glyphs > 0 {
+                    self.perf_frame_missing_glyphs = self
+                        .perf_frame_missing_glyphs
+                        .saturating_add(u64::from(missing_glyphs));
+                    self.perf_frame_texts_with_missing_glyphs =
+                        self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
                 }
                 return (id, metrics);
             }
@@ -2576,6 +2592,7 @@ impl TextSystem {
                 };
 
                 let mut glyphs: Vec<GlyphInstance> = Vec::new();
+                let mut missing_glyphs: u32 = 0;
                 let mut lines: Vec<TextLine> = Vec::new();
                 let mut first_line_caret_stops: Vec<(usize, Px)> = Vec::new();
                 let mut line_top_px = 0.0_f32;
@@ -2657,6 +2674,9 @@ impl TextSystem {
                             });
 
                             for g in line.glyphs {
+                                if g.id == 0 {
+                                    missing_glyphs = missing_glyphs.saturating_add(1);
+                                }
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
@@ -2948,6 +2968,9 @@ impl TextSystem {
                             });
 
                             for g in unwrapped.glyphs[s.glyph_range.clone()].iter() {
+                                if g.id == 0 {
+                                    missing_glyphs = missing_glyphs.saturating_add(1);
+                                }
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
@@ -3164,6 +3187,7 @@ impl TextSystem {
                     metrics,
                     lines: Arc::from(lines),
                     caret_stops: Arc::from(first_line_caret_stops),
+                    missing_glyphs,
                 })
             };
             self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
@@ -3177,6 +3201,13 @@ impl TextSystem {
             .unwrap_or_default();
 
         let metrics = shape.metrics;
+        if shape.missing_glyphs > 0 {
+            self.perf_frame_missing_glyphs = self
+                .perf_frame_missing_glyphs
+                .saturating_add(u64::from(shape.missing_glyphs));
+            self.perf_frame_texts_with_missing_glyphs =
+                self.perf_frame_texts_with_missing_glyphs.saturating_add(1);
+        }
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
@@ -3340,26 +3371,63 @@ impl TextSystem {
                 metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             }
         } else {
-            // Keep measurement aligned with prepare/paint under fractional scale factors.
-            //
-            // `shape_single_line_metrics` can disagree with full shaping near wrap boundaries when
-            // we also snap vertical layout to device pixels (common on Windows at 125%/150% DPI).
-            // Prefer the full wrapper in that case so layout height matches the prepared blob.
-            let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-            let wrapped = if snap_vertical {
-                crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
+            // Prefer the same wrap policy as `prepare` so `measure` stays layout-consistent.
+            // This matters even under fractional scale factors where we may snap line heights.
+            if normalized_constraints.wrap == TextWrap::Word
+                && normalized_constraints.overflow == TextOverflow::Clip
+                && normalized_constraints.max_width.is_some()
+                && !text.contains('\n')
+            {
+                let blob_key =
+                    TextBlobKey::new(text, style, normalized_constraints, self.font_stack_key);
+                let wrapped = self.wrap_for_prepare(
                     TextInputRef::plain(text, style),
+                    &blob_key,
                     normalized_constraints,
-                )
+                );
+                match wrapped {
+                    WrappedForPrepare::Owned(wrapped) => {
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    }
+                    WrappedForPrepare::UnwrappedWordLtr {
+                        unwrapped, lines, ..
+                    } => {
+                        let mut max_w_px = 0.0_f32;
+                        for s in &lines {
+                            max_w_px = max_w_px.max(s.width_px.max(0.0));
+                        }
+                        metrics_for_uniform_lines(
+                            max_w_px,
+                            lines.len().max(1),
+                            unwrapped.baseline.max(0.0),
+                            unwrapped.line_height.max(0.0),
+                            scale,
+                        )
+                    }
+                }
             } else {
-                crate::text::wrapper::wrap_with_constraints_measure_only(
-                    &mut self.parley_shaper,
-                    TextInputRef::plain(text, style),
-                    normalized_constraints,
-                )
-            };
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
+                // Keep measurement aligned with prepare/paint under fractional scale factors.
+                //
+                // `shape_single_line_metrics` can disagree with full shaping near wrap boundaries
+                // when we also snap vertical layout to device pixels (common on Windows at
+                // 125%/150% DPI). Prefer the full wrapper in that case so layout height matches
+                // the prepared blob.
+                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+                let wrapped = if snap_vertical {
+                    crate::text::wrapper::wrap_with_constraints(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    )
+                } else {
+                    crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    )
+                };
+                metrics_from_wrapped_lines(&wrapped.lines, scale)
+            }
         };
 
         let bucket = self.measure_cache.entry(key).or_default();
@@ -3554,29 +3622,72 @@ impl TextSystem {
                 metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             }
         } else {
-            let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-            let wrapped = if snap_vertical {
-                crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
+            let text = rich.text.as_ref();
+            if normalized_constraints.wrap == TextWrap::Word
+                && normalized_constraints.overflow == TextOverflow::Clip
+                && normalized_constraints.max_width.is_some()
+                && !text.contains('\n')
+            {
+                let blob_key = TextBlobKey::new_attributed(
+                    rich,
+                    base_style,
+                    normalized_constraints,
+                    self.font_stack_key,
+                );
+                let wrapped = self.wrap_for_prepare(
                     TextInputRef::Attributed {
-                        text: rich.text.as_ref(),
+                        text,
                         base: base_style,
                         spans: rich.spans.as_ref(),
                     },
+                    &blob_key,
                     normalized_constraints,
-                )
+                );
+                match wrapped {
+                    WrappedForPrepare::Owned(wrapped) => {
+                        metrics_from_wrapped_lines(&wrapped.lines, scale)
+                    }
+                    WrappedForPrepare::UnwrappedWordLtr {
+                        unwrapped, lines, ..
+                    } => {
+                        let mut max_w_px = 0.0_f32;
+                        for s in &lines {
+                            max_w_px = max_w_px.max(s.width_px.max(0.0));
+                        }
+                        metrics_for_uniform_lines(
+                            max_w_px,
+                            lines.len().max(1),
+                            unwrapped.baseline.max(0.0),
+                            unwrapped.line_height.max(0.0),
+                            scale,
+                        )
+                    }
+                }
             } else {
-                crate::text::wrapper::wrap_with_constraints_measure_only(
-                    &mut self.parley_shaper,
-                    TextInputRef::Attributed {
-                        text: rich.text.as_ref(),
-                        base: base_style,
-                        spans: rich.spans.as_ref(),
-                    },
-                    normalized_constraints,
-                )
-            };
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
+                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+                let wrapped = if snap_vertical {
+                    crate::text::wrapper::wrap_with_constraints(
+                        &mut self.parley_shaper,
+                        TextInputRef::Attributed {
+                            text,
+                            base: base_style,
+                            spans: rich.spans.as_ref(),
+                        },
+                        normalized_constraints,
+                    )
+                } else {
+                    crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::Attributed {
+                            text,
+                            base: base_style,
+                            spans: rich.spans.as_ref(),
+                        },
+                        normalized_constraints,
+                    )
+                };
+                metrics_from_wrapped_lines(&wrapped.lines, scale)
+            }
         };
 
         let bucket = self.measure_cache.entry(key).or_default();

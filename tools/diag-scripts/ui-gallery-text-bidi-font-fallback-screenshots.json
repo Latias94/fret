@@ -55,16 +55,19 @@
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-text-bidi-sample-btn-1" } },
     { "type": "wait_frames", "n": 10 },
+    { "type": "assert", "predicate": { "kind": "render_text_missing_glyphs_is", "missing_glyphs": 0 } },
     { "type": "capture_bundle", "label": "ui-gallery-text-bidi-font-fallback-cjk" },
     { "type": "capture_screenshot", "label": "ui-gallery-text-bidi-font-fallback-cjk" },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-text-bidi-sample-btn-2" } },
     { "type": "wait_frames", "n": 10 },
+    { "type": "assert", "predicate": { "kind": "render_text_missing_glyphs_is", "missing_glyphs": 0 } },
     { "type": "capture_bundle", "label": "ui-gallery-text-bidi-font-fallback-mixed-ltr-cjk" },
     { "type": "capture_screenshot", "label": "ui-gallery-text-bidi-font-fallback-mixed-ltr-cjk" },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-text-bidi-sample-btn-8" } },
     { "type": "wait_frames", "n": 10 },
+    { "type": "assert", "predicate": { "kind": "render_text_missing_glyphs_is", "missing_glyphs": 0 } },
     { "type": "capture_bundle", "label": "ui-gallery-text-bidi-font-fallback-emoji-rtl" },
     { "type": "capture_screenshot", "label": "ui-gallery-text-bidi-font-fallback-emoji-rtl" }
   ]

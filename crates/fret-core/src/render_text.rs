@@ -12,6 +12,14 @@ pub struct RendererTextPerfSnapshot {
     pub font_stack_key: u64,
     pub font_db_revision: u64,
 
+    /// Total count of missing/tofu glyphs observed across text prepared this frame.
+    ///
+    /// Implementation note: this is currently approximated as the number of shaped glyphs whose
+    /// glyph id is `0` (the `.notdef` glyph) across prepared text runs.
+    pub frame_missing_glyphs: u64,
+    /// Count of prepared text blobs that contained at least one missing/tofu glyph.
+    pub frame_texts_with_missing_glyphs: u64,
+
     pub blobs_live: u64,
     pub blob_cache_entries: u64,
     pub shape_cache_entries: u64,

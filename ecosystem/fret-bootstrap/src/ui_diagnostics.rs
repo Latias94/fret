@@ -1171,8 +1171,14 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "wait_until",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        &predicate,
+                    ) {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -1213,8 +1219,14 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "assert",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        &predicate,
+                    ) {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -2314,8 +2326,14 @@ impl UiDiagnosticsService {
                         UiPredicateV1::VisibleInWindow { target }
                     };
 
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        &predicate,
+                    ) {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -2390,6 +2408,7 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
@@ -4845,6 +4864,11 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub font_stack_key: u64,
     pub font_db_revision: u64,
 
+    #[serde(default)]
+    pub frame_missing_glyphs: u64,
+    #[serde(default)]
+    pub frame_texts_with_missing_glyphs: u64,
+
     pub blobs_live: u64,
     pub blob_cache_entries: u64,
     pub shape_cache_entries: u64,
@@ -4878,6 +4902,8 @@ impl UiRendererTextPerfSnapshotV1 {
             frame_id: snapshot.frame_id.0,
             font_stack_key: snapshot.font_stack_key,
             font_db_revision: snapshot.font_db_revision,
+            frame_missing_glyphs: snapshot.frame_missing_glyphs,
+            frame_texts_with_missing_glyphs: snapshot.frame_texts_with_missing_glyphs,
             blobs_live: snapshot.blobs_live,
             blob_cache_entries: snapshot.blob_cache_entries,
             shape_cache_entries: snapshot.shape_cache_entries,
@@ -11549,6 +11575,7 @@ fn eval_predicate(
     window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
+    render_text: Option<fret_core::RendererTextPerfSnapshot>,
     pred: &UiPredicateV1,
 ) -> bool {
     match pred {
@@ -11637,6 +11664,9 @@ fn eval_predicate(
                 Some(true) => barrier == focus_barrier,
                 Some(false) => barrier != focus_barrier,
             }
+        }
+        UiPredicateV1::RenderTextMissingGlyphsIs { missing_glyphs } => {
+            render_text.is_some_and(|snapshot| snapshot.frame_missing_glyphs == *missing_glyphs)
         }
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
@@ -13022,6 +13052,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            None,
             &pred
         ));
 
@@ -13033,7 +13064,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected padding to shrink the allowed window rect"
         );
     }
@@ -13074,7 +13105,7 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected node to satisfy the min-size gate"
         );
     }
@@ -13133,7 +13164,7 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected roving focus to satisfy active_item_is"
         );
 
@@ -13164,7 +13195,7 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected active_descendant to satisfy active_item_is"
         );
     }
@@ -13205,7 +13236,7 @@ mod tests {
         };
 
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "collapsed node should fail the min-size gate"
         );
     }
@@ -13263,7 +13294,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected overlap (a right edge > b left edge) to fail"
         );
 
@@ -13277,7 +13308,7 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to tolerate a small overlap"
         );
     }
@@ -13313,7 +13344,7 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected missing test id to satisfy NotExists"
         );
     }
@@ -13371,7 +13402,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected overlap (a right edge > b left edge) to pass"
         );
 
@@ -13385,7 +13416,7 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to require more overlap than available"
         );
     }
@@ -13443,7 +13474,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected x overlap to pass even when y does not overlap"
         );
 
@@ -13457,7 +13488,7 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to require more x overlap than available"
         );
     }
@@ -13515,7 +13546,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected y overlap to pass even when x does not overlap"
         );
 
@@ -13529,7 +13560,7 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to require more y overlap than available"
         );
     }
@@ -13681,7 +13712,7 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            eval_predicate(&snapshot, window_bounds, window, None, None, &pred),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
         );
 
@@ -13691,7 +13722,7 @@ mod tests {
             require_equal: Some(true),
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window, None, None, &pred),
             "expected require_equal=true to fail when the roots differ"
         );
     }

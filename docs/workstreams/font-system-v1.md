@@ -78,6 +78,7 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
      with a focused mixed-script conformance suite.
    - Initial conformance evidence (UI Gallery script + screenshots/bundles):
      - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json`
+       - Includes `render_text_missing_glyphs_is` assertions (requires diagnostics bundles).
 
 3) Font enumeration is still uncached and metadata is best-effort.
    - `all_font_names()` and `all_font_catalog_entries()` are best-effort snapshots (platform-dependent).
