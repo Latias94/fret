@@ -54,6 +54,7 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
   - `crates/fret-runtime/src/font_bootstrap.rs`
 - Runner wiring (refresh catalog + apply config + bump stack key):
   - `crates/fret-launch/src/runner/desktop/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/app_handler.rs` (startup catalog population)
   - `crates/fret-launch/src/runner/web/*`
 
 ### Audit inputs (repo-ref)
@@ -117,6 +118,8 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
      - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`all_font_names_cache`,
        `all_font_catalog_entries_cache`, `family_id_cache_lower`)
    - `all_font_names()` and `all_font_catalog_entries()` remain best-effort snapshots (platform-dependent).
+   - Desktop startup populates picker catalog asynchronously by default to avoid UI-thread stalls
+     (`FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC=0` forces sync).
    - `FontCatalogMetadata` carries coarse metadata (axes + monospace hint), but settings UI still needs to consume it.
    - Remaining work: decide refresh policy boundaries (when does the runner rescan system fonts? how often?).
 

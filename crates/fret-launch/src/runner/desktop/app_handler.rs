@@ -444,22 +444,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.text_font_stack_key(),
             ));
 
-        let entries = renderer
-            .all_font_catalog_entries()
-            .into_iter()
-            .map(|e| fret_runtime::FontCatalogEntry {
-                family: e.family,
-                has_variable_axes: e.has_variable_axes,
-                known_variable_axes: e.known_variable_axes,
-                is_monospace_candidate: e.is_monospace_candidate,
-            })
-            .collect::<Vec<_>>();
-        // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
-        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
-            &mut self.app,
-            entries,
-            fret_runtime::FontFamilyDefaultsPolicy::None,
-        );
+        let startup_async = Self::system_font_rescan_async_enabled()
+            && Self::system_font_catalog_startup_async_enabled();
+        if startup_async {
+            // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
+            // empty picker snapshot and populate it asynchronously via the rescan pipeline.
+            let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                &mut self.app,
+                Vec::new(),
+                fret_runtime::FontFamilyDefaultsPolicy::None,
+            );
+        } else {
+            // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
+            super::super::font_catalog::apply_renderer_font_catalog_update(
+                &mut self.app,
+                &mut renderer,
+                fret_runtime::FontFamilyDefaultsPolicy::None,
+            );
+        }
 
         self.context = Some(context);
         self.renderer = Some(renderer);
@@ -478,6 +480,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.main_window = Some(main_window);
         self.driver.init(&mut self.app, main_window);
         self.app.request_redraw(main_window);
+        if startup_async {
+            self.request_system_font_rescan();
+        }
         self.drain_effects(event_loop);
     }
 

@@ -4251,6 +4251,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         })
     }
 
+    fn system_font_catalog_startup_async_enabled() -> bool {
+        static FLAG: OnceLock<bool> = OnceLock::new();
+        *FLAG.get_or_init(|| {
+            if cfg!(any(target_os = "ios", target_os = "android")) {
+                return false;
+            }
+            std::env::var("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC")
+                .ok()
+                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
+                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC").is_none()
+        })
+    }
+
     fn request_redraw_all_windows(&self) {
         for (_id, state) in self.windows.iter() {
             state.window.request_redraw();

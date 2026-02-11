@@ -50,6 +50,18 @@ Repeated rescan requests while a rescan is in-flight are coalesced: at most one 
 
 Set `FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC=0` to force a synchronous rescan path (debugging/triage).
 
+#### 2.1) Startup catalog enumeration is async-by-default on desktop
+
+Enumerating the full system font catalog (for picker UIs) can be expensive, and doing it synchronously during renderer
+startup risks a noticeable stall.
+
+On desktop builds, we avoid enumerating the catalog on the UI thread at startup by default:
+
+- Seed an empty `FontCatalogMetadata` snapshot (revisioned per ADR 0258).
+- Kick an async rescan to populate the catalog and bump `TextFontStackKey` once the result is applied.
+
+Set `FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC=0` to force the old synchronous startup enumeration path.
+
 ### 3) Bounded injected font retention (dedupe + LRU eviction)
 
 The renderer retains injected font bytes (from `Effect::TextAddFonts`) so it can re-register them during a system rescan.
@@ -75,6 +87,8 @@ If a font blob is evicted, it may not survive a subsequent system rescan.
 
 - Desktop async rescan (coalesced + env gate):
   - `crates/fret-launch/src/runner/desktop/mod.rs` (`request_system_font_rescan`, `apply_pending_system_font_rescan_result`)
+- Desktop startup (async catalog population):
+  - `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Renderer seed/result split (background compute + main-thread apply):
   - `crates/fret-render-wgpu/src/text/mod.rs` (`SystemFontRescanSeed`, `SystemFontRescanResult`)
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`run_system_font_rescan`)
@@ -86,4 +100,3 @@ If a font blob is evicted, it may not survive a subsequent system rescan.
 - ADR 0258: `docs/adr/0258-font-catalog-refresh-and-revisioning-v1.md`
 - Workstream: `docs/workstreams/font-system-v1.md`
 - Audit note: `docs/audits/font-system-parley-zed-xilem-2026-02.md`
-
