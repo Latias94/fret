@@ -14,6 +14,8 @@ contracts early to avoid large rewrites later.
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
+- Mobile bring-up v1 (scroll + IME + keyboard avoidance): `docs/workstreams/mobile-bringup-v1.md`, `docs/workstreams/mobile-bringup-v1-todo.md`, and `docs/workstreams/mobile-bringup-v1-milestones.md`
+- Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`

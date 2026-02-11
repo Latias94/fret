@@ -19,6 +19,12 @@ Active workstreams:
 - `docs/workstreams/environment-queries-v1-extensions.md`
 - `docs/workstreams/environment-queries-v1-extensions-todo.md`
 - `docs/workstreams/environment-queries-v1-extensions-milestones.md`
+- `docs/workstreams/mobile-bringup-v1.md`
+- `docs/workstreams/mobile-bringup-v1-todo.md`
+- `docs/workstreams/mobile-bringup-v1-milestones.md`
+- `docs/workstreams/gesture-recognizers-v1.md`
+- `docs/workstreams/gesture-recognizers-v1-todo.md`
+- `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
