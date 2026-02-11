@@ -22,7 +22,7 @@ use fret_runtime::{
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
@@ -32,9 +32,7 @@ use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
 };
-use fret_workspace::{
-    WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
-};
+use fret_workspace::{WorkspaceFrame, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,6 +53,7 @@ mod inspector;
 mod menubar;
 mod router;
 mod settings_sheet;
+mod status_bar;
 use router::{
     UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
     apply_page_router_update_side_effects, build_ui_gallery_page_router,
@@ -2597,62 +2596,13 @@ impl UiGalleryDriver {
                         ])
                         .into_element(cx);
 
-                    let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
-                        let status_last_action = cx
-                            .get_model_cloned(&content_models.last_action, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from("<none>"));
-                        let status_theme = cx
-                            .get_model_cloned(&content_models.theme_preset, Invalidation::Layout)
-                            .flatten()
-                            .unwrap_or_else(|| Arc::<str>::from("<default>"));
-                        let status_view_cache = cx
-                            .get_model_copied(
-                                &content_models.view_cache_enabled,
-                                Invalidation::Layout,
-                            )
-                            .unwrap_or(false);
-                        let status_cache_shell = cx
-                            .get_model_copied(
-                                &content_models.view_cache_cache_shell,
-                                Invalidation::Layout,
-                            )
-                            .unwrap_or(false);
-
-                        let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
-                            "theme: {} view_cache={} shell_cache={} layout_us={} paint_us={}",
-                            status_theme.as_ref(),
-                            status_view_cache as u8,
-                            status_cache_shell as u8,
-                            last_debug_stats.layout_time.as_micros(),
-                            last_debug_stats.paint_time.as_micros()
-                        ))];
-                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
-                            right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
-                        }
-
-                        let status_last_action_label = Arc::<str>::from(format!(
-                            "last action: {}",
-                            status_last_action.as_ref()
-                        ));
-                        let status_last_action_text = status_last_action_label.clone();
-                        let status_last_action_item = cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Text,
-                                label: Some(status_last_action_label),
-                                test_id: Some(Arc::from("ui-gallery-status-last-action")),
-                                ..Default::default()
-                            },
-                            move |cx| vec![cx.text(status_last_action_text.as_ref())],
-                        );
-
-                        WorkspaceStatusBar::new()
-                            .left(vec![status_last_action_item])
-                            .right(right_items)
-                            .into_element(cx)
-                    });
+                    let status_bar = status_bar::status_bar_view(
+                        cx,
+                        content_models.as_ref(),
+                        inspector_status.as_ref(),
+                        last_debug_stats.layout_time.as_micros(),
+                        last_debug_stats.paint_time.as_micros(),
+                    );
 
                     let mut center_layout = fret_ui::element::LayoutStyle::default();
                     center_layout.size.width = fret_ui::element::Length::Fill;
