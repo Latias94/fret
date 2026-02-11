@@ -17,6 +17,11 @@ This is an **outcomes-first** port: we align behavior and composition outcomes, 
 
 Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`.
 
+Related workstreams:
+
+- WebView backend plan (native, `wry`): `docs/workstreams/webview-wry-v1.md` and
+  `docs/workstreams/webview-wry-v1-todo.md`.
+
 ## Version stamp (upstream reference)
 
 The upstream spec for this workstream is the pinned local checkout under

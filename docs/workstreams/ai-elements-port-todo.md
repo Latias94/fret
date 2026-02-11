@@ -341,6 +341,13 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP0-foundation-014 Add “Version stamp” update rules (pinned upstream commit must be updated first).
   - Target: `docs/workstreams/ai-elements-port.md`
 
+### WebPreview backend (optional, feature-gated)
+
+- [x] AIEL-MVP0-webpreview-001 Port `WebPreview` chrome-only surfaces + UI Gallery demo + diag gate.
+- [x] AIEL-MVP0-webpreview-002 Define WebView integration plan and crate boundaries (contract + wry backend).
+  - Workstream: `docs/workstreams/webview-wry-v1.md`
+  - TODOs: `docs/workstreams/webview-wry-v1-todo.md`
+
 ### Data model (v0)
 
 - [x] AIEL-MVP0-model-001 Confirm `MessageId = u64` (align with `crates/fret-ui::ItemKey`) and document stability rules.
