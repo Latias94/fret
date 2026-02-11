@@ -14,6 +14,7 @@ Workstream entry:
 
 - [ ] Ensure all gesture code lives in `ecosystem/` (policy), not in `crates/fret-ui` (mechanism).
 - [ ] Add a short “why this is policy” note and link to ADR 0066.
+  - Note: baseline touch pan-to-scroll for `Scroll` / `VirtualList` is treated as runtime mechanism.
 
 ## Pan recognizer (M0)
 
@@ -28,6 +29,7 @@ Workstream entry:
 
 ## Scroll integration (M1)
 
-- [ ] Integrate into `fret-ui-shadcn::ScrollArea` touch scrolling.
-- [ ] Add a conformance test: tap does not scroll; drag scrolls and suppresses click.
-
+- [ ] Integrate into a policy-heavy scroll surface (beyond the runtime baseline) to prove:
+  - tap does not scroll,
+  - drag scrolls,
+  - the winner rule prevents stuck pressed state.

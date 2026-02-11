@@ -30,12 +30,14 @@ Evidence:
 
 Definition of done:
 
-- `fret-ui-shadcn::ScrollArea` uses the recognizer for touch pan scrolling.
+- At least one policy-heavy scroll surface adopts the recognizer for richer behavior than the
+  runtime baseline (e.g. capture-steal / nested scroll arbitration).
 - Tap behavior remains correct for pressables inside the scroll surface when the pan does not arm.
 
 Evidence:
 
 - Unit test verifies a “tap” (no drag) still bubbles to a child pressable.
+- Unit test verifies capture-steal (or an equivalent “winner” rule) prevents stuck pressed state.
 
 ## M2 — Extensions (deferred)
 
@@ -44,4 +46,3 @@ Candidates:
 - inertial scrolling (kinetic) with reduced-motion gating,
 - axis locking heuristics,
 - pinch-to-zoom policies for viewport surfaces.
-
