@@ -23,8 +23,8 @@ use fret_ui_shadcn::{
 
 #[cfg(feature = "webview")]
 use fret_webview::{
-    WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_push_request,
-    webview_register_surface_tracked, webview_runtime_state,
+    WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_console_entries,
+    webview_push_request, webview_register_surface_tracked, webview_runtime_state,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -949,10 +949,12 @@ impl WebPreviewConsoleLog {
 #[derive(Debug, Clone)]
 pub struct WebPreviewConsole {
     logs: Arc<[WebPreviewConsoleLog]>,
+    backend_logs: bool,
     children: Vec<AnyElement>,
     test_id_trigger: Option<Arc<str>>,
     test_id_content: Option<Arc<str>>,
     test_id_marker: Option<Arc<str>>,
+    test_id_backend_logs_marker: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
@@ -961,10 +963,12 @@ impl Default for WebPreviewConsole {
     fn default() -> Self {
         Self {
             logs: Arc::from([]),
+            backend_logs: false,
             children: Vec::new(),
             test_id_trigger: None,
             test_id_content: None,
             test_id_marker: None,
+            test_id_backend_logs_marker: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
@@ -978,6 +982,11 @@ impl WebPreviewConsole {
 
     pub fn logs(mut self, logs: Arc<[WebPreviewConsoleLog]>) -> Self {
         self.logs = logs;
+        self
+    }
+
+    pub fn backend_logs(mut self, enabled: bool) -> Self {
+        self.backend_logs = enabled;
         self
     }
 
@@ -998,6 +1007,11 @@ impl WebPreviewConsole {
 
     pub fn test_id_marker(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id_marker = Some(id.into());
+        self
+    }
+
+    pub fn test_id_backend_logs_marker(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_backend_logs_marker = Some(id.into());
         self
     }
 
@@ -1065,9 +1079,45 @@ impl WebPreviewConsole {
             }
         };
 
-        let logs = self.logs.clone();
+        let (logs, backend_logs_present) = {
+            let mut out: Vec<WebPreviewConsoleLog> = self.logs.iter().cloned().collect();
+
+            #[cfg(feature = "webview")]
+            let backend_entries = if self.backend_logs {
+                controller
+                    .backend
+                    .as_ref()
+                    .map(|b| webview_console_entries(cx.app, b.id))
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+            #[cfg(not(feature = "webview"))]
+            let backend_entries: Vec<fret_webview::WebViewConsoleEntry> = Vec::new();
+
+            let backend_logs_present = !backend_entries.is_empty();
+
+            for entry in backend_entries {
+                let level = match entry.level {
+                    fret_webview::WebViewConsoleLevel::Log => WebPreviewConsoleLogLevel::Log,
+                    fret_webview::WebViewConsoleLevel::Warn => WebPreviewConsoleLogLevel::Warn,
+                    fret_webview::WebViewConsoleLevel::Error => WebPreviewConsoleLogLevel::Error,
+                };
+                out.push(WebPreviewConsoleLog {
+                    level,
+                    timestamp: Arc::<str>::from(""),
+                    message: entry.message,
+                });
+            }
+
+            (
+                Arc::<[WebPreviewConsoleLog]>::from(out),
+                backend_logs_present,
+            )
+        };
         let children = self.children;
         let marker_id = self.test_id_marker.clone();
+        let backend_marker_id = self.test_id_backend_logs_marker.clone();
         let content = CollapsibleContent::new([{
             let mut rows: Vec<AnyElement> = Vec::new();
             if logs.is_empty() {
@@ -1144,6 +1194,16 @@ impl WebPreviewConsole {
                         SemanticsDecoration::default()
                             .role(SemanticsRole::Generic)
                             .test_id(marker_id),
+                    ),
+                );
+            }
+
+            if backend_logs_present && let Some(backend_marker_id) = backend_marker_id {
+                rows.push(
+                    cx.text("").attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Generic)
+                            .test_id(backend_marker_id),
                     ),
                 );
             }

@@ -20919,8 +20919,10 @@ fn preview_ai_web_preview_demo(
 
         let console = ui_ai::WebPreviewConsole::new()
             .logs(logs)
+            .backend_logs(true)
             .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
             .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
+            .test_id_backend_logs_marker("ui-ai-web-preview-demo-console-backend-logs-present")
             .into_element(cx);
 
         let commits_now = cx

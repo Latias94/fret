@@ -65,6 +65,21 @@ pub enum WebViewConsoleLevel {
     Error,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebViewConsoleEntry {
+    pub level: WebViewConsoleLevel,
+    pub message: Arc<str>,
+}
+
+impl WebViewConsoleEntry {
+    pub fn new(level: WebViewConsoleLevel, message: impl Into<Arc<str>>) -> Self {
+        Self {
+            level,
+            message: message.into(),
+        }
+    }
+}
+
 /// Requests emitted by UI/policy code, to be handled by a concrete backend.
 #[derive(Debug, Clone, PartialEq)]
 pub enum WebViewRequest {
@@ -154,9 +169,13 @@ pub struct WebViewHost {
     events: VecDeque<WebViewEvent>,
     surfaces: HashMap<WebViewId, WebViewSurfaceRegistration>,
     runtime: HashMap<WebViewId, WebViewRuntimeState>,
+    console: HashMap<WebViewId, VecDeque<WebViewConsoleEntry>>,
 }
 
 impl WebViewHost {
+    const EVENTS_CAP: usize = 512;
+    const CONSOLE_CAP: usize = 200;
+
     pub fn push_request(&mut self, request: WebViewRequest) {
         self.requests.push_back(request);
     }
@@ -172,6 +191,9 @@ impl WebViewHost {
     pub fn push_event(&mut self, event: WebViewEvent) {
         self.apply_event_to_runtime(&event);
         self.events.push_back(event);
+        while self.events.len() > Self::EVENTS_CAP {
+            let _ = self.events.pop_front();
+        }
     }
 
     pub fn push_events(&mut self, events: impl IntoIterator<Item = WebViewEvent>) {
@@ -186,6 +208,13 @@ impl WebViewHost {
 
     pub fn runtime_state(&self, id: WebViewId) -> Option<&WebViewRuntimeState> {
         self.runtime.get(&id)
+    }
+
+    pub fn console_entries(&self, id: WebViewId) -> Vec<WebViewConsoleEntry> {
+        self.console
+            .get(&id)
+            .map(|q| q.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     pub fn requeue_requests_front(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
@@ -293,6 +322,7 @@ impl WebViewHost {
             WebViewEvent::Destroyed { id } => {
                 self.runtime.remove(id);
                 self.surfaces.remove(id);
+                self.console.remove(id);
             }
             WebViewEvent::UrlChanged { id, url } => {
                 self.runtime
@@ -311,7 +341,13 @@ impl WebViewHost {
             WebViewEvent::NavigationStateChanged { id, state } => {
                 self.runtime.entry(*id).or_default().navigation = *state;
             }
-            WebViewEvent::ConsoleMessage { .. } => {}
+            WebViewEvent::ConsoleMessage { id, level, message } => {
+                let q = self.console.entry(*id).or_default();
+                q.push_back(WebViewConsoleEntry::new(*level, message.clone()));
+                while q.len() > Self::CONSOLE_CAP {
+                    let _ = q.pop_front();
+                }
+            }
             WebViewEvent::LoadFailed { id, error } => {
                 self.runtime
                     .entry(*id)
@@ -423,6 +459,12 @@ pub fn webview_runtime_state(
     id: WebViewId,
 ) -> Option<WebViewRuntimeState> {
     with_webview_host(host, |st| st.and_then(|st| st.runtime_state(id).cloned()))
+}
+
+pub fn webview_console_entries(host: &impl GlobalsHost, id: WebViewId) -> Vec<WebViewConsoleEntry> {
+    with_webview_host(host, |st| {
+        st.map(|st| st.console_entries(id)).unwrap_or_default()
+    })
 }
 
 pub fn webview_register_surface(host: &mut impl GlobalsHost, surface: WebViewSurfaceRegistration) {

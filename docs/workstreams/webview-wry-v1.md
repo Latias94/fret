@@ -177,5 +177,7 @@ Notes:
 
 - `can_go_back/can_go_forward` is derived from a backend-side best-effort history tracker and may
   diverge from the underlying engine in edge cases (redirect chains, cross-origin swaps).
-- Console capture is not wired by default yet; we have the contract surface (`WebViewEvent`) but
-  still need to decide on the storage policy (cap, filtering) and a UI surface for the log list.
+- Console capture is best-effort:
+  - We inject a JS bridge that forwards `console.log/warn/error` to the host via IPC.
+  - The host stores a bounded per-webview ring buffer.
+  - We still need to decide on richer formatting (structured args, stack traces) and filtering.

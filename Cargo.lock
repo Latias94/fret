@@ -2193,6 +2193,7 @@ dependencies = [
  "fret-webview",
  "lb-wry",
  "raw-window-handle",
+ "serde_json",
  "tracing",
 ]
 

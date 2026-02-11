@@ -85,6 +85,50 @@ impl HostedState {
     }
 }
 
+const CONSOLE_BRIDGE_JS: &str = r#"
+(() => {
+  const safeString = (v) => {
+    try {
+      if (typeof v === 'string') return v;
+      if (v instanceof Error) return (v.stack || v.message || String(v));
+      if (typeof v === 'object') return JSON.stringify(v);
+      return String(v);
+    } catch (_) {
+      try { return String(v); } catch (_) { return '<unprintable>'; }
+    }
+  };
+
+  const post = (level, args) => {
+    try {
+      if (!window.ipc || !window.ipc.postMessage) return;
+      const message = Array.from(args).map(safeString).join(' ');
+      window.ipc.postMessage(JSON.stringify({ kind: 'console', level, message }));
+    } catch (_) {
+      // ignore
+    }
+  };
+
+  const wrap = (level) => {
+    const original = console[level];
+    console[level] = function(...args) {
+      try { post(level, args); } catch (_) {}
+      try { return original.apply(console, args); } catch (_) { return undefined; }
+    };
+  };
+
+  wrap('log');
+  wrap('warn');
+  wrap('error');
+
+  window.addEventListener('error', (e) => {
+    try {
+      const msg = e && e.message ? e.message : 'window error';
+      post('error', [msg]);
+    } catch (_) {}
+  });
+})();
+"#;
+
 impl WryWebViewHost {
     pub fn new() -> Self {
         Self {
@@ -155,6 +199,43 @@ impl WryWebViewHost {
                                     }
                                 });
 
+                            let builder = builder.with_initialization_script(CONSOLE_BRIDGE_JS);
+
+                            let id_for_ipc = id;
+                            let target_window_for_ipc = target_window;
+                            let events_for_ipc = events.clone();
+                            let builder = builder.with_ipc_handler(move |req| {
+                                let body = req.body();
+                                let Ok(value) = serde_json::from_str::<serde_json::Value>(body)
+                                else {
+                                    return;
+                                };
+                                let kind = value.get("kind").and_then(|v| v.as_str());
+                                if kind != Some("console") {
+                                    return;
+                                }
+                                let level =
+                                    value.get("level").and_then(|v| v.as_str()).unwrap_or("log");
+                                let message =
+                                    value.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+                                let level = match level {
+                                    "warn" => fret_webview::WebViewConsoleLevel::Warn,
+                                    "error" => fret_webview::WebViewConsoleLevel::Error,
+                                    _ => fret_webview::WebViewConsoleLevel::Log,
+                                };
+
+                                if let Ok(mut map) = events_for_ipc.lock() {
+                                    map.entry(target_window_for_ipc).or_default().push_back(
+                                        WebViewEvent::ConsoleMessage {
+                                            id: id_for_ipc,
+                                            level,
+                                            message: Arc::<str>::from(message),
+                                        },
+                                    );
+                                }
+                            });
+
                             let id_for_load = id;
                             let target_window_for_load = target_window;
                             let events_for_load = events.clone();
@@ -202,6 +283,18 @@ impl WryWebViewHost {
 
                                 if let Ok(mut map) = events_for_load.lock() {
                                     let q = map.entry(target_window_for_load).or_default();
+                                    q.push_back(WebViewEvent::ConsoleMessage {
+                                        id: id_for_load,
+                                        level: fret_webview::WebViewConsoleLevel::Log,
+                                        message: Arc::<str>::from(match event {
+                                            PageLoadEvent::Started => {
+                                                format!("load started: {}", url.as_ref())
+                                            }
+                                            PageLoadEvent::Finished => {
+                                                format!("load finished: {}", url.as_ref())
+                                            }
+                                        }),
+                                    });
                                     q.push_back(WebViewEvent::UrlChanged {
                                         id: id_for_load,
                                         url: url.clone(),

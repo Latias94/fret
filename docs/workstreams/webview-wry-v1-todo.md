@@ -55,6 +55,10 @@ Tracking format:
   - observes a “loaded” marker (backend-provided),
   - toggles console panel (if supported).
   - Implemented gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json` (requires `--features webview-wry`).
+- [x] WEBVIEW-WRY2-ai-006 Capture backend console output and surface it in `WebPreviewConsole`.
+  - Inject `console.*` bridge via `wry` initialization script + IPC handler.
+  - Store a bounded ring buffer in the app-global host.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json` (requires `--features webview-wry`).
 
 ## Blockers / risks
 
