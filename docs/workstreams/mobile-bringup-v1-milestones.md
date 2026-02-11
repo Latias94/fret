@@ -51,6 +51,8 @@ Evidence:
 
 - Unit/integration test demonstrates the policy applies when `occlusion_insets.bottom > 0`.
 - A diag bundle snapshot captures the committed insets and the chosen avoidance behavior.
+- A scripted diag scenario simulates occlusion and asserts the focused input remains visible:
+  - `tools/diag-scripts/ui-gallery-ai-chat-demo-keyboard-occlusion-focus-visible.json`
 
 ## M3 — Android insets + lifecycle plumbing (runner)
 

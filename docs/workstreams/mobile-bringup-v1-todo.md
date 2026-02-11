@@ -26,13 +26,14 @@ Workstream entry:
 
 ## Keyboard avoidance (policy)
 
-- [ ] Add a keyboard avoidance policy helper in `ecosystem/fret-ui-kit` (environment query driven).
+- [x] Add a keyboard avoidance policy helper in `ecosystem/fret-ui-kit` (environment query driven).
 - [x] Apply a minimal policy in `apps/fret-ui-gallery` so focused inputs are not obscured by IME.
   - Start with bottom “scroll slack” based on `occlusion_insets.bottom`.
+  - Keep a scripted diag gate that simulates keyboard occlusion in CI.
 
 ## Android plumbing (runner/backend)
 
-- [ ] Add Android-specific environment commits:
+- [x] Add Android-specific environment commits:
   - safe-area insets (best-effort),
   - occlusion insets (IME / transient obstructions).
 - [ ] Handle winit lifecycle events:
