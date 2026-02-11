@@ -55,6 +55,26 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-tex
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+### Gate 1.5: Locale change bumps fallback policy key
+
+- Script: `tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json`
+- Check flag: `--check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change`
+
+Expected:
+
+- The script captures two bundles (before/after locale change via Settings).
+- The gate asserts:
+  - `locale_bcp47` is `en-US` in the BEFORE capture and `zh-CN` in the AFTER capture.
+  - `fallback_policy_key` differs between the two labeled captures.
+
+Run (native):
+
+```bash
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json \
+  --check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 ### Gate 2: System font rescan bumps font stack key (native)
 
 - Script: `tools/diag-scripts/ui-gallery-text-rescan-system-fonts-font-stack-key-bumps.json`

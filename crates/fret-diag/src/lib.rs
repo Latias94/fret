@@ -101,6 +101,7 @@ use stats::{
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
     check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
     check_bundle_for_windowed_rows_visible_start_changes_repainted,
+    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
     check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
     check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
@@ -187,6 +188,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_web_ime_bridge_enabled: bool = false;
     let mut check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: bool = false;
     let mut check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: bool = false;
+    let mut check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: bool = false;
     let mut check_ui_gallery_text_mixed_script_bundled_fallback_conformance: bool = false;
     let mut check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition: bool = false;
@@ -812,6 +814,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-text-fallback-policy-key-bumps-on-settings-change" => {
                 check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change = true;
+                i += 1;
+            }
+            "--check-ui-gallery-text-fallback-policy-key-bumps-on-locale-change" => {
+                check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change = true;
                 i += 1;
             }
             "--check-ui-gallery-text-mixed-script-bundled-fallback-conformance" => {
@@ -1891,6 +1897,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_web_ime_bridge_enabled
                     || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
                     || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
                     || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                     || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                     || check_ui_gallery_markdown_editor_source_a11y_composition
@@ -2016,6 +2023,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_web_ime_bridge_enabled,
                         check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
                         check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
                         check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
@@ -2253,6 +2261,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_web_ime_bridge_enabled,
                         check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
                         check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
                         check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
@@ -2638,6 +2647,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_web_ime_bridge_enabled
                         || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
                         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                        || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
                         || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                         || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                         || check_ui_gallery_markdown_editor_source_a11y_composition
@@ -2737,6 +2747,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_web_ime_bridge_enabled,
                             check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
                             check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                            check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
                             check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                             check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                             check_ui_gallery_markdown_editor_source_a11y_composition,
@@ -4159,6 +4170,7 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_web_ime_bridge_enabled
                     || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
                     || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+                    || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
                     || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
@@ -4603,6 +4615,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
                         ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(&src)
                             && !check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
+                    let suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
+                        ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(&src)
+                            && !check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
                     let suite_ui_gallery_text_mixed_script_bundled_fallback_conformance =
                         ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(&src)
                             && !check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
@@ -4692,6 +4707,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
                         check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
                             || suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
+                        check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+                            || suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
                         check_ui_gallery_text_mixed_script_bundled_fallback_conformance
                             || suite_ui_gallery_text_mixed_script_bundled_fallback_conformance,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click
@@ -8903,6 +8920,19 @@ fn ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_
     )
 }
 
+fn ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-text-fallback-policy-key-bumps-on-locale-change.json"
+    )
+}
+
 fn ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
     script: &Path,
 ) -> bool {
@@ -10009,6 +10039,7 @@ fn apply_post_run_checks(
     check_ui_gallery_web_ime_bridge_enabled: bool,
     check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps: bool,
     check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change: bool,
+    check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change: bool,
     check_ui_gallery_text_mixed_script_bundled_fallback_conformance: bool,
     check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
@@ -10229,6 +10260,9 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change {
         check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(out_dir)?;
+    }
+    if check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change {
+        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(out_dir)?;
     }
     if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
         check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;

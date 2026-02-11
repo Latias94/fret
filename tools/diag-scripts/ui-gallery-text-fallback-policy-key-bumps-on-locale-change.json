@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery: text fallback policy key bumps when locale changes",
+    "tags": ["ui-gallery", "text", "fonts", "locale", "gate"],
+    "target_hints": ["fret-ui-gallery"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override-en-us" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-fallback-policy-locale-before"
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-open" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-text-locale-override-zh-cn" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-fallback-policy-locale-after"
+    }
+  ]
+}
+
