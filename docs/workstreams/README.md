@@ -136,3 +136,6 @@ Active workstreams:
 - `docs/workstreams/creative-recipes-v1.md`
 - `docs/workstreams/creative-recipes-v1-todo.md`
 - `docs/workstreams/creative-recipes-v1-milestones.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-todo.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`

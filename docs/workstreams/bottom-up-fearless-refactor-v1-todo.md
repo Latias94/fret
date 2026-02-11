@@ -5,6 +5,7 @@ Status: Active (workstream tracker)
 This document tracks cross-cutting TODOs for:
 
 - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+- `docs/workstreams/bottom-up-fearless-refactor-v1-milestones.md`
 
 Tracking format:
 
