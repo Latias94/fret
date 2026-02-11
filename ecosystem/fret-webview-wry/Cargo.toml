@@ -1,0 +1,19 @@
+[package]
+name = "fret-webview-wry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-webview = { path = "../fret-webview" }
+tracing.workspace = true
+

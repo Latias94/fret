@@ -16,12 +16,12 @@ Tracking format:
 
 ## M0 — Contract + crate skeletons
 
-- [ ] WEBVIEW-WRY0-contract-001 Create `ecosystem/fret-webview` crate (contract-only).
-- [ ] WEBVIEW-WRY0-contract-002 Define v1 request + event enums (minimal set).
+- [x] WEBVIEW-WRY0-contract-001 Create `ecosystem/fret-webview` crate (contract-only).
+- [x] WEBVIEW-WRY0-contract-002 Define v1 request + event enums (minimal set).
 - [ ] WEBVIEW-WRY0-contract-003 Define stable ID + lifecycle rules (create/destroy; per-window constraints).
 - [ ] WEBVIEW-WRY0-contract-004 Add a unit test that round-trips a request/event list (serde optional; only if needed).
 
-- [ ] WEBVIEW-WRY0-backend-010 Create `ecosystem/fret-webview-wry` crate (native backend).
+- [x] WEBVIEW-WRY0-backend-010 Create `ecosystem/fret-webview-wry` crate (native backend).
 - [ ] WEBVIEW-WRY0-backend-011 Add feature-gated `wry` dependency (native only).
 - [ ] WEBVIEW-WRY0-backend-012 Decide windowing glue strategy (winit/tao compatibility) and document it.
 
@@ -47,4 +47,3 @@ Tracking format:
 
 - [ ] WEBVIEW-WRYX-risk-001 Clarify if `wry` is compatible with our native runner stack without forking windowing.
 - [ ] WEBVIEW-WRYX-risk-002 Decide how we handle z-order + input capture for child WebViews inside docking panels.
-

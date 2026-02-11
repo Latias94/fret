@@ -1993,6 +1993,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-webview-wry"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-webview",
+ "tracing",
+]
+
+[[package]]
 name = "fret-workspace"
 version = "0.1.0"
 dependencies = [
