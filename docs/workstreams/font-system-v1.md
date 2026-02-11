@@ -43,6 +43,10 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
   - `crates/fret-launch/src/runner/desktop/mod.rs`
   - `crates/fret-launch/src/runner/web/*`
 
+### Audit inputs (repo-ref)
+
+- `docs/audits/font-system-parley-zed-xilem-2026-02.md`
+
 ### What is already good
 
 - Semantic `FontId` in `fret-core` (portable across runs + wasm): `crates/fret-core/src/ids.rs`.
@@ -60,6 +64,10 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 - Font catalog metadata is available as a runner-populated global for pickers/diagnostics:
   - `crates/fret-runtime/src/font_catalog.rs` (`FontCatalogMetadata`, `FontCatalogEntry`)
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyShaper::all_font_catalog_entries`)
+- Font selection/fallback is now auditable in diag bundles when tofu/missing glyphs occur:
+  - `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::font_trace_snapshot`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiResourceCachesV1.render_text_font_trace`)
 
 ### Known gaps (must-fix)
 
@@ -79,6 +87,9 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
    - Initial conformance evidence (UI Gallery script + screenshots/bundles):
      - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json`
        - Includes `render_text_missing_glyphs_is` assertions (requires diagnostics bundles).
+   - Follow-up (recommended): add a script gate that asserts the bundle contains a non-empty
+     `render_text_font_trace.entries[*].families` list when tofu is observed (to make fallback regressions debuggable
+     without rerunning locally).
 
 3) Font enumeration is still uncached and metadata is best-effort.
    - `all_font_names()` and `all_font_catalog_entries()` are best-effort snapshots (platform-dependent).

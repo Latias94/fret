@@ -46,6 +46,10 @@ Current Fret evidence anchors:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variation_key_from_normalized_coords`, Swash `normalized_coords(...)`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variable_font_weight_changes_face_key_and_raster_output`)
+- Missing-glyph + selected-family diagnostics trace (bundle-scoped, renderer-owned):
+  - `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::font_trace_snapshot`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiResourceCachesV1.render_text_font_trace`)
 
 ## Goals
 
@@ -61,6 +65,27 @@ Current Fret evidence anchors:
 - Define a full end-user UI for arbitrary variation axes (debug/advanced settings can come later).
 
 ## Decision
+
+### 0) Add a renderer-owned “font selection trace” to diagnostics bundles
+
+When missing/tofu glyphs happen, engineers need a portable artifact that answers:
+
+- which font was requested (named family vs generic),
+- which families the shaper actually used for the blob,
+- which families produced missing glyphs.
+
+Decision:
+
+- The renderer records a **bounded, per-frame trace** of prepared text blobs, primarily when missing glyphs are
+  observed.
+- The runner serializes this trace into the diagnostics bundle (`bundle.json`) so regressions are shareable and
+  scriptable.
+
+Implementation anchors:
+
+- Core types: `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`, entries + family usage).
+- Renderer capture: `crates/fret-render-wgpu/src/text/mod.rs` (trace ring + snapshot export).
+- Bundle serialization: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiRendererTextFontTraceSnapshotV1`).
 
 ### 1) Define a renderer-owned “font instance identity” and include it in glyph keys
 
@@ -148,5 +173,13 @@ Milestones:
 
 - M0: variable font instance identity + rasterization coordinates + tests.
 - M1: script/locale fallback integration + `TextFontStackKey` participation + conformance strings.
-- M2: catalog metadata (optional) for pickers and diagnostics.
+- M2: auditable traces + catalog metadata (optional) for pickers and diagnostics.
 - M3: public shaping knobs (features + variations) (optional).
+
+## Audit (inputs)
+
+See `docs/audits/font-system-parley-zed-xilem-2026-02.md` for a focused comparison against:
+
+- Zed/GPUI’s cosmic-text-based system and caching patterns,
+- Parley/fontique’s design goals and fallback model,
+- Xilem’s Parley-based variable font usage.
