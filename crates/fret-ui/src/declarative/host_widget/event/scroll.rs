@@ -14,6 +14,7 @@ struct TouchPanScrollTracking {
     start: Option<Point>,
     last: Option<Point>,
     panning: bool,
+    captured_for_pan: bool,
 }
 
 fn touch_pan_delta_for_move<H: UiHost>(
@@ -69,6 +70,28 @@ fn clear_touch_pan_tracking<H: UiHost>(
     window: AppWindowId,
     element: crate::GlobalElementId,
     pointer_id: fret_core::PointerId,
+) -> bool {
+    let mut captured_for_pan = false;
+    crate::elements::with_element_state(
+        &mut *cx.app,
+        window,
+        element,
+        TouchPanScrollTracking::default,
+        |st| {
+            if st.pointer_id == Some(pointer_id) {
+                captured_for_pan = st.captured_for_pan;
+                *st = TouchPanScrollTracking::default();
+            }
+        },
+    );
+    captured_for_pan
+}
+
+fn mark_touch_pan_captured<H: UiHost>(
+    cx: &mut EventCx<'_, H>,
+    window: AppWindowId,
+    element: crate::GlobalElementId,
+    pointer_id: fret_core::PointerId,
 ) {
     crate::elements::with_element_state(
         &mut *cx.app,
@@ -77,10 +100,16 @@ fn clear_touch_pan_tracking<H: UiHost>(
         TouchPanScrollTracking::default,
         |st| {
             if st.pointer_id == Some(pointer_id) {
-                *st = TouchPanScrollTracking::default();
+                st.captured_for_pan = true;
             }
         },
     );
+}
+
+fn clear_pressed_pressable_if_any<H: UiHost>(cx: &mut EventCx<'_, H>, window: AppWindowId) {
+    if let Some(prev_node) = crate::elements::set_pressed_pressable(&mut *cx.app, window, None) {
+        cx.invalidate(prev_node, Invalidation::Paint);
+    }
 }
 
 fn apply_virtual_list_scroll_delta<H: UiHost>(
@@ -250,6 +279,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         st.start = Some(*position);
                         st.last = Some(*position);
                         st.panning = false;
+                        st.captured_for_pan = false;
                     },
                 );
             }
@@ -261,6 +291,15 @@ pub(super) fn handle_virtual_list<H: UiHost>(
             modifiers,
             ..
         }) => {
+            if *pointer_type == fret_core::PointerType::Touch {
+                let foreign_capture = cx.captured.is_some_and(|n| n != cx.node);
+                match cx.input_ctx.dispatch_phase {
+                    fret_runtime::InputDispatchPhase::Capture if !foreign_capture => return true,
+                    fret_runtime::InputDispatchPhase::Bubble if foreign_capture => return true,
+                    _ => {}
+                }
+            }
+
             if *pointer_type == fret_core::PointerType::Touch
                 && let Some(delta) =
                     touch_pan_delta_for_move(cx, window, this.element, *pointer_id, *position)
@@ -273,6 +312,11 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     delta,
                     *modifiers,
                 );
+                if consumed && cx.captured != Some(cx.node) {
+                    cx.capture_pointer(cx.node);
+                    mark_touch_pan_captured(cx, window, this.element, *pointer_id);
+                    clear_pressed_pressable_if_any(cx, window);
+                }
             }
         }
         Event::Pointer(fret_core::PointerEvent::Up {
@@ -281,12 +325,20 @@ pub(super) fn handle_virtual_list<H: UiHost>(
             ..
         }) => {
             if *pointer_type == fret_core::PointerType::Touch {
-                clear_touch_pan_tracking(cx, window, this.element, *pointer_id);
+                let captured_for_pan =
+                    clear_touch_pan_tracking(cx, window, this.element, *pointer_id);
+                if captured_for_pan && cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
             }
         }
         Event::PointerCancel(e) => {
             if e.pointer_type == fret_core::PointerType::Touch {
-                clear_touch_pan_tracking(cx, window, this.element, e.pointer_id);
+                let captured_for_pan =
+                    clear_touch_pan_tracking(cx, window, this.element, e.pointer_id);
+                if captured_for_pan && cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
             }
         }
         _ => {}
@@ -448,6 +500,7 @@ pub(super) fn handle_scroll<H: UiHost>(
                         st.start = Some(*position);
                         st.last = Some(*position);
                         st.panning = false;
+                        st.captured_for_pan = false;
                     },
                 );
             }
@@ -460,6 +513,12 @@ pub(super) fn handle_scroll<H: UiHost>(
         }) => {
             if *pointer_type != fret_core::PointerType::Touch {
                 return true;
+            }
+            let foreign_capture = cx.captured.is_some_and(|n| n != cx.node);
+            match cx.input_ctx.dispatch_phase {
+                fret_runtime::InputDispatchPhase::Capture if !foreign_capture => return true,
+                fret_runtime::InputDispatchPhase::Bubble if foreign_capture => return true,
+                _ => {}
             }
             let Some(delta) =
                 touch_pan_delta_for_move(cx, window, this.element, *pointer_id, *position)
@@ -504,6 +563,11 @@ pub(super) fn handle_scroll<H: UiHost>(
             };
 
             if consumed {
+                if cx.captured != Some(cx.node) {
+                    cx.capture_pointer(cx.node);
+                    mark_touch_pan_captured(cx, window, this.element, *pointer_id);
+                    clear_pressed_pressable_if_any(cx, window);
+                }
                 if let Some(handle) = props.scroll_handle.as_ref() {
                     super::invalidate_scroll_handle_bindings(
                         cx,
@@ -523,12 +587,20 @@ pub(super) fn handle_scroll<H: UiHost>(
             ..
         }) => {
             if *pointer_type == fret_core::PointerType::Touch {
-                clear_touch_pan_tracking(cx, window, this.element, *pointer_id);
+                let captured_for_pan =
+                    clear_touch_pan_tracking(cx, window, this.element, *pointer_id);
+                if captured_for_pan && cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
             }
         }
         Event::PointerCancel(e) => {
             if e.pointer_type == fret_core::PointerType::Touch {
-                clear_touch_pan_tracking(cx, window, this.element, e.pointer_id);
+                let captured_for_pan =
+                    clear_touch_pan_tracking(cx, window, this.element, e.pointer_id);
+                if captured_for_pan && cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
             }
         }
         _ => {}

@@ -55,12 +55,15 @@ impl ElementHostWidget {
             return;
         };
 
-        if matches!(
+        let should_dispatch = matches!(
             event,
             Event::Pointer(fret_core::PointerEvent::Down { .. })
                 | Event::Pointer(fret_core::PointerEvent::Up { .. })
                 | Event::PointerCancel(_)
-        ) {
+        ) || (cx.captured.is_some()
+            && matches!(event, Event::Pointer(fret_core::PointerEvent::Move { .. })));
+
+        if should_dispatch {
             match instance {
                 ElementInstance::PointerRegion(props) => {
                     pointer_region::handle_pointer_region(self, cx, window, props, event);
