@@ -97,5 +97,7 @@ Tradeoffs / limitations (current):
 ## Follow-ups
 
 1. Docking host uses `ResizablePanelGroup` for split rendering (replace ad-hoc split widgets). (done)
-2. Add nested-split stabilization rules (same-axis "touching nodes" lock behavior) to avoid ImGui-class oscillation/linked splitters. (done; current docking splits)
+2. Same-axis nested split stabilization:
+   - Previously implemented as a docking-layer lock pass for binary nested splits.
+   - With the docking N-ary canonicalization workstream, same-axis nested splits are flattened into a single N-ary split on import and after ops, so the legacy stabilization is no longer required and was removed.
 3. Decide whether to promote pixel `preferred_px` hints into dock persistence schema (new layout version) based on feedback.

@@ -6,7 +6,6 @@ use super::layout::{
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
-use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_split_drag};
 use super::tab_bar_geometry::TabBarGeometry;
 use super::{
     DockManager, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService, DockSpace,

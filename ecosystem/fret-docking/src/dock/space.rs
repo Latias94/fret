@@ -17,9 +17,6 @@ use super::prelude_ui::*;
 use super::services::{
     DockFocusRequestService, DockPanelContentService, DockViewportOverlayHooksService,
 };
-use super::split_stabilize::{
-    SplitSizeLock, apply_same_axis_locks, compute_same_axis_locks_for_split_drag,
-};
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
@@ -119,9 +116,6 @@ struct PendingDockTabsDrag {
 #[derive(Debug, Clone)]
 struct DividerDragSession {
     handle: DividerDragState,
-    layout_root: DockNodeId,
-    layout_bounds: Rect,
-    locks: Vec<SplitSizeLock>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2126,18 +2120,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             *position,
                                         )
                                 {
-                                    let locks = compute_same_axis_locks_for_split_drag(
-                                        &dock.graph,
-                                        &layout,
-                                        handle.split,
-                                        handle.axis,
-                                        handle.handle_ix,
-                                    );
                                     self.divider_drag = Some(DividerDragSession {
                                         handle,
-                                        layout_root,
-                                        layout_bounds,
-                                        locks,
                                     });
                                     request_pointer_capture = Some(Some(dock_space_node));
                                     request_cursor = Some(match handle.axis {
@@ -2914,15 +2898,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     ) {
                                         dock.graph
                                             .update_split_fractions(divider.handle.split, next);
-                                        apply_same_axis_locks(
-                                            &mut dock.graph,
-                                            divider.layout_root,
-                                            divider.layout_bounds,
-                                            divider.handle.axis,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                            &divider.locks,
-                                        );
                                         invalidate_layout = true;
                                         invalidate_paint = true;
                                     }
@@ -3227,28 +3202,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             if *button == fret_core::MouseButton::Left
                                 && let Some(divider) = self.divider_drag.take()
                             {
-                                let mut seen: std::collections::HashSet<DockNodeId> =
-                                    std::collections::HashSet::new();
                                 let mut updates: Vec<fret_core::SplitFractionsUpdate> = Vec::new();
-                                for split in std::iter::once(divider.handle.split)
-                                    .chain(divider.locks.iter().map(|l| l.split))
+                                if let Some(DockNode::Split {
+                                    children,
+                                    fractions,
+                                    ..
+                                }) = dock.graph.node(divider.handle.split)
+                                    && children.len() >= 2
+                                    && children.len() == fractions.len()
                                 {
-                                    if !seen.insert(split) {
-                                        continue;
-                                    }
-                                    if let Some(DockNode::Split {
-                                        children,
-                                        fractions,
-                                        ..
-                                    }) = dock.graph.node(split)
-                                        && children.len() >= 2
-                                        && children.len() == fractions.len()
-                                    {
-                                        updates.push(fret_core::SplitFractionsUpdate {
-                                            split,
-                                            fractions: fractions.clone(),
-                                        });
-                                    }
+                                    updates.push(fret_core::SplitFractionsUpdate {
+                                        split: divider.handle.split,
+                                        fractions: fractions.clone(),
+                                    });
                                 }
 
                                 if !updates.is_empty() {

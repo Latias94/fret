@@ -92,7 +92,7 @@ Docking UI and policy:
 - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace` interaction core)
 - `ecosystem/fret-docking/src/dock/layout.rs` (layout map; already N-ary friendly)
 - `ecosystem/fret-docking/src/dock/hit_test.rs` (split handle hit-testing via `handle_hit_rects`)
-- `ecosystem/fret-docking/src/dock/split_stabilize.rs` (nested same-axis stabilization)
+- Canonical form keeps same-axis splits flat (legacy same-axis nested stabilization removed).
 - `ecosystem/fret-docking/src/runtime.rs` (app/runner integration; tear-off fallbacks; close/merge)
 
 Diagnostics and scripted repros:

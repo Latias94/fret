@@ -74,9 +74,12 @@ Each TODO is labeled:
     - `ecosystem/fret-docking/src/dock/space.rs` (divider drag uses adjacent-only update)
     - `ecosystem/fret-docking/src/dock/tests/split.rs` (N-ary adjacency tests)
 
-- [ ] DN-P0-ui-004 Reduce or remove nested same-axis stabilization once canonical form is enforced.
-  - Target: delete or simplify `ecosystem/fret-docking/src/dock/split_stabilize.rs`.
+- [x] DN-P0-ui-004 Reduce or remove nested same-axis stabilization once canonical form is enforced.
+  - Target: delete or simplify `ecosystem/fret-docking/src/dock/split_stabilize.rs`. (done; removed)
   - Gate: existing splitter tests must remain green.
+  - Evidence:
+    - `crates/fret-core/src/dock/persistence.rs` (imports simplify to canonical form)
+    - `ecosystem/fret-docking/src/dock/space.rs` (split drag commits only the touched split)
 
 ## P1 — Constraints hooks (editor feel)
 

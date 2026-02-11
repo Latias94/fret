@@ -100,7 +100,9 @@ Status:
 - Preview semantics aligned via `DockGraph::edge_dock_decision` (insert vs wrap).
 - Deterministic edge-insert overlay geometry gate exists in `ecosystem/fret-docking`.
 - Splitter drag updates use adjacent-only resizing for N-ary splits.
-- Remaining: N-ary handle hit-test coverage + stabilization cleanup.
+- N-ary split handle hit-testing is covered by deterministic unit tests.
+- Legacy same-axis nested split stabilization has been removed (canonicalization keeps same-axis splits flat).
+- Remaining: none (M3 complete).
 
 Implementation targets:
 
@@ -108,16 +110,13 @@ Implementation targets:
   - compute preview rects based on simulated commit (pure function).
 - `ecosystem/fret-docking/src/dock/space.rs`:
   - update drag intent resolution to request the new semantics.
-- `ecosystem/fret-docking/src/dock/split_stabilize.rs`:
-  - simplify or remove; keep only what remains necessary after M2.
 - `ecosystem/fret-docking/src/dock/paint.rs`:
   - adjust overlay rendering to match the new preview model (no “always half” assumption).
 
 Gates:
 
 - Existing docking tests remain green.
-- Add at least one new geometry test that:
-  - simulates insertion into an existing split and checks the preview rect.
+- Geometry tests exist for edge-insert preview rects.
 
 ## M4 — Diagnostics: scripted correctness gates (`fretboard diag`)
 
