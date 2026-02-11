@@ -1597,6 +1597,7 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "bytemuck",
  "cocoa",
  "fret-app",
@@ -1614,6 +1615,10 @@ dependencies = [
  "js-sys",
  "keyboard-types",
  "objc",
+ "objc2",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-ui-kit",
  "pollster",
  "renderdog",
  "serde_json",

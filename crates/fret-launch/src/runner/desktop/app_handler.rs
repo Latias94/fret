@@ -1396,6 +1396,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.saw_left_mouse_release_this_turn = false;
         self.poll_window_environment_if_due(Instant::now());
 
+        #[cfg(target_os = "ios")]
+        if self.ios_keyboard.is_none() {
+            self.ios_keyboard = Some(ios_keyboard::IosKeyboardTracker::new());
+        }
+
         for (app_window, state) in self.windows.iter_mut() {
             #[cfg(target_os = "android")]
             {
@@ -1416,7 +1421,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 let focus_is_text_input = self
                     .app
                     .global::<fret_runtime::WindowTextInputSnapshotService>()
-                    .and_then(|svc| svc.snapshot(*app_window))
+                    .and_then(|svc| svc.snapshot(app_window))
                     .map(|s| s.focus_is_text_input)
                     .unwrap_or(false);
 
@@ -1439,6 +1444,68 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     bottom: baseline_bottom_inset,
                     left: Px(left_px / scale_factor),
                 };
+                let occlusion_insets = fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: ime_bottom_inset,
+                    left: Px(0.0),
+                };
+
+                let mut insets_changed = false;
+                self.app
+                    .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
+                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                            insets_changed = true;
+                        }
+                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
+                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                            insets_changed = true;
+                        }
+                    });
+                if insets_changed {
+                    state.window.request_redraw();
+                }
+            }
+
+            #[cfg(target_os = "ios")]
+            {
+                let safe_area = state.window.safe_area();
+                let scale_factor = (state.window.scale_factor() as f32).max(0.0001);
+
+                let safe_area_insets = fret_core::Edges {
+                    top: Px(safe_area.top as f32 / scale_factor),
+                    right: Px(safe_area.right as f32 / scale_factor),
+                    bottom: Px(safe_area.bottom as f32 / scale_factor),
+                    left: Px(safe_area.left as f32 / scale_factor),
+                };
+
+                let focus_is_text_input = self
+                    .app
+                    .global::<fret_runtime::WindowTextInputSnapshotService>()
+                    .and_then(|svc| svc.snapshot(app_window))
+                    .map(|s| s.focus_is_text_input)
+                    .unwrap_or(false);
+
+                let keyboard_overlap_bottom = if focus_is_text_input {
+                    let frame = self
+                        .ios_keyboard
+                        .as_ref()
+                        .and_then(|tracker| tracker.keyboard_frame_screen());
+                    frame
+                        .and_then(|frame| {
+                            ios_keyboard::keyboard_overlap_bottom_in_window_points(
+                                &*state.window,
+                                frame,
+                            )
+                        })
+                        .unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                let ime_bottom_inset =
+                    Px((keyboard_overlap_bottom - safe_area_insets.bottom.0).max(0.0));
+
                 let occlusion_insets = fret_core::Edges {
                     top: Px(0.0),
                     right: Px(0.0),

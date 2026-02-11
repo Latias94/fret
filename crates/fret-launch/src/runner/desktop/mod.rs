@@ -6,7 +6,7 @@ use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
     fmt,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
@@ -56,6 +56,8 @@ mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
+#[cfg(target_os = "ios")]
+mod ios_keyboard;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -1164,6 +1166,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
     renderer_caps: Option<fret_render::RendererCapabilities>,
+    system_font_rescan_result: Arc<Mutex<Option<fret_render::SystemFontRescanResult>>>,
+    system_font_rescan_in_flight: bool,
+    system_font_rescan_pending: bool,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
 
@@ -1192,6 +1197,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     clipboard: NativeClipboard,
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
+    #[cfg(target_os = "ios")]
+    ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,
@@ -2918,6 +2925,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             context: None,
             renderer: None,
             renderer_caps: None,
+            system_font_rescan_result: Arc::new(Mutex::new(None)),
+            system_font_rescan_in_flight: false,
+            system_font_rescan_pending: false,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             windows: SlotMap::with_key(),
@@ -2938,6 +2948,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             clipboard: NativeClipboard::default(),
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
+            #[cfg(target_os = "ios")]
+            ios_keyboard: None,
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),
@@ -3073,7 +3085,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
             caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
-            caps.clipboard.text = true;
+            caps.clipboard.text = false;
             caps.clipboard.files = false;
 
             caps.dnd.external = false;
@@ -3086,7 +3098,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.fs.real_paths = false;
             caps.fs.file_dialogs = false;
 
-            caps.shell.open_url = true;
+            caps.shell.open_url = false;
 
             caps.gfx.native_gpu = true;
             caps.gfx.webgpu = false;
@@ -3334,6 +3346,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Ensure pending queued work does not cross the reload boundary.
         self.dispatcher.hot_reload_boundary();
+        self.system_font_rescan_in_flight = false;
+        self.system_font_rescan_pending = false;
+        if let Ok(mut slot) = self.system_font_rescan_result.lock() {
+            *slot = None;
+        }
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
         {
@@ -4219,6 +4236,153 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         fired_any
     }
 
+    fn system_font_rescan_async_enabled() -> bool {
+        static FLAG: OnceLock<bool> = OnceLock::new();
+        *FLAG.get_or_init(|| {
+            if cfg!(any(target_os = "ios", target_os = "android")) {
+                return false;
+            }
+            std::env::var("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC")
+                .ok()
+                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
+                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC").is_none()
+        })
+    }
+
+    fn request_system_font_rescan(&mut self) {
+        if !Self::system_font_rescan_async_enabled() {
+            self.rescan_system_fonts_sync();
+            return;
+        }
+
+        if self.system_font_rescan_in_flight {
+            self.system_font_rescan_pending = true;
+            return;
+        }
+
+        let Some(seed) = self
+            .renderer
+            .as_mut()
+            .and_then(|renderer| renderer.system_font_rescan_seed())
+        else {
+            return;
+        };
+
+        if let Ok(mut slot) = self.system_font_rescan_result.lock() {
+            *slot = None;
+        }
+        self.system_font_rescan_in_flight = true;
+
+        let result_slot = self.system_font_rescan_result.clone();
+        let dispatcher = self.dispatcher.handle();
+        let dispatcher_for_wake = dispatcher.clone();
+        dispatcher.dispatch_background(
+            Box::new(move || {
+                let result = seed.run();
+                if let Ok(mut slot) = result_slot.lock() {
+                    *slot = Some(result);
+                }
+                dispatcher_for_wake.wake(None);
+            }),
+            fret_runtime::DispatchPriority::Low,
+        );
+    }
+
+    fn rescan_system_fonts_sync(&mut self) {
+        let Some(renderer) = self.renderer.as_mut() else {
+            return;
+        };
+
+        if !renderer.rescan_system_fonts() {
+            return;
+        }
+
+        let entries = renderer
+            .all_font_catalog_entries()
+            .into_iter()
+            .map(|e| fret_runtime::FontCatalogEntry {
+                family: e.family,
+                has_variable_axes: e.has_variable_axes,
+                known_variable_axes: e.known_variable_axes,
+                is_monospace_candidate: e.is_monospace_candidate,
+            })
+            .collect::<Vec<_>>();
+        // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
+        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+            &mut self.app,
+            entries,
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
+        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
+            let _ = renderer.set_text_font_families(config);
+        }
+        self.app
+            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                renderer.text_font_stack_key(),
+            ));
+
+        for (_id, state) in self.windows.iter() {
+            state.window.request_redraw();
+        }
+    }
+
+    fn apply_pending_system_font_rescan_result(&mut self) -> bool {
+        let result = self
+            .system_font_rescan_result
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take());
+        let Some(result) = result else {
+            return false;
+        };
+
+        self.system_font_rescan_in_flight = false;
+
+        let Some(renderer) = self.renderer.as_mut() else {
+            return true;
+        };
+
+        if !renderer.apply_system_font_rescan_result(result) {
+            return true;
+        }
+
+        let entries = renderer
+            .all_font_catalog_entries()
+            .into_iter()
+            .map(|e| fret_runtime::FontCatalogEntry {
+                family: e.family,
+                has_variable_axes: e.has_variable_axes,
+                known_variable_axes: e.known_variable_axes,
+                is_monospace_candidate: e.is_monospace_candidate,
+            })
+            .collect::<Vec<_>>();
+        // Font catalog refresh trigger (ADR 0258): explicit system font rescan (async).
+        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+            &mut self.app,
+            entries,
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
+        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
+            let _ = renderer.set_text_font_families(config);
+        }
+        self.app
+            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                renderer.text_font_stack_key(),
+            ));
+
+        for (_id, state) in self.windows.iter() {
+            state.window.request_redraw();
+        }
+
+        let should_restart = self.system_font_rescan_pending;
+        self.system_font_rescan_pending = false;
+        if should_restart {
+            self.request_system_font_rescan();
+        }
+
+        true
+    }
+
     fn drain_effects(&mut self, event_loop: &dyn ActiveEventLoop) {
         const MAX_EFFECT_DRAIN_TURNS: usize = 8;
 
@@ -4226,6 +4390,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let now = Instant::now();
             let mut did_work = self.dispatcher.drain_turn(now);
             did_work |= self.drain_inboxes(None);
+            did_work |= self.apply_pending_system_font_rescan_result();
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
@@ -4734,39 +4899,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::TextRescanSystemFonts => {
-                        let Some(renderer) = self.renderer.as_mut() else {
-                            continue;
-                        };
-                        if !renderer.rescan_system_fonts() {
-                            continue;
-                        }
-
-                        let entries = renderer
-                            .all_font_catalog_entries()
-                            .into_iter()
-                            .map(|e| fret_runtime::FontCatalogEntry {
-                                family: e.family,
-                                has_variable_axes: e.has_variable_axes,
-                                known_variable_axes: e.known_variable_axes,
-                                is_monospace_candidate: e.is_monospace_candidate,
-                            })
-                            .collect::<Vec<_>>();
-                        // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
-                        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
-                            &mut self.app,
-                            entries,
-                            fret_runtime::FontFamilyDefaultsPolicy::None,
-                        );
-                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
-                            let _ = renderer.set_text_font_families(config);
-                        }
-                        self.app.set_global::<fret_runtime::TextFontStackKey>(
-                            fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
-                        );
-
-                        for (_id, state) in self.windows.iter() {
-                            state.window.request_redraw();
-                        }
+                        self.request_system_font_rescan();
                     }
                     Effect::ImageRegisterRgba8 {
                         window,
