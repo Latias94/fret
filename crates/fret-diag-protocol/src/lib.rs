@@ -616,6 +616,32 @@ pub enum UiPredicateV1 {
     DockDropPreviewKindIs {
         preview_kind: String,
     },
+    /// True when the current docking drop resolve source matches `source`.
+    ///
+    /// This predicate reads the window-local `DockDropResolveDiagnostics` snapshot published into
+    /// `WindowInteractionDiagnosticsStore` by policy-heavy ecosystem crates (e.g. docking).
+    ///
+    /// Supported sources:
+    /// - `invert_docking`
+    /// - `outside_window`
+    /// - `float_zone`
+    /// - `layout_bounds_miss`
+    /// - `latched_previous_hover`
+    /// - `tab_bar`
+    /// - `floating_title_bar`
+    /// - `outer_hint_rect`
+    /// - `inner_hint_rect`
+    /// - `none`
+    DockDropResolveSourceIs {
+        source: String,
+    },
+    /// True when the current docking drop resolve has (or does not have) a resolved target.
+    ///
+    /// This is useful for policy-gated no-drop zones: scripts can assert that the pointer is over
+    /// a *candidate* region (via `dock_drop_resolve_source_is`) while `resolved` stays `None`.
+    DockDropResolvedIsSome {
+        some: bool,
+    },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {
         canonical: bool,

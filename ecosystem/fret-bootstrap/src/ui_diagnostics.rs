@@ -12094,6 +12094,29 @@ fn eval_predicate(
             };
             have == preview_kind.as_str()
         }
+        UiPredicateV1::DockDropResolveSourceIs { source } => {
+            let Some(resolve) = docking.and_then(|d| d.dock_drop_resolve.as_ref()) else {
+                return false;
+            };
+            let have = match resolve.source {
+                fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
+                fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
+                fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
+                fret_runtime::DockDropResolveSource::LayoutBoundsMiss => "layout_bounds_miss",
+                fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
+                    "latched_previous_hover"
+                }
+                fret_runtime::DockDropResolveSource::TabBar => "tab_bar",
+                fret_runtime::DockDropResolveSource::FloatingTitleBar => "floating_title_bar",
+                fret_runtime::DockDropResolveSource::OuterHintRect => "outer_hint_rect",
+                fret_runtime::DockDropResolveSource::InnerHintRect => "inner_hint_rect",
+                fret_runtime::DockDropResolveSource::None => "none",
+            };
+            have == source.as_str()
+        }
+        UiPredicateV1::DockDropResolvedIsSome { some } => docking
+            .and_then(|d| d.dock_drop_resolve.as_ref())
+            .is_some_and(|d| d.resolved.is_some() == *some),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),
@@ -13532,6 +13555,75 @@ mod tests {
         let pred = UiPredicateV1::DockDropPreviewKindIs {
             preview_kind: "insert_into_split".to_string(),
         };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+    }
+
+    #[test]
+    fn dock_drop_resolve_source_and_resolved_presence_predicates_read_from_docking_diagnostics() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: Vec::new(),
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: Vec::new(),
+        };
+
+        let mut docking = fret_runtime::DockingInteractionDiagnostics::default();
+        docking.dock_drop_resolve = Some(fret_runtime::DockDropResolveDiagnostics {
+            pointer_id: fret_core::PointerId(1),
+            position: fret_core::geometry::Point::new(Px(1.0), Px(2.0)),
+            window_bounds,
+            dock_bounds: window_bounds,
+            source: fret_runtime::DockDropResolveSource::OuterHintRect,
+            resolved: None,
+            preview: None,
+            candidates: Vec::new(),
+        });
+
+        let pred = UiPredicateV1::DockDropResolveSourceIs {
+            source: "outer_hint_rect".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockDropResolvedIsSome { some: false };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+
+        docking.dock_drop_resolve = Some(fret_runtime::DockDropResolveDiagnostics {
+            resolved: Some(fret_runtime::DockDropTargetDiagnostics {
+                layout_root: dock_node_id(1),
+                tabs: dock_node_id(2),
+                zone: fret_core::dock::DropZone::Left,
+                insert_index: None,
+                outer: true,
+            }),
+            ..docking.dock_drop_resolve.unwrap()
+        });
+
+        let pred = UiPredicateV1::DockDropResolvedIsSome { some: true };
         assert!(eval_predicate(
             &snapshot,
             window_bounds,

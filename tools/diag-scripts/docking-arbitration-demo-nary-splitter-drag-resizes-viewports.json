@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "name": "Docking arbitration demo: splitter drag resizes viewports (n-ary)",
+    "tags": ["docking", "nary", "gate"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" },
+      "delta_x": 240.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "min_w_px": 600.0,
+        "min_h_px": 200.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "max_w_px": 340.0,
+        "max_h_px": 10000.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-nary-splitter-drag-resizes-viewports" }
+  ]
+}
