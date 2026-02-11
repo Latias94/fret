@@ -35,6 +35,7 @@ mod suggestions;
 mod test_results;
 mod tool;
 mod tool_call_block;
+mod web_preview;
 
 pub use ai_chat::*;
 pub use ai_conversation::*;
@@ -73,3 +74,4 @@ pub use suggestions::*;
 pub use test_results::*;
 pub use tool::*;
 pub use tool_call_block::*;
+pub use web_preview::*;
