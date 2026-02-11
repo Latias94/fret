@@ -9,111 +9,13 @@ use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack as decl_stack;
-use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use time::{Date, Month};
 
 mod css_color;
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGolden {
-    themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGoldenTheme {
-    root: WebNode,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebRect {
-    #[allow(dead_code)]
-    x: f32,
-    #[allow(dead_code)]
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebNode {
-    tag: String,
-    #[serde(default)]
-    id: Option<String>,
-    #[serde(default)]
-    attrs: BTreeMap<String, String>,
-    #[serde(default)]
-    active: bool,
-    #[serde(default)]
-    text: Option<String>,
-    rect: WebRect,
-    #[serde(rename = "computedStyle", default)]
-    computed_style: BTreeMap<String, String>,
-    #[serde(default)]
-    children: Vec<WebNode>,
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-fn web_golden_path(name: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("shadcn-web")
-        .join("v4")
-        .join("new-york-v4")
-        .join(format!("{name}.json"))
-}
-
-fn read_web_golden(name: &str) -> WebGolden {
-    let path = web_golden_path(name);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing web golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 golden:extract {name} --update\n\nDocs:\n  goldens/README.md\n  docs/shadcn-web-goldens.md",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse web golden: {}\nerror: {err}",
-            path.display()
-        )
-    })
-}
-
-fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Option<&'a WebNode> {
-    if pred(node) {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_first(child, pred) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn find_all<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Vec<&'a WebNode> {
-    let mut out = Vec::new();
-    let mut stack = vec![node];
-    while let Some(n) = stack.pop() {
-        if pred(n) {
-            out.push(n);
-        }
-        for child in &n.children {
-            stack.push(child);
-        }
-    }
-    out
-}
+#[path = "web_golden_shadcn.rs"]
+mod web_golden_shadcn;
+use web_golden_shadcn::*;
 
 fn contains_text(node: &WebNode, needle: &str) -> bool {
     if node.text.as_deref().is_some_and(|t| t.contains(needle)) {

@@ -94,8 +94,34 @@ pub(crate) fn web_golden_path(name: &str) -> PathBuf {
         .join(format!("{name}.json"))
 }
 
+pub(crate) fn web_golden_path_open_fallback(name: &str) -> PathBuf {
+    let base = web_golden_path(name);
+    if base.exists() {
+        return base;
+    }
+
+    // Open-mode goldens use an `.open` suffix, but some coverage keys normalize it away.
+    base.with_file_name(format!("{name}.open.json"))
+}
+
 pub(crate) fn read_web_golden(name: &str) -> WebGolden {
     let path = web_golden_path(name);
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+        panic!(
+            "missing web golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 golden:extract {name} --update\n\nDocs:\n  goldens/README.md\n  docs/shadcn-web-goldens.md",
+            path.display()
+        )
+    });
+    serde_json::from_str(&text).unwrap_or_else(|err| {
+        panic!(
+            "failed to parse web golden: {}\nerror: {err}",
+            path.display()
+        )
+    })
+}
+
+pub(crate) fn read_web_golden_open_fallback(name: &str) -> WebGolden {
+    let path = web_golden_path_open_fallback(name);
     let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
         panic!(
             "missing web golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 golden:extract {name} --update\n\nDocs:\n  goldens/README.md\n  docs/shadcn-web-goldens.md",
@@ -161,7 +187,14 @@ pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
     pred: &impl Fn(&'a WebNode) -> bool,
 ) -> Option<&'a WebNode> {
-    find_first(&theme.root, pred).or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
+    find_first(&theme.root, pred)
+        .or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
+        .or_else(|| {
+            theme
+                .portal_wrappers
+                .iter()
+                .find_map(|p| find_first(p, pred))
+        })
 }
 
 pub(crate) fn find_all_in_theme<'a>(
@@ -171,6 +204,9 @@ pub(crate) fn find_all_in_theme<'a>(
     let mut out = find_all(&theme.root, pred);
     for portal in &theme.portals {
         out.extend(find_all(portal, pred));
+    }
+    for wrapper in &theme.portal_wrappers {
+        out.extend(find_all(wrapper, pred));
     }
     out
 }
