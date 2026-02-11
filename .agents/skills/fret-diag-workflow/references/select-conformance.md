@@ -36,11 +36,13 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
 
 ## Typed script template (optional)
 
-If you want a typed Rust source-of-truth for one of the scripts (while keeping JSON as the portable artifact):
+If you want a typed Rust source-of-truth for the suite scripts (while keeping JSON as the portable artifact):
 
-- Print the v2 template:
+- Check that all suite scripts match their templates:
+  - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- Optional: inspect or check an individual template:
+  - `cargo run -p fret-diag-scriptgen -- list`
   - `cargo run -p fret-diag-scriptgen -- print ui-gallery-select-open-jitter-click-stable-v2`
-- Check that the checked-in JSON matches the template:
   - `cargo run -p fret-diag-scriptgen -- check ui-gallery-select-open-jitter-click-stable-v2 tools/diag-scripts/ui-gallery-select-open-jitter-click-stable-v2.json`
 
 Notes:

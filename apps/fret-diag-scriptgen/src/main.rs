@@ -4,7 +4,7 @@ use std::process::ExitCode;
 
 use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
 use fret_diag_protocol::{
-    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1,
+    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
 };
 
 fn main() -> ExitCode {
@@ -73,6 +73,18 @@ fn run() -> Result<(), String> {
             println!("{}", out.display());
             Ok(())
         }
+        "check-suite" => {
+            let suite = args.next().ok_or_else(|| {
+                "missing suite name (try: check-suite ui-gallery-select)".to_string()
+            })?;
+            let workspace_root = workspace_root()?;
+            let (status, errors) = check_suite(&suite, &workspace_root)?;
+            if errors > 0 {
+                return Err(format!("suite check failed: {errors} mismatches"));
+            }
+            println!("{status}");
+            Ok(())
+        }
         "check" => {
             let name = args
                 .next()
@@ -111,6 +123,7 @@ Usage:
   fret-diag-scriptgen list
   fret-diag-scriptgen print <template>
   fret-diag-scriptgen write <template> [--out <path>] [--overwrite]
+  fret-diag-scriptgen check-suite <suite>
   fret-diag-scriptgen check <template> <json_path>
 
 Notes:
@@ -125,7 +138,17 @@ fn template_names() -> &'static [&'static str] {
     &[
         "todo-baseline-v2",
         "ui-gallery-command-palette-shortcut-primary-v2",
+        "ui-gallery-select-commit-and-label-update-bundle-v2",
+        "ui-gallery-select-keyboard-commit-apple-v2",
+        "ui-gallery-select-typeahead-commit-banana-v2",
+        "ui-gallery-select-disabled-item-no-commit-v2",
+        "ui-gallery-select-roving-skips-disabled-orange-v2",
+        "ui-gallery-select-dismiss-outside-press-v2",
+        "ui-gallery-select-escape-dismiss-focus-restore-v2",
+        "ui-gallery-select-trigger-toggle-close-v2",
         "ui-gallery-select-open-jitter-click-stable-v2",
+        "ui-gallery-select-wheel-scroll-v2",
+        "ui-gallery-select-wheel-up-from-bottom-v2",
     ]
 }
 
@@ -135,8 +158,36 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         "ui-gallery-command-palette-shortcut-primary-v2" => {
             Ok(ui_gallery_command_palette_shortcut_primary_v2())
         }
+        "ui-gallery-select-commit-and-label-update-bundle-v2" => {
+            Ok(ui_gallery_select_commit_and_label_update_bundle_v2())
+        }
+        "ui-gallery-select-keyboard-commit-apple-v2" => {
+            Ok(ui_gallery_select_keyboard_commit_apple_v2())
+        }
+        "ui-gallery-select-typeahead-commit-banana-v2" => {
+            Ok(ui_gallery_select_typeahead_commit_banana_v2())
+        }
+        "ui-gallery-select-disabled-item-no-commit-v2" => {
+            Ok(ui_gallery_select_disabled_item_no_commit_v2())
+        }
+        "ui-gallery-select-roving-skips-disabled-orange-v2" => {
+            Ok(ui_gallery_select_roving_skips_disabled_orange_v2())
+        }
+        "ui-gallery-select-dismiss-outside-press-v2" => {
+            Ok(ui_gallery_select_dismiss_outside_press_v2())
+        }
+        "ui-gallery-select-escape-dismiss-focus-restore-v2" => {
+            Ok(ui_gallery_select_escape_dismiss_focus_restore_v2())
+        }
+        "ui-gallery-select-trigger-toggle-close-v2" => {
+            Ok(ui_gallery_select_trigger_toggle_close_v2())
+        }
         "ui-gallery-select-open-jitter-click-stable-v2" => {
             Ok(ui_gallery_select_open_jitter_click_stable_v2())
+        }
+        "ui-gallery-select-wheel-scroll-v2" => Ok(ui_gallery_select_wheel_scroll_v2()),
+        "ui-gallery-select-wheel-up-from-bottom-v2" => {
+            Ok(ui_gallery_select_wheel_up_from_bottom_v2())
         }
         other => Err(format!("unknown template: {other} (try: list)")),
     }
@@ -174,8 +225,66 @@ fn ui_gallery_command_palette_shortcut_primary_v2() -> UiActionScriptV2 {
         .build()
 }
 
+fn ctrl_a_step() -> UiActionStepV2 {
+    UiActionStepV2::PressKey {
+        key: "a".to_string(),
+        modifiers: UiKeyModifiersV1 {
+            ctrl: true,
+            ..Default::default()
+        },
+        repeat: false,
+    }
+}
+
+fn wait_bounds_within_window_step(target: UiSelectorV1, timeout_frames: u32) -> UiActionStepV2 {
+    UiActionStepV2::WaitUntil {
+        predicate: UiPredicateV1::BoundsWithinWindow {
+            target,
+            padding_px: 2.0,
+            eps_px: 0.5,
+        },
+        timeout_frames,
+    }
+}
+
+fn ui_gallery_nav_to_select_page() -> ScriptV2Builder {
+    ScriptV2Builder::new()
+        .wait_exists(test_id("ui-gallery-nav-search"), 600)
+        .press_key("escape")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(ctrl_a_step())
+        .press_key("backspace")
+        .type_text("select")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-select"))
+        .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-trigger"), 600)
+}
+
+fn ui_gallery_nav_to_select_page_no_escape() -> ScriptV2Builder {
+    ScriptV2Builder::new()
+        .wait_exists(test_id("ui-gallery-nav-search"), 600)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(ctrl_a_step())
+        .press_key("backspace")
+        .type_text("select")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-select"))
+        .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-trigger"), 600)
+}
+
+fn with_required_caps(mut script: UiActionScriptV2, caps: &[&str]) -> UiActionScriptV2 {
+    script.meta = Some(UiScriptMetaV1 {
+        required_capabilities: caps.iter().map(|s| (*s).to_string()).collect(),
+        ..Default::default()
+    });
+    script
+}
+
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
-    let mut script = ScriptV2Builder::new()
+    let script = ScriptV2Builder::new()
         .wait_exists(test_id("ui-gallery-nav-search"), 600)
         .press_key("escape")
         .wait_frames(2)
@@ -218,11 +327,359 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         ))
         .build();
 
-    script.meta = Some(UiScriptMetaV1 {
-        required_capabilities: vec!["diag.script_v2".to_string()],
-        ..Default::default()
-    });
-    script
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("ui-gallery-select-item-banana"), 240)
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .wait_frames(30)
+        .click(test_id("ui-gallery-select-item-banana"))
+        .wait_not_exists(test_id("ui-gallery-select-item-banana"), 240)
+        .wait_exists(role_and_name("text", "Selected: banana"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-select-commit-and-label-update".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .press_key("arrow_down")
+        .wait_frames(2)
+        .press_key("enter")
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-select-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .wait_exists(role_and_name("text", "Selected: apple"), 240)
+        .capture_bundle(Some("ui-gallery-select-keyboard-commit-apple".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .press_key("b")
+        .wait_frames(2)
+        .press_key("enter")
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-select-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .wait_exists(role_and_name("text", "Selected: banana"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-select-typeahead-commit-banana".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .wait_exists(test_id("ui-gallery-select-item-item-15"), 240)
+        .click(test_id("ui-gallery-select-item-item-15"))
+        .wait_frames(5)
+        .wait_exists(test_id("select-scroll-viewport"), 120)
+        .wait_exists(role_and_name("text", "Selected: <none>"), 120)
+        .press_key("escape")
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-select-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some(
+            "ui-gallery-select-disabled-item-no-commit".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .press_key("home")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("select-scroll-viewport"),
+                item: test_id("ui-gallery-select-item-apple"),
+            },
+            timeout_frames: 240,
+        })
+        .press_key("arrow_down")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("select-scroll-viewport"),
+                item: test_id("ui-gallery-select-item-banana"),
+            },
+            timeout_frames: 240,
+        })
+        .press_key("arrow_down")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("select-scroll-viewport"),
+                item: test_id("ui-gallery-select-item-item-01"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some(
+            "ui-gallery-select-roving-skips-disabled-orange".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("ui-gallery-select-item-apple"), 240)
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .wait_frames(10)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-nav-search"),
+            },
+            timeout_frames: 240,
+        })
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .wait_not_exists(test_id("ui-gallery-select-item-apple"), 240)
+        .capture_bundle(Some("ui-gallery-select-dismiss-outside-press".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .press_key("escape")
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-select-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some(
+            "ui-gallery-select-escape-dismiss-focus-restore".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .wait_frames(5)
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-select-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some("ui-gallery-select-trigger-toggle-close".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page_no_escape()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("ui-gallery-select-item-apple"), 60)
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .push(UiActionStepV2::MovePointer {
+            target: test_id("ui-gallery-select-item-apple"),
+        })
+        .push(UiActionStepV2::Wheel {
+            target: test_id("ui-gallery-select-item-apple"),
+            delta_x: 0.0,
+            delta_y: -120.0,
+        })
+        .wait_frames(5)
+        .push(UiActionStepV2::Wheel {
+            target: test_id("ui-gallery-select-item-apple"),
+            delta_x: 0.0,
+            delta_y: -240.0,
+        })
+        .wait_frames(5)
+        .push(UiActionStepV2::Wheel {
+            target: test_id("ui-gallery-select-item-apple"),
+            delta_x: 0.0,
+            delta_y: 120.0,
+        })
+        .wait_frames(5)
+        .capture_bundle(Some("ui-gallery-select-wheel-scroll".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_select_page_no_escape()
+        .click(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("ui-gallery-select-item-apple"), 240)
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("select-scroll-viewport"),
+            240,
+        ))
+        .press_key("end")
+        .wait_frames(10)
+        .wait_exists(test_id("ui-gallery-select-item-item-40"), 120)
+        .push(UiActionStepV2::MovePointer {
+            target: test_id("ui-gallery-select-item-item-40"),
+        })
+        .wait_frames(5)
+        .push(UiActionStepV2::Wheel {
+            target: test_id("ui-gallery-select-item-item-40"),
+            delta_x: 0.0,
+            delta_y: 2400.0,
+        })
+        .wait_frames(5)
+        .capture_bundle(Some("ui-gallery-select-wheel-up-from-bottom".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), String> {
+    let mut errors: u64 = 0;
+    let mut checked: u64 = 0;
+
+    let items: &[(&str, &str)] = match suite {
+        "ui-gallery-select" => &[
+            (
+                "ui-gallery-select-commit-and-label-update-bundle-v2",
+                "tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json",
+            ),
+            (
+                "ui-gallery-select-keyboard-commit-apple-v2",
+                "tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json",
+            ),
+            (
+                "ui-gallery-select-typeahead-commit-banana-v2",
+                "tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json",
+            ),
+            (
+                "ui-gallery-select-disabled-item-no-commit-v2",
+                "tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json",
+            ),
+            (
+                "ui-gallery-select-roving-skips-disabled-orange-v2",
+                "tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json",
+            ),
+            (
+                "ui-gallery-select-dismiss-outside-press-v2",
+                "tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json",
+            ),
+            (
+                "ui-gallery-select-escape-dismiss-focus-restore-v2",
+                "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
+            ),
+            (
+                "ui-gallery-select-trigger-toggle-close-v2",
+                "tools/diag-scripts/ui-gallery-select-trigger-toggle-close.json",
+            ),
+            (
+                "ui-gallery-select-open-jitter-click-stable-v2",
+                "tools/diag-scripts/ui-gallery-select-open-jitter-click-stable-v2.json",
+            ),
+            (
+                "ui-gallery-select-wheel-scroll-v2",
+                "tools/diag-scripts/ui-gallery-select-wheel-scroll.json",
+            ),
+            (
+                "ui-gallery-select-wheel-up-from-bottom-v2",
+                "tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json",
+            ),
+        ],
+        other => return Err(format!("unknown suite: {other}")),
+    };
+
+    for (template, rel_path) in items {
+        checked += 1;
+
+        let script = template_v2(template)?;
+        let expected = serde_json::to_value(&script).map_err(|e| e.to_string())?;
+
+        let abs = workspace_root.join(rel_path);
+        let actual_text = fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+        let actual_script: UiActionScriptV2 = serde_json::from_str(&actual_text).map_err(|e| {
+            format!(
+                "failed to parse script json at {path}: {e}",
+                path = abs.display()
+            )
+        })?;
+        let actual = serde_json::to_value(&actual_script).map_err(|e| e.to_string())?;
+
+        if expected != actual {
+            errors += 1;
+            eprintln!("MISMATCH template={template} path={}", abs.display());
+        }
+    }
+
+    let status = if errors == 0 {
+        format!("passed ({checked} checked)")
+    } else {
+        format!("failed ({errors} mismatches; {checked} checked)")
+    };
+    Ok((status, errors))
 }
 
 fn to_pretty_json(script: &UiActionScriptV2) -> Result<String, String> {

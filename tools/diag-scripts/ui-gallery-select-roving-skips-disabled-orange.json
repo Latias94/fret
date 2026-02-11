@@ -1,90 +1,176 @@
 {
-  "schema_version": 1,
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2"
+    ]
+  },
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "select" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
     {
-      "type": "wait_until",
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "select",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-select",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-select" }
+        "target": {
+          "id": "ui-gallery-page-select",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }
+        "target": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" } },
     {
-      "type": "wait_until",
+      "target": {
+        "id": "ui-gallery-select-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "select-scroll-viewport" }
+        "target": {
+          "id": "select-scroll-viewport",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
+        "eps_px": 0.5,
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
         "padding_px": 2.0,
-        "eps_px": 0.5
+        "target": {
+          "id": "select-scroll-viewport",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "home" },
     {
-      "type": "wait_until",
+      "key": "home",
+      "type": "press_key"
+    },
+    {
       "predicate": {
-        "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "select-scroll-viewport" },
-        "item": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }
+        "container": {
+          "id": "select-scroll-viewport",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-select-item-apple",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "arrow_down" },
     {
-      "type": "wait_until",
+      "key": "arrow_down",
+      "type": "press_key"
+    },
+    {
       "predicate": {
-        "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "select-scroll-viewport" },
-        "item": { "kind": "test_id", "id": "ui-gallery-select-item-banana" }
+        "container": {
+          "id": "select-scroll-viewport",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-select-item-banana",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "arrow_down" },
     {
-      "type": "wait_until",
+      "key": "arrow_down",
+      "type": "press_key"
+    },
+    {
       "predicate": {
-        "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "select-scroll-viewport" },
-        "item": { "kind": "test_id", "id": "ui-gallery-select-item-item-01" }
+        "container": {
+          "id": "select-scroll-viewport",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-select-item-item-01",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "capture_bundle",
-      "label": "ui-gallery-select-roving-skips-disabled-orange"
+      "label": "ui-gallery-select-roving-skips-disabled-orange",
+      "type": "capture_bundle"
     }
   ]
 }

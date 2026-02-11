@@ -80,6 +80,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 - [x] Add `diag script validate` (schema/parse, clear error paths, `check.script_schema.json`).
 - [x] Add `diag script lint` (capability inference, discouraged patterns, `check.script_lint.json`).
 - [ ] Add CI-friendly “generate + check” workflow:
+  - [x] add a `fret-diag-scriptgen check-suite ui-gallery-select` closure for the Select suite,
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
 - [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
