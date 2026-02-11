@@ -209,6 +209,10 @@ impl ParleyShaper {
         true
     }
 
+    pub fn common_fallback_stack_suffix(&self) -> &str {
+        &self.common_fallback_stack_suffix
+    }
+
     #[cfg(test)]
     #[allow(dead_code)]
     pub fn new_without_system_fonts() -> Self {

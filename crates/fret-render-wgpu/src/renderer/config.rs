@@ -14,6 +14,13 @@ impl Renderer {
         self.text_system.font_trace_snapshot(frame_id)
     }
 
+    pub fn text_fallback_policy_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFallbackPolicySnapshot {
+        self.text_system.fallback_policy_snapshot(frame_id)
+    }
+
     pub fn text_diagnostics_snapshot(
         &self,
         frame_id: fret_core::FrameId,

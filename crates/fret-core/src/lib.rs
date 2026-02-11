@@ -71,8 +71,9 @@ pub use layout_direction::LayoutDirection;
 pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{
-    RendererGlyphAtlasPerfSnapshot, RendererTextFontTraceEntry, RendererTextFontTraceFamilyClass,
-    RendererTextFontTraceFamilyUsage, RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
+    RendererGlyphAtlasPerfSnapshot, RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
+    RendererTextFontTraceFamilyClass, RendererTextFontTraceFamilyUsage,
+    RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
 };
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,

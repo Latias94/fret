@@ -4001,15 +4001,26 @@ impl UiDiagnosticsService {
                         self.cfg.max_debug_string_bytes,
                     )
                 });
+            let render_text_fallback_policy = app
+                .global::<fret_core::RendererTextFallbackPolicySnapshot>()
+                .cloned()
+                .map(|s| {
+                    UiRendererTextFallbackPolicySnapshotV1::from_core(
+                        s,
+                        self.cfg.max_debug_string_bytes,
+                    )
+                });
             (icon_svg_cache.is_some()
                 || !canvas.is_empty()
                 || render_text.is_some()
-                || render_text_font_trace.is_some())
+                || render_text_font_trace.is_some()
+                || render_text_fallback_policy.is_some())
             .then_some(UiResourceCachesV1 {
                 icon_svg_cache,
                 canvas,
                 render_text,
                 render_text_font_trace,
+                render_text_fallback_policy,
             })
         };
 
@@ -4882,6 +4893,8 @@ pub struct UiResourceCachesV1 {
     pub render_text: Option<UiRendererTextPerfSnapshotV1>,
     #[serde(default)]
     pub render_text_font_trace: Option<UiRendererTextFontTraceSnapshotV1>,
+    #[serde(default)]
+    pub render_text_fallback_policy: Option<UiRendererTextFallbackPolicySnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -4915,6 +4928,8 @@ pub struct UiRendererTextPerfSnapshotV1 {
 
     pub font_stack_key: u64,
     pub font_db_revision: u64,
+    #[serde(default)]
+    pub fallback_policy_key: u64,
 
     #[serde(default)]
     pub frame_missing_glyphs: u64,
@@ -4954,6 +4969,7 @@ impl UiRendererTextPerfSnapshotV1 {
             frame_id: snapshot.frame_id.0,
             font_stack_key: snapshot.font_stack_key,
             font_db_revision: snapshot.font_db_revision,
+            fallback_policy_key: snapshot.fallback_policy_key,
             frame_missing_glyphs: snapshot.frame_missing_glyphs,
             frame_texts_with_missing_glyphs: snapshot.frame_texts_with_missing_glyphs,
             blobs_live: snapshot.blobs_live,
@@ -4974,6 +4990,93 @@ impl UiRendererTextPerfSnapshotV1 {
             mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
             color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
             subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiTextCommonFallbackInjectionV1 {
+    PlatformDefault,
+    None,
+    CommonFallback,
+}
+
+impl Default for UiTextCommonFallbackInjectionV1 {
+    fn default() -> Self {
+        Self::PlatformDefault
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFallbackPolicySnapshotV1 {
+    pub frame_id: u64,
+    pub font_stack_key: u64,
+    pub font_db_revision: u64,
+    pub fallback_policy_key: u64,
+
+    #[serde(default)]
+    pub system_fonts_enabled: bool,
+    #[serde(default)]
+    pub prefer_common_fallback: bool,
+
+    #[serde(default)]
+    pub common_fallback_injection: UiTextCommonFallbackInjectionV1,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locale_bcp47: Option<String>,
+
+    #[serde(default)]
+    pub common_fallback_stack_suffix: String,
+    #[serde(default)]
+    pub common_fallback_candidates: Vec<String>,
+}
+
+impl UiRendererTextFallbackPolicySnapshotV1 {
+    fn from_core(
+        snapshot: fret_core::RendererTextFallbackPolicySnapshot,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        fn injection_from_core(
+            injection: fret_core::TextCommonFallbackInjection,
+        ) -> UiTextCommonFallbackInjectionV1 {
+            match injection {
+                fret_core::TextCommonFallbackInjection::PlatformDefault => {
+                    UiTextCommonFallbackInjectionV1::PlatformDefault
+                }
+                fret_core::TextCommonFallbackInjection::None => {
+                    UiTextCommonFallbackInjectionV1::None
+                }
+                fret_core::TextCommonFallbackInjection::CommonFallback => {
+                    UiTextCommonFallbackInjectionV1::CommonFallback
+                }
+            }
+        }
+
+        let mut locale_bcp47 = snapshot.locale_bcp47;
+        if let Some(locale) = locale_bcp47.as_mut() {
+            truncate_string_bytes(locale, max_debug_string_bytes);
+        }
+
+        let mut common_fallback_stack_suffix = snapshot.common_fallback_stack_suffix;
+        truncate_string_bytes(&mut common_fallback_stack_suffix, max_debug_string_bytes);
+
+        let mut common_fallback_candidates = snapshot.common_fallback_candidates;
+        for s in &mut common_fallback_candidates {
+            truncate_string_bytes(s, max_debug_string_bytes);
+        }
+
+        Self {
+            frame_id: snapshot.frame_id.0,
+            font_stack_key: snapshot.font_stack_key,
+            font_db_revision: snapshot.font_db_revision,
+            fallback_policy_key: snapshot.fallback_policy_key,
+            system_fonts_enabled: snapshot.system_fonts_enabled,
+            prefer_common_fallback: snapshot.prefer_common_fallback,
+            common_fallback_injection: injection_from_core(snapshot.common_fallback_injection),
+            locale_bcp47,
+            common_fallback_stack_suffix,
+            common_fallback_candidates,
         }
     }
 }

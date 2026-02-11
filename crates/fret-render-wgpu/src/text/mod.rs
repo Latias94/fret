@@ -326,6 +326,13 @@ fn common_fallback_stack_suffix(
     common_fallback_config: &[String],
     defaults: &'static [&'static str],
 ) -> String {
+    effective_common_fallback_candidates(common_fallback_config, defaults).join(", ")
+}
+
+fn effective_common_fallback_candidates(
+    common_fallback_config: &[String],
+    defaults: &'static [&'static str],
+) -> Vec<String> {
     let mut seen_lower: HashSet<String> = HashSet::new();
     let mut families: Vec<String> = Vec::new();
 
@@ -347,7 +354,22 @@ fn common_fallback_stack_suffix(
         push(family);
     }
 
-    families.join(", ")
+    families
+}
+
+fn normalize_and_hash_family_candidates(
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+    candidates: &[String],
+) {
+    let mut out: Vec<String> = Vec::new();
+    for c in candidates {
+        let trimmed = c.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        out.push(trimmed.to_ascii_lowercase());
+    }
+    out.hash(hasher);
 }
 
 fn default_sans_candidates() -> &'static [&'static str] {
@@ -1566,6 +1588,9 @@ pub struct TextSystem {
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
+    fallback_policy_key: u64,
+    last_font_family_config: fret_core::TextFontFamilyConfig,
+    last_common_fallback_injection: fret_core::TextCommonFallbackInjection,
     quality: TextQualityState,
     common_fallback_config: Vec<String>,
     generic_injected_by_family: HashMap<ParleyGenericFamily, Vec<ParleyFamilyId>>,
@@ -1990,6 +2015,7 @@ impl TextSystem {
             frame_id,
             font_stack_key: self.font_stack_key,
             font_db_revision: self.font_db_revision,
+            fallback_policy_key: self.fallback_policy_key,
             frame_missing_glyphs: self.perf_frame_missing_glyphs,
             frame_texts_with_missing_glyphs: self.perf_frame_texts_with_missing_glyphs,
             blobs_live: self.blobs.len() as u64,
@@ -2010,6 +2036,42 @@ impl TextSystem {
             mask_atlas: self.mask_atlas.diagnostics_snapshot(),
             color_atlas: self.color_atlas.diagnostics_snapshot(),
             subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),
+        }
+    }
+
+    pub fn fallback_policy_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFallbackPolicySnapshot {
+        let (common_fallback_candidates, common_fallback_stack_suffix) =
+            match self.common_fallback_mode {
+                CommonFallbackMode::PreferSystemFallback => (Vec::new(), String::new()),
+                CommonFallbackMode::PreferCommonFallback => {
+                    let candidates = effective_common_fallback_candidates(
+                        &self.common_fallback_config,
+                        default_common_fallback_families(),
+                    );
+                    (
+                        candidates,
+                        self.parley_shaper
+                            .common_fallback_stack_suffix()
+                            .to_string(),
+                    )
+                }
+            };
+
+        fret_core::RendererTextFallbackPolicySnapshot {
+            frame_id,
+            font_stack_key: self.font_stack_key,
+            font_db_revision: self.font_db_revision,
+            fallback_policy_key: self.fallback_policy_key,
+            system_fonts_enabled: self.parley_shaper.system_fonts_enabled(),
+            locale_bcp47: self.text_locale.clone(),
+            common_fallback_injection: self.last_common_fallback_injection,
+            prefer_common_fallback: self.common_fallback_mode
+                == CommonFallbackMode::PreferCommonFallback,
+            common_fallback_stack_suffix,
+            common_fallback_candidates,
         }
     }
 
@@ -2040,7 +2102,8 @@ impl TextSystem {
         let _ = self.parley_shaper.set_default_locale(parsed);
 
         self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.font_stack_key = self.font_db_revision;
+        self.recompute_fallback_policy_key();
+        self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
     }
@@ -2055,7 +2118,7 @@ impl TextSystem {
         let added = self.parley_shaper.add_fonts(fonts);
         if added > 0 {
             self.font_db_revision = self.font_db_revision.saturating_add(1);
-            self.font_stack_key = self.font_db_revision;
+            self.recompute_font_stack_key();
             self.reset_caches_for_font_change();
         }
 
@@ -2087,7 +2150,7 @@ impl TextSystem {
         }
 
         self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.font_stack_key = self.font_db_revision;
+        self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
     }
@@ -2174,6 +2237,9 @@ impl TextSystem {
             // Non-zero by default so callers can treat `0` as "unknown/uninitialized" if desired.
             font_stack_key: 1,
             font_db_revision: 1,
+            fallback_policy_key: 1,
+            last_font_family_config: fret_core::TextFontFamilyConfig::default(),
+            last_common_fallback_injection: fret_core::TextCommonFallbackInjection::PlatformDefault,
             quality: TextQualityState::new(TextQualitySettings::default()),
             common_fallback_config: Vec::new(),
             generic_injected_by_family: HashMap::new(),
@@ -2227,6 +2293,8 @@ impl TextSystem {
         };
 
         out.bootstrap_default_generic_families(sans, serif, mono);
+        out.recompute_fallback_policy_key();
+        out.recompute_font_stack_key();
         out
     }
 
@@ -2348,6 +2416,8 @@ impl TextSystem {
     pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.common_fallback_config
             .clone_from(&config.common_fallback);
+        self.last_font_family_config = config.clone();
+        self.last_common_fallback_injection = config.common_fallback_injection;
 
         let next_mode = match config.common_fallback_injection {
             fret_core::TextCommonFallbackInjection::PlatformDefault => {
@@ -2419,9 +2489,66 @@ impl TextSystem {
         }
 
         self.font_db_revision = self.font_db_revision.saturating_add(1);
-        self.font_stack_key = self.font_db_revision;
+        self.recompute_fallback_policy_key();
+        self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
+    }
+
+    fn recompute_fallback_policy_key(&mut self) {
+        use std::hash::Hasher as _;
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        "fret.text.fallback_policy.v1".hash(&mut hasher);
+
+        self.parley_shaper.system_fonts_enabled().hash(&mut hasher);
+        match self.common_fallback_mode {
+            CommonFallbackMode::PreferSystemFallback => 0u8.hash(&mut hasher),
+            CommonFallbackMode::PreferCommonFallback => 1u8.hash(&mut hasher),
+        }
+
+        self.text_locale
+            .as_deref()
+            .map(|v| v.to_ascii_lowercase())
+            .hash(&mut hasher);
+
+        match self.last_common_fallback_injection {
+            fret_core::TextCommonFallbackInjection::PlatformDefault => 0u8.hash(&mut hasher),
+            fret_core::TextCommonFallbackInjection::None => 1u8.hash(&mut hasher),
+            fret_core::TextCommonFallbackInjection::CommonFallback => 2u8.hash(&mut hasher),
+        }
+
+        normalize_and_hash_family_candidates(&mut hasher, &self.last_font_family_config.ui_sans);
+        normalize_and_hash_family_candidates(&mut hasher, &self.last_font_family_config.ui_serif);
+        normalize_and_hash_family_candidates(&mut hasher, &self.last_font_family_config.ui_mono);
+        normalize_and_hash_family_candidates(
+            &mut hasher,
+            &self.last_font_family_config.common_fallback,
+        );
+
+        for &family in default_common_fallback_families() {
+            family.trim().to_ascii_lowercase().hash(&mut hasher);
+        }
+
+        self.parley_shaper
+            .common_fallback_stack_suffix()
+            .trim()
+            .to_ascii_lowercase()
+            .hash(&mut hasher);
+
+        let key = hasher.finish();
+        self.fallback_policy_key = if key == 0 { 1 } else { key };
+    }
+
+    fn recompute_font_stack_key(&mut self) {
+        use std::hash::Hasher as _;
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        "fret.text.font_stack_key.v1".hash(&mut hasher);
+        self.font_db_revision.hash(&mut hasher);
+        self.fallback_policy_key.hash(&mut hasher);
+        let key = hasher.finish();
+        self.font_stack_key = if key == 0 { 1 } else { key };
     }
 
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -3533,11 +3660,13 @@ impl TextSystem {
         let text_preview = truncate_text_preview(text, max_text_bytes);
 
         let mut common_fallback_lower: HashSet<String> = HashSet::new();
-        for f in &self.common_fallback_config {
-            common_fallback_lower.insert(f.trim().to_ascii_lowercase());
-        }
-        for &f in default_common_fallback_families() {
-            common_fallback_lower.insert(f.trim().to_ascii_lowercase());
+        if self.common_fallback_mode == CommonFallbackMode::PreferCommonFallback {
+            for f in &self.common_fallback_config {
+                common_fallback_lower.insert(f.trim().to_ascii_lowercase());
+            }
+            for &f in default_common_fallback_families() {
+                common_fallback_lower.insert(f.trim().to_ascii_lowercase());
+            }
         }
 
         let mut families: Vec<fret_core::RendererTextFontTraceFamilyUsage> =
@@ -7004,6 +7133,40 @@ mod tests {
         assert_eq!(
             suffix,
             "Noto Color Emoji, Noto Sans CJK SC, Noto Sans Arabic"
+        );
+    }
+
+    #[test]
+    fn fallback_policy_key_normalizes_family_candidates_and_stays_stable_across_case_changes() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Make the test independent from host/system fonts.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+
+        let mut config0 = fret_core::TextFontFamilyConfig::default();
+        config0.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        config0.ui_sans = vec!["  Inter  ".to_string()];
+        config0.common_fallback = vec![
+            " Noto Color Emoji ".to_string(),
+            "Noto Sans CJK SC".to_string(),
+        ];
+        let _ = text.set_font_families(&config0);
+        let key0 = text.fallback_policy_key;
+
+        let mut config1 = fret_core::TextFontFamilyConfig::default();
+        config1.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        config1.ui_sans = vec!["inter".to_string()];
+        config1.common_fallback = vec![
+            "noto color emoji".to_string(),
+            "  noto sans cjk sc  ".to_string(),
+        ];
+        let _ = text.set_font_families(&config1);
+        let key1 = text.fallback_policy_key;
+
+        assert_eq!(
+            key0, key1,
+            "expected fallback policy key to ignore case/whitespace changes"
         );
     }
 

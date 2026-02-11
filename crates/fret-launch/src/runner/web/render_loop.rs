@@ -530,6 +530,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .set_global(gfx.renderer.text_diagnostics_snapshot(self.frame_id));
             self.app
                 .set_global(gfx.renderer.text_font_trace_snapshot(self.frame_id));
+            self.app
+                .set_global(gfx.renderer.text_fallback_policy_snapshot(self.frame_id));
         }
 
         let mut submit: Vec<wgpu::CommandBuffer> = engine.command_buffers;

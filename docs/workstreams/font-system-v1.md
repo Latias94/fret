@@ -67,6 +67,7 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 - Semantic `FontId` in `fret-core` (portable across runs + wasm): `crates/fret-core/src/ids.rs`.
 - Single source of truth for family resolution: Parley/fontique collection (no legacy bridge).
 - Cache invalidation: `TextBlobKey` includes `font_stack_key`; font config mutations bump key and reset caches.
+- Diagnostics: `fallback_policy_key` + a fallback policy snapshot are recorded to help interpret font traces.
 - Variable font instance coordinates are carried end-to-end (shaping → glyph keys → Swash rasterization) with a
   deterministic fixture test:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)

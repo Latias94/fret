@@ -77,18 +77,26 @@ When missing/tofu glyphs happen, engineers need a portable artifact that answers
 - which families the shaper actually used for the blob,
 - which families produced missing glyphs.
 
+We also need to know **which fallback policy was in effect** (locale + common-fallback injection mode + candidate lists),
+otherwise traces are hard to interpret when debugging “why did this glyph pick this family?” regressions.
+
 Decision:
 
 - The renderer records a **bounded, per-frame trace** of prepared text blobs, primarily when missing glyphs are
   observed.
 - The runner serializes this trace into the diagnostics bundle (`bundle.json`) so regressions are shareable and
   scriptable.
+- The renderer also provides a per-frame snapshot of the effective fallback policy.
 
 Implementation anchors:
 
 - Core types: `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`, entries + family usage).
 - Renderer capture: `crates/fret-render-wgpu/src/text/mod.rs` (trace ring + snapshot export).
 - Bundle serialization: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiRendererTextFontTraceSnapshotV1`).
+- Fallback policy snapshot:
+  - `crates/fret-core/src/render_text.rs` (`RendererTextFallbackPolicySnapshot`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::fallback_policy_snapshot`, `fallback_policy_key`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiRendererTextFallbackPolicySnapshotV1`)
 
 ### 1) Define a renderer-owned “font instance identity” and include it in glyph keys
 
