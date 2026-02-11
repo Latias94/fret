@@ -32,13 +32,12 @@ This workstream is intentionally **Android-first**:
 
 ## Layering rules (non-negotiable)
 
-- `crates/fret-ui`: mechanism only (pointer routing, capture, scroll handles, environment queries).
-- `ecosystem/fret-ui-kit`: gesture/policy glue (touch pan → scroll handle updates, keyboard avoidance helpers).
-- `ecosystem/fret-ui-shadcn`: recipe adoption (ScrollArea uses gesture helpers; gallery uses keyboard avoidance).
+- `crates/fret-ui`: mechanism only (pointer routing, capture, scroll containers, scroll handles, environment queries).
+- `ecosystem/fret-ui-kit`: gesture/policy glue (gesture arena, capture-steal, inertial scrolling, keyboard avoidance helpers).
+- `ecosystem/fret-ui-shadcn`: recipe adoption (ScrollArea inherits runtime scroll behavior; gallery uses keyboard avoidance).
 - `crates/fret-launch` / `crates/fret-platform-*`: platform glue (lifecycle + safe-area/keyboard insets commits).
 
 ## Tracking
 
 - Milestones: `docs/workstreams/mobile-bringup-v1-milestones.md`
 - TODO list: `docs/workstreams/mobile-bringup-v1-todo.md`
-
