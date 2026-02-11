@@ -34,6 +34,15 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
 
 - `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
 
+## Typed script template (optional)
+
+If you want a typed Rust source-of-truth for one of the scripts (while keeping JSON as the portable artifact):
+
+- Print the v2 template:
+  - `cargo run -p fret-diag-scriptgen -- print ui-gallery-select-open-jitter-click-stable-v2`
+- Check that the checked-in JSON matches the template:
+  - `cargo run -p fret-diag-scriptgen -- check ui-gallery-select-open-jitter-click-stable-v2 tools/diag-scripts/ui-gallery-select-open-jitter-click-stable-v2.json`
+
 Notes:
 
 - `diag suite` runs `diag lint` by default; disable with `--no-lint`.

@@ -2,8 +2,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fret_diag_protocol::UiActionScriptV2;
 use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
+use fret_diag_protocol::{
+    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1,
+};
 
 fn main() -> ExitCode {
     match run() {
@@ -82,12 +84,14 @@ fn run() -> Result<(), String> {
             let script = template_v2(&name)?;
             let expected = serde_json::to_value(&script).map_err(|e| e.to_string())?;
             let actual_text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            let actual: serde_json::Value = serde_json::from_str(&actual_text).map_err(|e| {
-                format!(
-                    "failed to parse json at {path}: {e}",
-                    path = Path::new(&path).display()
-                )
-            })?;
+            let actual_script: UiActionScriptV2 =
+                serde_json::from_str(&actual_text).map_err(|e| {
+                    format!(
+                        "failed to parse script json at {path}: {e}",
+                        path = Path::new(&path).display()
+                    )
+                })?;
+            let actual = serde_json::to_value(&actual_script).map_err(|e| e.to_string())?;
 
             if expected != actual {
                 return Err("json differs (compare with: print)".to_string());
@@ -121,6 +125,7 @@ fn template_names() -> &'static [&'static str] {
     &[
         "todo-baseline-v2",
         "ui-gallery-command-palette-shortcut-primary-v2",
+        "ui-gallery-select-open-jitter-click-stable-v2",
     ]
 }
 
@@ -129,6 +134,9 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         "todo-baseline-v2" => Ok(todo_baseline_v2()),
         "ui-gallery-command-palette-shortcut-primary-v2" => {
             Ok(ui_gallery_command_palette_shortcut_primary_v2())
+        }
+        "ui-gallery-select-open-jitter-click-stable-v2" => {
+            Ok(ui_gallery_select_open_jitter_click_stable_v2())
         }
         other => Err(format!("unknown template: {other} (try: list)")),
     }
@@ -164,6 +172,57 @@ fn ui_gallery_command_palette_shortcut_primary_v2() -> UiActionScriptV2 {
             "ui-gallery-command-palette-shortcut-primary".to_string(),
         ))
         .build()
+}
+
+fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
+    let mut script = ScriptV2Builder::new()
+        .wait_exists(test_id("ui-gallery-nav-search"), 600)
+        .press_key("escape")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(UiActionStepV2::PressKey {
+            key: "a".to_string(),
+            modifiers: UiKeyModifiersV1 {
+                ctrl: true,
+                ..Default::default()
+            },
+            repeat: false,
+        })
+        .press_key("backspace")
+        .type_text("select")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-select"))
+        .wait_exists(test_id("ui-gallery-page-select"), 600)
+        .wait_exists(test_id("ui-gallery-select-trigger"), 600)
+        .click_stable(test_id("ui-gallery-select-trigger"))
+        .wait_exists(test_id("select-scroll-viewport"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::BoundsWithinWindow {
+                target: test_id("select-scroll-viewport"),
+                padding_px: 2.0,
+                eps_px: 0.5,
+            },
+            timeout_frames: 240,
+        })
+        .push(UiActionStepV2::WaitBoundsStable {
+            target: test_id("select-scroll-viewport"),
+            stable_frames: 4,
+            max_move_px: 0.5,
+            timeout_frames: 180,
+        })
+        .click_stable(test_id("ui-gallery-select-item-banana"))
+        .wait_not_exists(test_id("select-scroll-viewport"), 240)
+        .wait_exists(role_and_name("text", "Selected: banana"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-select-open-jitter-click-stable-v2".to_string(),
+        ))
+        .build();
+
+    script.meta = Some(UiScriptMetaV1 {
+        required_capabilities: vec!["diag.script_v2".to_string()],
+        ..Default::default()
+    });
+    script
 }
 
 fn to_pretty_json(script: &UiActionScriptV2) -> Result<String, String> {
