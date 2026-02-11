@@ -482,6 +482,140 @@ fn dock_center_drop_overlay_excludes_tab_bar() {
         "expected center drop overlay quad to cover content rect (excluding tab bar)"
     );
 }
+
+#[test]
+fn dock_edge_drop_overlay_previews_insert_into_same_axis_split_slot() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let (root_split, target_tabs) = app.with_global_mut(DockManager::default, |dock, _app| {
+        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.left")],
+            active: 0,
+        });
+        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.right")],
+            active: 0,
+        });
+        let split = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left_tabs, right_tabs],
+            fractions: vec![0.4, 0.6],
+        });
+        dock.graph.set_window_root(window, split);
+
+        for (key, title) in [
+            (PanelKey::new("core.left"), "Left"),
+            (PanelKey::new("core.right"), "Right"),
+        ] {
+            dock.panels.insert(
+                key,
+                DockPanel {
+                    title: title.to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+
+        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+            tabs: right_tabs,
+            root: split,
+            leaf_tabs: right_tabs,
+            zone: DropZone::Left,
+            insert_index: None,
+            outer: false,
+            explicit: true,
+        }));
+
+        (split, right_tabs)
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let dock = app
+        .global::<DockManager>()
+        .expect("expected dock manager to exist");
+
+    let decision = dock
+        .graph
+        .edge_dock_decision(window, target_tabs, DropZone::Left);
+    let Some(fret_core::EdgeDockDecision::InsertIntoSplit {
+        split,
+        anchor_index,
+        insert_index,
+    }) = decision
+    else {
+        panic!("expected insert-into-split preview decision, got: {decision:?}");
+    };
+    assert_eq!(split, root_split);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let layout = compute_layout_map(
+        &dock.graph,
+        root_split,
+        dock_bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+    );
+    let split_bounds = layout
+        .get(&root_split)
+        .copied()
+        .expect("expected split bounds to exist");
+
+    let (axis, children_len, mut next_fractions) = match dock.graph.node(root_split) {
+        Some(DockNode::Split {
+            axis,
+            children,
+            fractions,
+        }) => (*axis, children.len(), fractions.clone()),
+        _ => panic!("expected window root to be a split"),
+    };
+    let old = *next_fractions
+        .get(anchor_index)
+        .expect("expected anchor fraction");
+    next_fractions[anchor_index] = old * 0.5;
+    next_fractions.insert(insert_index.min(next_fractions.len()), old * 0.5);
+
+    let computed = resizable::compute_layout(
+        axis,
+        split_bounds,
+        children_len.saturating_add(1),
+        &next_fractions,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+        &[],
+    );
+    let expected = computed
+        .panel_rects
+        .get(insert_index)
+        .copied()
+        .expect("expected inserted panel slot rect");
+
+    let has_overlay = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { rect, .. } if *rect == expected
+        )
+    });
+    assert!(
+        has_overlay,
+        "expected an edge-drop overlay quad for the inserted slot, rect={expected:?}"
+    );
+}
 #[test]
 fn dock_center_drop_overlay_draws_tab_preview_for_drag_payload() {
     let window = AppWindowId::default();
