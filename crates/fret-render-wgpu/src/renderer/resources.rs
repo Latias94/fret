@@ -10,6 +10,8 @@ impl Renderer {
         let uniform_capacity = 256usize;
         let clip_capacity = 1024usize;
         let clip_entry_size = std::mem::size_of::<ClipRRectUniform>() as u64;
+        let mask_capacity = 1024usize;
+        let mask_entry_size = std::mem::size_of::<MaskGradientUniform>() as u64;
 
         let uniform_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -39,6 +41,18 @@ impl Renderer {
                         },
                         count: None,
                     },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: Some(
+                                std::num::NonZeroU64::new(mask_entry_size).unwrap(),
+                            ),
+                        },
+                        count: None,
+                    },
                 ],
             });
 
@@ -52,6 +66,13 @@ impl Renderer {
         let clip_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret clip stack buffer"),
             size: clip_entry_size.saturating_mul(clip_capacity as u64).max(4),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let mask_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret mask stack buffer"),
+            size: mask_entry_size.saturating_mul(mask_capacity as u64).max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -72,6 +93,14 @@ impl Renderer {
                     binding: 1,
                     resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                         buffer: &clip_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &mask_buffer,
                         offset: 0,
                         size: None,
                     }),
@@ -257,6 +286,8 @@ impl Renderer {
             uniform_capacity,
             clip_buffer,
             clip_capacity,
+            mask_buffer,
+            mask_capacity,
             quad_pipeline_format: None,
             quad_pipeline: None,
             viewport_pipeline_format: None,

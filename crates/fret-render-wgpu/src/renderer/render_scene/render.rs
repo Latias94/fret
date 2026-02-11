@@ -319,6 +319,16 @@ impl Renderer {
             }
         }
 
+        self.ensure_mask_capacity(device, encoding.masks.len().max(1));
+        if !encoding.masks.is_empty() {
+            queue.write_buffer(&self.mask_buffer, 0, bytemuck::cast_slice(&encoding.masks));
+            if perf_enabled {
+                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
+                    (std::mem::size_of::<MaskGradientUniform>() * encoding.masks.len()) as u64,
+                );
+            }
+        }
+
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
         self.prepare_image_bind_groups(device, &encoding.ordered_draws);
 

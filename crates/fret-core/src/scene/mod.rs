@@ -8,12 +8,14 @@ use slotmap::Key;
 
 mod fingerprint;
 mod image_object_fit;
+mod mask;
 mod paint;
 mod replay;
 mod validate;
 
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
+pub use mask::Mask;
 pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
     TileMode,
@@ -226,6 +228,13 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_mask<T>(&mut self, bounds: Rect, mask: Mask, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushMask { bounds, mask });
+        let out = f(self);
+        self.push(SceneOp::PopMask);
+        out
+    }
+
     pub fn with_effect<T>(
         &mut self,
         bounds: Rect,
@@ -309,6 +318,13 @@ pub enum SceneOp {
         corner_radii: Corners,
     },
     PopClip,
+
+    PushMask {
+        /// Computation bounds (not an implicit clip), see ADR 0239.
+        bounds: Rect,
+        mask: Mask,
+    },
+    PopMask,
 
     PushEffect {
         /// Computation bounds (not an implicit clip), see ADR 0117.

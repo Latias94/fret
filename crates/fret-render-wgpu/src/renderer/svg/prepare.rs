@@ -120,6 +120,8 @@ impl Renderer {
                 | SceneOp::Image { .. }
                 | SceneOp::ImageRegion { .. }
                 | SceneOp::MaskImage { .. }
+                | SceneOp::PushMask { .. }
+                | SceneOp::PopMask
                 | SceneOp::Text { .. }
                 | SceneOp::Path { .. }
                 | SceneOp::ViewportSurface { .. } => {}

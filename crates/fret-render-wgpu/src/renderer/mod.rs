@@ -63,6 +63,8 @@ pub struct Renderer {
     uniform_capacity: usize,
     clip_buffer: wgpu::Buffer,
     clip_capacity: usize,
+    mask_buffer: wgpu::Buffer,
+    mask_capacity: usize,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
