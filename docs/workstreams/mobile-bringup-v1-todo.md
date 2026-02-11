@@ -39,6 +39,9 @@ Workstream entry:
 - [x] Handle winit lifecycle events:
   - on `Suspended`: drop surfaces / pause rendering,
   - on `Resumed`: rebuild surfaces and request redraw.
+- [ ] Android packaging loop (dev):
+  - `apps/fret-ui-gallery-mobile` provides `android_main()` entrypoint.
+  - `tools/mobile/android_apk_run.sh` can build + install + launch on a device/emulator.
 
 Notes:
 
@@ -51,4 +54,4 @@ Notes:
 - [x] iOS safe-area + keyboard occlusion commit (UIKit glue).
 - [x] iOS lifecycle surface rebuild policy.
 - [x] iOS simulator packaging loop (no Xcode project) for `fret-ui-gallery`.
-- [ ] Real device packaging/signing notes (Xcode project or scripted codesign + install).
+- [x] Real device packaging/signing notes (Xcode project or scripted codesign + install).

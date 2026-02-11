@@ -2028,6 +2028,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-gallery-mobile"
+version = "0.1.0"
+dependencies = [
+ "fret-ui-gallery",
+ "winit",
+]
+
+[[package]]
 name = "fret-ui-gallery-web"
 version = "0.1.0"
 dependencies = [

@@ -18,6 +18,16 @@ This workstream is intentionally **Android-first**:
 - Android is the fastest path to a real device smoke test for `winit + wgpu`.
 - iOS has the same contract needs, but requires separate platform glue for insets and lifecycle.
 
+## Android device/emulator run (APK via cargo-apk)
+
+For bring-up we use `cargo-apk` to package a `cdylib` + `NativeActivity` APK.
+This is a dev-only loop and may change later (the upstream tool is deprecated in favour of
+`xbuild`, but it is still a fast path to get a real device smoke test).
+
+Run:
+
+- `tools/mobile/android_apk_run.sh --release`
+
 ## iOS simulator run (no Xcode project)
 
 For quick iteration on iOS without committing an Xcode project, we can bundle the Rust-built
@@ -37,6 +47,10 @@ Notes:
 
 - Set `IOS_SIM_UDID=<udid>` to force a specific simulator device.
 - This is a development loop only; real device packaging/signing is tracked separately.
+
+## Device packaging notes
+
+- `docs/workstreams/mobile-bringup-v1-device-packaging.md`
 
 ## Contract anchors (already accepted)
 
