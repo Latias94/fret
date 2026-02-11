@@ -36,7 +36,7 @@ Workstream entry:
 - [x] Add Android-specific environment commits:
   - safe-area insets (best-effort),
   - occlusion insets (IME / transient obstructions).
-- [ ] Handle winit lifecycle events:
+- [x] Handle winit lifecycle events:
   - on `Suspended`: drop surfaces / pause rendering,
   - on `Resumed`: rebuild surfaces and request redraw.
 
@@ -49,6 +49,6 @@ Notes:
 ## iOS plumbing (follow-up)
 
 - [x] iOS safe-area + keyboard occlusion commit (UIKit glue).
-- [ ] iOS lifecycle surface rebuild policy.
+- [x] iOS lifecycle surface rebuild policy.
 - [ ] iOS simulator packaging loop (no Xcode project) for `fret-ui-gallery`.
 - [ ] Real device packaging/signing notes (Xcode project or scripted codesign + install).

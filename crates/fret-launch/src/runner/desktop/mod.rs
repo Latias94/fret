@@ -1161,6 +1161,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     dispatcher: DesktopDispatcher,
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
+    is_suspended: bool,
 
     renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
@@ -2921,6 +2922,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
+            is_suspended: false,
             renderdoc: None,
             context: None,
             renderer: None,

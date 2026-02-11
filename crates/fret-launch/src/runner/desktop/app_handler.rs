@@ -1391,6 +1391,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
         self.drain_effects(event_loop);
 
+        if self.is_suspended {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            return;
+        }
+
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
@@ -1722,5 +1727,30 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         } else {
             event_loop.set_control_flow(ControlFlow::Wait);
         }
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    fn resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = false;
+
+        // Recreate surfaces eagerly when possible so the first post-resume frame presents without
+        // waiting for additional input events.
+        self.can_create_surfaces(event_loop);
+
+        for (app_window, state) in self.windows.iter() {
+            let _ = (app_window, state);
+            state.window.request_redraw();
+        }
+        self.drain_effects(event_loop);
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    fn suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = true;
+
+        // Best-effort: drop surfaces to avoid presenting while backgrounded and to ensure we can
+        // recreate cleanly on resume.
+        self.destroy_surfaces(event_loop);
+        event_loop.set_control_flow(ControlFlow::Wait);
     }
 }
