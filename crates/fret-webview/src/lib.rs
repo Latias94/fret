@@ -217,6 +217,12 @@ impl WebViewHost {
             .unwrap_or_default()
     }
 
+    pub fn clear_console(&mut self, id: WebViewId) {
+        if let Some(q) = self.console.get_mut(&id) {
+            q.clear();
+        }
+    }
+
     pub fn requeue_requests_front(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
         let mut head: VecDeque<WebViewRequest> = requests.into_iter().collect();
         head.append(&mut self.requests);
@@ -465,6 +471,10 @@ pub fn webview_console_entries(host: &impl GlobalsHost, id: WebViewId) -> Vec<We
     with_webview_host(host, |st| {
         st.map(|st| st.console_entries(id)).unwrap_or_default()
     })
+}
+
+pub fn webview_clear_console(host: &mut impl GlobalsHost, id: WebViewId) {
+    with_webview_host_mut(host, |st| st.clear_console(id));
 }
 
 pub fn webview_register_surface(host: &mut impl GlobalsHost, surface: WebViewSurfaceRegistration) {

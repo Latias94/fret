@@ -20923,6 +20923,7 @@ fn preview_ai_web_preview_demo(
             .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
             .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
             .test_id_backend_logs_marker("ui-ai-web-preview-demo-console-backend-logs-present")
+            .test_id_clear("ui-ai-web-preview-demo-console-clear")
             .into_element(cx);
 
         let commits_now = cx

@@ -180,4 +180,5 @@ Notes:
 - Console capture is best-effort:
   - We inject a JS bridge that forwards `console.log/warn/error` to the host via IPC.
   - The host stores a bounded per-webview ring buffer.
+  - The ring buffer can be cleared from UI (v1: best-effort, no persistence).
   - We still need to decide on richer formatting (structured args, stack traces) and filtering.

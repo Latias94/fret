@@ -23,8 +23,9 @@ use fret_ui_shadcn::{
 
 #[cfg(feature = "webview")]
 use fret_webview::{
-    WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_console_entries,
-    webview_push_request, webview_register_surface_tracked, webview_runtime_state,
+    WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_clear_console,
+    webview_console_entries, webview_push_request, webview_register_surface_tracked,
+    webview_runtime_state,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -42,6 +43,8 @@ pub struct WebPreviewController {
     #[cfg(feature = "webview")]
     pub nav_intent: Model<Option<WebPreviewBackendAction>>,
     #[cfg(feature = "webview")]
+    pub console_clear_intent: Model<bool>,
+    #[cfg(feature = "webview")]
     pub backend: Option<WebPreviewBackendController>,
 }
 
@@ -54,6 +57,16 @@ impl std::fmt::Debug for WebPreviewController {
             .field("disabled", &self.disabled)
             .field("has_on_url_change", &self.on_url_change.is_some())
             .field("nav_intent", &{
+                #[cfg(feature = "webview")]
+                {
+                    "<model>"
+                }
+                #[cfg(not(feature = "webview"))]
+                {
+                    "<none>"
+                }
+            })
+            .field("console_clear_intent", &{
                 #[cfg(feature = "webview")]
                 {
                     "<model>"
@@ -272,6 +285,26 @@ impl WebPreview {
                     }
                 };
 
+                #[cfg(feature = "webview")]
+                let console_clear_intent = {
+                    #[derive(Default)]
+                    struct ConsoleClearIntentState {
+                        model: Option<Model<bool>>,
+                    }
+
+                    let existing =
+                        cx.with_state(ConsoleClearIntentState::default, |st| st.model.clone());
+                    if let Some(existing) = existing {
+                        existing
+                    } else {
+                        let model = cx.app.models_mut().insert(false);
+                        cx.with_state(ConsoleClearIntentState::default, |st| {
+                            st.model = Some(model.clone());
+                        });
+                        model
+                    }
+                };
+
                 let controller = WebPreviewController {
                     url: url_model.clone(),
                     url_draft: url_draft.clone(),
@@ -280,6 +313,8 @@ impl WebPreview {
                     on_url_change: on_url_change.clone(),
                     #[cfg(feature = "webview")]
                     nav_intent: nav_intent.clone(),
+                    #[cfg(feature = "webview")]
+                    console_clear_intent: console_clear_intent.clone(),
                     #[cfg(feature = "webview")]
                     backend: backend.clone(),
                 };
@@ -376,6 +411,17 @@ impl WebPreview {
                                 };
                                 webview_push_request(cx.app, request);
                                 let _ = cx.app.models_mut().update(&nav_intent, |v| *v = None);
+                            }
+
+                            let clear_console = cx
+                                .get_model_copied(&console_clear_intent, Invalidation::Paint)
+                                .unwrap_or(false);
+                            if clear_console {
+                                webview_clear_console(cx.app, backend.id);
+                                let _ = cx
+                                    .app
+                                    .models_mut()
+                                    .update(&console_clear_intent, |v| *v = false);
                             }
 
                             // If the backend navigates (e.g. clicking a link), reflect the actual URL into
@@ -955,6 +1001,7 @@ pub struct WebPreviewConsole {
     test_id_content: Option<Arc<str>>,
     test_id_marker: Option<Arc<str>>,
     test_id_backend_logs_marker: Option<Arc<str>>,
+    test_id_clear: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
@@ -969,6 +1016,7 @@ impl Default for WebPreviewConsole {
             test_id_content: None,
             test_id_marker: None,
             test_id_backend_logs_marker: None,
+            test_id_clear: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
@@ -1015,6 +1063,11 @@ impl WebPreviewConsole {
         self
     }
 
+    pub fn test_id_clear(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_clear = Some(id.into());
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -1031,6 +1084,7 @@ impl WebPreviewConsole {
         };
 
         let theme = Theme::global(&*cx.app).clone();
+        let test_id_clear = self.test_id_clear.clone();
         let open_now = cx
             .get_model_copied(&controller.console_open, Invalidation::Layout)
             .unwrap_or(false);
@@ -1059,7 +1113,7 @@ impl WebPreviewConsole {
         let button = Button::new("Console")
             .children([row])
             .variant(ButtonVariant::Ghost)
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
             .refine_style(ChromeRefinement::default().p(Space::N4))
             .into_element(cx);
 
@@ -1078,6 +1132,52 @@ impl WebPreviewConsole {
                 trigger
             }
         };
+
+        #[cfg(feature = "webview")]
+        let clear_button = if self.backend_logs {
+            controller.backend.as_ref().map(|_backend| {
+                let clear_intent = controller.console_clear_intent.clone();
+                let mut clear = Button::new("Clear")
+                    .children([cx.text("Clear")])
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Sm)
+                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&clear_intent, |v| *v = true);
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                    }))
+                    .into_element(cx);
+
+                if let Some(test_id) = test_id_clear.clone() {
+                    clear = clear.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Button)
+                            .test_id(test_id),
+                    );
+                }
+                clear
+            })
+        } else {
+            None
+        };
+
+        #[cfg(not(feature = "webview"))]
+        let clear_button: Option<AnyElement> = None;
+
+        let header = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items_center()
+                .gap(Space::N1),
+            move |_cx| {
+                let mut items = vec![trigger];
+                if let Some(clear_button) = clear_button {
+                    items.push(clear_button);
+                }
+                items
+            },
+        );
 
         let (logs, backend_logs_present) = {
             let mut out: Vec<WebPreviewConsoleLog> = self.logs.iter().cloned().collect();
@@ -1240,7 +1340,7 @@ impl WebPreviewConsole {
                     })
                     .merge(self.chrome),
             )
-            .into_element(cx, move |_cx, _is_open| trigger, move |_cx| content);
+            .into_element(cx, move |_cx, _is_open| header, move |_cx| content);
 
         root
     }

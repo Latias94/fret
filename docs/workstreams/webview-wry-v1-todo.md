@@ -59,6 +59,10 @@ Tracking format:
   - Inject `console.*` bridge via `wry` initialization script + IPC handler.
   - Store a bounded ring buffer in the app-global host.
   - Gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json` (requires `--features webview-wry`).
+- [x] WEBVIEW-WRY2-ai-007 Add a “Clear console” action for backend logs.
+  - Host API: clear per-webview console ring buffer.
+  - UI: show a Clear button when `backend_logs` is enabled and a backend is present.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json` (requires `--features webview-wry`).
 
 ## Blockers / risks
 
