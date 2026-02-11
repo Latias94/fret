@@ -6279,9 +6279,46 @@ pub struct UiTreeDebugSnapshotV1 {
     /// that do not want to parse the entire element runtime snapshot payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<ElementEnvironmentSnapshotV1>,
+    /// Best-effort window insets snapshot (safe-area + occlusion) from `WindowMetricsService`.
+    ///
+    /// Unlike `debug.environment`, this does not require the element runtime snapshot to be
+    /// enabled. It is intended as a quick "what does the runner think the insets are" anchor
+    /// during mobile bring-up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_insets: Option<UiWindowInsetsSnapshotV1>,
+    /// Best-effort platform text-input snapshot for the current window.
+    ///
+    /// This records `focus_is_text_input` and the last committed IME cursor area, which are
+    /// frequently needed when diagnosing virtual keyboard avoidance and IME candidate placement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_input: Option<UiWindowTextInputSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiWindowInsetsSnapshotV1 {
+    pub safe_area_known: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_area_insets_px: Option<UiPaddingInsetsV1>,
+    pub occlusion_known: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occlusion_insets_px: Option<UiPaddingInsetsV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWindowTextInputSnapshotV1 {
+    pub focus_is_text_input: bool,
+    pub is_composing: bool,
+    /// Total length (UTF-16 code units) of the composed view.
+    pub text_len_utf16: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marked_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_cursor_area: Option<RectV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -6430,6 +6467,41 @@ impl UiTreeDebugSnapshotV1 {
         let environment = element_runtime_snapshot
             .as_ref()
             .and_then(|snapshot| snapshot.environment.clone());
+
+        let window_insets = app.global::<fret_core::WindowMetricsService>().map(|svc| {
+            let safe_area_known = svc.safe_area_insets_is_known(window);
+            let safe_area_insets_px = svc.safe_area_insets(window).map(|e| UiPaddingInsetsV1 {
+                left_px: e.left.0,
+                top_px: e.top.0,
+                right_px: e.right.0,
+                bottom_px: e.bottom.0,
+            });
+            let occlusion_known = svc.occlusion_insets_is_known(window);
+            let occlusion_insets_px = svc.occlusion_insets(window).map(|e| UiPaddingInsetsV1 {
+                left_px: e.left.0,
+                top_px: e.top.0,
+                right_px: e.right.0,
+                bottom_px: e.bottom.0,
+            });
+            UiWindowInsetsSnapshotV1 {
+                safe_area_known,
+                safe_area_insets_px,
+                occlusion_known,
+                occlusion_insets_px,
+            }
+        });
+
+        let text_input = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .map(|snapshot| UiWindowTextInputSnapshotV1 {
+                focus_is_text_input: snapshot.focus_is_text_input,
+                is_composing: snapshot.is_composing,
+                text_len_utf16: snapshot.text_len_utf16,
+                selection_utf16: snapshot.selection_utf16,
+                marked_utf16: snapshot.marked_utf16,
+                ime_cursor_area: snapshot.ime_cursor_area.map(RectV1::from),
+            });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -6607,6 +6679,8 @@ impl UiTreeDebugSnapshotV1 {
                 .map(UiOverlayPolicyDecisionV1::from_decision)
                 .collect(),
             environment,
+            window_insets,
+            text_input,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
