@@ -17,12 +17,7 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_query::{QueryPolicy, with_query_client};
-use fret_router::{
-    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
-    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
-    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
-};
+use fret_router::{NavigationAction, Router};
 use fret_runtime::{
     DefaultKeybinding, ImageUpdateToken, KeyChord, MenuItemToggle, MenuItemToggleKind,
     PlatformCapabilities, PlatformFilter, WindowCommandAvailabilityService,
@@ -58,201 +53,12 @@ use crate::harness::{
 use crate::spec::*;
 use crate::ui;
 
-const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
-const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
-
-#[cfg(target_arch = "wasm32")]
-type UiGalleryHistory = fret_router::WebHistoryAdapter;
-
-#[cfg(not(target_arch = "wasm32"))]
-type UiGalleryHistory = fret_router::MemoryHistory;
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-enum UiGalleryRouteId {
-    Root,
-    Gallery,
-}
-
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-struct UiGalleryPagePrefetchSeed {
-    selected_page: Arc<str>,
-}
-
-fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
-    let location = RouteLocation::from_path("/gallery")
-        .with_query_value("page", Some(page.to_string()))
-        .with_query_value("source", Some("nav".to_string()));
-
-    if let Some(demo) = from.query_value("demo") {
-        location.with_query_value("demo", Some(demo.to_string()))
-    } else {
-        location
-    }
-}
-
-fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
-    let page = location.query_value("page")?;
-    page_spec(page).is_some().then_some(Arc::<str>::from(page))
-}
-
-fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
-    let tree = Arc::new(RouteTree::new(
-        RouteNode::new(UiGalleryRouteId::Root, "/")
-            .expect("root route should build")
-            .with_children(vec![
-                RouteNode::new(UiGalleryRouteId::Gallery, "gallery")
-                    .expect("gallery route should build"),
-            ]),
-    ));
-
-    let search_table = Arc::new(RouteSearchTable::new());
-
-    #[cfg(target_arch = "wasm32")]
-    let history = UiGalleryHistory::new().expect("web history adapter should resolve a location");
-
-    #[cfg(not(target_arch = "wasm32"))]
-    let history = UiGalleryHistory::new(RouteLocation::parse("/"));
-
-    let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
-        .expect("ui gallery router should build");
-
-    router.route_hooks_mut().insert(
-        UiGalleryRouteId::Gallery,
-        RouteHooks {
-            before_load: None,
-            loader: Some(Arc::new(|ctx| {
-                vec![fret_router::RoutePrefetchIntent {
-                    route: ctx.matched.route,
-                    namespace: UI_GALLERY_PAGE_CONTENT_NS,
-                    location: ctx.to.clone(),
-                    extra: None,
-                }]
-            })),
-        },
-    );
-
-    router
-}
-
-fn apply_page_route_side_effects_via_router(
-    app: &mut App,
-    window: AppWindowId,
-    action: NavigationAction,
-    current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-) {
-    let current_route = route_location_for_page(&router.state().location, &current_page);
-    let update = router.navigate_with_prefetch_intents(action, Some(current_route.canonicalized()));
-    apply_page_router_update_side_effects(app, window, current_page, router, update);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn sync_gallery_page_history_command_enabled(
-    app: &mut App,
-    window: AppWindowId,
-    history: &UiGalleryHistory,
-) {
-    let can_back = history.can_back();
-    let can_forward = history.can_forward();
-
-    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
-    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
-
-    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-        if can_back {
-            svc.clear_command(window, &cmd_back);
-        } else {
-            svc.set_enabled(window, cmd_back.clone(), false);
-        }
-
-        if can_forward {
-            svc.clear_command(window, &cmd_forward);
-        } else {
-            svc.set_enabled(window, cmd_forward.clone(), false);
-        }
-    });
-}
-
-#[cfg(target_arch = "wasm32")]
-fn sync_gallery_page_history_command_enabled(
-    app: &mut App,
-    window: AppWindowId,
-    _history: &UiGalleryHistory,
-) {
-    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
-    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
-
-    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-        svc.clear_command(window, &cmd_back);
-        svc.clear_command(window, &cmd_forward);
-    });
-}
-
-fn apply_page_router_update_side_effects(
-    app: &mut App,
-    window: AppWindowId,
-    current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
-    update: Result<
-        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
-        fret_router::RouteSearchValidationFailure,
-    >,
-) {
-    sync_gallery_page_history_command_enabled(app, window, router.history());
-
-    let Ok(update) = update else {
-        return;
-    };
-
-    let RouterUpdateWithPrefetchIntents { update, intents } = update;
-
-    let invalidated = if let RouterUpdate::Changed(transition) = &update {
-        collect_invalidated_namespaces(
-            &transition.from,
-            &transition.to,
-            &[
-                NamespaceInvalidationRule::new(
-                    UI_GALLERY_PAGE_CONTENT_NS,
-                    RouteChangePolicy::PathOrQueryChanged,
-                ),
-                NamespaceInvalidationRule::new(
-                    UI_GALLERY_NAV_INDEX_NS,
-                    RouteChangePolicy::QueryChanged,
-                ),
-            ],
-        )
-    } else {
-        Vec::new()
-    };
-
-    if invalidated.is_empty() && intents.is_empty() {
-        return;
-    }
-
-    let _ = with_query_client(app, |client, app| {
-        for namespace in invalidated {
-            client.invalidate_namespace(namespace);
-        }
-
-        for intent in intents {
-            if intent.namespace != UI_GALLERY_PAGE_CONTENT_NS {
-                continue;
-            }
-
-            let seed = UiGalleryPagePrefetchSeed {
-                selected_page: current_page.clone(),
-            };
-            let key = prefetch_intent_query_key::<String, _>(&intent);
-            let policy = QueryPolicy::default();
-            let _ = client.prefetch(app, window, key, policy, move |_token| {
-                Ok::<String, fret_query::QueryError>(format!(
-                    "ui_gallery.page_prefetch:{}",
-                    seed.selected_page
-                ))
-            });
-        }
-    });
-}
+mod router;
+use router::{
+    UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
+    apply_page_router_update_side_effects, build_ui_gallery_page_router,
+    page_from_gallery_location,
+};
 
 #[derive(Default)]
 struct DebugHudState {
@@ -432,6 +238,89 @@ struct UiGalleryWindowState {
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
     last_config_files_status_seq: u64,
+}
+
+impl UiGalleryWindowState {
+    fn content_models(&self) -> ui::UiGalleryModels {
+        ui::UiGalleryModels {
+            content_tab: self.content_tab.clone(),
+            theme_preset: self.theme_preset.clone(),
+            theme_preset_open: self.theme_preset_open.clone(),
+            view_cache_enabled: self.view_cache_enabled.clone(),
+            view_cache_cache_shell: self.view_cache_cache_shell.clone(),
+            view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
+            view_cache_popover_open: self.view_cache_popover_open.clone(),
+            view_cache_continuous: self.view_cache_continuous.clone(),
+            view_cache_counter: self.view_cache_counter.clone(),
+            popover_open: self.popover_open.clone(),
+            dialog_open: self.dialog_open.clone(),
+            alert_dialog_open: self.alert_dialog_open.clone(),
+            sheet_open: self.sheet_open.clone(),
+            portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
+            select_value: self.select_value.clone(),
+            select_open: self.select_open.clone(),
+            combobox_value: self.combobox_value.clone(),
+            combobox_open: self.combobox_open.clone(),
+            combobox_query: self.combobox_query.clone(),
+            date_picker_open: self.date_picker_open.clone(),
+            date_picker_month: self.date_picker_month.clone(),
+            date_picker_selected: self.date_picker_selected.clone(),
+            time_picker_open: self.time_picker_open.clone(),
+            time_picker_selected: self.time_picker_selected.clone(),
+            resizable_h_fractions: self.resizable_h_fractions.clone(),
+            resizable_v_fractions: self.resizable_v_fractions.clone(),
+            data_table_state: self.data_table_state.clone(),
+            data_grid_selected_row: self.data_grid_selected_row.clone(),
+            tabs_value: self.tabs_value.clone(),
+            accordion_value: self.accordion_value.clone(),
+            avatar_demo_image: self.avatar_demo_image.clone(),
+            image_fit_demo_wide_image: self.image_fit_demo_wide_image.clone(),
+            image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
+            image_fit_demo_streaming_image: self.image_fit_demo_streaming_image.clone(),
+            progress: self.progress.clone(),
+            checkbox: self.checkbox.clone(),
+            switch: self.switch.clone(),
+            material3_checkbox: self.material3_checkbox.clone(),
+            material3_switch: self.material3_switch.clone(),
+            material3_radio_value: self.material3_radio_value.clone(),
+            material3_tabs_value: self.material3_tabs_value.clone(),
+            material3_list_value: self.material3_list_value.clone(),
+            material3_expressive: self.material3_expressive.clone(),
+            material3_navigation_bar_value: self.material3_navigation_bar_value.clone(),
+            material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
+            material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
+            material3_modal_navigation_drawer_open: self
+                .material3_modal_navigation_drawer_open
+                .clone(),
+            material3_dialog_open: self.material3_dialog_open.clone(),
+            material3_text_field_value: self.material3_text_field_value.clone(),
+            material3_text_field_disabled: self.material3_text_field_disabled.clone(),
+            material3_text_field_error: self.material3_text_field_error.clone(),
+            material3_autocomplete_value: self.material3_autocomplete_value.clone(),
+            material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
+            material3_autocomplete_error: self.material3_autocomplete_error.clone(),
+            material3_autocomplete_dialog_open: self.material3_autocomplete_dialog_open.clone(),
+            material3_menu_open: self.material3_menu_open.clone(),
+            text_input: self.text_input.clone(),
+            text_area: self.text_area.clone(),
+            dropdown_open: self.dropdown_open.clone(),
+            context_menu_open: self.context_menu_open.clone(),
+            context_menu_edge_open: self.context_menu_edge_open.clone(),
+            cmdk_open: self.cmdk_open.clone(),
+            cmdk_query: self.cmdk_query.clone(),
+            last_action: self.last_action.clone(),
+            sonner_position: self.sonner_position.clone(),
+            virtual_list_torture_jump: self.virtual_list_torture_jump.clone(),
+            virtual_list_torture_edit_row: self.virtual_list_torture_edit_row.clone(),
+            virtual_list_torture_edit_text: self.virtual_list_torture_edit_text.clone(),
+            virtual_list_torture_scroll: self.virtual_list_torture_scroll.clone(),
+            code_editor_syntax_rust: self.code_editor_syntax_rust.clone(),
+            code_editor_boundary_identifier: self.code_editor_boundary_identifier.clone(),
+            code_editor_soft_wrap: self.code_editor_soft_wrap.clone(),
+            code_editor_folds: self.code_editor_folds.clone(),
+            code_editor_inlays: self.code_editor_inlays.clone(),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -2273,24 +2162,11 @@ impl UiGalleryDriver {
             }
         }
 
+        let content_models = Arc::new(state.content_models());
         let selected_page = state.selected_page.clone();
         let workspace_tabs = state.workspace_tabs.clone();
         let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
         let nav_query = state.nav_query.clone();
-        let content_tab = state.content_tab.clone();
-        let theme_preset = state.theme_preset.clone();
-        let theme_preset_open = state.theme_preset_open.clone();
-        let view_cache_enabled = state.view_cache_enabled.clone();
-        let view_cache_cache_shell = state.view_cache_cache_shell.clone();
-        let view_cache_inner_enabled = state.view_cache_inner_enabled.clone();
-        let view_cache_popover_open = state.view_cache_popover_open.clone();
-        let view_cache_continuous = state.view_cache_continuous.clone();
-        let view_cache_counter = state.view_cache_counter.clone();
-        let popover_open = state.popover_open.clone();
-        let dialog_open = state.dialog_open.clone();
-        let alert_dialog_open = state.alert_dialog_open.clone();
-        let sheet_open = state.sheet_open.clone();
-        let portal_geometry_popover_open = state.portal_geometry_popover_open.clone();
         let settings_open = state.settings_open.clone();
         let settings_menu_bar_os = state.settings_menu_bar_os.clone();
         let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
@@ -2298,68 +2174,7 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
         let settings_edit_can_undo = state.settings_edit_can_undo.clone();
         let settings_edit_can_redo = state.settings_edit_can_redo.clone();
-        let select_value = state.select_value.clone();
-        let select_open = state.select_open.clone();
-        let combobox_value = state.combobox_value.clone();
-        let combobox_open = state.combobox_open.clone();
-        let combobox_query = state.combobox_query.clone();
-        let date_picker_open = state.date_picker_open.clone();
-        let date_picker_month = state.date_picker_month.clone();
-        let date_picker_selected = state.date_picker_selected.clone();
-        let time_picker_open = state.time_picker_open.clone();
-        let time_picker_selected = state.time_picker_selected.clone();
-        let resizable_h_fractions = state.resizable_h_fractions.clone();
-        let resizable_v_fractions = state.resizable_v_fractions.clone();
-        let data_table_state = state.data_table_state.clone();
-        let data_grid_selected_row = state.data_grid_selected_row.clone();
-        let tabs_value = state.tabs_value.clone();
-        let accordion_value = state.accordion_value.clone();
-        let avatar_demo_image = state.avatar_demo_image.clone();
-        let image_fit_demo_wide_image = state.image_fit_demo_wide_image.clone();
-        let image_fit_demo_tall_image = state.image_fit_demo_tall_image.clone();
-        let image_fit_demo_streaming_image = state.image_fit_demo_streaming_image.clone();
-        let progress = state.progress.clone();
-        let checkbox = state.checkbox.clone();
-        let switch = state.switch.clone();
-        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
-        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
-        let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
-        let code_editor_folds = state.code_editor_folds.clone();
-        let code_editor_inlays = state.code_editor_inlays.clone();
-        let material3_checkbox = state.material3_checkbox.clone();
-        let material3_switch = state.material3_switch.clone();
-        let material3_radio_value = state.material3_radio_value.clone();
-        let material3_tabs_value = state.material3_tabs_value.clone();
-        let material3_list_value = state.material3_list_value.clone();
-        let material3_expressive = state.material3_expressive.clone();
-        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
-        let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
-        let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
-        let material3_modal_navigation_drawer_open =
-            state.material3_modal_navigation_drawer_open.clone();
-        let material3_dialog_open = state.material3_dialog_open.clone();
-        let material3_text_field_value = state.material3_text_field_value.clone();
-        let material3_text_field_disabled = state.material3_text_field_disabled.clone();
-        let material3_text_field_error = state.material3_text_field_error.clone();
-        let material3_autocomplete_value = state.material3_autocomplete_value.clone();
-        let material3_autocomplete_disabled = state.material3_autocomplete_disabled.clone();
-        let material3_autocomplete_error = state.material3_autocomplete_error.clone();
-        let material3_autocomplete_dialog_open = state.material3_autocomplete_dialog_open.clone();
-        let material3_menu_open = state.material3_menu_open.clone();
-        let text_input = state.text_input.clone();
-        let text_area = state.text_area.clone();
-        let dropdown_open = state.dropdown_open.clone();
-        let context_menu_open = state.context_menu_open.clone();
-        let context_menu_edge_open = state.context_menu_edge_open.clone();
-        let cmdk_open = state.cmdk_open.clone();
-        let cmdk_query = state.cmdk_query.clone();
-        let last_action = state.last_action.clone();
-        let sonner_position = state.sonner_position.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
-        let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
-        let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
-        let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
-        let virtual_list_torture_scroll = state.virtual_list_torture_scroll.clone();
         let inspector_enabled = state.inspector_enabled.clone();
         let inspector_last_pointer = state.inspector_last_pointer.clone();
 
@@ -2686,80 +2501,7 @@ impl UiGalleryDriver {
                                             cx,
                                             &theme,
                                             selected.as_ref(),
-                                            content_tab.clone(),
-                                            theme_preset.clone(),
-                                            theme_preset_open.clone(),
-                                            view_cache_enabled.clone(),
-                                            view_cache_cache_shell.clone(),
-                                            view_cache_inner_enabled.clone(),
-                                            view_cache_popover_open.clone(),
-                                            view_cache_continuous.clone(),
-                                            view_cache_counter.clone(),
-                                            popover_open.clone(),
-                                            dialog_open.clone(),
-                                            alert_dialog_open.clone(),
-                                            sheet_open.clone(),
-                                            portal_geometry_popover_open.clone(),
-                                            select_value.clone(),
-                                            select_open.clone(),
-                                            combobox_value.clone(),
-                                            combobox_open.clone(),
-                                            combobox_query.clone(),
-                                            date_picker_open.clone(),
-                                            date_picker_month.clone(),
-                                            date_picker_selected.clone(),
-                                            time_picker_open.clone(),
-                                            time_picker_selected.clone(),
-                                            resizable_h_fractions.clone(),
-                                            resizable_v_fractions.clone(),
-                                            data_table_state.clone(),
-                                            data_grid_selected_row.clone(),
-                                            tabs_value.clone(),
-                                            accordion_value.clone(),
-                                            avatar_demo_image.clone(),
-                                            image_fit_demo_wide_image.clone(),
-                                            image_fit_demo_tall_image.clone(),
-                                            image_fit_demo_streaming_image.clone(),
-                                            progress.clone(),
-                                            checkbox.clone(),
-                                            switch.clone(),
-                                            material3_checkbox.clone(),
-                                            material3_switch.clone(),
-                                            material3_radio_value.clone(),
-                                            material3_tabs_value.clone(),
-                                            material3_list_value.clone(),
-                                            material3_expressive.clone(),
-                                            material3_navigation_bar_value.clone(),
-                                            material3_navigation_rail_value.clone(),
-                                            material3_navigation_drawer_value.clone(),
-                                            material3_modal_navigation_drawer_open.clone(),
-                                            material3_dialog_open.clone(),
-                                            material3_text_field_value.clone(),
-                                            material3_text_field_disabled.clone(),
-                                            material3_text_field_error.clone(),
-                                            material3_autocomplete_value.clone(),
-                                            material3_autocomplete_disabled.clone(),
-                                            material3_autocomplete_error.clone(),
-                                            material3_autocomplete_dialog_open.clone(),
-                                            material3_menu_open.clone(),
-                                            text_input.clone(),
-                                            text_area.clone(),
-                                            dropdown_open.clone(),
-                                            context_menu_open.clone(),
-                                            context_menu_edge_open.clone(),
-                                            cmdk_open.clone(),
-                                            cmdk_query.clone(),
-                                            last_action.clone(),
-                                            sonner_position.clone(),
-                                            virtual_list_torture_jump.clone(),
-                                            virtual_list_torture_edit_row.clone(),
-                                            virtual_list_torture_edit_text.clone(),
-                                            virtual_list_torture_scroll.clone(),
-                                            code_editor_syntax_rust.clone(),
-                                            code_editor_boundary_identifier.clone(),
-                                            code_editor_soft_wrap.clone(),
-                                            code_editor_folds.clone(),
-                                            code_editor_inlays.clone(),
+                                            content_models.as_ref(),
                                         )
                                     }
                                 })]
@@ -2790,80 +2532,7 @@ impl UiGalleryDriver {
                                         cx,
                                         &theme,
                                         selected.as_ref(),
-                                        content_tab.clone(),
-                                        theme_preset.clone(),
-                                        theme_preset_open.clone(),
-                                        view_cache_enabled.clone(),
-                                        view_cache_cache_shell.clone(),
-                                        view_cache_inner_enabled.clone(),
-                                        view_cache_popover_open.clone(),
-                                        view_cache_continuous.clone(),
-                                        view_cache_counter.clone(),
-                                        popover_open.clone(),
-                                        dialog_open.clone(),
-                                        alert_dialog_open.clone(),
-                                        sheet_open.clone(),
-                                        portal_geometry_popover_open.clone(),
-                                        select_value.clone(),
-                                        select_open.clone(),
-                                        combobox_value.clone(),
-                                        combobox_open.clone(),
-                                        combobox_query.clone(),
-                                        date_picker_open.clone(),
-                                        date_picker_month.clone(),
-                                        date_picker_selected.clone(),
-                                        time_picker_open.clone(),
-                                        time_picker_selected.clone(),
-                                        resizable_h_fractions.clone(),
-                                        resizable_v_fractions.clone(),
-                                        data_table_state.clone(),
-                                        data_grid_selected_row.clone(),
-                                        tabs_value.clone(),
-                                        accordion_value.clone(),
-                                        avatar_demo_image.clone(),
-                                        image_fit_demo_wide_image.clone(),
-                                        image_fit_demo_tall_image.clone(),
-                                        image_fit_demo_streaming_image.clone(),
-                                        progress.clone(),
-                                        checkbox.clone(),
-                                        switch.clone(),
-                                        material3_checkbox.clone(),
-                                        material3_switch.clone(),
-                                        material3_radio_value.clone(),
-                                        material3_tabs_value.clone(),
-                                        material3_list_value.clone(),
-                                        material3_expressive.clone(),
-                                        material3_navigation_bar_value.clone(),
-                                        material3_navigation_rail_value.clone(),
-                                        material3_navigation_drawer_value.clone(),
-                                        material3_modal_navigation_drawer_open.clone(),
-                                        material3_dialog_open.clone(),
-                                        material3_text_field_value.clone(),
-                                        material3_text_field_disabled.clone(),
-                                        material3_text_field_error.clone(),
-                                        material3_autocomplete_value.clone(),
-                                        material3_autocomplete_disabled.clone(),
-                                        material3_autocomplete_error.clone(),
-                                        material3_autocomplete_dialog_open.clone(),
-                                        material3_menu_open.clone(),
-                                        text_input.clone(),
-                                        text_area.clone(),
-                                        dropdown_open.clone(),
-                                        context_menu_open.clone(),
-                                        context_menu_edge_open.clone(),
-                                        cmdk_open.clone(),
-                                        cmdk_query.clone(),
-                                        last_action.clone(),
-                                        sonner_position.clone(),
-                                        virtual_list_torture_jump.clone(),
-                                        virtual_list_torture_edit_row.clone(),
-                                        virtual_list_torture_edit_text.clone(),
-                                        virtual_list_torture_scroll.clone(),
-                                        code_editor_syntax_rust.clone(),
-                                        code_editor_boundary_identifier.clone(),
-                                        code_editor_soft_wrap.clone(),
-                                        code_editor_folds.clone(),
-                                        code_editor_inlays.clone(),
+                                        content_models.as_ref(),
                                     )
                                 }
                             })
@@ -2961,17 +2630,17 @@ impl UiGalleryDriver {
 
                     let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
                         let status_last_action = cx
-                            .get_model_cloned(&last_action, Invalidation::Layout)
+                            .get_model_cloned(&content_models.last_action, Invalidation::Layout)
                             .unwrap_or_else(|| Arc::<str>::from("<none>"));
                         let status_theme = cx
-                            .get_model_cloned(&theme_preset, Invalidation::Layout)
+                            .get_model_cloned(&content_models.theme_preset, Invalidation::Layout)
                             .flatten()
                             .unwrap_or_else(|| Arc::<str>::from("<default>"));
                         let status_view_cache = cx
-                            .get_model_copied(&view_cache_enabled, Invalidation::Layout)
+                            .get_model_copied(&content_models.view_cache_enabled, Invalidation::Layout)
                             .unwrap_or(false);
                         let status_cache_shell = cx
-                            .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
+                            .get_model_copied(&content_models.view_cache_cache_shell, Invalidation::Layout)
                             .unwrap_or(false);
 
                         let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
@@ -3122,7 +2791,7 @@ impl UiGalleryDriver {
                         } else {
                             {
                                 let position = cx
-                                    .get_model_copied(&sonner_position, Invalidation::Layout)
+                                    .get_model_copied(&content_models.sonner_position, Invalidation::Layout)
                                     .unwrap_or(shadcn::ToastPosition::TopCenter);
                                 shadcn::Toaster::new().position(position).into_element(cx)
                             }
