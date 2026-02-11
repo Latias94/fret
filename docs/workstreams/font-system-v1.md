@@ -103,6 +103,8 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
    - Follow-up (recommended): add a script gate that asserts the bundle contains a non-empty
      `render_text_font_trace.entries[*].families` list when tofu is observed (to make fallback regressions debuggable
      without rerunning locally).
+   - Deterministic bundled-only conformance (no system fonts):
+     - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent`)
 
 3) Font enumeration is still uncached and metadata is best-effort.
    - `all_font_names()` and `all_font_catalog_entries()` are best-effort snapshots (platform-dependent).
