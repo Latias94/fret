@@ -1398,16 +1398,36 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 let right_px = (surface_w - content_rect.right).max(0).min(surface_w) as f32;
                 let bottom_px = (surface_h - content_rect.bottom).max(0).min(surface_h) as f32;
 
+                let focus_is_text_input = self
+                    .app
+                    .global::<fret_runtime::WindowTextInputSnapshotService>()
+                    .and_then(|svc| svc.snapshot(*app_window))
+                    .map(|s| s.focus_is_text_input)
+                    .unwrap_or(false);
+
+                let bottom_inset = Px(bottom_px / scale_factor);
+                let baseline_bottom_inset = match state.android_bottom_inset_baseline {
+                    Some(prev) if focus_is_text_input => Px(prev.0.min(bottom_inset.0)),
+                    _ => bottom_inset,
+                };
+                state.android_bottom_inset_baseline = Some(baseline_bottom_inset);
+
+                let ime_bottom_inset = if focus_is_text_input {
+                    Px((bottom_inset.0 - baseline_bottom_inset.0).max(0.0))
+                } else {
+                    Px(0.0)
+                };
+
                 let safe_area_insets = fret_core::Edges {
                     top: Px(top_px / scale_factor),
                     right: Px(right_px / scale_factor),
-                    bottom: Px(0.0),
+                    bottom: baseline_bottom_inset,
                     left: Px(left_px / scale_factor),
                 };
                 let occlusion_insets = fret_core::Edges {
                     top: Px(0.0),
                     right: Px(0.0),
-                    bottom: Px(bottom_px / scale_factor),
+                    bottom: ime_bottom_inset,
                     left: Px(0.0),
                 };
 

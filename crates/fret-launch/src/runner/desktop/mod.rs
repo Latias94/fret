@@ -1122,6 +1122,8 @@ struct WindowRuntime<S> {
     surface: Option<SurfaceState<'static>>,
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
+    #[cfg(target_os = "android")]
+    android_bottom_inset_baseline: Option<fret_core::Px>,
     /// Coalesced resizes awaiting application at the next frame boundary.
     ///
     /// During interactive window resize, platforms may emit multiple size updates per vblank.
@@ -3566,6 +3568,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     },
                     ..Default::default()
                 },
+                #[cfg(target_os = "android")]
+                android_bottom_inset_baseline: None,
                 pending_surface_resize: None,
                 last_delivered_window_resized: None,
                 is_focused: false,
