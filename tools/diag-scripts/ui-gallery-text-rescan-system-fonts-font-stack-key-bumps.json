@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: rescan system fonts bumps text font stack key",
+    "tags": ["ui-gallery", "text", "fonts", "rescan"],
+    "target_hints": ["fret-ui-gallery"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-rescan-system-fonts-before"
+    },
+    { "type": "press_shortcut", "shortcut": "primary+p" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "dialog",
+          "name": "Command palette"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "type_text", "text": "Rescan System Fonts" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "list_box_option",
+          "name": "Rescan System Fonts"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "role_and_name",
+        "role": "list_box_option",
+        "name": "Rescan System Fonts"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "dialog",
+          "name": "Command palette"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 240 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-text-rescan-system-fonts-after"
+    }
+  ]
+}
+
