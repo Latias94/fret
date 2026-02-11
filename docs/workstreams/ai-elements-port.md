@@ -109,6 +109,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
   - `AI package info (demo)` (`ai_package_info_demo`): `PackageInfo` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`
+  - `AI open in chat (demo)` (`ai_open_in_chat_demo`): `OpenIn` provider dropdown demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -717,7 +719,7 @@ Legend:
 | `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
 | `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
 | `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
-| `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Defer | App-specific affordance. |
+| `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Prototype | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl`. Demo + diag gate exist. |
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/panel.rs` | Defer | Workspace shell/panels belong in docking/viewports workstreams. |
 | `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |
 | `node.tsx` / `edge.tsx` | `fret-node` + `fret-ui-ai` | `ecosystem/fret-node` (core) + `fret-ui-ai` chrome | Defer | Same. |

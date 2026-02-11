@@ -89,7 +89,7 @@ Status legend:
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
 | `image` | Prototype | `fret-ui-ai` or `fret-ui-shadcn` | `Image` surface exists (renders `ImageId`; decoding/upload is app-owned). Decide later if it belongs in shadcn. |
-| `open-in-chat` | Not started | `fret-ui-ai` | Likely app-level wiring; component is just chrome. |
+| `open-in-chat` | Prototype | `fret-ui-ai` | Provider dropdown menu (`OpenIn*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`. |
 
 ### Workflow
 

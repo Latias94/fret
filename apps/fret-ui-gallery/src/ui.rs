@@ -708,6 +708,7 @@ fn page_preview(
         PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
         PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
         PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
+        PAGE_AI_OPEN_IN_CHAT_DEMO => preview_ai_open_in_chat_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17753,6 +17754,55 @@ fn preview_ai_package_info_demo(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("PackageInfo (AI Elements)"), minor, added, removed],
+    )]
+}
+
+fn preview_ai_open_in_chat_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let menu = ui_ai::OpenIn::new(
+        "Explain Rust's borrow checker rules with a short example and a common pitfall.",
+    )
+    .trigger(ui_ai::OpenInTrigger::new().test_id("ui-ai-open-in-chat-demo-trigger"))
+    .into_element_with_entries(cx, move |cx| {
+        vec![
+            ui_ai::OpenInChatGpt::new()
+                .test_id("ui-ai-open-in-chat-demo-item-chatgpt")
+                .into_entry(cx),
+            ui_ai::OpenInClaude::new()
+                .test_id("ui-ai-open-in-chat-demo-item-claude")
+                .into_entry(cx),
+            ui_ai::OpenInT3::new()
+                .test_id("ui-ai-open-in-chat-demo-item-t3")
+                .into_entry(cx),
+            ui_ai::OpenInScira::new()
+                .test_id("ui-ai-open-in-chat-demo-item-scira")
+                .into_entry(cx),
+            ui_ai::OpenInv0::new()
+                .test_id("ui-ai-open-in-chat-demo-item-v0")
+                .into_entry(cx),
+            ui_ai::OpenInCursor::new()
+                .test_id("ui-ai-open-in-chat-demo-item-cursor")
+                .into_entry(cx),
+        ]
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("OpenIn (AI Elements)"),
+                cx.text("Open the menu; selecting an item will emit Effect::OpenUrl."),
+                menu,
+            ]
+        },
     )]
 }
 

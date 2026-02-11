@@ -641,6 +641,23 @@ use fret_ui_ai::{PackageInfo, PackageInfoChangeKind};
 ```
 "#;
 
+pub(crate) const DOC_AI_OPEN_IN_CHAT_DEMO: &str = r#"
+## AI open in chat (demo)
+
+This page demonstrates the AI Elements-aligned `OpenIn` menu surface:
+
+- trigger button,
+- provider entries that emit `Effect::OpenUrl` when selected.
+
+Note: the demo gate opens the menu but does not click a provider entry (to avoid launching a browser).
+"#;
+
+pub(crate) const USAGE_AI_OPEN_IN_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::OpenIn;
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

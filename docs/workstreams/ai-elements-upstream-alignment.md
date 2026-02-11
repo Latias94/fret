@@ -79,6 +79,7 @@ Legend:
 | `image.tsx` | `fret-ui-ai` | `image.rs` | Ported (prototype) | Rendering only; decoding/upload is app-owned. |
 | `terminal.tsx` | `fret-ui-ai` | `terminal.rs` | Ported (prototype) | Viewer-only (output + copy/clear + auto-scroll); no PTY/TTY in v1. |
 | `package-info.tsx` | `fret-ui-ai` | `package_info.rs` | Ported (prototype) | Package card (name/change badge + version row + deps list building blocks). |
+| `open-in-chat.tsx` | `fret-ui-ai` | `open_in_chat.rs` | Ported (prototype) | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl` (URLs match upstream). |
 
 ## Known upstream files not yet ported
 
@@ -87,7 +88,6 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 - `agent.tsx`
 - `audio-player.tsx`
 - `jsx-preview.tsx` (likely out of scope for Rust)
-- `open-in-chat.tsx`
 - `persona.tsx`
 - `sandbox.tsx`
 - `task.tsx`
