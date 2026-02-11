@@ -14,6 +14,7 @@ default-run = "fret-ui-gallery"
 [features]
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
+webview-wry = ["dep:fret-webview", "fret-launch/webview-wry", "fret-ui-ai/webview"]
 
 [dependencies]
 anyhow.workspace = true
@@ -63,3 +64,4 @@ web-sys = { version = "0.3", features = ["Window", "Location"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust"] }
+fret-webview = { path = "../../crates/fret-webview", optional = true }

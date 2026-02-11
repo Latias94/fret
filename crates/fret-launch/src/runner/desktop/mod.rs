@@ -1158,6 +1158,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     renderer_caps: Option<fret_render::RendererCapabilities>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
+    #[cfg(feature = "webview-wry")]
+    webviews_wry: fret_webview_wry::wry_host::WryWebViewHost,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
@@ -2328,6 +2330,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             renderer_caps: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
+            #[cfg(feature = "webview-wry")]
+            webviews_wry: fret_webview_wry::wry_host::WryWebViewHost::new(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,

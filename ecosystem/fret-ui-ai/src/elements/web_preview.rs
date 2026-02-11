@@ -22,7 +22,10 @@ use fret_ui_shadcn::{
 };
 
 #[cfg(feature = "webview")]
-use fret_webview::{WebViewId, WebViewRequest};
+use fret_webview::{
+    WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_push_request,
+    webview_register_surface,
+};
 
 #[derive(Debug, Default, Clone)]
 struct WebPreviewProviderState {
@@ -69,7 +72,6 @@ pub type OnWebPreviewUrlChange =
 #[derive(Clone)]
 pub struct WebPreviewBackendController {
     pub id: WebViewId,
-    pub requests: Model<Vec<WebViewRequest>>,
     pub surface_test_id: Arc<str>,
 }
 
@@ -78,7 +80,6 @@ impl std::fmt::Debug for WebPreviewBackendController {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WebPreviewBackendController")
             .field("id", &self.id)
-            .field("requests", &"<model>")
             .field("surface_test_id", &self.surface_test_id.as_ref())
             .finish()
     }
@@ -247,19 +248,39 @@ impl WebPreview {
                     #[derive(Default)]
                     struct BackendInit {
                         created: bool,
+                        last_loaded_url: String,
                     }
 
                     let needs_create = cx.with_state(BackendInit::default, |st| !st.created);
                     if needs_create {
-                        let url_now: Arc<str> = Arc::from(url_now.clone());
-                        let _ = cx.app.models_mut().update(&backend.requests, |v| {
-                            v.push(WebViewRequest::Create {
+                        let url_now_string = url_now.clone();
+                        let url_now: Arc<str> = Arc::from(url_now_string.clone());
+                        webview_push_request(
+                            cx.app,
+                            WebViewRequest::Create {
                                 id: backend.id,
                                 window: cx.window,
                                 initial_url: url_now,
-                            });
+                            },
+                        );
+                        cx.with_state(BackendInit::default, |st| {
+                            st.created = true;
+                            st.last_loaded_url = url_now_string;
                         });
-                        cx.with_state(BackendInit::default, |st| st.created = true);
+                    } else {
+                        let needs_load =
+                            cx.with_state(BackendInit::default, |st| st.last_loaded_url != url_now);
+                        if needs_load {
+                            let next: Arc<str> = Arc::from(url_now.clone());
+                            webview_push_request(
+                                cx.app,
+                                WebViewRequest::LoadUrl {
+                                    id: backend.id,
+                                    url: next,
+                                },
+                            );
+                            cx.with_state(BackendInit::default, |st| st.last_loaded_url = url_now);
+                        }
                     }
                 }
 
@@ -547,8 +568,6 @@ impl WebPreviewUrl {
         let url = controller.url.clone();
         let on_url_change = controller.on_url_change.clone();
         let disabled = controller.disabled;
-        #[cfg(feature = "webview")]
-        let backend = controller.backend.clone();
 
         let on_submit: OnInputSubmit = Arc::new(
             move |host: &mut dyn UiFocusActionHost, action_cx: ActionCx| {
@@ -556,17 +575,6 @@ impl WebPreviewUrl {
                 let _ = host.models_mut().update(&url, |v| *v = next.clone());
                 if let Some(cb) = on_url_change.clone() {
                     cb(host, action_cx, Arc::<str>::from(next));
-                }
-                #[cfg(feature = "webview")]
-                if let Some(backend) = backend.clone() {
-                    let next: Arc<str> =
-                        Arc::from(host.models_mut().get_cloned(&url).unwrap_or_default());
-                    let _ = host.models_mut().update(&backend.requests, |v| {
-                        v.push(WebViewRequest::LoadUrl {
-                            id: backend.id,
-                            url: next,
-                        });
-                    });
                 }
                 host.request_redraw(action_cx.window);
             },
@@ -706,6 +714,14 @@ impl WebPreviewBody {
         let Some(test_id) = test_id else {
             return el;
         };
+        #[cfg(feature = "webview")]
+        if let Some(backend) = controller.backend.as_ref() {
+            webview_register_surface(
+                cx.app,
+                WebViewSurfaceRegistration::new(backend.id, cx.window, test_id.clone())
+                    .visible(true),
+            );
+        }
         el.attach_semantics(SemanticsDecoration::default().role(role).test_id(test_id))
     }
 }

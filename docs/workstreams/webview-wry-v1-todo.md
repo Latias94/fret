@@ -2,7 +2,7 @@
 title: WebView integration (native wry) — v1 TODO
 status: active
 date: 2026-02-11
-scope: ecosystem/fret-webview, ecosystem/fret-webview-wry, WebPreview backend
+scope: crates/fret-webview, crates/fret-webview-wry, WebPreview backend
 ---
 
 # WebView integration (native wry) — v1 TODO
@@ -16,29 +16,29 @@ Tracking format:
 
 ## M0 — Contract + crate skeletons
 
-- [x] WEBVIEW-WRY0-contract-001 Create `ecosystem/fret-webview` crate (contract-only).
+- [x] WEBVIEW-WRY0-contract-001 Create `crates/fret-webview` crate (contract-only).
 - [x] WEBVIEW-WRY0-contract-002 Define v1 request + event enums (minimal set).
 - [ ] WEBVIEW-WRY0-contract-003 Define stable ID + lifecycle rules (create/destroy; per-window constraints).
 - [ ] WEBVIEW-WRY0-contract-004 Add a unit test that round-trips a request/event list (serde optional; only if needed).
 
-- [x] WEBVIEW-WRY0-backend-010 Create `ecosystem/fret-webview-wry` crate (native backend).
-- [ ] WEBVIEW-WRY0-backend-011 Add feature-gated `wry` dependency (native only).
-- [ ] WEBVIEW-WRY0-backend-012 Decide windowing glue strategy (winit/tao compatibility) and document it.
+- [x] WEBVIEW-WRY0-backend-010 Create `crates/fret-webview-wry` crate (native backend).
+- [x] WEBVIEW-WRY0-backend-011 Add feature-gated `wry` dependency (native only).
+- [x] WEBVIEW-WRY0-backend-012 Decide windowing glue strategy (winit/tao compatibility) and document it.
 
 ## M1 — Host integration seam
 
-- [~] WEBVIEW-WRY1-host-001 Define how UI expresses “WebView wants this rect” (handle/adapter seam).
+- [x] WEBVIEW-WRY1-host-001 Define how UI expresses “WebView wants this rect” (handle/adapter seam).
   - v1 plan: stable `test_id` + bounds lookup via `SemanticsSnapshot` (`fret-webview` helpers).
-- [ ] WEBVIEW-WRY1-host-002 Implement lifecycle: create/destroy per app window.
-- [ ] WEBVIEW-WRY1-host-003 Route navigation intents to backend (load/go_back/go_forward/reload).
+- [~] WEBVIEW-WRY1-host-002 Implement lifecycle: create/destroy per app window.
+- [~] WEBVIEW-WRY1-host-003 Route navigation intents to backend (load/go_back/go_forward/reload).
 - [ ] WEBVIEW-WRY1-host-004 Emit navigation state events back into a model/UI-consumable place.
 
 ## M2 — `WebPreview` end-to-end (feature-gated)
 
-- [ ] WEBVIEW-WRY2-ai-001 Add `fret-ui-ai` feature flags for webview backends (e.g. `webview`, `webview-wry`).
+- [~] WEBVIEW-WRY2-ai-001 Add `fret-ui-ai` feature flags for webview backends (e.g. `webview`, `webview-wry`).
 - [ ] WEBVIEW-WRY2-ai-002 Wire `WebPreview` navigation buttons to backend intents (when enabled).
 - [ ] WEBVIEW-WRY2-ai-003 Reflect `can_back/can_forward/is_loading` into the chrome state.
-- [ ] WEBVIEW-WRY2-ai-004 UI Gallery demo: embedded WebView (or fallback to chrome-only with explicit label).
+- [x] WEBVIEW-WRY2-ai-004 UI Gallery demo: embedded WebView (or fallback to chrome-only with explicit label).
 - [ ] WEBVIEW-WRY2-ai-005 Add a diag script gate that:
   - enters a URL,
   - observes a “loaded” marker (backend-provided),

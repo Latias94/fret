@@ -954,6 +954,63 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         state.last_accessibility_snapshot = None;
                     }
 
+                    #[cfg(feature = "webview-wry")]
+                    {
+                        // v1 integration seam: drive a native child WebView using `test_id` bounds
+                        // from the semantics snapshot.
+                        //
+                        // We only compute a snapshot when a surface is registered for this window.
+                        let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
+                            if fret_webview::webview_has_surfaces_for_window(&self.app, app_window)
+                            {
+                                self.driver.accessibility_snapshot(
+                                    &mut self.app,
+                                    app_window,
+                                    &mut state.user,
+                                )
+                            } else {
+                                None
+                            }
+                        });
+
+                        if let Some(snapshot) = snapshot.as_ref() {
+                            let surfaces =
+                                fret_webview::webview_surfaces_for_window(&self.app, app_window);
+                            if !surfaces.is_empty() {
+                                let placements = surfaces
+                                    .into_iter()
+                                    .filter_map(|s| {
+                                        let placement = fret_webview::placement_for_test_id(
+                                            snapshot,
+                                            s.surface_test_id.as_ref(),
+                                            s.visible,
+                                        )?;
+                                        Some(fret_webview::WebViewRequest::SetPlacement {
+                                            id: s.id,
+                                            placement,
+                                        })
+                                    })
+                                    .collect::<Vec<_>>();
+                                fret_webview::webview_push_requests(&mut self.app, placements);
+                            }
+                        }
+
+                        let requests = fret_webview::webview_drain_requests(&mut self.app);
+                        if !requests.is_empty() {
+                            let unhandled = self.webviews_wry.handle_requests_for_window(
+                                app_window,
+                                state.window.as_ref(),
+                                requests,
+                            );
+                            if !unhandled.is_empty() {
+                                fret_webview::webview_requeue_requests_front(
+                                    &mut self.app,
+                                    unhandled,
+                                );
+                            }
+                        }
+                    }
+
                     let record_started = hitch_config.map(|_| Instant::now());
                     let record_span = tracing::info_span!(
                         "fret.runner.record",

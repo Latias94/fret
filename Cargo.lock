@@ -1681,6 +1681,8 @@ dependencies = [
  "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
+ "fret-webview",
+ "fret-webview-wry",
  "getrandom 0.3.4",
  "image",
  "keyboard-types",
@@ -2062,6 +2064,7 @@ dependencies = [
  "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-undo",
+ "fret-webview",
  "fret-workspace",
  "pollster",
  "serde_json",
@@ -2178,6 +2181,7 @@ name = "fret-webview"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "slotmap",
 ]
 

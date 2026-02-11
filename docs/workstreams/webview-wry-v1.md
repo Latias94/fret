@@ -2,7 +2,7 @@
 title: WebView integration (native wry) — v1
 status: draft
 date: 2026-02-11
-scope: ecosystem/fret-webview, ecosystem/fret-webview-wry, WebPreview backend
+scope: crates/fret-webview, crates/fret-webview-wry, WebPreview backend
 ---
 
 # WebView integration (native wry) — v1
@@ -39,19 +39,26 @@ We want:
 This matches the repository's overall philosophy:
 
 - `crates/fret-ui`: mechanisms only.
-- `ecosystem/*`: policy/recipes/backends can iterate faster and be feature-gated.
+- `ecosystem/*`: policy/recipes can iterate faster and be feature-gated.
+
+Note: the **runner** (`crates/fret-launch`) must not depend on `ecosystem/*` crates (layering rule
+`kernel-no-ecosystem`), so the v1 WebView backend crates live under `crates/` even though they are
+feature-gated and still evolving.
 
 ## Crate split (Plan B)
 
-- `ecosystem/fret-webview` (contract-only)
+- `crates/fret-webview` (contract-only)
   - Types for intents/requests + events.
   - No dependency on `wry`/windowing backends.
   - Can be used by `fret-ui-ai` to express a WebView embedding target.
+  - Provides an app-global `WebViewHost` queue + surface registry (via `GlobalsHost`) so UI and
+    runner code can communicate without adding new effect variants.
 
-- `ecosystem/fret-webview-wry` (native impl)
+- `crates/fret-webview-wry` (native impl)
   - Depends on `wry` (feature-gated).
   - Wires the contract into the actual platform WebView instance(s).
   - Owns the “how do we embed” details.
+  - Provides `WryWebViewHost` (request executor).
 
 ## v1 contract sketch (subject to iteration)
 
@@ -93,7 +100,22 @@ approach:
 
 This is implemented as a contract-level helper in `fret-webview` so it remains backend-agnostic:
 
-- `ecosystem/fret-webview/src/lib.rs` (`best_bounds_for_test_id`, `placement_for_test_id`)
+- `crates/fret-webview/src/lib.rs` (`best_bounds_for_test_id`, `placement_for_test_id`)
+
+Runner integration (v1):
+
+- `crates/fret-launch` feature: `webview-wry`
+  - After each window render pass, compute placements from the semantics snapshot (when any webview
+    surface is registered for that window).
+  - Drain `WebViewHost` requests, execute them via `WryWebViewHost`, and requeue create/load
+    requests that cannot be satisfied yet.
+
+UI integration (v1):
+
+- `ecosystem/fret-ui-ai` feature: `webview`
+  - `WebPreviewBody` registers a `WebViewSurfaceRegistration` for placement using a stable
+    `test_id`.
+  - `WebPreview` pushes `Create` and `LoadUrl` requests via the app-global `WebViewHost`.
 
 Risk notes:
 

@@ -77,7 +77,7 @@ Status legend:
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
-| `web-preview` | Prototype | `fret-ui-ai` | Chrome-only port exists (`WebPreview*`); UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded webview backend is host-owned (plan: optional `wry`-backed feature). |
+| `web-preview` | Prototype | `fret-ui-ai` | Chrome-only port exists (`WebPreview*`); UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry`. |
 | `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 | `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 | `package-info` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |

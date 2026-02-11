@@ -20832,86 +20832,96 @@ fn preview_ai_web_preview_demo(
         )
     };
 
-    let demo = ui_ai::WebPreview::new()
+    let mut demo = ui_ai::WebPreview::new()
         .url_model(url.clone())
         .on_url_change(on_url_change)
-        .test_id_root("ui-ai-web-preview-demo-root")
-        .into_element_with_children(cx, move |cx, _controller| {
-            let back = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
-                cx,
-                IconId::new_static("lucide.arrow-left"),
-            )])
-            .tooltip("Back")
-            .disabled(true)
-            .test_id("ui-ai-web-preview-demo-nav-back")
+        .test_id_root("ui-ai-web-preview-demo-root");
+
+    #[cfg(feature = "webview-wry")]
+    {
+        let backend = ui_ai::WebPreviewBackendController {
+            id: fret_webview::WebViewId(1),
+            surface_test_id: Arc::<str>::from("ui-ai-web-preview-demo-body"),
+        };
+        demo = demo.backend(backend);
+    }
+
+    let demo = demo.into_element_with_children(cx, move |cx, _controller| {
+        let back = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+            cx,
+            IconId::new_static("lucide.arrow-left"),
+        )])
+        .tooltip("Back")
+        .disabled(true)
+        .test_id("ui-ai-web-preview-demo-nav-back")
+        .into_element(cx);
+
+        let forward = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+            cx,
+            IconId::new_static("lucide.arrow-right"),
+        )])
+        .tooltip("Forward")
+        .disabled(true)
+        .test_id("ui-ai-web-preview-demo-nav-forward")
+        .into_element(cx);
+
+        let reload = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+            cx,
+            IconId::new_static("lucide.rotate-cw"),
+        )])
+        .tooltip("Reload")
+        .test_id("ui-ai-web-preview-demo-nav-reload")
+        .into_element(cx);
+
+        let url_input = ui_ai::WebPreviewUrl::new()
+            .placeholder("Enter URL…")
+            .test_id("ui-ai-web-preview-demo-url")
             .into_element(cx);
 
-            let forward = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
-                cx,
-                IconId::new_static("lucide.arrow-right"),
-            )])
-            .tooltip("Forward")
-            .disabled(true)
-            .test_id("ui-ai-web-preview-demo-nav-forward")
+        let nav = ui_ai::WebPreviewNavigation::new([back, forward, reload, url_input])
+            .test_id("ui-ai-web-preview-demo-nav")
             .into_element(cx);
 
-            let reload = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
-                cx,
-                IconId::new_static("lucide.rotate-cw"),
-            )])
-            .tooltip("Reload")
-            .test_id("ui-ai-web-preview-demo-nav-reload")
+        let body = ui_ai::WebPreviewBody::new()
+            .test_id("ui-ai-web-preview-demo-body")
             .into_element(cx);
 
-            let url_input = ui_ai::WebPreviewUrl::new()
-                .placeholder("Enter URL…")
-                .test_id("ui-ai-web-preview-demo-url")
-                .into_element(cx);
+        let logs: Arc<[ui_ai::WebPreviewConsoleLog]> = Arc::from(vec![
+            ui_ai::WebPreviewConsoleLog::new(ui_ai::WebPreviewConsoleLogLevel::Log, "ready")
+                .timestamp("12:00:00"),
+            ui_ai::WebPreviewConsoleLog::new(
+                ui_ai::WebPreviewConsoleLogLevel::Warn,
+                "slow network",
+            )
+            .timestamp("12:00:02"),
+            ui_ai::WebPreviewConsoleLog::new(
+                ui_ai::WebPreviewConsoleLogLevel::Error,
+                "failed to load resource",
+            )
+            .timestamp("12:00:04"),
+        ]);
 
-            let nav = ui_ai::WebPreviewNavigation::new([back, forward, reload, url_input])
-                .test_id("ui-ai-web-preview-demo-nav")
-                .into_element(cx);
+        let console = ui_ai::WebPreviewConsole::new()
+            .logs(logs)
+            .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
+            .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
+            .into_element(cx);
 
-            let body = ui_ai::WebPreviewBody::new()
-                .test_id("ui-ai-web-preview-demo-body")
-                .into_element(cx);
+        let commits_now = cx
+            .get_model_copied(&commits, Invalidation::Layout)
+            .unwrap_or(0);
+        let marker = cx.text(format!("commits={commits_now}")).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id(if commits_now > 0 {
+                    "ui-ai-web-preview-demo-committed-true"
+                } else {
+                    "ui-ai-web-preview-demo-committed-false"
+                }),
+        );
 
-            let logs: Arc<[ui_ai::WebPreviewConsoleLog]> = Arc::from(vec![
-                ui_ai::WebPreviewConsoleLog::new(ui_ai::WebPreviewConsoleLogLevel::Log, "ready")
-                    .timestamp("12:00:00"),
-                ui_ai::WebPreviewConsoleLog::new(
-                    ui_ai::WebPreviewConsoleLogLevel::Warn,
-                    "slow network",
-                )
-                .timestamp("12:00:02"),
-                ui_ai::WebPreviewConsoleLog::new(
-                    ui_ai::WebPreviewConsoleLogLevel::Error,
-                    "failed to load resource",
-                )
-                .timestamp("12:00:04"),
-            ]);
-
-            let console = ui_ai::WebPreviewConsole::new()
-                .logs(logs)
-                .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
-                .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
-                .into_element(cx);
-
-            let commits_now = cx
-                .get_model_copied(&commits, Invalidation::Layout)
-                .unwrap_or(0);
-            let marker = cx.text(format!("commits={commits_now}")).attach_semantics(
-                SemanticsDecoration::default()
-                    .role(fret_core::SemanticsRole::Generic)
-                    .test_id(if commits_now > 0 {
-                        "ui-ai-web-preview-demo-committed-true"
-                    } else {
-                        "ui-ai-web-preview-demo-committed-false"
-                    }),
-            );
-
-            vec![nav, body, console, marker]
-        });
+        vec![nav, body, console, marker]
+    });
 
     vec![stack::vstack(
         cx,

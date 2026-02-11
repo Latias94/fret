@@ -19,6 +19,7 @@ hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
 diag-screenshots = ["dep:serde_json", "dep:image"]
 wasm-emoji-fonts = ["fret-fonts/emoji"]
 wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
+webview-wry = ["dep:fret-webview", "dep:fret-webview-wry", "fret-webview-wry/wry"]
 
 [dependencies]
 fret-app = { path = "../fret-app" }
@@ -35,6 +36,8 @@ winit.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-platform = { path = "../fret-platform" }
 fret-platform-native = { path = "../fret-platform-native" }
+fret-webview = { path = "../fret-webview", optional = true }
+fret-webview-wry = { path = "../fret-webview-wry", optional = true }
 pollster.workspace = true
 slotmap.workspace = true
 renderdog.workspace = true
