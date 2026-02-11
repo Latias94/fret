@@ -11,8 +11,8 @@ ad-hoc UI-side stabilization for deeply nested split trees.
 
 ## Why now
 
-Today, edge-docking a panel always wraps the target in a new 50/50 binary split (creating a new
-`DockNode::Split { children: [new, old] }`). Repeating the gesture produces progressively deeper
+Historically, edge-docking a panel wrapped the target in a new 50/50 binary split (creating a new
+`DockNode::Split { children: [new, old] }`). Repeating the gesture produced progressively deeper
 trees, which:
 
 - increases the number of nodes touched by layout/hit-test/paint,
@@ -24,6 +24,18 @@ trees, which:
 Fret already has the right layering (ADR 0075), and the persisted schema (`DockLayout`) already
 supports `children: Vec<_>` and `fractions: Vec<_>`. The missing part is **how ops are applied** and
 **how the runtime tree is simplified**.
+
+## Implementation status (core)
+
+The core graph now enforces a canonicalized form after operations and upgrades edge docking
+semantics to prefer insertion into an existing same-axis split when possible:
+
+- Canonicalization lives in `crates/fret-core/src/dock/mutate.rs` (`simplify_window_forest`).
+- Edge docking “insert instead of wrap” lives in `crates/fret-core/src/dock/mutate.rs`
+  (`insert_edge_child_prefer_same_axis_split`).
+
+This workstream remains active for the docking UI layer (preview geometry, splitter drags, and
+reducing transitional stabilization in `ecosystem/fret-docking`).
 
 ## Goals
 
@@ -72,7 +84,7 @@ Core graph and ops:
 - `crates/fret-core/src/dock/mod.rs` (`DockGraph`, `DockNode`, `DropZone`)
 - `crates/fret-core/src/dock/op.rs` (`DockOp`)
 - `crates/fret-core/src/dock/apply.rs` (apply ops)
-- `crates/fret-core/src/dock/mutate.rs` (graph mutation helpers; contains binary-only assumptions)
+- `crates/fret-core/src/dock/mutate.rs` (graph mutation helpers; canonicalization + edge-insert semantics)
 - `crates/fret-core/src/dock/layout.rs` (`DockLayout` schema, versioning, validation)
 
 Docking UI and policy:
@@ -164,6 +176,10 @@ prefer this behavior:
    - Start with: `target_share`
    - Replace it with: `[target_share * (1.0 - k), target_share * k]` and insert the new node
      accordingly (where `k` is a policy default, e.g. 0.5).
+
+Implementation default (v1):
+
+- `k = 0.5` (split the anchor share in half).
 
 Fallback:
 

@@ -34,6 +34,11 @@ Outcome:
 - Core graph helpers no longer assume binary splits.
 - Post-op simplification produces canonical form.
 
+Status:
+
+- Implemented in `crates/fret-core/src/dock/mutate.rs` (`simplify_window_forest`).
+- Regression gates live in `crates/fret-core/src/dock/tests.rs` (e.g. pruning empty tabs in 3+ child splits).
+
 Implementation targets:
 
 - `crates/fret-core/src/dock/mutate.rs`
@@ -56,6 +61,13 @@ Outcome:
 
 - `MovePanel` / `MoveTabs` edge docking prefers inserting into a same-axis split.
 - Fractions are updated by splitting the target share, not resetting to 50/50.
+
+Status:
+
+- Implemented in `crates/fret-core/src/dock/mutate.rs` (`insert_edge_child_prefer_same_axis_split`).
+- Deterministic gates live in `crates/fret-core/src/dock/tests.rs`:
+  - `edge_dock_inserts_into_existing_same_axis_split_and_splits_share`
+  - `repeated_edge_dock_keeps_same_axis_splits_flat`
 
 Implementation targets:
 

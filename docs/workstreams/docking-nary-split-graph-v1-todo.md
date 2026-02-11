@@ -15,25 +15,29 @@ Each TODO is labeled:
 
 ## P0 — Core graph correctness and canonical form
 
-- [ ] DN-P0-core-001 Define and document canonical-form invariants for N-ary splits.
+- [~] DN-P0-core-001 Define and document canonical-form invariants for N-ary splits.
   - Output: `DockGraph::simplify_*` API surface + doc comments.
   - Gate: unit tests in `crates/fret-core`.
+  - Status: canonicalization exists (`simplify_window_forest`), but the “public query/helpers” surface is still evolving.
 
-- [ ] DN-P0-core-002 Make `collapse_empty_tabs_upwards` and related helpers N-ary safe.
+- [x] DN-P0-core-002 Make `collapse_empty_tabs_upwards` and related helpers N-ary safe.
   - Remove binary-only assumptions (e.g. `children.len() == 2`).
   - Gate: add regression tests that construct 3+ child splits and remove tabs in the middle.
+  - Evidence: `crates/fret-core/src/dock/tests.rs` (`close_panel_prunes_empty_tabs_in_nary_split`).
 
-- [ ] DN-P0-core-003 Implement “insert instead of wrap” for `DockGraph::move_panel_between_windows`.
+- [x] DN-P0-core-003 Implement “insert instead of wrap” for `DockGraph::move_panel_between_windows`.
   - Insert into nearest same-axis split when possible.
   - Update fractions by splitting the target share (do not reset to 50/50).
   - Gate: unit tests for repeated edge-dock sequences (tree depth does not grow).
+  - Evidence: `crates/fret-core/src/dock/tests.rs` (`edge_dock_inserts_into_existing_same_axis_split_and_splits_share`).
 
-- [ ] DN-P0-core-004 Implement “insert instead of wrap” for `DockGraph::move_tabs_between_windows`.
+- [x] DN-P0-core-004 Implement “insert instead of wrap” for `DockGraph::move_tabs_between_windows`.
   - Gate: unit tests for moving whole tab stacks.
 
-- [ ] DN-P0-core-005 Add a post-op simplification pipeline.
+- [~] DN-P0-core-005 Add a post-op simplification pipeline.
   - Steps: prune empty tabs, prune single-child splits, flatten nested same-axis splits, normalize fractions.
   - Gate: “round trip” tests with randomized op sequences (bounded depth).
+  - Status: deterministic canonicalization is in place; randomized/fixture op-sequence coverage is still TODO.
 
 - [ ] DN-P0-core-006 Update `DockGraph::compute_layout` (if needed) to match N-ary semantics.
   - Note: current code already iterates over `children.len().min(fractions.len())`, but we should
@@ -43,9 +47,10 @@ Each TODO is labeled:
   - Goal: avoid repeated subtree scans in hot paths (especially for large layouts).
   - Option: cache parent links in a temporary map during op application.
 
-- [ ] DN-P0-core-008 Introduce internal “shares” vocabulary helpers.
+- [~] DN-P0-core-008 Introduce internal “shares” vocabulary helpers.
   - Example: `normalize_shares(&mut [f32])`, `split_share(old, k) -> (a, b)`.
   - Goal: keep semantics explicit even if persisted field remains `fractions`.
+  - Status: `normalize_shares` + share splitting helper exists in `crates/fret-core/src/dock/mutate.rs`; expand as needed when UI clamping lands.
 
 ## P0 — UI alignment (drop previews and split handles)
 
