@@ -2568,19 +2568,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             invalidate_paint = true;
                                             handled = true;
                                         } else {
-                                            self.pending_dock_drags.insert(
-                                                pointer_id,
-                                                PendingDockDrag {
-                                                    start: *position,
-                                                    panel: panel_key,
-                                                    grab_offset: tab_local,
-                                                    start_tick: now_tick,
-                                                },
-                                            );
-                                            request_pointer_capture = Some(Some(dock_space_node));
-                                            dock.hover = None;
-                                            invalidate_paint = true;
-                                            handled = true;
+                                            let allow_drag = docking_policy
+                                                .as_deref()
+                                                .is_none_or(|policy| {
+                                                    policy.allow_panel_drag(
+                                                        self.window,
+                                                        &panel_key,
+                                                        dock.panels.get(&panel_key),
+                                                    )
+                                                });
+                                            if allow_drag {
+                                                self.pending_dock_drags.insert(
+                                                    pointer_id,
+                                                    PendingDockDrag {
+                                                        start: *position,
+                                                        panel: panel_key,
+                                                        grab_offset: tab_local,
+                                                        start_tick: now_tick,
+                                                    },
+                                                );
+                                                request_pointer_capture = Some(Some(dock_space_node));
+                                                dock.hover = None;
+                                                invalidate_paint = true;
+                                                handled = true;
+                                            }
                                         }
                                     }
                                 }
@@ -2661,20 +2672,27 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             Px((position.x.0 - tab_bar.origin.x.0).max(0.0)),
                                             Px((position.y.0 - tab_bar.origin.y.0).max(0.0)),
                                         );
-                                        self.pending_dock_tabs_drags.insert(
-                                            pointer_id,
-                                            PendingDockTabsDrag {
-                                                start: *position,
-                                                tabs: tabs_node,
-                                                grab_offset: tab_local,
-                                                start_tick: now_tick,
-                                            },
-                                        );
-                                        request_pointer_capture = Some(Some(dock_space_node));
-                                        dock.hover = None;
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
-                                        handled = true;
+                                        let allow_drag = docking_policy
+                                            .as_deref()
+                                            .is_none_or(|policy| {
+                                                policy.allow_tabs_group_drag(self.window, tabs_node)
+                                            });
+                                        if allow_drag {
+                                            self.pending_dock_tabs_drags.insert(
+                                                pointer_id,
+                                                PendingDockTabsDrag {
+                                                    start: *position,
+                                                    tabs: tabs_node,
+                                                    grab_offset: tab_local,
+                                                    start_tick: now_tick,
+                                                },
+                                            );
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            dock.hover = None;
+                                            invalidate_paint = true;
+                                            pending_redraws.push(self.window);
+                                            handled = true;
+                                        }
                                     }
                                 }
                             }

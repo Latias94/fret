@@ -87,6 +87,24 @@ pub trait DockingPolicy: Send + Sync + 'static {
     ) -> bool {
         true
     }
+
+    /// Whether a panel tab is allowed to start a dock drag (tear-off / docking previews).
+    ///
+    /// This is the "group locking" escape hatch: editors can prevent dragging certain panels
+    /// (or entire groups) without changing core docking ops.
+    fn allow_panel_drag(
+        &self,
+        _window: AppWindowId,
+        _panel: &PanelKey,
+        _info: Option<&DockPanel>,
+    ) -> bool {
+        true
+    }
+
+    /// Whether a tab-stack (tabs node) is allowed to start a "tabs group" drag.
+    fn allow_tabs_group_drag(&self, _window: AppWindowId, _tabs: DockNodeId) -> bool {
+        true
+    }
 }
 
 pub(crate) fn default_viewport_min_content_size() -> Size {

@@ -259,6 +259,91 @@ fn dock_drag_drop_zone_mask_can_disallow_left_hint_rect() {
         diag.candidates
     );
 }
+
+#[test]
+fn dock_drag_start_respects_tabs_group_drag_policy() {
+    struct DisallowTabsGroupDrag;
+
+    impl DockingPolicy for DisallowTabsGroupDrag {
+        fn allow_tabs_group_drag(&self, _window: AppWindowId, _tabs: DockNodeId) -> bool {
+            false
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .with_global_mut(DockingPolicyService::default, |svc, _app| {
+            svc.set(Arc::new(DisallowTabsGroupDrag));
+        });
+
+    let down_pos = {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let root = harness
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.graph.window_root(harness.window))
+            .expect("expected dock window root");
+        let settings = fret_runtime::DockingInteractionSettings::default();
+        let layout = compute_layout_map(
+            &harness.app.global::<DockManager>().unwrap().graph,
+            root,
+            dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        );
+        let root_rect = layout.get(&root).copied().expect("expected root rect");
+        let (tab_bar, _content) = split_tab_bar(root_rect);
+        Point::new(
+            Px(tab_bar.origin.x.0 + 600.0),
+            Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5),
+        )
+    };
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let move_pos = Point::new(Px(down_pos.x.0 + 240.0), down_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "expected policy to prevent starting a tabs group drag session"
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected policy to prevent dock drag from requesting pointer capture"
+    );
+}
 #[test]
 fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding() {
     struct HitTestTransparent;
