@@ -1084,6 +1084,7 @@ impl WebPreviewConsole {
         };
 
         let theme = Theme::global(&*cx.app).clone();
+        #[cfg(feature = "webview")]
         let test_id_clear = self.test_id_clear.clone();
         let open_now = cx
             .get_model_copied(&controller.console_open, Invalidation::Layout)

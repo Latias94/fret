@@ -84,6 +84,7 @@ an interactive chat demo:
 - `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
 - `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
 - `Context`: AI Elements-aligned context usage hovercard surface (percent trigger + progress content).
+- `Terminal`: AI Elements-aligned terminal output viewer surface (monospace output + copy/clear + auto-scroll).
 - `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
 - `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Feature-gated native embedding exists via `wry` (see `docs/workstreams/webview-wry-v1.md`); chrome-only remains the default when the backend is not enabled.
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
@@ -104,6 +105,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
   - `AI context (demo)` (`ai_context_demo`): `Context` hovercard demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
+  - `AI terminal (demo)` (`ai_terminal_demo`): `Terminal` viewer demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -693,7 +696,7 @@ Legend:
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | Prototype | Optional; ported as a “step list disclosure” surface (apps control data). UI Gallery demo + diag gate: `ai_chain_of_thought_demo`, `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Done | Collapsible plan container + shimmer for streaming title/description; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`. |
 | `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
-| `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
+| `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Prototype | Viewer-only v1: output text + copy/clear + auto-scroll. No PTY/TTY integration yet; ANSI formatting is a future enhancement. |
 | `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
 | `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
 | `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Prototype | Chrome port exists (`WebPreview*`) and can be paired with a host-owned embedded backend (feature-gated `wry`). UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Backend narrative/TODO: `docs/workstreams/webview-wry-v1.md`. |
@@ -711,7 +714,7 @@ Legend:
 | `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Defer | Voice pipeline dependent. |
 | `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
 | `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
-| `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Defer | Needs a “context items” data model + file references. |
+| `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
 | `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Defer | App-specific affordance. |
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/panel.rs` | Defer | Workspace shell/panels belong in docking/viewports workstreams. |
 | `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |

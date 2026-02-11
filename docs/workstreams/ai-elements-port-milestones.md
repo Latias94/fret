@@ -143,6 +143,8 @@ Notes:
 - `Commit` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-commit-large-scroll.json`).
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
 - `StackTrace` large-list demo + scroll/click seam gate exists (`ui-gallery-ai-stack-trace-large-scroll.json`).
+- `Terminal` v1 is ported as a viewer-only output surface (monospace output + copy/clear + auto-scroll) and gated:
+  - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
 - `TestResults` large-list demo + scroll/activate seam gate exists (`ui-gallery-ai-test-results-large-scroll.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).

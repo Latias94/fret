@@ -75,7 +75,7 @@ Status legend:
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
 | `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
-| `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
+| `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
 | `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
@@ -206,6 +206,10 @@ Existing gates (UI Gallery `ai_model_selector_demo`):
 Existing gates (UI Gallery `ai_context_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
+
+Existing gates (UI Gallery `ai_terminal_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
 
 Existing gates (UI Gallery `ai_web_preview_demo`):
 

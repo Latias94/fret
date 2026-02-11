@@ -706,6 +706,7 @@ fn page_preview(
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
+        PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17622,6 +17623,72 @@ fn preview_ai_context_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> 
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Context (AI Elements)"), context],
+    )]
+}
+
+fn preview_ai_terminal_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct TerminalModels {
+        output: Option<Model<String>>,
+    }
+
+    let output = cx.with_state(TerminalModels::default, |st| st.output.clone());
+    let output = match output {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::from(
+                "$ echo \"hello\"\nhello\n$ printf \"line1\\nline2\\n\"\nline1\nline2\n",
+            ));
+            cx.with_state(TerminalModels::default, |st| {
+                st.output = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let output_for_clear = output.clone();
+    let on_clear: ui_ai::OnTerminalClear = Arc::new(move |host, _action_cx| {
+        let _ = host.models_mut().update(&output_for_clear, |v| v.clear());
+    });
+
+    let terminal = ui_ai::Terminal::new(output.clone())
+        .is_streaming(true)
+        .auto_scroll(true)
+        .on_clear(on_clear)
+        .test_id_root("ui-ai-terminal-demo-root")
+        .test_id_copy("ui-ai-terminal-demo-copy")
+        .copied_marker_test_id("ui-ai-terminal-demo-copied")
+        .test_id_clear("ui-ai-terminal-demo-clear")
+        .test_id_viewport("ui-ai-terminal-demo-viewport")
+        .into_element(cx);
+
+    let empty_now = cx
+        .get_model_cloned(&output, Invalidation::Layout)
+        .unwrap_or_default()
+        .is_empty();
+    let marker = cx.text("").attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if empty_now {
+                "ui-ai-terminal-demo-output-empty-true"
+            } else {
+                "ui-ai-terminal-demo-output-empty-false"
+            }),
+    );
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Terminal (AI Elements)"), terminal, marker],
     )]
 }
 

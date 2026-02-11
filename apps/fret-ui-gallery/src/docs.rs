@@ -605,6 +605,24 @@ use fret_ui_ai::Context;
 ```
 "#;
 
+pub(crate) const DOC_AI_TERMINAL_DEMO: &str = r#"
+## AI terminal (demo)
+
+This page demonstrates the AI Elements-aligned `Terminal` viewer surface:
+
+- output text content (monospace),
+- copy/clear actions,
+- auto-scroll to bottom on output changes (when enabled).
+
+Note: v1 is **viewer-only** and does not embed a PTY/TTY terminal.
+"#;
+
+pub(crate) const USAGE_AI_TERMINAL_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Terminal;
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

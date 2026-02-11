@@ -77,6 +77,7 @@ Legend:
 | `environment-variables.tsx` | `fret-ui-ai` | `environment_variables.rs` | Ported (prototype) | Table-like key/value outcomes. |
 | `web-preview.tsx` | `fret-ui-ai` | `web_preview.rs` | Ported (prototype) | Chrome always available; native embed via `webview-wry` behind feature flags. |
 | `image.tsx` | `fret-ui-ai` | `image.rs` | Ported (prototype) | Rendering only; decoding/upload is app-owned. |
+| `terminal.tsx` | `fret-ui-ai` | `terminal.rs` | Ported (prototype) | Viewer-only (output + copy/clear + auto-scroll); no PTY/TTY in v1. |
 
 ## Known upstream files not yet ported
 
@@ -90,7 +91,6 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 - `persona.tsx`
 - `sandbox.tsx`
 - `task.tsx`
-- `terminal.tsx` (may want a dedicated ANSI/text crate)
 - Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
 - Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `transcription.tsx`, `voice-selector.tsx`
 

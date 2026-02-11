@@ -112,6 +112,7 @@ pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
+pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -267,6 +268,7 @@ pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
 pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_context_demo";
+pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -871,6 +873,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "context", "tokens", "progress", "hovercard", "demo"],
                 docs::DOC_AI_CONTEXT_DEMO,
                 docs::USAGE_AI_CONTEXT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TERMINAL_DEMO,
+                "AI Terminal (Demo)",
+                "AI Elements Terminal / Output Viewer Demo",
+                "fret-ui-ai (terminal viewer)",
+                CMD_NAV_AI_TERMINAL_DEMO,
+                &[
+                    "ai", "terminal", "output", "copy", "clear", "scroll", "demo",
+                ],
+                docs::DOC_AI_TERMINAL_DEMO,
+                docs::USAGE_AI_TERMINAL_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
