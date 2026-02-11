@@ -1443,7 +1443,8 @@ impl UiDiagnosticsService {
                                         Some("click_stable.probe"),
                                         self.cfg.max_debug_string_bytes,
                                     );
-                                    let ok = hit.includes_intended == Some(true);
+                                    let ok = hit.includes_intended == Some(true)
+                                        || hit.hit_path_contains_intended == Some(true);
                                     if !ok {
                                         hit.note = Some("click_stable.mismatch".to_string());
                                         push_hit_test_trace(
