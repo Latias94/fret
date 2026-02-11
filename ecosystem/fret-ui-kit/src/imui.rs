@@ -2716,7 +2716,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let windows_sorted: Vec<AnyElement> =
                     indexed.into_iter().map(|(_, _, w)| w).collect();
 
-                let mut props = fret_ui::element::StackProps::default();
+                let mut props = fret_ui::element::ContainerProps::default();
                 props.layout.position = PositionStyle::Absolute;
                 props.layout.inset = InsetStyle {
                     left: Some(Px(0.0)),
@@ -2728,7 +2728,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 props.layout.size.width = Length::Fill;
                 props.layout.size.height = Length::Fill;
 
-                cx.stack_props(props, move |_cx| windows_sorted)
+                let mut layer = cx.container(props, move |_cx| windows_sorted);
+                // `cx.container(...)` introduces a fresh scoped id; normalize the outer layer element
+                // id back to the named scope id so z-order state can track layers by `layer_id`.
+                layer.id = layer_id;
+                layer
             })
         });
 

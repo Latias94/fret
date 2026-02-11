@@ -271,7 +271,11 @@ where
 
         let window = cx.container(window_props, move |cx| {
             let mut col = ColumnProps::default();
-            col.layout.size.width = Length::Fill;
+            col.layout.size.width = if resizable_layout {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
             col.layout.size.height = if resizable_layout && !collapsed {
                 Length::Fill
             } else {
@@ -281,7 +285,11 @@ where
             let title_bar = cx.container(
                 {
                     let mut props = ContainerProps::default();
-                    props.layout.size.width = Length::Fill;
+                    props.layout.size.width = if resizable_layout {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
                     props.layout.size.height = Length::Px(Px(24.0));
                     // Prevent multi-line title text from painting into the content area at
                     // non-1.0 DPI when the layout engine probes min-content widths.
@@ -310,7 +318,11 @@ where
                 },
                 move |cx| {
                     let mut row = RowProps::default();
-                    row.layout.size.width = Length::Fill;
+                    row.layout.size.width = if resizable_layout {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
                     row.layout.size.height = Length::Fill;
                     row.gap = Px(6.0);
                     row.align = fret_ui::element::CrossAlign::Center;
@@ -438,8 +450,13 @@ where
                     let handle =
                         cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
                     let mut scroll_layout = LayoutStyle::default();
-                    scroll_layout.size.width = Length::Fill;
-                    scroll_layout.size.height = Length::Fill;
+                    if resizable_layout {
+                        scroll_layout.size.width = Length::Fill;
+                        scroll_layout.size.height = Length::Fill;
+                    } else {
+                        scroll_layout.size.width = Length::Auto;
+                        scroll_layout.size.height = Length::Auto;
+                    }
                     scroll_layout.overflow = Overflow::Clip;
 
                     cx.scroll(
@@ -453,7 +470,11 @@ where
                             vec![cx.container(
                                 {
                                     let mut props = ContainerProps::default();
-                                    props.layout.size.width = Length::Fill;
+                                    props.layout.size.width = if resizable_layout {
+                                        Length::Fill
+                                    } else {
+                                        Length::Auto
+                                    };
                                     props.padding = Edges::all(Px(8.0));
                                     props
                                 },
@@ -475,8 +496,13 @@ where
                 if options.inputs_enabled && (options.activate_on_click || options.focus_on_click) {
                     let layout = {
                         let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
+                        if resizable_layout {
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                        } else {
+                            layout.size.width = Length::Auto;
+                            layout.size.height = Length::Auto;
+                        }
                         layout
                     };
                     let focus_on_click = options.focus_on_click;

@@ -4365,7 +4365,6 @@ mod tests {
 
         let a_bounds = ui.debug_node_bounds(window_a).expect("window a bounds");
         let b_bounds = ui.debug_node_bounds(window_b).expect("window b bounds");
-
         let overlap_left = a_bounds.origin.x.0.max(b_bounds.origin.x.0);
         let overlap_top = a_bounds.origin.y.0.max(b_bounds.origin.y.0);
         let overlap_right = (a_bounds.origin.x.0 + a_bounds.size.width.0)
