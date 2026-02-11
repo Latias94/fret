@@ -48,5 +48,7 @@ Notes:
 
 ## iOS plumbing (follow-up)
 
-- [ ] iOS safe-area + keyboard occlusion commit (UIKit glue).
+- [x] iOS safe-area + keyboard occlusion commit (UIKit glue).
 - [ ] iOS lifecycle surface rebuild policy.
+- [ ] iOS simulator packaging loop (no Xcode project) for `fret-ui-gallery`.
+- [ ] Real device packaging/signing notes (Xcode project or scripted codesign + install).

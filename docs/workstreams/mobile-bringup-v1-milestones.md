@@ -75,7 +75,9 @@ Definition of done:
 
 - iOS runner commits safe-area + keyboard occlusion insets into the same seam.
 - iOS lifecycle and surface rebuild follow the same policy matrix as Android.
+- A repeatable simulator run loop exists for `fret-ui-gallery` (dev-only, no Xcode project).
 
 Evidence:
 
 - Same acceptance criteria as M3, but on iOS.
+- `tools/mobile/ios_sim_run.sh` can build + bundle + launch the demo in a simulator.

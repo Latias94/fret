@@ -18,6 +18,26 @@ This workstream is intentionally **Android-first**:
 - Android is the fastest path to a real device smoke test for `winit + wgpu`.
 - iOS has the same contract needs, but requires separate platform glue for insets and lifecycle.
 
+## iOS simulator run (no Xcode project)
+
+For quick iteration on iOS without committing an Xcode project, we can bundle the Rust-built
+executable into a minimal `.app` and run it via `simctl`.
+
+Prereqs:
+
+- Xcode (or Xcode Command Line Tools) with an iOS Simulator runtime installed.
+- Rust targets installed:
+  - `rustup target add aarch64-apple-ios-sim`
+
+Run:
+
+- `tools/mobile/ios_sim_run.sh --release`
+
+Notes:
+
+- Set `IOS_SIM_UDID=<udid>` to force a specific simulator device.
+- This is a development loop only; real device packaging/signing is tracked separately.
+
 ## Contract anchors (already accepted)
 
 - Mechanism vs policy split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
