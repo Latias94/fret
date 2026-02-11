@@ -360,6 +360,10 @@ impl Renderer {
         self.text_system.add_fonts(fonts)
     }
 
+    pub fn rescan_system_fonts(&mut self) -> bool {
+        self.text_system.rescan_system_fonts()
+    }
+
     pub fn text_font_stack_key(&self) -> u64 {
         self.text_system.font_stack_key()
     }

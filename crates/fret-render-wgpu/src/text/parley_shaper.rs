@@ -65,6 +65,7 @@ pub(crate) struct ParleyShaper {
     default_locale: Option<String>,
     common_fallback_stack_suffix: String,
     system_fonts_enabled: bool,
+    registered_font_blobs: Vec<parley::fontique::Blob<u8>>,
     family_id_cache_lower: HashMap<String, FamilyId>,
     all_font_names_cache: Option<Vec<String>>,
     all_font_catalog_entries_cache: Option<Vec<FontCatalogEntryMetadata>>,
@@ -79,6 +80,7 @@ impl Default for ParleyShaper {
             default_locale: None,
             common_fallback_stack_suffix: String::new(),
             system_fonts_enabled: true,
+            registered_font_blobs: Vec::new(),
             family_id_cache_lower: HashMap::new(),
             all_font_names_cache: None,
             all_font_catalog_entries_cache: None,
@@ -288,6 +290,7 @@ impl ParleyShaper {
         let mut added = 0usize;
         for data in fonts {
             let blob = parley::fontique::Blob::<u8>::from(data);
+            self.registered_font_blobs.push(blob.clone());
             let families = self.fcx.collection.register_fonts(blob, None);
             added = added.saturating_add(families.iter().map(|(_, fonts)| fonts.len()).sum());
         }
@@ -295,6 +298,27 @@ impl ParleyShaper {
             self.invalidate_catalog_caches();
         }
         added
+    }
+
+    pub fn rescan_system_fonts(&mut self) -> bool {
+        if !self.system_fonts_enabled {
+            return false;
+        }
+
+        let source_cache = std::mem::take(&mut self.fcx.source_cache);
+        self.fcx.collection =
+            parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+                shared: false,
+                system_fonts: true,
+            });
+        self.fcx.source_cache = source_cache;
+
+        for blob in self.registered_font_blobs.iter().cloned() {
+            let _ = self.fcx.collection.register_fonts(blob, None);
+        }
+
+        self.invalidate_catalog_caches();
+        true
     }
 
     pub fn shape_single_line(&mut self, input: TextInputRef<'_>, scale: f32) -> ShapedLineLayout {
@@ -686,6 +710,12 @@ mod tests {
             shaper.all_font_catalog_entries(),
             "expected repeated catalog reads to be stable"
         );
+    }
+
+    #[test]
+    fn rescan_is_noop_when_system_fonts_disabled() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        assert!(!shaper.rescan_system_fonts());
     }
 
     #[test]

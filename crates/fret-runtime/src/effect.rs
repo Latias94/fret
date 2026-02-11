@@ -121,6 +121,17 @@ pub enum Effect {
     TextAddFonts {
         fonts: Vec<Vec<u8>>,
     },
+    /// Request a best-effort rescan of system-installed fonts (native-only).
+    ///
+    /// Web/WASM runners should ignore this effect, as they cannot access system font databases.
+    ///
+    /// Semantics:
+    /// - This is an explicit, user-initiated refresh hook (ADR 0258).
+    /// - Runners should re-enumerate the font catalog and republish `FontCatalogMetadata` if
+    ///   changes are observed.
+    /// - Runners should also bump renderer text invalidation keys (e.g. `TextFontStackKey`) so
+    ///   cached shaping/rasterization results cannot be reused after a rescan attempt.
+    TextRescanSystemFonts,
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {

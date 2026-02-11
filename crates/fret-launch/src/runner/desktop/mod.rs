@@ -4733,6 +4733,41 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             state.window.request_redraw();
                         }
                     }
+                    Effect::TextRescanSystemFonts => {
+                        let Some(renderer) = self.renderer.as_mut() else {
+                            continue;
+                        };
+                        if !renderer.rescan_system_fonts() {
+                            continue;
+                        }
+
+                        let entries = renderer
+                            .all_font_catalog_entries()
+                            .into_iter()
+                            .map(|e| fret_runtime::FontCatalogEntry {
+                                family: e.family,
+                                has_variable_axes: e.has_variable_axes,
+                                known_variable_axes: e.known_variable_axes,
+                                is_monospace_candidate: e.is_monospace_candidate,
+                            })
+                            .collect::<Vec<_>>();
+                        // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
+                        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                            &mut self.app,
+                            entries,
+                            fret_runtime::FontFamilyDefaultsPolicy::None,
+                        );
+                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
+                            let _ = renderer.set_text_font_families(config);
+                        }
+                        self.app.set_global::<fret_runtime::TextFontStackKey>(
+                            fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
+                        );
+
+                        for (_id, state) in self.windows.iter() {
+                            state.window.request_redraw();
+                        }
+                    }
                     Effect::ImageRegisterRgba8 {
                         window,
                         token,

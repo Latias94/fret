@@ -1985,6 +1985,23 @@ impl TextSystem {
         added
     }
 
+    /// Best-effort rescan of system-installed fonts (native-only).
+    ///
+    /// When this returns `true`, the text system bumps `font_stack_key` and clears all cached text
+    /// blobs and atlas entries, ensuring shaping/rasterization results cannot be reused across the
+    /// rescan boundary.
+    pub fn rescan_system_fonts(&mut self) -> bool {
+        let changed = self.parley_shaper.rescan_system_fonts();
+        if !changed {
+            return false;
+        }
+
+        self.font_db_revision = self.font_db_revision.saturating_add(1);
+        self.font_stack_key = self.font_db_revision;
+        self.reset_caches_for_font_change();
+        true
+    }
+
     pub fn new(device: &wgpu::Device) -> Self {
         let atlas_width = 2048;
         let atlas_height = 2048;
@@ -5429,6 +5446,18 @@ mod tests {
         assert!(text.set_text_locale(Some("zh-CN")));
         let k2 = text.font_stack_key();
         assert_ne!(k1, k2);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn text_rescan_system_fonts_bumps_font_stack_key() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let k0 = text.font_stack_key();
+        assert!(text.rescan_system_fonts());
+        let k1 = text.font_stack_key();
+        assert_ne!(k0, k1);
     }
 
     #[test]

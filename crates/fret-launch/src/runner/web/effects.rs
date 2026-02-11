@@ -157,6 +157,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     );
                     window.request_redraw();
                 }
+                Effect::TextRescanSystemFonts => {
+                    // Web/WASM cannot access system fonts; ignore (ADR 0258).
+                }
                 Effect::CursorSetIcon { icon, .. } => {
                     let cursor = match icon {
                         fret_core::CursorIcon::Default => winit::cursor::CursorIcon::Default,
