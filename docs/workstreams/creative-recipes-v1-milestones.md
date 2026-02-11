@@ -128,13 +128,16 @@ catalog texture selected at registration time (no per-instance `ImageId` yet).
 - Ship at least one baked catalog texture (blue-noise/dither) and a sampled baseline material.
 - Add a conformance test for sampled materials and deterministic fallback behavior.
 
-Status: Not started
+Status: Landed
 
-Evidence (planned):
+Evidence:
 
 - `docs/adr/0242-sampled-materials-and-fixed-binding-shapes-v2.md`
-- `crates/fret-render-wgpu/src/renderer/services.rs` (`MaterialService` binding shapes)
-- `crates/fret-render-wgpu/src/renderer/resources.rs` (catalog texture upload/lifetime)
+- `crates/fret-core/src/materials.rs` (`MaterialBindingShape` + `MaterialCatalogTextureKind`)
+- `crates/fret-render-wgpu/src/renderer/services.rs` (`MaterialService` capability gating)
+- `crates/fret-render-wgpu/src/renderer/resources.rs` (catalog texture upload/lifetime + bind group shape)
+- `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (registration-time selection encoded per draw)
+- `crates/fret-render-wgpu/src/renderer/shaders.rs` (sampled Noise path)
 - `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
 
 ## M8 — `fret-ui-magic` (Phase 0)

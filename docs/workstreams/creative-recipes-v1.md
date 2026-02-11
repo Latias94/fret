@@ -100,10 +100,11 @@ Landed kernel primitives:
   fixed-delta support
 - Effect steps extension: `ColorMatrix` + `AlphaThreshold`
   (`crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`)
+- Sampled materials v2a: renderer-owned catalog textures (ADR 0242)
+  (`crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`)
 
 Not yet landed (tracked in this workstream):
 
 1. `VisualCatalog`/`MaterialCatalog` skeleton API (ecosystem foundation; see TODO list)
-2. Sampled materials v2a: catalog textures (ADR 0242)
-3. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
-4. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)
+2. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
+3. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)

@@ -64,12 +64,12 @@ Next (recommended order):
 This is the recommended first step for ADR 0242: sampled materials bind a renderer-owned catalog
 texture selected at registration time (no per-instance `ImageId` yet).
 
-- [ ] Define `BindingShape::ParamsPlusCatalogTexture` in the renderer material registry and
+- [x] Define `BindingShape::ParamsPlusCatalogTexture` in the renderer material registry and
       capability-gate it (ADR 0124).
-- [ ] Add a small catalog texture set (blue-noise/dither) and wire upload + lifetime to the renderer.
-- [ ] Implement at least one sampled baseline material kind (e.g. a higher quality noise/dither
+- [x] Add a small catalog texture set (blue-noise/dither) and wire upload + lifetime to the renderer.
+- [x] Implement at least one sampled baseline material kind (e.g. a higher quality noise/dither
       overlay) that uses the catalog texture in the shader.
-- [ ] Add a conformance test for sampled material rendering and deterministic fallbacks.
+- [x] Add a conformance test for sampled material rendering and deterministic fallbacks.
 
 ## P1 — `fret-ui-magic` (Phase 0)
 
