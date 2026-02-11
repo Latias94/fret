@@ -8682,7 +8682,7 @@ fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
 }
 
-fn ui_gallery_select_suite_scripts() -> [&'static str; 9] {
+fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     [
         "tools/diag-scripts/ui-gallery-select-commit-and-label-update-bundle.json",
         "tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json",
@@ -8691,6 +8691,7 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 9] {
         "tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json",
         "tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json",
         "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-select-trigger-toggle-close.json",
         "tools/diag-scripts/ui-gallery-select-wheel-scroll.json",
         "tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json",
     ]
