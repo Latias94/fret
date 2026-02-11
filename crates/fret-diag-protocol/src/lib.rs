@@ -867,6 +867,15 @@ pub struct UiHitTestTraceEntryV1 {
     pub pointer_capture_layer_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pointer_capture_multiple_layers: Option<bool>,
+    /// Best-effort pointer capture owner (in-run references only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

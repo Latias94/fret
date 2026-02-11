@@ -11352,7 +11352,33 @@ fn build_hit_test_trace_entry_for_selector(
         (Some("miss"), None, None)
     };
 
-    let any_captured_node_id = ui.any_captured_node().map(|n| n.data().as_ffi());
+    let (
+        pointer_capture_node_id,
+        pointer_capture_test_id,
+        pointer_capture_role,
+        pointer_capture_bounds,
+    ) = ui
+        .any_captured_node()
+        .map(|captured| {
+            let captured_id = captured.data().as_ffi();
+            let mut test_id: Option<String> = None;
+            let mut role: Option<String> = None;
+            let mut bounds: Option<UiRectV1> = None;
+            if let Some(snapshot) = semantics_snapshot {
+                if let Some(n) = snapshot.nodes.iter().find(|n| n.id == captured) {
+                    test_id = n.test_id.clone();
+                    role = Some(semantics_role_label(n.role).to_string());
+                    bounds = Some(UiRectV1 {
+                        x_px: n.bounds.origin.x.0,
+                        y_px: n.bounds.origin.y.0,
+                        w_px: n.bounds.size.width.0,
+                        h_px: n.bounds.size.height.0,
+                    });
+                }
+            }
+            (Some(captured_id), test_id, role, bounds)
+        })
+        .unwrap_or((None, None, None, None));
     let blocking_layer_hint = blocking_layer_id.and_then(|layer_id| {
         scope_roots
             .iter()
@@ -11399,7 +11425,7 @@ fn build_hit_test_trace_entry_for_selector(
             Some("pointer_capture") => Some(format!(
                 "blocked by pointer capture (layer_id={}, captured_node_id={}) {} intended={intended} hit={hit}",
                 blocking_layer_id.unwrap_or(0),
-                any_captured_node_id.unwrap_or(0),
+                pointer_capture_node_id.unwrap_or(0),
                 blocking_layer_hint.as_deref().unwrap_or(""),
             )),
             Some("pointer_occlusion") => Some(format!(
@@ -11441,6 +11467,10 @@ fn build_hit_test_trace_entry_for_selector(
         pointer_capture_active: Some(arbitration.pointer_capture_active),
         pointer_capture_layer_id,
         pointer_capture_multiple_layers: Some(arbitration.pointer_capture_multiple_layers),
+        pointer_capture_node_id,
+        pointer_capture_test_id,
+        pointer_capture_role,
+        pointer_capture_bounds,
         scope_roots,
         note: note.map(|s| s.to_string()),
     }

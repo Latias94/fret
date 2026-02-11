@@ -90,6 +90,7 @@ Hit-test / routing trace entry fields:
 - `barrier_root` / `focus_barrier_root` (in-run references)
 - `pointer_occlusion` / `pointer_occlusion_layer_id` (input arbitration snapshot; explains occlusion)
 - `pointer_capture_active` / `pointer_capture_layer_id` / `pointer_capture_multiple_layers` (input arbitration snapshot; explains capture)
+- `pointer_capture_node_id` / `pointer_capture_test_id` / `pointer_capture_role` / `pointer_capture_bounds` (best-effort capture owner; in-run references only)
 - `blocking_reason` / `blocking_root` / `blocking_layer_id` (best-effort attribution for fast triage; prefer raw fields when debugging novel cases)
   - when available, `blocking_root` points to the responsible `layer_root` (in-run reference only)
 - `routing_explain` (best-effort human-readable hint for `blocking_reason`; not a contract)
