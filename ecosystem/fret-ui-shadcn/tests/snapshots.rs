@@ -318,6 +318,8 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
         SceneOp::PushEffect { .. } | SceneOp::PopEffect => {
             unreachable!("effect ops are not expected in fret-ui-shadcn snapshots")
         }
+        #[allow(unreachable_patterns)]
+        other => unreachable!("unhandled scene op in fret-ui-shadcn snapshots: {other:?}"),
     }
 }
 
