@@ -50,6 +50,17 @@ Candidate shape:
 
 - new runtime effect/command (runner-owned) that triggers a platform font rescan and re-applies metadata if changed.
 
+Status:
+
+- Landed: `Effect::TextRescanSystemFonts` is handled by the desktop runner and ignored on web.
+
+Evidence:
+
+- Effect contract: `crates/fret-runtime/src/effect.rs` (`TextRescanSystemFonts`)
+- Desktop wiring: `crates/fret-launch/src/runner/desktop/mod.rs`
+- Web wiring: `crates/fret-launch/src/runner/web/effects.rs`
+- Renderer rescan: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::rescan_system_fonts`)
+
 Open questions:
 
 - Whether rescans should be blocking, async, or “eventually consistent” (likely async).

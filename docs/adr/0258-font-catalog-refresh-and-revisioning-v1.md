@@ -37,7 +37,7 @@ We want a contract where:
 ## Non-goals
 
 - Guarantee stable, cross-machine font enumeration results.
-- Define a new public “system font rescan” command/effect in v1 (we can add it later).
+- Require a new public “system font rescan” command/effect for v1 (it can be added incrementally).
 - Provide per-face/weight/style enumeration in the runtime contract (family-level is sufficient for v1 pickers).
 
 ## Decision
