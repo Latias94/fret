@@ -20852,26 +20852,35 @@ fn preview_ai_web_preview_demo(
             IconId::new_static("lucide.arrow-left"),
         )])
         .tooltip("Back")
-        .disabled(true)
-        .test_id("ui-ai-web-preview-demo-nav-back")
-        .into_element(cx);
+        .disabled(true);
+        #[cfg(feature = "webview-wry")]
+        let back = back.backend_action(ui_ai::WebPreviewBackendAction::GoBack);
+        let back = back
+            .test_id("ui-ai-web-preview-demo-nav-back")
+            .into_element(cx);
 
         let forward = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
             cx,
             IconId::new_static("lucide.arrow-right"),
         )])
         .tooltip("Forward")
-        .disabled(true)
-        .test_id("ui-ai-web-preview-demo-nav-forward")
-        .into_element(cx);
+        .disabled(true);
+        #[cfg(feature = "webview-wry")]
+        let forward = forward.backend_action(ui_ai::WebPreviewBackendAction::GoForward);
+        let forward = forward
+            .test_id("ui-ai-web-preview-demo-nav-forward")
+            .into_element(cx);
 
         let reload = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
             cx,
             IconId::new_static("lucide.rotate-cw"),
         )])
-        .tooltip("Reload")
-        .test_id("ui-ai-web-preview-demo-nav-reload")
-        .into_element(cx);
+        .tooltip("Reload");
+        #[cfg(feature = "webview-wry")]
+        let reload = reload.backend_action(ui_ai::WebPreviewBackendAction::Reload);
+        let reload = reload
+            .test_id("ui-ai-web-preview-demo-nav-reload")
+            .into_element(cx);
 
         let url_input = ui_ai::WebPreviewUrl::new()
             .placeholder("Enter URL…")

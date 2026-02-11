@@ -136,4 +136,4 @@ pub use model::{
 };
 
 #[cfg(feature = "webview")]
-pub use elements::WebPreviewBackendController;
+pub use elements::{WebPreviewBackendAction, WebPreviewBackendController};

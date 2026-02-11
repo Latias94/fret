@@ -36,7 +36,7 @@ Tracking format:
 ## M2 — `WebPreview` end-to-end (feature-gated)
 
 - [~] WEBVIEW-WRY2-ai-001 Add `fret-ui-ai` feature flags for webview backends (e.g. `webview`, `webview-wry`).
-- [ ] WEBVIEW-WRY2-ai-002 Wire `WebPreview` navigation buttons to backend intents (when enabled).
+- [~] WEBVIEW-WRY2-ai-002 Wire `WebPreview` navigation buttons to backend intents (when enabled).
 - [ ] WEBVIEW-WRY2-ai-003 Reflect `can_back/can_forward/is_loading` into the chrome state.
 - [x] WEBVIEW-WRY2-ai-004 UI Gallery demo: embedded WebView (or fallback to chrome-only with explicit label).
 - [ ] WEBVIEW-WRY2-ai-005 Add a diag script gate that:

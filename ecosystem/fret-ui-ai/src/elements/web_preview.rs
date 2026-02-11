@@ -40,6 +40,8 @@ pub struct WebPreviewController {
     pub disabled: bool,
     pub on_url_change: Option<OnWebPreviewUrlChange>,
     #[cfg(feature = "webview")]
+    pub nav_intent: Model<Option<WebPreviewBackendAction>>,
+    #[cfg(feature = "webview")]
     pub backend: Option<WebPreviewBackendController>,
 }
 
@@ -51,6 +53,16 @@ impl std::fmt::Debug for WebPreviewController {
             .field("console_open", &"<model>")
             .field("disabled", &self.disabled)
             .field("has_on_url_change", &self.on_url_change.is_some())
+            .field("nav_intent", &{
+                #[cfg(feature = "webview")]
+                {
+                    "<model>"
+                }
+                #[cfg(not(feature = "webview"))]
+                {
+                    "<none>"
+                }
+            })
             .field("has_backend", &{
                 #[cfg(feature = "webview")]
                 {
@@ -67,6 +79,14 @@ impl std::fmt::Debug for WebPreviewController {
 
 pub type OnWebPreviewUrlChange =
     Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, Arc<str>) + 'static>;
+
+#[cfg(feature = "webview")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WebPreviewBackendAction {
+    GoBack,
+    GoForward,
+    Reload,
+}
 
 #[cfg(feature = "webview")]
 #[derive(Clone)]
@@ -233,12 +253,33 @@ impl WebPreview {
                     model
                 };
 
+                #[cfg(feature = "webview")]
+                let nav_intent = {
+                    #[derive(Default)]
+                    struct NavIntentState {
+                        model: Option<Model<Option<WebPreviewBackendAction>>>,
+                    }
+
+                    let existing = cx.with_state(NavIntentState::default, |st| st.model.clone());
+                    if let Some(existing) = existing {
+                        existing
+                    } else {
+                        let model = cx.app.models_mut().insert(None::<WebPreviewBackendAction>);
+                        cx.with_state(NavIntentState::default, |st| {
+                            st.model = Some(model.clone());
+                        });
+                        model
+                    }
+                };
+
                 let controller = WebPreviewController {
                     url: url_model,
                     url_draft,
                     console_open,
                     disabled,
                     on_url_change: on_url_change.clone(),
+                    #[cfg(feature = "webview")]
+                    nav_intent: nav_intent.clone(),
                     #[cfg(feature = "webview")]
                     backend: backend.clone(),
                 };
@@ -281,6 +322,25 @@ impl WebPreview {
                             );
                             cx.with_state(BackendInit::default, |st| st.last_loaded_url = url_now);
                         }
+                    }
+
+                    let intent = cx
+                        .get_model_cloned(&nav_intent, Invalidation::Paint)
+                        .unwrap_or(None);
+                    if let Some(intent) = intent {
+                        let request = match intent {
+                            WebPreviewBackendAction::GoBack => {
+                                WebViewRequest::GoBack { id: backend.id }
+                            }
+                            WebPreviewBackendAction::GoForward => {
+                                WebViewRequest::GoForward { id: backend.id }
+                            }
+                            WebPreviewBackendAction::Reload => {
+                                WebViewRequest::Reload { id: backend.id }
+                            }
+                        };
+                        webview_push_request(cx.app, request);
+                        let _ = cx.app.models_mut().update(&nav_intent, |v| *v = None);
                     }
                 }
 
@@ -416,6 +476,8 @@ pub struct WebPreviewNavigationButton {
     tooltip: Option<Arc<str>>,
     disabled: bool,
     on_activate: Option<fret_ui::action::OnActivate>,
+    #[cfg(feature = "webview")]
+    backend_action: Option<WebPreviewBackendAction>,
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
 }
@@ -438,6 +500,8 @@ impl WebPreviewNavigationButton {
             tooltip: None,
             disabled: false,
             on_activate: None,
+            #[cfg(feature = "webview")]
+            backend_action: None,
             children: children.into_iter().collect(),
             test_id: None,
         }
@@ -455,6 +519,12 @@ impl WebPreviewNavigationButton {
 
     pub fn on_activate(mut self, on_activate: fret_ui::action::OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    #[cfg(feature = "webview")]
+    pub fn backend_action(mut self, action: WebPreviewBackendAction) -> Self {
+        self.backend_action = Some(action);
         self
     }
 
@@ -478,7 +548,35 @@ impl WebPreviewNavigationButton {
                     .text_color(ColorRef::Color(theme.color_required("muted-foreground"))),
             );
 
-        if let Some(on_activate) = self.on_activate {
+        #[cfg(feature = "webview")]
+        let backend_action = self.backend_action;
+        let user_on_activate = self.on_activate;
+
+        #[cfg(not(feature = "webview"))]
+        let user_on_activate = self.on_activate;
+
+        #[cfg(feature = "webview")]
+        if let Some(action) = backend_action {
+            if let Some(controller) = use_web_preview_controller(cx) {
+                let nav_intent = controller.nav_intent.clone();
+                let user_on_activate = user_on_activate.clone();
+                button = button.on_activate(Arc::new(move |host, action_cx, reason| {
+                    let _ = host.models_mut().update(&nav_intent, |v| *v = Some(action));
+                    if let Some(user) = user_on_activate.as_ref() {
+                        user(host, action_cx, reason);
+                    }
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                }));
+            } else if let Some(on_activate) = user_on_activate {
+                button = button.on_activate(on_activate);
+            }
+        } else if let Some(on_activate) = user_on_activate {
+            button = button.on_activate(on_activate);
+        }
+
+        #[cfg(not(feature = "webview"))]
+        if let Some(on_activate) = user_on_activate {
             button = button.on_activate(on_activate);
         }
         if let Some(test_id) = self.test_id.clone() {
