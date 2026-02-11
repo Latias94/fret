@@ -111,10 +111,13 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
    - Deterministic bundled-only conformance (no system fonts):
      - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent`)
 
-3) Font enumeration is still uncached and metadata is best-effort.
-   - `all_font_names()` and `all_font_catalog_entries()` are best-effort snapshots (platform-dependent).
-   - `FontCatalogMetadata` now carries coarse metadata (axes + monospace hint), but settings UI still needs to consume it.
-   - Remaining work: decide refresh policy + caching boundaries (when does the runner rescan?).
+3) Font enumeration caching + metadata is best-effort.
+   - Renderer caches enumeration and case-insensitive family lookups (invalidate on `add_fonts`):
+     - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`all_font_names_cache`,
+       `all_font_catalog_entries_cache`, `family_id_cache_lower`)
+   - `all_font_names()` and `all_font_catalog_entries()` remain best-effort snapshots (platform-dependent).
+   - `FontCatalogMetadata` carries coarse metadata (axes + monospace hint), but settings UI still needs to consume it.
+   - Remaining work: decide refresh policy boundaries (when does the runner rescan system fonts? how often?).
 
 ## Reference study (repo-ref)
 
