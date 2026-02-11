@@ -12,6 +12,7 @@ contracts early to avoid large rewrites later.
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
+- Font system audit + roadmap: `docs/workstreams/font-system-v1.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`

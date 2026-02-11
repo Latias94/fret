@@ -164,22 +164,22 @@ Exit criteria:
 Exit criteria:
 
 - [x] Add conformance inputs with mixed-direction text (LTR+RTL, numbers, punctuation).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`mixed_direction_selection_rects_are_nonempty`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_direction_selection_rects_are_nonempty`).
 - [x] Ensure `hit_test_point` and caret rects are stable and cluster-aware in RTL runs.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`hit_test_point_for_rtl_line_maps_left_edge_to_logical_end`,
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`hit_test_point_for_rtl_line_maps_left_edge_to_logical_end`,
     `caret_stops_for_slice_interpolates_within_cluster_rtl`).
 - [x] Add unit tests for selection rect generation across direction changes.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`selection_rects_for_rtl_line_has_positive_width`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`selection_rects_for_rtl_line_has_positive_width`).
 
 ### TLI1-M3.8 — Large selection performance and rect coalescing
 
 Exit criteria:
 
 - [x] Add rect coalescing for selection highlights (merge adjacent rects per line).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`coalesce_selection_rects_in_place`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`coalesce_selection_rects_in_place`).
 - [x] Add culling: only generate selection rects intersecting the current viewport when possible.
   - Evidence: `crates/fret-core/src/text.rs` (`TextService::selection_rects_clipped`),
-    `crates/fret-render-wgpu/src/text.rs` (`selection_rects_from_lines_clipped`),
+    `crates/fret-render-wgpu/src/text/mod.rs` (`selection_rects_from_lines_clipped`),
     `crates/fret-ui/src/text_area/widget.rs` (selection/preedit paint uses `selection_rects_clipped`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (SelectableText selection paint uses `selection_rects_clipped`).
 - [x] Add a micro-benchmark-like test/demo in UI Gallery (or a diagnostic counter) to track rect count.
@@ -193,7 +193,7 @@ Exit criteria:
   - Chosen: snap vertical line advances/baselines to device pixels under non-integer scale factors; keep horizontal subpixel.
 - [x] Add a regression test that renders multi-line text under a non-integer scale factor and
   checks for stable metrics/line offsets (no accumulating drift across lines).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor`).
 
 ## Backlog (issue-shaped TODOs)
 
@@ -203,7 +203,7 @@ Exit criteria:
   - Decision: multiline line-clamp is a separate explicit feature; `TextOverflow::Ellipsis` is
     single-line only in v1. Evidence: `docs/adr/0221-text-overflow-ellipsis-and-line-clamp-v1.md`.
 - [x] TLI1-003: Audit caching keys: width/wrap/overflow/scale/font-stack must be included in both measure and prepare paths.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`TextBlobKey`, `TextMeasureKey`),
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextBlobKey`, `TextMeasureKey`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (`needs_prepare` checks for width/wrap/overflow/scale/font stack),
     `crates/fret-ui/src/declarative/tests/layout.rs` (`text_measurement_and_paint_agree_on_overflow_and_scale_factor`).
 - [x] TLI1-004: Decide whether `SelectableText` selection should remain visible when not focused (UX parity vs simplicity).
@@ -223,9 +223,9 @@ Exit criteria:
   - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_bidi_rtl_conformance`) uses
     `TextService::{hit_test_point,caret_rect,selection_rects_clipped}` on mixed-direction sample strings.
 - [x] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`decorations_are_pixel_snapped_under_non_integer_scale_factor`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`decorations_are_pixel_snapped_under_non_integer_scale_factor`).
 - [x] TLI1-009: Decide trailing-whitespace selection policy and test it.
   - Chosen: trailing spaces at soft-wrap boundaries remain selectable; caret geometry at the wrap boundary is
     disambiguated via `CaretAffinity` (upstream=end-of-prev-line, downstream=start-of-next-line).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`trailing_space_at_soft_wrap_is_selectable`),
-    `crates/fret-render-wgpu/src/text.rs` (`caret_stops_for_slice`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`trailing_space_at_soft_wrap_is_selectable`),
+    `crates/fret-render-wgpu/src/text/mod.rs` (`caret_stops_for_slice`).

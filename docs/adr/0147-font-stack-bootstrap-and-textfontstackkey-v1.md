@@ -128,8 +128,11 @@ The runner should allow toggling these tiers via crate features (e.g. `fret-laun
    - Decide a better policy vocabulary (e.g. “use platform defaults” vs “seed with curated candidates”).
 
 2) Unifying font resolution sources:
-   - Today the renderer may bridge multiple libraries (e.g. `cosmic-text` fontdb + Parley/fontique).
-   - Long term we should converge on a single source of truth for generic families + fallback ordering to avoid “key vs behavior” drift.
+   - Resolved (2026-02-11): the renderer uses Parley/fontique as the single source of truth for family resolution and
+     generic stack injection, and no longer bridges a separate fontdb implementation.
+   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::set_font_families`, `font_stack_key`,
+     `reset_caches_for_font_change`), `crates/fret-render-wgpu/src/text/parley_shaper.rs` (family resolution +
+     generic family injection).
 
 3) Emoji policy:
    - Baseline pipeline and cache-key rules are tracked by ADR 0152.
