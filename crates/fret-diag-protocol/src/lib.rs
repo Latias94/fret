@@ -556,6 +556,12 @@ pub enum UiPredicateV1 {
     RenderTextMissingGlyphsIs {
         missing_glyphs: u64,
     },
+    /// Ensures that when the renderer reports missing/tofu glyphs for the current frame, a
+    /// renderer-owned font fallback trace has been captured and is non-empty.
+    ///
+    /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
+    /// the diagnostics bundle should contain an audit trail of the selected families.
+    RenderTextFontTraceCapturedWhenMissingGlyphs,
     VisibleInWindow {
         target: UiSelectorV1,
     },
