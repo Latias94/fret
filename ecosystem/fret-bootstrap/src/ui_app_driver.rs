@@ -1970,6 +1970,11 @@ fn ui_app_render<S>(
         state.ui.request_semantics_snapshot();
     }
 
+    #[cfg(feature = "diagnostics")]
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.apply_frame_clock_overrides(app, window);
+    });
+
     let layout_started = hitch_config.map(|_| Instant::now());
     {
         #[cfg(feature = "tracing")]

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use crate::time::{Duration, Instant};
 use crate::{AppWindowId, Color, Edges, Event, FrameId, Point, Rect, Size};
@@ -279,11 +280,89 @@ pub struct WindowFrameClockService {
     last_frame_id: HashMap<AppWindowId, FrameId>,
     last_instant: HashMap<AppWindowId, Instant>,
     snapshots: HashMap<AppWindowId, FrameClockSnapshot>,
+    fixed_delta: HashMap<AppWindowId, Duration>,
+    fixed_now_monotonic: HashMap<AppWindowId, Duration>,
 }
 
 impl WindowFrameClockService {
+    fn fixed_delta_from_env() -> Option<Duration> {
+        static FIXED: OnceLock<Option<Duration>> = OnceLock::new();
+        *FIXED.get_or_init(|| {
+            let v = std::env::var("FRET_DIAG_FIXED_FRAME_DELTA_MS")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .or_else(|| {
+                    std::env::var("FRET_FRAME_CLOCK_FIXED_DELTA_MS")
+                        .ok()
+                        .filter(|v| !v.trim().is_empty())
+                })?;
+            let ms: u64 = v.trim().parse().ok()?;
+            (ms > 0).then(|| Duration::from_millis(ms))
+        })
+    }
+
+    /// Force a deterministic fixed delta for `window`.
+    ///
+    /// This is intended for diagnostics and scripted tests (ADR 0240). When enabled, `record_frame`
+    /// advances `now_monotonic` by `delta` each time `frame_id` changes, rather than using
+    /// `Instant::now()`.
+    pub fn set_fixed_delta(&mut self, window: AppWindowId, delta: Option<Duration>) {
+        match delta {
+            Some(delta) if delta > Duration::default() => {
+                self.fixed_delta.insert(window, delta);
+                // If we have an existing snapshot, seed fixed time from it so toggling the mode
+                // does not jump backwards.
+                if let Some(snapshot) = self.snapshots.get(&window).copied() {
+                    self.fixed_now_monotonic
+                        .entry(window)
+                        .or_insert(snapshot.now_monotonic);
+                }
+            }
+            _ => {
+                self.fixed_delta.remove(&window);
+                self.fixed_now_monotonic.remove(&window);
+            }
+        }
+    }
+
+    pub fn fixed_delta(&self, window: AppWindowId) -> Option<Duration> {
+        self.fixed_delta.get(&window).copied()
+    }
+
     pub fn record_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
         if self.last_frame_id.get(&window).copied() == Some(frame_id) {
+            return;
+        }
+
+        let fixed_delta = self
+            .fixed_delta
+            .get(&window)
+            .copied()
+            .or_else(Self::fixed_delta_from_env);
+        if let Some(fixed_delta) = fixed_delta {
+            let had_prev = self.last_frame_id.contains_key(&window);
+            let prev_now = self
+                .fixed_now_monotonic
+                .get(&window)
+                .copied()
+                .unwrap_or_else(|| Duration::default());
+            let now_monotonic = if had_prev {
+                prev_now.saturating_add(fixed_delta)
+            } else {
+                prev_now
+            };
+            self.fixed_now_monotonic.insert(window, now_monotonic);
+
+            let delta = had_prev.then_some(fixed_delta).unwrap_or_default();
+            self.last_frame_id.insert(window, frame_id);
+            self.snapshots.insert(
+                window,
+                FrameClockSnapshot {
+                    frame_id,
+                    now_monotonic,
+                    delta,
+                },
+            );
             return;
         }
 
@@ -319,6 +398,8 @@ impl WindowFrameClockService {
         self.last_frame_id.remove(&window);
         self.last_instant.remove(&window);
         self.snapshots.remove(&window);
+        self.fixed_delta.remove(&window);
+        self.fixed_now_monotonic.remove(&window);
     }
 }
 
@@ -492,5 +573,34 @@ mod tests {
 
         assert_eq!(svc.forced_colors_mode(window), None);
         assert!(svc.forced_colors_mode_is_known(window));
+    }
+
+    #[test]
+    fn window_frame_clock_fixed_delta_is_deterministic() {
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(100));
+        let mut svc = WindowFrameClockService::default();
+        svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+
+        svc.record_frame(window, FrameId(1));
+        let s1 = svc.snapshot(window).expect("expected snapshot");
+        assert_eq!(s1.frame_id, FrameId(1));
+        assert_eq!(s1.now_monotonic, Duration::default());
+        assert_eq!(s1.delta, Duration::default());
+
+        // Same frame id: no advance.
+        svc.record_frame(window, FrameId(1));
+        let s1b = svc.snapshot(window).expect("expected snapshot");
+        assert_eq!(s1b, s1);
+
+        svc.record_frame(window, FrameId(2));
+        let s2 = svc.snapshot(window).expect("expected snapshot");
+        assert_eq!(s2.frame_id, FrameId(2));
+        assert_eq!(s2.delta, Duration::from_millis(16));
+        assert_eq!(s2.now_monotonic, Duration::from_millis(16));
+
+        svc.record_frame(window, FrameId(3));
+        let s3 = svc.snapshot(window).expect("expected snapshot");
+        assert_eq!(s3.delta, Duration::from_millis(16));
+        assert_eq!(s3.now_monotonic, Duration::from_millis(32));
     }
 }

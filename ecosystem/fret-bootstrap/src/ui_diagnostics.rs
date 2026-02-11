@@ -57,6 +57,11 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    /// Optional fixed frame delta (ms) for deterministic diagnostics/scripted tests (ADR 0240).
+    ///
+    /// When set, the per-window frame clock uses a synthetic monotonic time that advances by this
+    /// delta each frame, rather than wall-clock `Instant::now()`.
+    pub frame_clock_fixed_delta_ms: Option<u64>,
 
     /// Optional DevTools WebSocket endpoint for diagnostics control (script/pick/dump).
     ///
@@ -191,6 +196,16 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
+        let frame_clock_fixed_delta_ms = std::env::var("FRET_DIAG_FIXED_FRAME_DELTA_MS")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or_else(|| {
+                std::env::var("FRET_DIAG_FRAME_DELTA_MS")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty())
+            })
+            .and_then(|v| v.trim().parse::<u64>().ok())
+            .filter(|v| *v > 0);
 
         Self {
             enabled,
@@ -221,6 +236,7 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            frame_clock_fixed_delta_ms,
             devtools_ws_url,
             devtools_token,
             devtools_embed_bundle: cfg!(target_arch = "wasm32"),
@@ -303,6 +319,16 @@ impl UiDiagnosticsService {
         provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     ) {
         self.app_snapshot_provider = provider;
+    }
+
+    pub(crate) fn apply_frame_clock_overrides(&mut self, app: &mut App, window: AppWindowId) {
+        let Some(delta_ms) = self.cfg.frame_clock_fixed_delta_ms else {
+            return;
+        };
+        let delta = fret_core::time::Duration::from_millis(delta_ms);
+        app.with_global_mut_untracked(fret_core::WindowFrameClockService::default, |svc, _host| {
+            svc.set_fixed_delta(window, Some(delta))
+        });
     }
 
     /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
@@ -4695,6 +4721,8 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub inspect_trigger_path: String,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock_fixed_delta_ms: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -4749,6 +4777,7 @@ impl UiDiagnosticsBundleV1 {
                 ),
                 redact_text: svc.cfg.redact_text,
                 max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
+                frame_clock_fixed_delta_ms: svc.cfg.frame_clock_fixed_delta_ms,
             },
             windows: svc
                 .per_window
@@ -4794,6 +4823,17 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub app_snapshot: Option<serde_json::Value>,
 
     pub debug: UiTreeDebugSnapshotV1,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock: Option<UiFrameClockSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiFrameClockSnapshotV1 {
+    pub now_monotonic_ms: u64,
+    pub delta_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_delta_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
