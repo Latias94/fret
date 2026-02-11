@@ -249,7 +249,21 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            let mut scroll = shadcn::ScrollArea::new([body])
+            let occlusion = fret_ui_kit::declarative::occlusion_insets_or_zero(
+                cx,
+                fret_ui::Invalidation::Layout,
+            );
+            let bottom_slack = cx.spacer(fret_ui::element::SpacerProps {
+                layout: {
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.flex.grow = 0.0;
+                    layout.flex.shrink = 0.0;
+                    layout
+                },
+                min: occlusion.bottom,
+            });
+
+            let mut scroll = shadcn::ScrollArea::new([body, bottom_slack])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
