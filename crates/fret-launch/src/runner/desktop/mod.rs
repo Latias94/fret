@@ -1170,6 +1170,11 @@ pub struct WinitRunner<D: WinitAppDriver> {
     main_window: Option<fret_core::AppWindowId>,
     menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
+    /// Best-effort z-order for windows (most recently focused last).
+    ///
+    /// This is used as a tie-breaker when multiple windows overlap the cursor and the platform
+    /// cannot provide reliable z-order/hover routing.
+    windows_z_order: Vec<fret_core::AppWindowId>,
 
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
     /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
@@ -2922,6 +2927,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             main_window: None,
             menu_bar: None,
             windows_pending_front: HashMap::new(),
+            windows_z_order: Vec::new(),
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
@@ -3603,6 +3609,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
+        self.bump_window_z_order(id);
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -3802,6 +3809,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.remove(window) else {
             return false;
         };
+        self.windows_z_order.retain(|w| *w != window);
         #[cfg(windows)]
         windows_menu::unregister_window(state.window.as_ref());
         #[cfg(target_os = "macos")]
@@ -5839,7 +5847,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
         let mut fallback: Option<fret_core::AppWindowId> = None;
+        for &w in self.windows_z_order.iter().rev() {
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
+            let size = state.window.surface_size();
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        // Fallback if the z-order list has drifted.
         for w in self.windows.keys() {
+            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+                continue;
+            }
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
@@ -5865,6 +5902,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
         fallback
+    }
+
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        if self.windows.get(window).is_none() {
+            return;
+        }
+        self.windows_z_order.retain(|w| *w != window);
+        self.windows_z_order.push(window);
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {
