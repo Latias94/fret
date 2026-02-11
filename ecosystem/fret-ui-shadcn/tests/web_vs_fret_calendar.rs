@@ -27,14 +27,9 @@ use web_find::{
 mod style_aware_services;
 use style_aware_services::StyleAwareServices;
 
-fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
-    let delta = (actual.0 - expected).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected≈{expected} (±{tol}) got={}",
-        actual.0
-    );
-}
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
 
 fn run_fret_root_with_ui_and_services(
     bounds: Rect,

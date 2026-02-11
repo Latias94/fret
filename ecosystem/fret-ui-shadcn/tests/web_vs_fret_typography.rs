@@ -20,6 +20,10 @@ use web_golden_shadcn::*;
 mod style_aware_services;
 use style_aware_services::{RecordedTextPrepare, StyleAwareServices};
 
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
+
 fn web_collect_tag<'a>(node: &'a WebNode, tag: &str, out: &mut Vec<&'a WebNode>) {
     if node.tag == tag {
         out.push(node);
@@ -60,15 +64,6 @@ fn web_css_u16(node: &WebNode, key: &str) -> u16 {
             node.tag
         )
     })
-}
-
-fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
-    let delta = (actual.0 - expected).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected≈{expected} (±{tol}) got={}",
-        actual.0
-    );
 }
 
 fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
