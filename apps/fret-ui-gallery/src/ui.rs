@@ -15837,9 +15837,12 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = {
         let card = shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Login to your account").into_element(cx),
+                shadcn::CardTitle::new("Login to your account")
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-demo-title"),
                 shadcn::CardDescription::new("Enter your email below to login to your account")
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-demo-description"),
                 shadcn::CardAction::new(vec![
                     shadcn::Button::new("Sign Up")
                         .variant(shadcn::ButtonVariant::Link)
@@ -15915,7 +15918,8 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .into_element(cx),
         ])
         .refine_layout(max_w_sm.clone())
-        .into_element(cx);
+        .into_element(cx)
+        .test_id("ui-gallery-card-demo");
 
         centered(cx, card)
     };

@@ -559,6 +559,15 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    BoundsMaxSize {
+        target: UiSelectorV1,
+        #[serde(default)]
+        max_w_px: f32,
+        #[serde(default)]
+        max_h_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsNonOverlapping {
         a: UiSelectorV1,
         b: UiSelectorV1,

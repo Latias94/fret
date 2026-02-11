@@ -11675,6 +11675,26 @@ fn eval_predicate(
 
             w + eps >= min_w && h + eps >= min_h
         }
+        UiPredicateV1::BoundsMaxSize {
+            target,
+            max_w_px,
+            max_h_px,
+            eps_px,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+
+            let w = node.bounds.size.width.0.max(0.0);
+            let h = node.bounds.size.height.0.max(0.0);
+
+            let max_w = max_w_px.max(0.0);
+            let max_h = max_h_px.max(0.0);
+            let eps = eps_px.max(0.0);
+
+            w <= max_w + eps && h <= max_h + eps
+        }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
                 return false;

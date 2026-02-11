@@ -311,7 +311,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     ///
     /// This uses a repeating `Effect::SetTimer` and checks file metadata (mtime/len) on each tick.
     /// It is intended for local dev workflows and stays portable (no platform-specific watcher deps).
-    pub fn with_config_files_watcher(mut self, poll_interval: Duration) -> Self {
+    pub fn with_config_files_watcher(self, poll_interval: Duration) -> Self {
         self.with_config_files_watcher_for_root(poll_interval, ".")
     }
 

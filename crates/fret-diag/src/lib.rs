@@ -8542,9 +8542,10 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 8] {
     ]
 }
 
-fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 12] {
+fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 13] {
     [
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+        "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
