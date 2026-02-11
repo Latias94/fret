@@ -299,6 +299,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut devtools_ws_url: Option<String> = None;
     let mut devtools_token: Option<String> = None;
     let mut devtools_session_id: Option<String> = None;
+    let mut suite_script_inputs: Vec<String> = Vec::new();
 
     fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
         if env.iter().any(|(k, _v)| k == key) {
@@ -430,6 +431,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --devtools-session-id".to_string());
                 };
                 devtools_session_id = Some(v);
+                i += 1;
+            }
+            "--script-dir" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --script-dir".to_string());
+                };
+                suite_script_inputs.push(v);
+                i += 1;
+            }
+            "--glob" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --glob".to_string());
+                };
+                suite_script_inputs.push(v);
                 i += 1;
             }
             "--pick-trigger-path" => {
@@ -1547,6 +1564,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-redraw-hitches-max-total-ms is only supported with `diag repro` for now"
                 .to_string(),
         );
+    }
+    if sub != "suite" && !suite_script_inputs.is_empty() {
+        return Err("--glob/--script-dir are only supported with `diag suite`".to_string());
     }
 
     let workspace_root = crate::cli::workspace_root()?;
@@ -3454,7 +3474,7 @@ See: `docs/tracy.md`.\n";
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
-            if rest.is_empty() {
+            if rest.is_empty() && suite_script_inputs.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)"
                         .to_string(),
@@ -3469,79 +3489,86 @@ See: `docs/tracy.md`.\n";
                 DockingArbitration,
             }
 
-            let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
-            let is_ui_gallery_overlay_steady_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-overlay-steady";
-            let is_ui_gallery_code_editor_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-code-editor";
-            let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
-            let is_ui_gallery_date_picker_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-date-picker";
-            let is_ui_gallery_select_suite = rest.len() == 1 && rest[0] == "ui-gallery-select";
-            let is_ui_gallery_shadcn_conformance_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-shadcn-conformance";
-            let is_ui_gallery_virt_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
-            let is_ui_gallery_virt_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-virt-retained-measured";
-            let is_ui_gallery_tree_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-tree-retained";
-            let is_ui_gallery_tree_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-tree-retained-measured";
-            let is_ui_gallery_data_table_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained";
-            let is_ui_gallery_data_table_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-measured";
-            let is_ui_gallery_data_table_retained_keep_alive_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-keep-alive";
-            let is_ui_gallery_table_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
-            let is_ui_gallery_table_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-table-retained-measured";
-            let is_ui_gallery_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
-            let is_ui_gallery_ai_transcript_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
-            let is_ui_gallery_canvas_cull_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-canvas-cull";
-            let is_ui_gallery_node_graph_cull_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull";
-            let is_ui_gallery_node_graph_cull_window_shifts_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull-window-shifts";
-            let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = rest.len() == 1
-                && rest[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
-            let is_ui_gallery_chart_torture_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-chart-torture";
-            let is_ui_gallery_vlist_window_boundary_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
-            let is_ui_gallery_vlist_window_boundary_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
-            let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
-            let is_ui_gallery_ui_kit_list_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
-            let is_ui_gallery_inspector_torture_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture";
-            let is_ui_gallery_inspector_torture_keep_alive_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture-keep-alive";
-            let is_ui_gallery_file_tree_torture_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
-            let is_ui_gallery_file_tree_torture_interactive_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture-interactive";
-            let is_ui_gallery_cache005_suite = rest.len() == 1 && rest[0] == "ui-gallery-cache005";
-            let is_components_gallery_file_tree_suite =
-                rest.len() == 1 && rest[0] == "components-gallery-file-tree";
-            let is_components_gallery_table_suite =
-                rest.len() == 1 && rest[0] == "components-gallery-table";
-            let is_components_gallery_table_keep_alive_suite =
-                rest.len() == 1 && rest[0] == "components-gallery-table-keep-alive";
-            let is_workspace_shell_demo_suite =
-                rest.len() == 1 && rest[0] == "workspace-shell-demo";
-            let is_workspace_shell_demo_file_tree_keep_alive_suite =
-                rest.len() == 1 && rest[0] == "workspace-shell-demo-file-tree-keep-alive";
-            let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
+            let suite_args: Vec<String> = rest.clone();
 
-            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+            let is_ui_gallery_suite = suite_args.len() == 1 && suite_args[0] == "ui-gallery";
+            let is_ui_gallery_overlay_steady_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-overlay-steady";
+            let is_ui_gallery_code_editor_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-code-editor";
+            let is_ui_gallery_layout_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-layout";
+            let is_ui_gallery_date_picker_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
+            let is_ui_gallery_select_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-select";
+            let is_ui_gallery_shadcn_conformance_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-shadcn-conformance";
+            let is_ui_gallery_virt_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-virt-retained";
+            let is_ui_gallery_virt_retained_measured_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-virt-retained-measured";
+            let is_ui_gallery_tree_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-tree-retained";
+            let is_ui_gallery_tree_retained_measured_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-tree-retained-measured";
+            let is_ui_gallery_data_table_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-data-table-retained";
+            let is_ui_gallery_data_table_retained_measured_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-data-table-retained-measured";
+            let is_ui_gallery_data_table_retained_keep_alive_suite = suite_args.len() == 1
+                && suite_args[0] == "ui-gallery-data-table-retained-keep-alive";
+            let is_ui_gallery_table_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-table-retained";
+            let is_ui_gallery_table_retained_measured_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-table-retained-measured";
+            let is_ui_gallery_retained_measured_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-retained-measured";
+            let is_ui_gallery_ai_transcript_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-ai-transcript-retained";
+            let is_ui_gallery_canvas_cull_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-canvas-cull";
+            let is_ui_gallery_node_graph_cull_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-node-graph-cull";
+            let is_ui_gallery_node_graph_cull_window_shifts_suite = suite_args.len() == 1
+                && suite_args[0] == "ui-gallery-node-graph-cull-window-shifts";
+            let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = suite_args.len()
+                == 1
+                && suite_args[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
+            let is_ui_gallery_chart_torture_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-chart-torture";
+            let is_ui_gallery_vlist_window_boundary_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-vlist-window-boundary";
+            let is_ui_gallery_vlist_window_boundary_retained_suite = suite_args.len() == 1
+                && suite_args[0] == "ui-gallery-vlist-window-boundary-retained";
+            let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite = suite_args.len() == 1
+                && suite_args[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
+            let is_ui_gallery_ui_kit_list_retained_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-ui-kit-list-retained";
+            let is_ui_gallery_inspector_torture_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-inspector-torture";
+            let is_ui_gallery_inspector_torture_keep_alive_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-inspector-torture-keep-alive";
+            let is_ui_gallery_file_tree_torture_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-file-tree-torture";
+            let is_ui_gallery_file_tree_torture_interactive_suite = suite_args.len() == 1
+                && suite_args[0] == "ui-gallery-file-tree-torture-interactive";
+            let is_ui_gallery_cache005_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-cache005";
+            let is_components_gallery_file_tree_suite =
+                suite_args.len() == 1 && suite_args[0] == "components-gallery-file-tree";
+            let is_components_gallery_table_suite =
+                suite_args.len() == 1 && suite_args[0] == "components-gallery-table";
+            let is_components_gallery_table_keep_alive_suite =
+                suite_args.len() == 1 && suite_args[0] == "components-gallery-table-keep-alive";
+            let is_workspace_shell_demo_suite =
+                suite_args.len() == 1 && suite_args[0] == "workspace-shell-demo";
+            let is_workspace_shell_demo_file_tree_keep_alive_suite = suite_args.len() == 1
+                && suite_args[0] == "workspace-shell-demo-file-tree-keep-alive";
+            let is_docking_arbitration_suite =
+                suite_args.len() == 1 && suite_args[0] == "docking-arbitration";
+
+            let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
                 if is_ui_gallery_suite {
                     // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
                     // post-run gate. Enable screenshots so those checks can resolve semantics
@@ -4229,12 +4256,23 @@ See: `docs/tracy.md`.\n";
                     )
                 } else {
                     (
-                        rest.into_iter()
+                        suite_args
+                            .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
                         None,
                     )
                 };
+
+            if !suite_script_inputs.is_empty() {
+                scripts.extend(expand_script_inputs(&workspace_root, &suite_script_inputs)?);
+                scripts.sort();
+                scripts.dedup();
+            }
+
+            if scripts.is_empty() {
+                return Err("suite produced no scripts".to_string());
+            }
 
             let suite_wants_screenshots = pack_include_screenshots
                 || check_pixels_changed_test_id.is_some()

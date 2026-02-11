@@ -100,9 +100,9 @@ Definition of done:
 
 ### M5: Ecosystem-friendly script discovery and suites
 
-- [ ] Allow `fretboard diag suite` to accept:
-  - [ ] `--script-dir <path>`,
-  - [ ] `--glob <pattern>`,
+- [x] Allow `fretboard diag suite` to accept:
+  - [x] `--script-dir <path>`,
+  - [x] `--glob <pattern>`,
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).
 - [ ] Add a recommended “smoke” suite definition that is stable across platforms.
 - [ ] Make suites evidence-first by default:
