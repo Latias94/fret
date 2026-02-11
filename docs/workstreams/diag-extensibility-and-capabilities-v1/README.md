@@ -40,6 +40,8 @@ Sub-documents (this workstream intentionally decomposes into small, checkable st
   - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - Determinism and “repeat-run triage” for flaky regressions:
   - `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
+- Component conformance playbooks (how to build stable, explainable end-to-end gates):
+  - `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
 
 ## Why this workstream
 

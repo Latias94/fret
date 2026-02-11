@@ -154,6 +154,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut warmup_frames: u64 = 0;
     let mut lint_all_test_ids_bounds: bool = false;
     let mut lint_eps_px: f32 = 0.5;
+    let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
     let mut max_top_total_us: Option<u64> = None;
@@ -469,6 +470,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 lint_eps_px = v
                     .parse::<f32>()
                     .map_err(|_| "invalid value for --lint-eps-px".to_string())?;
+                i += 1;
+            }
+            "--no-lint" => {
+                suite_lint = false;
+                i += 1;
+            }
+            "--lint" => {
+                suite_lint = true;
                 i += 1;
             }
             "--inspect-path" => {
@@ -4168,6 +4177,61 @@ See: `docs/tracy.md`.\n";
                         );
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         std::process::exit(1);
+                    }
+                }
+
+                if suite_lint {
+                    let last_bundle_dir = result
+                        .last_bundle_dir
+                        .as_deref()
+                        .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()));
+                    if let Some(last_bundle_dir) = last_bundle_dir {
+                        let bundle_dir = PathBuf::from(last_bundle_dir);
+                        let bundle_dir = if bundle_dir.is_absolute() {
+                            bundle_dir
+                        } else {
+                            resolved_out_dir.join(bundle_dir)
+                        };
+                        let bundle_path = wait_for_bundle_json_in_dir(
+                            &bundle_dir,
+                            timeout_ms,
+                            poll_ms,
+                        )
+                        .ok_or_else(|| {
+                            format!(
+                                "suite lint is enabled but bundle.json was not found in time: {}",
+                                bundle_dir.display()
+                            )
+                        })?;
+
+                        let report = lint_bundle_from_path(
+                            &bundle_path,
+                            warmup_frames,
+                            LintOptions {
+                                all_test_ids_bounds: lint_all_test_ids_bounds,
+                                eps_px: lint_eps_px,
+                            },
+                        )?;
+
+                        let out = default_lint_out_path(&bundle_path);
+                        if let Some(parent) = out.parent() {
+                            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                        }
+                        let pretty = serde_json::to_string_pretty(&report.payload)
+                            .unwrap_or_else(|_| "{}".to_string());
+                        std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+                        if report.error_issues > 0 {
+                            eprintln!(
+                                "LINT-FAIL {} (run_id={}) errors={} out={}",
+                                src.display(),
+                                result.run_id,
+                                report.error_issues,
+                                out.display()
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
                     }
                 }
 
@@ -8475,6 +8539,22 @@ fn wait_for_bundle_json_from_script_result(
             if bundle_path.is_file() {
                 return Some(bundle_path);
             }
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    None
+}
+
+fn wait_for_bundle_json_in_dir(
+    bundle_dir: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    let bundle_path = resolve_bundle_json_path(bundle_dir);
+    while Instant::now() < deadline {
+        if bundle_path.is_file() {
+            return Some(bundle_path.clone());
         }
         std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
     }

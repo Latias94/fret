@@ -7,7 +7,7 @@ scope: diagnostics, automation, protocol, ecosystem, portability
 
 # Diagnostics Extensibility + Capabilities v1 (TODO)
 
-This file tracks tasks for `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This file tracks tasks for `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Guiding idea: keep `diag` useful for day-to-day debugging *and* safe to depend on as an ecosystem contract surface.
 
@@ -102,6 +102,19 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
   - [ ] run a script N times,
   - [ ] classify diffs (semantics/layout/routing/perf),
   - [ ] emit `repeat.summary.json`.
+
+## Component conformance (self-drawn UI pain points)
+
+Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conformance.md`
+
+- [x] Add a component conformance playbook document (invariants-first, evidence-first).
+- [ ] Turn the shadcn `Select` suite into a reference-quality example:
+  - [ ] ensure stable `test_id` for trigger/content/items (value-stable, not index-stable),
+  - [ ] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
+    focus restore, wheel scroll stability, collision/placement sanity.
+- [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
+  - [ ] `tools/diag-scripts/run-ui-gallery-shadcn-conformance-suite.py`,
+  - [ ] consider `fretboard diag suite` integration as a follow-up (single entrypoint).
 
 ## Scenario coverage (future-proofing)
 

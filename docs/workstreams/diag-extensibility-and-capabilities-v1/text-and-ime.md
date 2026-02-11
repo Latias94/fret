@@ -7,7 +7,7 @@ scope: diagnostics, text, ime, regression-gates
 
 # Diagnostics Extensibility + Capabilities v1 - Text & IME
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Self-drawn UI frameworks predictably struggle with text editing and IME composition.
 The diagnostics contract must make these failures explainable and gateable without relying only on screenshots.

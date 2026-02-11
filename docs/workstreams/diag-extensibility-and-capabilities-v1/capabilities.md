@@ -7,7 +7,7 @@ scope: diagnostics, automation, protocol, capabilities, transports
 
 # Diagnostics Extensibility + Capabilities v1 - Capabilities
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Goal: make “what is supported” explicit so missing support **fails fast with a structured reason**, rather than
 degrading into timeouts.

@@ -7,7 +7,7 @@ scope: diagnostics, automation, protocol, ecosystem, portability
 
 # Diagnostics Extensibility + Capabilities v1 (Milestones)
 
-This file tracks milestones for `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This file tracks milestones for `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Conventions:
 
@@ -90,7 +90,7 @@ Definition of done:
   - [x] emit `evidence.ime_event_trace` (native + web IME event kinds + length/cursor summaries; no raw text),
   - [ ] focus change trace with reasons (why focus moved / why it did not) beyond barrier inference.
 - [ ] M4d: Bundle lint closure:
-  - [ ] add `diag lint` and emit `check.lint.json`.
+  - [x] add `diag lint` and emit `check.lint.json`.
 
 Definition of done:
 
@@ -103,6 +103,9 @@ Definition of done:
   - [ ] `--glob <pattern>`,
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).
 - [ ] Add a recommended “smoke” suite definition that is stable across platforms.
+- [ ] Make suites evidence-first by default:
+  - [ ] run `diag lint` for every captured bundle (fail on error-level findings),
+  - [ ] emit `check.lint.json` next to `bundle.json` (or include it in `diag pack` outputs).
 
 ### M6: Text & IME gates (self-drawn UI pain point)
 

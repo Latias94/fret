@@ -7,7 +7,7 @@ scope: diagnostics, automation, scripts, tooling
 
 # Diagnostics Extensibility + Capabilities v1 - Script Tooling
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Goal: keep JSON scripts as the portable artifact, while providing tooling that makes scripts maintainable at scale
 (reviewable diffs, CI-friendly checks, and shrink/minimize workflows).
@@ -81,3 +81,23 @@ If typed templates are used (scriptgen):
 
 The goal is to treat scripts like compiled assets: authored or generated, but always reviewable and reproducible.
 
+## Bundle lint (post-run sanity checks)
+
+Bundle lint is intentionally separate from script-only lint: it validates the *captured evidence*.
+
+Command:
+
+- `fretboard diag lint <bundle_dir|bundle.json>`
+
+Behavior:
+
+- emits `check.lint.json` (default) next to `bundle.json`,
+- exits with code 1 when error-level findings exist,
+- supports `--warmup-frames <n>` to ignore early transient frames.
+
+Initial checks (expand over time, but keep codes stable):
+
+- `semantics.duplicate_test_id`,
+- `semantics.active_descendant_missing`,
+- focused/active out-of-window geometry sanity,
+- empty/zero-size bounds on focused or `test_id` nodes.

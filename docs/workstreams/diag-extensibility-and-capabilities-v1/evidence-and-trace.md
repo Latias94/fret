@@ -7,7 +7,7 @@ scope: diagnostics, automation, evidence, trace, triage
 
 # Diagnostics Extensibility + Capabilities v1 - Evidence & Trace
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Thesis: screenshots and logs are helpful, but self-drawn UI debugging only scales when failures produce
 **structured evidence** with **explainable reasons**.

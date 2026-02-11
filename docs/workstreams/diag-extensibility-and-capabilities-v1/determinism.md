@@ -7,7 +7,7 @@ scope: diagnostics, determinism, flake, triage
 
 # Diagnostics Extensibility + Capabilities v1 - Determinism
 
-This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`.
 
 Goal: turn “flaky” regressions into actionable reports by capturing environment fingerprints and enabling repeat-run
 triage workflows.
@@ -48,4 +48,3 @@ Prefer contract-backed mitigation (no wall-clock sleeps):
 - bounded retries with structured reasons.
 
 If a mitigation requires support (e.g. ROI screenshots, coordinate injection), gate it via capabilities.
-
