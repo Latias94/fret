@@ -888,6 +888,10 @@ pub struct UiHitTestTraceEntryV1 {
     pub pointer_capture_role: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pointer_capture_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_element_path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

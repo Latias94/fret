@@ -1299,12 +1299,15 @@ impl UiDiagnosticsService {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
+                        element_runtime,
+                        window,
                         Some(snapshot),
                         &target,
                         step_index as u32,
                         pos,
                         Some(node),
                         Some("click"),
+                        self.cfg.max_debug_string_bytes,
                     );
                 }
                 record_overlay_placement_trace(
@@ -1383,12 +1386,15 @@ impl UiDiagnosticsService {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
+                                    element_runtime,
+                                    window,
                                     Some(snapshot),
                                     &target,
                                     step_index as u32,
                                     center,
                                     Some(node),
                                     Some("click_stable.timeout"),
+                                    self.cfg.max_debug_string_bytes,
                                 );
                             }
                             force_dump_label =
@@ -1418,12 +1424,15 @@ impl UiDiagnosticsService {
                                 if let Some(ui) = ui {
                                     let mut hit = build_hit_test_trace_entry_for_selector(
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &target,
                                         step_index as u32,
                                         center,
                                         Some(node),
                                         Some("click_stable.probe"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                     let ok = hit.includes_intended == Some(true);
                                     if !ok {
@@ -1971,12 +1980,15 @@ impl UiDiagnosticsService {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
+                        element_runtime,
+                        window,
                         Some(snapshot),
                         &target,
                         step_index as u32,
                         pos,
                         Some(node),
                         Some("move_pointer"),
+                        self.cfg.max_debug_string_bytes,
                     );
                 }
                 output.events.push(move_pointer_event(pos));
@@ -2068,12 +2080,15 @@ impl UiDiagnosticsService {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
                                 ui,
+                                element_runtime,
+                                window,
                                 Some(snapshot),
                                 &target,
                                 step_index as u32,
                                 start,
                                 Some(node),
                                 Some("drag_pointer.start"),
+                                self.cfg.max_debug_string_bytes,
                             );
                         }
                         let end = Point::new(
@@ -2097,12 +2112,15 @@ impl UiDiagnosticsService {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
+                            element_runtime,
+                            window,
                             semantics_snapshot,
                             &target,
                             step_index as u32,
                             state.end,
                             None,
                             Some("drag_pointer.end"),
+                            self.cfg.max_debug_string_bytes,
                         );
                     }
                     active.v2_step_state = None;
@@ -2196,12 +2214,15 @@ impl UiDiagnosticsService {
                             record_hit_test_trace_for_selector(
                                 &mut active.hit_test_trace,
                                 ui,
+                                element_runtime,
+                                window,
                                 Some(snapshot),
                                 &target,
                                 step_index as u32,
                                 start,
                                 Some(node),
                                 Some("move_pointer_sweep.start"),
+                                self.cfg.max_debug_string_bytes,
                             );
                         }
                         let end = Point::new(
@@ -2229,12 +2250,15 @@ impl UiDiagnosticsService {
                         record_hit_test_trace_for_selector(
                             &mut active.hit_test_trace,
                             ui,
+                            element_runtime,
+                            window,
                             semantics_snapshot,
                             &target,
                             step_index as u32,
                             state.end,
                             None,
                             Some("move_pointer_sweep.end"),
+                            self.cfg.max_debug_string_bytes,
                         );
                     }
                     active.v2_step_state = None;
@@ -2323,12 +2347,15 @@ impl UiDiagnosticsService {
                     record_hit_test_trace_for_selector(
                         &mut active.hit_test_trace,
                         ui,
+                        element_runtime,
+                        window,
                         Some(snapshot),
                         &target,
                         step_index as u32,
                         pos,
                         Some(node),
                         Some(note.as_str()),
+                        self.cfg.max_debug_string_bytes,
                     );
                 }
                 output.events.push(wheel_event(pos, delta_x, delta_y));
@@ -2522,12 +2549,15 @@ impl UiDiagnosticsService {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
+                                    element_runtime,
+                                    window,
                                     semantics_snapshot,
                                     &container,
                                     step_index as u32,
                                     pos,
                                     Some(container_node),
                                     Some(note.as_str()),
+                                    self.cfg.max_debug_string_bytes,
                                 );
                             }
                             output.events.push(wheel_event(pos, delta_x, delta_y));
@@ -2621,12 +2651,15 @@ impl UiDiagnosticsService {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &target,
                                         step_index as u32,
                                         pos,
                                         Some(node),
                                         Some("type_text_into.click"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                 }
                                 record_focus_trace(
@@ -2819,12 +2852,15 @@ impl UiDiagnosticsService {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &menu,
                                         step_index as u32,
                                         pos,
                                         Some(node),
                                         Some("menu_select.menu_click"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                 }
                                 output
@@ -2887,12 +2923,15 @@ impl UiDiagnosticsService {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &item,
                                         step_index as u32,
                                         pos,
                                         Some(node),
                                         Some("menu_select.item_click"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                 }
                                 output
@@ -3019,12 +3058,15 @@ impl UiDiagnosticsService {
                                         record_hit_test_trace_for_selector(
                                             &mut active.hit_test_trace,
                                             ui,
+                                            element_runtime,
+                                            window,
                                             Some(snapshot),
                                             selector,
                                             step_index as u32,
                                             pos,
                                             Some(node),
                                             Some(note.as_str()),
+                                            self.cfg.max_debug_string_bytes,
                                         );
                                     }
                                     output.events.extend(click_events(
@@ -3111,22 +3153,28 @@ impl UiDiagnosticsService {
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
+                                    element_runtime,
+                                    window,
                                     Some(snapshot),
                                     &from,
                                     step_index as u32,
                                     start,
                                     Some(from_node),
                                     Some("drag_to.start"),
+                                    self.cfg.max_debug_string_bytes,
                                 );
                                 record_hit_test_trace_for_selector(
                                     &mut active.hit_test_trace,
                                     ui,
+                                    element_runtime,
+                                    window,
                                     Some(snapshot),
                                     &to,
                                     step_index as u32,
                                     end,
                                     Some(to_node),
                                     Some("drag_to.end"),
+                                    self.cfg.max_debug_string_bytes,
                                 );
                             }
                             V2DragPointerState {
@@ -3258,22 +3306,28 @@ impl UiDiagnosticsService {
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &target,
                                         step_index as u32,
                                         start,
                                         Some(node),
                                         Some("set_slider_value.drag_start"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                     record_hit_test_trace_for_selector(
                                         &mut active.hit_test_trace,
                                         ui,
+                                        element_runtime,
+                                        window,
                                         Some(snapshot),
                                         &target,
                                         step_index as u32,
                                         end,
                                         Some(node),
                                         Some("set_slider_value.drag_end"),
+                                        self.cfg.max_debug_string_bytes,
                                     );
                                 }
                                 output.events.extend(drag_events(
@@ -3323,22 +3377,28 @@ impl UiDiagnosticsService {
                                             record_hit_test_trace_for_selector(
                                                 &mut active.hit_test_trace,
                                                 ui,
+                                                element_runtime,
+                                                window,
                                                 Some(snapshot),
                                                 &target,
                                                 step_index as u32,
                                                 start,
                                                 Some(node),
                                                 Some("set_slider_value.adjust_drag_start"),
+                                                self.cfg.max_debug_string_bytes,
                                             );
                                             record_hit_test_trace_for_selector(
                                                 &mut active.hit_test_trace,
                                                 ui,
+                                                element_runtime,
+                                                window,
                                                 Some(snapshot),
                                                 &target,
                                                 step_index as u32,
                                                 end,
                                                 Some(node),
                                                 Some("set_slider_value.adjust_drag_end"),
+                                                self.cfg.max_debug_string_bytes,
                                             );
                                         }
                                         output.events.extend(drag_events(
@@ -11225,33 +11285,42 @@ fn hit_test_scope_roots_evidence(
 fn record_hit_test_trace_for_selector(
     trace: &mut Vec<UiHitTestTraceEntryV1>,
     ui: &UiTree<App>,
+    element_runtime: Option<&ElementRuntime>,
+    window: AppWindowId,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
     selector: &UiSelectorV1,
     step_index: u32,
     position: Point,
     intended: Option<&fret_core::SemanticsNode>,
     note: Option<&str>,
+    max_debug_string_bytes: usize,
 ) {
     let entry = build_hit_test_trace_entry_for_selector(
         ui,
+        element_runtime,
+        window,
         semantics_snapshot,
         selector,
         step_index,
         position,
         intended,
         note,
+        max_debug_string_bytes,
     );
     push_hit_test_trace(trace, entry);
 }
 
 fn build_hit_test_trace_entry_for_selector(
     ui: &UiTree<App>,
+    element_runtime: Option<&ElementRuntime>,
+    window: AppWindowId,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
     selector: &UiSelectorV1,
     step_index: u32,
     position: Point,
     intended: Option<&fret_core::SemanticsNode>,
     note: Option<&str>,
+    max_debug_string_bytes: usize,
 ) -> UiHitTestTraceEntryV1 {
     const MAX_HIT_NODE_PATH: usize = 64;
 
@@ -11398,6 +11467,8 @@ fn build_hit_test_trace_entry_for_selector(
         pointer_capture_test_id,
         pointer_capture_role,
         pointer_capture_bounds,
+        pointer_capture_element,
+        pointer_capture_element_path,
     ) = ui
         .any_captured_node()
         .map(|captured| {
@@ -11405,6 +11476,17 @@ fn build_hit_test_trace_entry_for_selector(
             let mut test_id: Option<String> = None;
             let mut role: Option<String> = None;
             let mut bounds: Option<UiRectV1> = None;
+            let mut element_id: Option<u64> = None;
+            let mut element_path: Option<String> = None;
+            if let Some(el) = ui.debug_node_element(captured) {
+                element_id = Some(el.0);
+                element_path = element_runtime
+                    .and_then(|rt| rt.debug_path_for_element(window, el))
+                    .map(|mut s| {
+                        truncate_string_bytes(&mut s, max_debug_string_bytes);
+                        s
+                    });
+            }
             if let Some(snapshot) = semantics_snapshot {
                 if let Some(n) = snapshot.nodes.iter().find(|n| n.id == captured) {
                     test_id = n.test_id.clone();
@@ -11417,9 +11499,16 @@ fn build_hit_test_trace_entry_for_selector(
                     });
                 }
             }
-            (Some(captured_id), test_id, role, bounds)
+            (
+                Some(captured_id),
+                test_id,
+                role,
+                bounds,
+                element_id,
+                element_path,
+            )
         })
-        .unwrap_or((None, None, None, None));
+        .unwrap_or((None, None, None, None, None, None));
     let blocking_layer_hint = blocking_layer_id.and_then(|layer_id| {
         scope_roots
             .iter()
@@ -11464,10 +11553,14 @@ fn build_hit_test_trace_entry_for_selector(
                 focus_barrier_root.unwrap_or(0)
             )),
             Some("pointer_capture") => Some(format!(
-                "blocked by pointer capture (layer_id={}, captured_node_id={}) {} intended={intended} hit={hit}",
+                "blocked by pointer capture (layer_id={}, captured_node_id={}) {}{} intended={intended} hit={hit}",
                 blocking_layer_id.unwrap_or(0),
                 pointer_capture_node_id.unwrap_or(0),
                 blocking_layer_hint.as_deref().unwrap_or(""),
+                pointer_capture_element_path
+                    .as_deref()
+                    .map(|p| format!(" element_path={p}"))
+                    .unwrap_or_default(),
             )),
             Some("pointer_occlusion") => Some(format!(
                 "blocked by pointer occlusion ({pointer_occlusion}) (layer_id={}, root={}) {} intended={intended} hit={hit}",
@@ -11516,6 +11609,8 @@ fn build_hit_test_trace_entry_for_selector(
         pointer_capture_test_id,
         pointer_capture_role,
         pointer_capture_bounds,
+        pointer_capture_element,
+        pointer_capture_element_path,
         scope_roots,
         note: note.map(|s| s.to_string()),
     }
