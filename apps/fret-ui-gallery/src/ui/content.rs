@@ -249,21 +249,7 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            let occlusion = fret_ui_kit::declarative::occlusion_insets_or_zero(
-                cx,
-                fret_ui::Invalidation::Layout,
-            );
-            let bottom_slack = cx.spacer(fret_ui::element::SpacerProps {
-                layout: {
-                    let mut layout = fret_ui::element::LayoutStyle::default();
-                    layout.flex.grow = 0.0;
-                    layout.flex.shrink = 0.0;
-                    layout
-                },
-                min: occlusion.bottom,
-            });
-
-            let mut scroll = shadcn::ScrollArea::new([body, bottom_slack])
+            let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
@@ -283,12 +269,33 @@ pub(crate) fn content_view(
     let content = content_inner.test_id("ui-gallery-content-scroll");
 
     cx.named("ui_gallery.content_view_root", |cx| {
+        let safe_area =
+            fret_ui_kit::declarative::safe_area_insets_or_zero(cx, fret_ui::Invalidation::Layout);
+        let occlusion =
+            fret_ui_kit::declarative::occlusion_insets_or_zero(cx, fret_ui::Invalidation::Layout);
+        let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
+        let chrome = ChromeRefinement {
+            padding: Some(fret_ui_kit::PaddingRefinement {
+                top: Some(fret_ui_kit::MetricRef::Px(Px(
+                    base_padding.0 + safe_area.top.0
+                ))),
+                right: Some(fret_ui_kit::MetricRef::Px(Px(
+                    base_padding.0 + safe_area.right.0
+                ))),
+                bottom: Some(fret_ui_kit::MetricRef::Px(Px(
+                    base_padding.0 + occlusion.bottom.0
+                ))),
+                left: Some(fret_ui_kit::MetricRef::Px(Px(
+                    base_padding.0 + safe_area.left.0
+                ))),
+            }),
+            background: Some(ColorRef::Color(theme.color_required("background"))),
+            ..ChromeRefinement::default()
+        };
         cx.container(
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
+                chrome,
                 LayoutRefinement::default().w_full().h_full(),
             ),
             |_cx| [content],
