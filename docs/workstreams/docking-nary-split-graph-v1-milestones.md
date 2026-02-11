@@ -98,8 +98,9 @@ Outcome:
 Status:
 
 - Preview semantics aligned via `DockGraph::edge_dock_decision` (insert vs wrap).
+- Deterministic edge-insert overlay geometry gate exists in `ecosystem/fret-docking`.
 - Splitter drag updates use adjacent-only resizing for N-ary splits.
-- Remaining: deterministic preview geometry tests + N-ary handle hit-test coverage + stabilization cleanup.
+- Remaining: N-ary handle hit-test coverage + stabilization cleanup.
 
 Implementation targets:
 
