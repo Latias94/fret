@@ -55,6 +55,7 @@ mod menubar;
 mod router;
 mod settings_sheet;
 mod status_bar;
+mod toaster;
 use router::{
     UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
     apply_page_router_update_side_effects, build_ui_gallery_page_router,
@@ -2586,19 +2587,11 @@ impl UiGalleryDriver {
 
                     let mut content: Vec<AnyElement> = vec![
                         panel,
-                        if (bisect & BISECT_DISABLE_TOASTER) != 0 {
-                            cx.text("")
-                        } else {
-                            {
-                                let position = cx
-                                    .get_model_copied(
-                                        &content_models.sonner_position,
-                                        Invalidation::Layout,
-                                    )
-                                    .unwrap_or(shadcn::ToastPosition::TopCenter);
-                                shadcn::Toaster::new().position(position).into_element(cx)
-                            }
-                        },
+                        toaster::toaster_view(
+                            cx,
+                            content_models.as_ref(),
+                            (bisect & BISECT_DISABLE_TOASTER) != 0,
+                        ),
                     ];
 
                     settings_sheet::push_settings_sheet(
