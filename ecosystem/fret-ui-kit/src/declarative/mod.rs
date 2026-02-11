@@ -43,6 +43,7 @@ pub mod table;
 pub mod text;
 pub mod text_scale_queries;
 pub mod theme_access;
+pub mod touch_pan_scroll;
 pub mod transition;
 pub mod tree;
 pub mod viewport_queries;
