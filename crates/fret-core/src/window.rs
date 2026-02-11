@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{AppWindowId, Color, Edges, Event, Point, Rect, Size};
+use crate::time::{Duration, Instant};
+use crate::{AppWindowId, Color, Edges, Event, FrameId, Point, Rect, Size};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorScheme {
@@ -247,6 +248,77 @@ impl WindowMetricsService {
         self.forced_colors_mode.remove(&window);
         self.safe_area_insets.remove(&window);
         self.occlusion_insets.remove(&window);
+    }
+}
+
+/// Snapshot of a window's frame clock for the current (or most recently recorded) frame.
+///
+/// This is intended to be:
+/// - monotonic (never wall-clock),
+/// - stable within a single frame,
+/// - and portable across native + wasm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FrameClockSnapshot {
+    pub frame_id: FrameId,
+    pub now_monotonic: Duration,
+    pub delta: Duration,
+}
+
+/// Runner-owned per-window frame clock snapshots (ADR 0240).
+///
+/// Runners SHOULD call [`WindowFrameClockService::record_frame`] once per rendered frame per window.
+///
+/// Notes:
+/// - This service intentionally uses `Instant::now()` internally so runners don't have to supply
+///   a timestamp. If a backend needs a more precise time source, we can add an explicit override
+///   API later without changing the snapshot contract.
+/// - Multiple calls for the same `frame_id` are ignored to keep `delta` stable within a frame.
+#[derive(Debug, Default, Clone)]
+pub struct WindowFrameClockService {
+    origin: Option<Instant>,
+    last_frame_id: HashMap<AppWindowId, FrameId>,
+    last_instant: HashMap<AppWindowId, Instant>,
+    snapshots: HashMap<AppWindowId, FrameClockSnapshot>,
+}
+
+impl WindowFrameClockService {
+    pub fn record_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
+        if self.last_frame_id.get(&window).copied() == Some(frame_id) {
+            return;
+        }
+
+        let now_instant = Instant::now();
+        let origin = *self.origin.get_or_insert(now_instant);
+        let now_monotonic = now_instant.duration_since(origin);
+        let delta = self
+            .last_instant
+            .insert(window, now_instant)
+            .map(|prev| now_instant.duration_since(prev))
+            .unwrap_or(Duration::default());
+
+        self.last_frame_id.insert(window, frame_id);
+        self.snapshots.insert(
+            window,
+            FrameClockSnapshot {
+                frame_id,
+                now_monotonic,
+                delta,
+            },
+        );
+    }
+
+    pub fn snapshot(&self, window: AppWindowId) -> Option<FrameClockSnapshot> {
+        self.snapshots.get(&window).copied()
+    }
+
+    pub fn is_known(&self, window: AppWindowId) -> bool {
+        self.snapshots.contains_key(&window)
+    }
+
+    pub fn clear_window(&mut self, window: AppWindowId) {
+        self.last_frame_id.remove(&window);
+        self.last_instant.remove(&window);
+        self.snapshots.remove(&window);
     }
 }
 

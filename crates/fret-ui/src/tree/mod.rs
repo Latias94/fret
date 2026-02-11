@@ -6117,6 +6117,101 @@ impl<H: UiHost> UiTree<H> {
         t.inverse().is_some().then_some(t)
     }
 
+    fn apply_vector(t: Transform2D, v: Point) -> Point {
+        Point::new(Px(t.a * v.x.0 + t.c * v.y.0), Px(t.b * v.x.0 + t.d * v.y.0))
+    }
+
+    pub(crate) fn map_window_point_to_node_layout_space(
+        &self,
+        target: NodeId,
+        window_pos: Point,
+    ) -> Option<Point> {
+        self.map_window_point_and_vector_to_node_layout_space(target, window_pos, None)
+            .map(|(p, _)| p)
+    }
+
+    pub(crate) fn map_window_vector_to_node_layout_space(
+        &self,
+        target: NodeId,
+        window_vec: Point,
+    ) -> Option<Point> {
+        self.map_window_point_and_vector_to_node_layout_space(
+            target,
+            Point::new(Px(0.0), Px(0.0)),
+            Some(window_vec),
+        )
+        .map(|(_, v)| v.unwrap_or(window_vec))
+    }
+
+    fn map_window_point_and_vector_to_node_layout_space(
+        &self,
+        target: NodeId,
+        mut mapped_pos: Point,
+        mut mapped_vec: Option<Point>,
+    ) -> Option<(Point, Option<Point>)> {
+        // Build the chain from target -> root, then walk root -> target.
+        let mut chain: Vec<NodeId> = Vec::new();
+        let mut cur = Some(target);
+        while let Some(id) = cur {
+            chain.push(id);
+            cur = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        if chain.is_empty() {
+            return None;
+        }
+        chain.reverse();
+
+        for (idx, &node) in chain.iter().enumerate() {
+            let is_target = idx == chain.len().saturating_sub(1);
+
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+
+            if let Some(inv) = prepaint
+                .and_then(|p| p.render_transform_inv)
+                .or_else(|| self.node_render_transform(node).and_then(|t| t.inverse()))
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(v) = mapped_vec {
+                    mapped_vec = Some(Self::apply_vector(inv, v));
+                }
+            }
+
+            if is_target {
+                break;
+            }
+
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+            if let Some(inv) = prepaint
+                .and_then(|p| p.children_render_transform_inv)
+                .or_else(|| {
+                    self.node_children_render_transform(node)
+                        .and_then(|t| t.inverse())
+                })
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(v) = mapped_vec {
+                    mapped_vec = Some(Self::apply_vector(inv, v));
+                }
+            }
+        }
+
+        Some((mapped_pos, mapped_vec))
+    }
+
     fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
         if !bounds.contains(position) {
             return false;

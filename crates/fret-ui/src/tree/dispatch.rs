@@ -1033,6 +1033,63 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            let now_monotonic = app
+                .global::<fret_core::WindowFrameClockService>()
+                .and_then(|svc| svc.snapshot(window))
+                .map(|s| s.now_monotonic);
+
+            let update_pointer = |app: &mut H,
+                                  pointer_id: fret_core::PointerId,
+                                  position: Point| {
+                app.with_global_mut_untracked(
+                    crate::pointer_motion::WindowPointerMotionService::default,
+                    |svc, _host| {
+                        svc.update_position(window, pointer_id, position, frame_id, now_monotonic);
+                    },
+                );
+            };
+
+            match event {
+                Event::Pointer(pe) => match pe {
+                    PointerEvent::Move {
+                        pointer_id,
+                        position,
+                        ..
+                    }
+                    | PointerEvent::Down {
+                        pointer_id,
+                        position,
+                        ..
+                    }
+                    | PointerEvent::Up {
+                        pointer_id,
+                        position,
+                        ..
+                    }
+                    | PointerEvent::Wheel {
+                        pointer_id,
+                        position,
+                        ..
+                    }
+                    | PointerEvent::PinchGesture {
+                        pointer_id,
+                        position,
+                        ..
+                    } => {
+                        update_pointer(app, *pointer_id, *position);
+                    }
+                },
+                Event::PointerCancel(e) => {
+                    if let Some(position) = e.position {
+                        update_pointer(app, e.pointer_id, position);
+                    }
+                }
+                _ => {}
+            }
+        }
+
         // Keep wheel routing and hover detection in sync with out-of-band scroll handle mutations
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
@@ -3215,10 +3272,6 @@ impl<H: UiHost> UiTree<H> {
             invalidation_visited,
         );
         did_work
-    }
-
-    fn apply_vector(t: Transform2D, v: Point) -> Point {
-        Point::new(Px(t.a * v.x.0 + t.c * v.y.0), Px(t.b * v.x.0 + t.d * v.y.0))
     }
 
     fn event_with_mapped_position(event: &Event, position: Point, delta: Option<Point>) -> Event {

@@ -31,6 +31,7 @@ pub mod overlay_placement;
 pub mod paint;
 pub mod pending_shortcut;
 pub mod pixel_snap;
+mod pointer_motion;
 #[cfg(feature = "unstable-retained-bridge")]
 pub mod retained_bridge;
 pub type ItemKey = u64;

@@ -96,6 +96,6 @@ pub use vector_path::{
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{
-    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowLogicalPosition,
-    WindowMetricsService,
+    ColorScheme, ContrastPreference, ForcedColorsMode, FrameClockSnapshot, WindowAnchor,
+    WindowFrameClockService, WindowLogicalPosition, WindowMetricsService,
 };
