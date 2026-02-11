@@ -45,7 +45,7 @@ impl ElementHostWidget {
         self.scroll_child_transform = None;
 
         self.hit_testable = match &instance {
-            ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Pressable(_) => true,
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::TextInputRegion(p) => p.enabled,
             ElementInstance::InternalDragRegion(p) => p.enabled,
@@ -55,6 +55,8 @@ impl ElementHostWidget {
             ElementInstance::FocusScope(_) => false,
             ElementInstance::LayoutQueryRegion(_) => false,
             ElementInstance::InteractivityGate(_) => false,
+            ElementInstance::HitTestGate(_) => false,
+            ElementInstance::FocusTraversalGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
@@ -69,7 +71,7 @@ impl ElementHostWidget {
             _ => true,
         };
         self.hit_test_children = match &instance {
-            ElementInstance::Pressable(p) => p.enabled,
+            ElementInstance::Pressable(_) => true,
             ElementInstance::PointerRegion(_) => true,
             ElementInstance::TextInputRegion(_) => true,
             ElementInstance::InternalDragRegion(_) => true,
@@ -78,6 +80,8 @@ impl ElementHostWidget {
             ElementInstance::FocusScope(_) => true,
             ElementInstance::LayoutQueryRegion(_) => true,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
+            ElementInstance::HitTestGate(p) => p.hit_test,
+            ElementInstance::FocusTraversalGate(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
             ElementInstance::ViewCache(_) => true,
@@ -99,6 +103,7 @@ impl ElementHostWidget {
         self.focus_traversal_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
+            ElementInstance::FocusTraversalGate(p) => p.traverse,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -127,6 +132,8 @@ impl ElementHostWidget {
             ElementInstance::FocusScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::LayoutQueryRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::HitTestGate(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::FocusTraversalGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ViewCache(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -368,6 +375,32 @@ impl ElementHostWidget {
 
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
                 // presence/interactivity gating handled via host widget flags.
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::HitTestGate(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                // Pass-through wrapper (layout like Opacity/VisualTransform), but with hit-test
+                // gating handled via host widget flags.
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::FocusTraversalGate(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                // Pass-through wrapper (layout like Opacity/VisualTransform), but with focus
+                // traversal gating handled via host widget flags.
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::EffectLayer(props) => {
