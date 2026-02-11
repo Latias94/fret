@@ -66,6 +66,19 @@ v1 target:
 - Native child view / overlay integration is backend-owned (wry).
 - UI owns only layout/chrome and expresses “a rectangle wants a WebView here”.
 
+### v1 seam (pragmatic)
+
+Until we have a dedicated “native surface anchor” element in the UI contract, v1 uses a pragmatic
+approach:
+
+- UI marks the intended WebView surface with a stable `test_id`.
+- The host/backend locates the bounds in the window `SemanticsSnapshot` and positions the native
+  child WebView accordingly.
+
+This is implemented as a contract-level helper in `fret-webview` so it remains backend-agnostic:
+
+- `ecosystem/fret-webview/src/lib.rs` (`best_bounds_for_test_id`, `placement_for_test_id`)
+
 Risk notes:
 
 - Z-order/input routing between the WebView child and Fret-rendered UI must be explicit.
@@ -87,4 +100,3 @@ Risk notes:
   - optionally surface console messages.
 
 See TODO tracker: `docs/workstreams/webview-wry-v1-todo.md`.
-

@@ -27,7 +27,8 @@ Tracking format:
 
 ## M1 — Host integration seam
 
-- [ ] WEBVIEW-WRY1-host-001 Define how UI expresses “WebView wants this rect” (handle/adapter seam).
+- [~] WEBVIEW-WRY1-host-001 Define how UI expresses “WebView wants this rect” (handle/adapter seam).
+  - v1 plan: stable `test_id` + bounds lookup via `SemanticsSnapshot` (`fret-webview` helpers).
 - [ ] WEBVIEW-WRY1-host-002 Implement lifecycle: create/destroy per app window.
 - [ ] WEBVIEW-WRY1-host-003 Route navigation intents to backend (load/go_back/go_forward/reload).
 - [ ] WEBVIEW-WRY1-host-004 Emit navigation state events back into a model/UI-consumable place.
