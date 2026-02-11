@@ -282,9 +282,9 @@ pub(crate) fn content_view(
                 right: Some(fret_ui_kit::MetricRef::Px(Px(
                     base_padding.0 + safe_area.right.0
                 ))),
-                bottom: Some(fret_ui_kit::MetricRef::Px(Px(
-                    base_padding.0 + occlusion.bottom.0
-                ))),
+                bottom: Some(fret_ui_kit::MetricRef::Px(Px(base_padding.0
+                    + safe_area.bottom.0
+                    + occlusion.bottom.0))),
                 left: Some(fret_ui_kit::MetricRef::Px(Px(
                     base_padding.0 + safe_area.left.0
                 ))),
