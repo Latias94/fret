@@ -175,15 +175,12 @@
     },
     {
       "predicate": {
-        "container": {
-          "id": "select-scroll-viewport",
-          "kind": "test_id"
-        },
-        "item": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
           "id": "ui-gallery-select-item-banana",
           "kind": "test_id"
-        },
-        "kind": "active_item_is"
+        }
       },
       "timeout_frames": 240,
       "type": "wait_until"

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fret_diag_protocol::builder::{ScriptV2Builder, active_item_is, role_and_name, test_id};
+use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
 use fret_diag_protocol::{
     UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
 };
@@ -324,10 +324,10 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
-            predicate: active_item_is(
-                test_id("select-scroll-viewport"),
-                test_id("ui-gallery-select-item-banana"),
-            ),
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-select-item-banana"),
+                selected: true,
+            },
             timeout_frames: 240,
         })
         .press_key("escape")
@@ -361,10 +361,10 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
-            predicate: active_item_is(
-                test_id("select-scroll-viewport"),
-                test_id("ui-gallery-select-item-banana"),
-            ),
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-select-item-banana"),
+                selected: true,
+            },
             timeout_frames: 240,
         })
         .press_key("escape")
@@ -384,8 +384,6 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
             test_id("select-scroll-viewport"),
             240,
         ))
-        .press_key("arrow_down")
-        .wait_frames(2)
         .press_key("enter")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -397,10 +395,10 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
-            predicate: active_item_is(
-                test_id("select-scroll-viewport"),
-                test_id("ui-gallery-select-item-apple"),
-            ),
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-select-item-apple"),
+                selected: true,
+            },
             timeout_frames: 240,
         })
         .press_key("escape")
@@ -431,10 +429,10 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
-            predicate: active_item_is(
-                test_id("select-scroll-viewport"),
-                test_id("ui-gallery-select-item-banana"),
-            ),
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-select-item-banana"),
+                selected: true,
+            },
             timeout_frames: 240,
         })
         .press_key("escape")
@@ -480,10 +478,10 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
-            predicate: active_item_is(
-                test_id("select-scroll-viewport"),
-                test_id("ui-gallery-select-item-banana"),
-            ),
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-select-item-banana"),
+                selected: true,
+            },
             timeout_frames: 240,
         })
         .press_key("escape")

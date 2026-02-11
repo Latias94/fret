@@ -112,14 +112,6 @@
       "type": "wait_until"
     },
     {
-      "key": "arrow_down",
-      "type": "press_key"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
       "key": "enter",
       "type": "press_key"
     },
@@ -165,15 +157,12 @@
     },
     {
       "predicate": {
-        "container": {
-          "id": "select-scroll-viewport",
-          "kind": "test_id"
-        },
-        "item": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
           "id": "ui-gallery-select-item-apple",
           "kind": "test_id"
-        },
-        "kind": "active_item_is"
+        }
       },
       "timeout_frames": 240,
       "type": "wait_until"
