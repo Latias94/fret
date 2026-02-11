@@ -343,6 +343,14 @@ where
                     viewport_id_out.set(Some(scroll.id));
 
                     let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
+                    let scroll = if let Some(active_element) = active_element_ref.get() {
+                        scroll.attach_semantics(
+                            fret_ui::element::SemanticsDecoration::default()
+                                .active_descendant_element(active_element.0),
+                        )
+                    } else {
+                        scroll
+                    };
 
                     if let Some(active_element) = active_element_ref.get() {
                         let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
@@ -413,12 +421,7 @@ where
                             // active row changes via keyboard/typeahead. Do not continuously
                             // "chase" the active row during wheel scrolling.
                             if consume_pending_active_scroll_into_view() {
-                                let _ = active_desc::scroll_active_element_into_view_y(
-                                    cx,
-                                    &handle_for_stack,
-                                    scroll.id,
-                                    active_element,
-                                );
+                                let _ = scroll_active_nearest(cx);
                             }
                         }
                     }

@@ -1137,6 +1137,14 @@ impl SelectTriggerPointerState {
 
         match down.pointer_type {
             PointerType::Mouse | PointerType::Unknown => {
+                let was_open = host.models_mut().get_copied(open).unwrap_or(false);
+                if was_open {
+                    let _ = host.models_mut().update(open, |v| *v = false);
+                    host.request_focus(action_cx.target);
+                    host.request_redraw(action_cx.window);
+                    return true;
+                }
+
                 let _ = host.models_mut().update(open, |v| *v = true);
                 host.request_redraw(action_cx.window);
                 host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
