@@ -1986,6 +1986,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-webview"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+]
+
+[[package]]
 name = "fret-workspace"
 version = "0.1.0"
 dependencies = [
