@@ -9296,6 +9296,7 @@ pub(super) struct ScriptResultSummary {
     pub(super) run_id: u64,
     pub(super) stage: Option<String>,
     pub(super) step_index: Option<u64>,
+    pub(super) reason_code: Option<String>,
     pub(super) reason: Option<String>,
     pub(super) last_bundle_dir: Option<String>,
 }
@@ -9377,6 +9378,10 @@ pub(super) fn run_script_and_wait(
 
                 if matches!(stage.as_deref(), Some("passed") | Some("failed")) {
                     let step_index = result.get("step_index").and_then(|v| v.as_u64());
+                    let reason_code = result
+                        .get("reason_code")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                     let reason = result
                         .get("reason")
                         .and_then(|v| v.as_str())
@@ -9389,6 +9394,7 @@ pub(super) fn run_script_and_wait(
                         run_id,
                         stage,
                         step_index,
+                        reason_code,
                         reason,
                         last_bundle_dir,
                     });

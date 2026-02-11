@@ -2633,6 +2633,269 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             report_result_and_exit(&result);
         }
+        "repeat" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing script path (try: fretboard diag repeat ./script.json --repeat 7)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let repeat = perf_repeat.max(1) as usize;
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let wants_screenshots = script_requests_screenshots(&src)
+                || pack_include_screenshots
+                || check_pixels_changed_test_id.is_some();
+
+            let repeat_launch_env = launch_env.clone();
+            let reuse_process = launch.is_none() || reuse_launch;
+
+            let mut child = if reuse_process {
+                maybe_launch_demo(
+                    &launch,
+                    &repeat_launch_env,
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &resolved_ready_path,
+                    &resolved_exit_path,
+                    wants_screenshots,
+                    timeout_ms,
+                    poll_ms,
+                )?
+            } else {
+                None
+            };
+
+            let mut runs: Vec<serde_json::Value> = Vec::with_capacity(repeat);
+
+            let mut baseline_run: Option<usize> = None;
+            let mut baseline_bundle: Option<PathBuf> = None;
+
+            let mut failed_runs: u64 = 0;
+            let mut differing_runs: u64 = 0;
+
+            for run_index in 0..repeat {
+                if !reuse_process {
+                    child = maybe_launch_demo(
+                        &launch,
+                        &repeat_launch_env,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        &resolved_exit_path,
+                        wants_screenshots,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+
+                let mut summary = run_script_and_wait(
+                    &src,
+                    &resolved_script_path,
+                    &resolved_script_trigger_path,
+                    &resolved_script_result_path,
+                    &resolved_script_result_trigger_path,
+                    timeout_ms,
+                    poll_ms,
+                );
+
+                if let Ok(s) = &summary
+                    && s.stage.as_deref() == Some("failed")
+                {
+                    if let Some(dir) =
+                        wait_for_failure_dump_bundle(&resolved_out_dir, s, timeout_ms, poll_ms)
+                    {
+                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                            if let Ok(s) = summary.as_mut() {
+                                s.last_bundle_dir = Some(name.to_string());
+                            }
+                        }
+                    }
+                }
+
+                if !reuse_process {
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                }
+
+                let entry = match summary {
+                    Ok(s) => {
+                        let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
+
+                        let bundle_json = s
+                            .last_bundle_dir
+                            .as_deref()
+                            .and_then(|d| (!d.trim().is_empty()).then_some(d.trim()))
+                            .map(PathBuf::from)
+                            .map(|p| {
+                                if p.is_absolute() {
+                                    p
+                                } else {
+                                    resolved_out_dir.join(p)
+                                }
+                            })
+                            .and_then(|p| {
+                                if p.is_dir() {
+                                    wait_for_bundle_json_in_dir(&p, timeout_ms, poll_ms)
+                                } else if p.is_file() {
+                                    Some(p)
+                                } else {
+                                    None
+                                }
+                            });
+
+                        if stage == "failed" {
+                            failed_runs += 1;
+                        }
+
+                        let mut perf: Option<serde_json::Value> = None;
+                        if let Some(bundle_json) = bundle_json.as_ref() {
+                            if let Ok(report) = bundle_stats_from_path(
+                                bundle_json,
+                                1,
+                                BundleStatsSort::Time,
+                                BundleStatsOptions { warmup_frames },
+                            ) {
+                                if let Some(top) = report.top.first() {
+                                    perf = Some(serde_json::json!({
+                                        "top_total_time_us": top.total_time_us,
+                                        "top_layout_time_us": top.layout_time_us,
+                                        "top_layout_engine_solve_time_us": top.layout_engine_solve_time_us,
+                                        "frame_id": top.frame_id,
+                                    }));
+                                }
+                            }
+                        }
+
+                        let mut compare_to_baseline: Option<serde_json::Value> = None;
+                        if stage == "passed" {
+                            if baseline_bundle.is_none() {
+                                if let Some(bundle_json) = bundle_json.clone() {
+                                    baseline_run = Some(run_index);
+                                    baseline_bundle = Some(bundle_json);
+                                }
+                            } else if let (Some(base), Some(cur)) =
+                                (baseline_bundle.as_ref(), bundle_json.as_ref())
+                            {
+                                let report = compare_bundles(
+                                    base,
+                                    cur,
+                                    CompareOptions {
+                                        warmup_frames,
+                                        eps_px: compare_eps_px,
+                                        ignore_bounds: compare_ignore_bounds,
+                                        ignore_scene_fingerprint: compare_ignore_scene_fingerprint,
+                                    },
+                                )?;
+
+                                let mut kinds: std::collections::BTreeMap<&str, u64> =
+                                    std::collections::BTreeMap::new();
+                                let mut semantics_diffs: u64 = 0;
+                                let mut layout_diffs: u64 = 0;
+                                let mut scene_fp_mismatch: u64 = 0;
+                                for d in &report.diffs {
+                                    *kinds.entry(d.kind).or_default() += 1;
+                                    if d.kind == "scene_fingerprint_mismatch" {
+                                        scene_fp_mismatch += 1;
+                                        continue;
+                                    }
+                                    if d.kind == "node_field_mismatch" && d.field == Some("bounds")
+                                    {
+                                        layout_diffs += 1;
+                                        continue;
+                                    }
+                                    semantics_diffs += 1;
+                                }
+
+                                if !report.ok {
+                                    differing_runs += 1;
+                                }
+
+                                compare_to_baseline = Some(serde_json::json!({
+                                    "ok": report.ok,
+                                    "diffs": report.diffs.len(),
+                                    "semantics_diffs": semantics_diffs,
+                                    "layout_diffs": layout_diffs,
+                                    "scene_fingerprint_mismatch": scene_fp_mismatch,
+                                    "diff_kinds": kinds,
+                                }));
+                            }
+                        }
+
+                        serde_json::json!({
+                            "index": run_index,
+                            "stage": stage,
+                            "run_id": s.run_id,
+                            "reason_code": s.reason_code,
+                            "reason": s.reason,
+                            "last_bundle_dir": s.last_bundle_dir,
+                            "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
+                            "perf": perf,
+                            "compare_to_baseline": compare_to_baseline,
+                        })
+                    }
+                    Err(err) => {
+                        failed_runs += 1;
+                        serde_json::json!({
+                            "index": run_index,
+                            "stage": "error",
+                            "error": err,
+                        })
+                    }
+                };
+
+                runs.push(entry);
+            }
+
+            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+
+            let status = if failed_runs == 0 && differing_runs == 0 {
+                "passed"
+            } else {
+                "failed"
+            };
+            let payload = serde_json::json!({
+                "schema_version": 1,
+                "status": status,
+                "script": src.display().to_string(),
+                "repeat": repeat,
+                "baseline_run": baseline_run,
+                "options": {
+                    "warmup_frames": warmup_frames,
+                    "compare_eps_px": compare_eps_px,
+                    "compare_ignore_bounds": compare_ignore_bounds,
+                    "compare_ignore_scene_fingerprint": compare_ignore_scene_fingerprint,
+                },
+                "failed_runs": failed_runs,
+                "differing_runs": differing_runs,
+                "runs": runs,
+            });
+
+            let out_path = resolved_out_dir.join("repeat.summary.json");
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+            if stats_json {
+                println!("{pretty}");
+            } else {
+                println!("{}", out_path.display());
+            }
+
+            if status != "passed" {
+                std::process::exit(1);
+            }
+            Ok(())
+        }
         "repro" => {
             if rest.is_empty() {
                 return Err(
