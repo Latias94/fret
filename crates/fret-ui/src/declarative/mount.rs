@@ -174,6 +174,13 @@ where
     // geometry via `ElementContext::last_bounds_for_element` (e.g. measured-height motion).
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+        window_state.record_committed_viewport_bounds(bounds);
+        let scale_factor = _app
+            .global::<fret_core::window::WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(window))
+            .unwrap_or(1.0);
+        window_state.record_committed_scale_factor(scale_factor);
     });
 
     // Out-of-band scroll handle mutations (e.g. deferred scroll-to-item) must be visible to view
