@@ -551,6 +551,10 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         checked: bool,
     },
+    SelectedIs {
+        target: UiSelectorV1,
+        selected: bool,
+    },
     CheckedIsNone {
         target: UiSelectorV1,
     },

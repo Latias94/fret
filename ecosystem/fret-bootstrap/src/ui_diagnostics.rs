@@ -12313,6 +12313,13 @@ fn eval_predicate(
             };
             node.flags.checked == Some(*checked)
         }
+        UiPredicateV1::SelectedIs { target, selected } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.selected == *selected
+        }
         UiPredicateV1::CheckedIsNone { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
