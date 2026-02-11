@@ -350,10 +350,19 @@ Plan:
 
 Prefer invariants over pixels; capture screenshots only when needed.
 
-Recommended diagnostics additions (see TODO):
+Recommended diagnostics additions (tracked in the TODO, implemented):
 
-- a small dock graph stats snapshot (node count, max depth, etc),
-- and an explicit “preview decision” field (`wrap_binary` vs `insert_into_split(...)`).
+- [x] A small dock graph stats snapshot (node count, max depth, split/tabs/floating counts).
+  - Evidence:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockGraphStatsDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_graph_stats_for_window`, published via `WindowInteractionDiagnosticsStore`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export: `UiDockGraphStatsDiagnosticsV1`)
+- [x] An explicit “preview decision” field for drop hovers (`wrap_binary` vs `insert_into_split(...)`).
+  - Evidence:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropPreviewDiagnostics`, `DockDropPreviewKindDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`compute_dock_drop_resolve_diagnostics` sets `preview`)
+    - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::DockDropPreviewKindIs`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + bundle export)
 
 Suggested initial scripts (names are placeholders):
 

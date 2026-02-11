@@ -35,15 +35,116 @@ const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
 const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 
+fn dock_graph_stats_for_window(
+    graph: &DockGraph,
+    window: fret_core::AppWindowId,
+) -> fret_runtime::DockGraphStatsDiagnostics {
+    use std::collections::HashSet;
+
+    let mut node_count: u32 = 0;
+    let mut tabs_count: u32 = 0;
+    let mut split_count: u32 = 0;
+    let mut floating_count: u32 = 0;
+    let mut max_depth: u32 = 0;
+    let mut max_split_depth: u32 = 0;
+
+    let mut canonical_ok = true;
+    let mut has_nested_same_axis_splits = false;
+
+    let mut visited: HashSet<DockNodeId> = HashSet::new();
+    let mut stack: Vec<(DockNodeId, u32, u32)> = Vec::new();
+
+    if let Some(root) = graph.window_root(window) {
+        stack.push((root, 1, 0));
+    }
+    for f in graph.floating_windows(window) {
+        stack.push((f.floating, 1, 0));
+    }
+
+    while let Some((node, depth, split_depth)) = stack.pop() {
+        if !visited.insert(node) {
+            continue;
+        }
+        node_count = node_count.saturating_add(1);
+        max_depth = max_depth.max(depth);
+        max_split_depth = max_split_depth.max(split_depth);
+
+        let Some(n) = graph.node(node) else {
+            canonical_ok = false;
+            continue;
+        };
+
+        match n {
+            DockNode::Tabs { tabs, .. } => {
+                tabs_count = tabs_count.saturating_add(1);
+                if tabs.is_empty() {
+                    canonical_ok = false;
+                }
+            }
+            DockNode::Floating { child } => {
+                floating_count = floating_count.saturating_add(1);
+                stack.push((*child, depth.saturating_add(1), split_depth));
+            }
+            DockNode::Split {
+                axis,
+                children,
+                fractions,
+            } => {
+                split_count = split_count.saturating_add(1);
+
+                if children.len() < 2 || children.len() != fractions.len() {
+                    canonical_ok = false;
+                }
+
+                let mut sum: f32 = 0.0;
+                for f in fractions {
+                    if !f.is_finite() || *f < 0.0 {
+                        canonical_ok = false;
+                    }
+                    sum += *f;
+                }
+                if !sum.is_finite() || (sum - 1.0).abs() > 1.0e-3 {
+                    canonical_ok = false;
+                }
+
+                for &child in children {
+                    if let Some(DockNode::Split {
+                        axis: child_axis, ..
+                    }) = graph.node(child)
+                    {
+                        if child_axis == axis {
+                            has_nested_same_axis_splits = true;
+                            canonical_ok = false;
+                        }
+                    }
+                    stack.push((
+                        child,
+                        depth.saturating_add(1),
+                        split_depth.saturating_add(1),
+                    ));
+                }
+            }
+        }
+    }
+
+    fret_runtime::DockGraphStatsDiagnostics {
+        node_count,
+        tabs_count,
+        split_count,
+        floating_count,
+        max_depth,
+        max_split_depth,
+        canonical_ok,
+        has_nested_same_axis_splits,
+    }
+}
+
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
-    dock_drop_resolve_diagnostics: Option<(
-        fret_runtime::FrameId,
-        fret_runtime::DockDropResolveDiagnostics,
-    )>,
+    dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
     divider_drag: Option<DividerDragSession>,
     floating_drag: Option<FloatingDragState>,
     pending_dock_drags: HashMap<fret_core::PointerId, PendingDockDrag>,
@@ -1487,9 +1588,40 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             dock_bounds: Rect,
             source: fret_runtime::DockDropResolveSource,
+            graph: &DockGraph,
+            window: fret_core::AppWindowId,
             target: Option<&DockDropTarget>,
             candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
         ) -> fret_runtime::DockDropResolveDiagnostics {
+            let preview = match target {
+                Some(DockDropTarget::Dock(t)) if t.zone != DropZone::Center => {
+                    let kind = match graph.edge_dock_decision(window, t.tabs, t.zone) {
+                        Some(fret_core::EdgeDockDecision::InsertIntoSplit {
+                            split,
+                            insert_index,
+                            ..
+                        }) => {
+                            let axis = match graph.node(split) {
+                                Some(DockNode::Split { axis, .. }) => *axis,
+                                _ => match t.zone {
+                                    DropZone::Left | DropZone::Right => fret_core::Axis::Horizontal,
+                                    DropZone::Top | DropZone::Bottom => fret_core::Axis::Vertical,
+                                    DropZone::Center => fret_core::Axis::Horizontal,
+                                },
+                            };
+                            fret_runtime::DockDropPreviewKindDiagnostics::InsertIntoSplit {
+                                axis,
+                                split,
+                                insert_index,
+                            }
+                        }
+                        _ => fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary,
+                    };
+                    Some(fret_runtime::DockDropPreviewDiagnostics { kind })
+                }
+                _ => None,
+            };
+
             fret_runtime::DockDropResolveDiagnostics {
                 pointer_id,
                 position,
@@ -1497,6 +1629,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 dock_bounds,
                 source,
                 resolved: dock_drop_target_diagnostics(target),
+                preview,
                 candidates,
             }
         }
@@ -3563,18 +3696,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            );
                                             dock.hover = hover;
                                             if diagnostics_enabled {
-                                                self.dock_drop_resolve_diagnostics = Some((
-                                                    now_frame,
-                                                    compute_dock_drop_resolve_diagnostics(
+                                                self.dock_drop_resolve_diagnostics =
+                                                    Some(compute_dock_drop_resolve_diagnostics(
                                                         e.pointer_id,
                                                         position,
                                                         window_bounds,
                                                         dock_bounds,
                                                         source,
+                                                        &dock.graph,
+                                                        self.window,
                                                         dock.hover.as_ref(),
                                                         candidates,
-                                                    ),
-                                                ));
+                                                    ));
                                             }
                                             if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
                                                 .is_some_and(|v| !v.is_empty())
@@ -3693,20 +3826,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            split_handle_hit_thickness,
 	                                            position,
 	                                            diagnostics_enabled.then_some(&mut candidates),
-	                                        );
+                                        );
                                         if diagnostics_enabled {
-                                            self.dock_drop_resolve_diagnostics = Some((
-                                                now_frame,
-                                                compute_dock_drop_resolve_diagnostics(
+                                            self.dock_drop_resolve_diagnostics =
+                                                Some(compute_dock_drop_resolve_diagnostics(
                                                     e.pointer_id,
                                                     position,
                                                     window_bounds,
                                                     dock_bounds,
                                                     source,
+                                                    &dock.graph,
+                                                    self.window,
                                                     target.as_ref(),
                                                     candidates,
-                                                ),
-                                            ));
+                                                ));
                                         }
                                         let intent = match drag {
                                             DockDragSnapshot::Panel(drag) => {
@@ -4092,10 +4225,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         target: capture.hit.viewport.target,
                     },
                 );
-            let dock_drop_resolve = self
-                .dock_drop_resolve_diagnostics
-                .as_ref()
-                .and_then(|(f, d)| (f == &frame_id).then(|| d.clone()));
+            let dock_drop_resolve = self.dock_drop_resolve_diagnostics.as_ref().cloned();
+            let dock_graph_stats = cx
+                .app
+                .global::<DockManager>()
+                .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -4107,6 +4241,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             dock_drag,
                             dock_drop_resolve,
                             viewport_capture,
+                            dock_graph_stats,
                         },
                     );
                 },

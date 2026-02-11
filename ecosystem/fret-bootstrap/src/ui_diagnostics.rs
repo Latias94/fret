@@ -1171,8 +1171,17 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "wait_until",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(window));
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        docking_diag,
+                        &predicate,
+                    ) {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -1213,8 +1222,17 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "assert",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(window));
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        docking_diag,
+                        &predicate,
+                    ) {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -2314,8 +2332,17 @@ impl UiDiagnosticsService {
                         UiPredicateV1::VisibleInWindow { target }
                     };
 
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(window));
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        docking_diag,
+                        &predicate,
+                    ) {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -2385,11 +2412,15 @@ impl UiDiagnosticsService {
                             target: target.clone(),
                         }
                     };
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(window));
                     let visible_ok = eval_predicate(
                         snapshot,
                         window_bounds,
                         window,
                         element_runtime,
+                        docking_diag,
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
@@ -6384,7 +6415,11 @@ pub struct UiDockingInteractionSnapshotV1 {
     #[serde(default)]
     pub dock_drag: Option<UiDockDragDiagnosticsV1>,
     #[serde(default)]
+    pub dock_drop_resolve: Option<UiDockDropResolveDiagnosticsV1>,
+    #[serde(default)]
     pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
+    #[serde(default)]
+    pub dock_graph_stats: Option<UiDockGraphStatsDiagnosticsV1>,
 }
 
 impl UiDockingInteractionSnapshotV1 {
@@ -6393,9 +6428,251 @@ impl UiDockingInteractionSnapshotV1 {
             dock_drag: snapshot
                 .dock_drag
                 .map(UiDockDragDiagnosticsV1::from_snapshot),
+            dock_drop_resolve: snapshot
+                .dock_drop_resolve
+                .as_ref()
+                .map(UiDockDropResolveDiagnosticsV1::from_snapshot),
             viewport_capture: snapshot
                 .viewport_capture
                 .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+            dock_graph_stats: snapshot
+                .dock_graph_stats
+                .map(UiDockGraphStatsDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockGraphStatsDiagnosticsV1 {
+    pub node_count: u32,
+    pub tabs_count: u32,
+    pub split_count: u32,
+    pub floating_count: u32,
+    pub max_depth: u32,
+    pub max_split_depth: u32,
+    pub canonical_ok: bool,
+    pub has_nested_same_axis_splits: bool,
+}
+
+impl UiDockGraphStatsDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockGraphStatsDiagnostics) -> Self {
+        Self {
+            node_count: snapshot.node_count,
+            tabs_count: snapshot.tabs_count,
+            split_count: snapshot.split_count,
+            floating_count: snapshot.floating_count,
+            max_depth: snapshot.max_depth,
+            max_split_depth: snapshot.max_split_depth,
+            canonical_ok: snapshot.canonical_ok,
+            has_nested_same_axis_splits: snapshot.has_nested_same_axis_splits,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropResolveSourceV1 {
+    InvertDocking,
+    OutsideWindow,
+    FloatZone,
+    LayoutBoundsMiss,
+    LatchedPreviousHover,
+    TabBar,
+    FloatingTitleBar,
+    OuterHintRect,
+    InnerHintRect,
+    None,
+}
+
+impl UiDockDropResolveSourceV1 {
+    fn from_source(source: fret_runtime::DockDropResolveSource) -> Self {
+        match source {
+            fret_runtime::DockDropResolveSource::InvertDocking => Self::InvertDocking,
+            fret_runtime::DockDropResolveSource::OutsideWindow => Self::OutsideWindow,
+            fret_runtime::DockDropResolveSource::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropResolveSource::LayoutBoundsMiss => Self::LayoutBoundsMiss,
+            fret_runtime::DockDropResolveSource::LatchedPreviousHover => Self::LatchedPreviousHover,
+            fret_runtime::DockDropResolveSource::TabBar => Self::TabBar,
+            fret_runtime::DockDropResolveSource::FloatingTitleBar => Self::FloatingTitleBar,
+            fret_runtime::DockDropResolveSource::OuterHintRect => Self::OuterHintRect,
+            fret_runtime::DockDropResolveSource::InnerHintRect => Self::InnerHintRect,
+            fret_runtime::DockDropResolveSource::None => Self::None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropCandidateRectKindV1 {
+    WindowBounds,
+    DockBounds,
+    FloatZone,
+    LayoutBounds,
+    RootRect,
+    LeafTabsRect,
+    TabBarRect,
+    InnerHintRect,
+    OuterHintRect,
+}
+
+impl UiDockDropCandidateRectKindV1 {
+    fn from_kind(kind: fret_runtime::DockDropCandidateRectKind) -> Self {
+        match kind {
+            fret_runtime::DockDropCandidateRectKind::WindowBounds => Self::WindowBounds,
+            fret_runtime::DockDropCandidateRectKind::DockBounds => Self::DockBounds,
+            fret_runtime::DockDropCandidateRectKind::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropCandidateRectKind::LayoutBounds => Self::LayoutBounds,
+            fret_runtime::DockDropCandidateRectKind::RootRect => Self::RootRect,
+            fret_runtime::DockDropCandidateRectKind::LeafTabsRect => Self::LeafTabsRect,
+            fret_runtime::DockDropCandidateRectKind::TabBarRect => Self::TabBarRect,
+            fret_runtime::DockDropCandidateRectKind::InnerHintRect => Self::InnerHintRect,
+            fret_runtime::DockDropCandidateRectKind::OuterHintRect => Self::OuterHintRect,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDropCandidateRectDiagnosticsV1 {
+    pub kind: UiDockDropCandidateRectKindV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<UiDropZoneV1>,
+    pub rect: RectV1,
+}
+
+impl UiDockDropCandidateRectDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDropCandidateRectDiagnostics) -> Self {
+        Self {
+            kind: UiDockDropCandidateRectKindV1::from_kind(snapshot.kind),
+            zone: snapshot.zone.map(UiDropZoneV1::from_zone),
+            rect: RectV1::from(snapshot.rect),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDropZoneV1 {
+    Center,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+impl UiDropZoneV1 {
+    fn from_zone(zone: fret_core::DropZone) -> Self {
+        match zone {
+            fret_core::DropZone::Center => Self::Center,
+            fret_core::DropZone::Left => Self::Left,
+            fret_core::DropZone::Right => Self::Right,
+            fret_core::DropZone::Top => Self::Top,
+            fret_core::DropZone::Bottom => Self::Bottom,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDropTargetDiagnosticsV1 {
+    pub layout_root: u64,
+    pub tabs: u64,
+    pub zone: UiDropZoneV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insert_index: Option<u64>,
+    pub outer: bool,
+}
+
+impl UiDockDropTargetDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDropTargetDiagnostics) -> Self {
+        Self {
+            layout_root: snapshot.layout_root.data().as_ffi(),
+            tabs: snapshot.tabs.data().as_ffi(),
+            zone: UiDropZoneV1::from_zone(snapshot.zone),
+            insert_index: snapshot.insert_index.map(|v| v as u64),
+            outer: snapshot.outer,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiDockDropPreviewKindDiagnosticsV1 {
+    WrapBinary,
+    InsertIntoSplit {
+        axis: String,
+        split: u64,
+        insert_index: u64,
+    },
+}
+
+impl UiDockDropPreviewKindDiagnosticsV1 {
+    fn from_kind(kind: fret_runtime::DockDropPreviewKindDiagnostics) -> Self {
+        match kind {
+            fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary => Self::WrapBinary,
+            fret_runtime::DockDropPreviewKindDiagnostics::InsertIntoSplit {
+                axis,
+                split,
+                insert_index,
+            } => Self::InsertIntoSplit {
+                axis: match axis {
+                    fret_core::Axis::Horizontal => "horizontal",
+                    fret_core::Axis::Vertical => "vertical",
+                }
+                .to_string(),
+                split: split.data().as_ffi(),
+                insert_index: insert_index as u64,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDropPreviewDiagnosticsV1 {
+    pub kind: UiDockDropPreviewKindDiagnosticsV1,
+}
+
+impl UiDockDropPreviewDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDropPreviewDiagnostics) -> Self {
+        Self {
+            kind: UiDockDropPreviewKindDiagnosticsV1::from_kind(snapshot.kind),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockDropResolveDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub position: PointV1,
+    pub window_bounds: RectV1,
+    pub dock_bounds: RectV1,
+    pub source: UiDockDropResolveSourceV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved: Option<UiDockDropTargetDiagnosticsV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview: Option<UiDockDropPreviewDiagnosticsV1>,
+    #[serde(default)]
+    pub candidates: Vec<UiDockDropCandidateRectDiagnosticsV1>,
+}
+
+impl UiDockDropResolveDiagnosticsV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockDropResolveDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            position: PointV1::from(snapshot.position),
+            window_bounds: RectV1::from(snapshot.window_bounds),
+            dock_bounds: RectV1::from(snapshot.dock_bounds),
+            source: UiDockDropResolveSourceV1::from_source(snapshot.source),
+            resolved: snapshot
+                .resolved
+                .map(UiDockDropTargetDiagnosticsV1::from_snapshot),
+            preview: snapshot
+                .preview
+                .map(UiDockDropPreviewDiagnosticsV1::from_snapshot),
+            candidates: snapshot
+                .candidates
+                .iter()
+                .copied()
+                .map(UiDockDropCandidateRectDiagnosticsV1::from_snapshot)
+                .collect(),
         }
     }
 }
@@ -11549,6 +11826,7 @@ fn eval_predicate(
     window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
+    docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     pred: &UiPredicateV1,
 ) -> bool {
     match pred {
@@ -11801,6 +12079,27 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
+        UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
+            let Some(preview) = docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .and_then(|d| d.preview.as_ref())
+            else {
+                return false;
+            };
+            let have = match preview.kind {
+                fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary => "wrap_binary",
+                fret_runtime::DockDropPreviewKindDiagnostics::InsertIntoSplit { .. } => {
+                    "insert_into_split"
+                }
+            };
+            have == preview_kind.as_str()
+        }
+        UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
+            .and_then(|d| d.dock_graph_stats)
+            .is_some_and(|s| s.canonical_ok == *canonical),
+        UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => docking
+            .and_then(|d| d.dock_graph_stats)
+            .is_some_and(|s| s.has_nested_same_axis_splits == *has_nested),
     }
 }
 
@@ -12677,6 +12976,10 @@ mod tests {
         AppWindowId::from(KeyData::from_ffi(id))
     }
 
+    fn dock_node_id(id: u64) -> fret_core::DockNodeId {
+        fret_core::DockNodeId::from(KeyData::from_ffi(id))
+    }
+
     fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
         Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
     }
@@ -13022,6 +13325,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            None,
             &pred
         ));
 
@@ -13033,7 +13337,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected padding to shrink the allowed window rect"
         );
     }
@@ -13074,7 +13378,7 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected node to satisfy the min-size gate"
         );
     }
@@ -13133,7 +13437,7 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected roving focus to satisfy active_item_is"
         );
 
@@ -13164,8 +13468,132 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected active_descendant to satisfy active_item_is"
+        );
+    }
+
+    #[test]
+    fn dock_drop_preview_kind_predicate_reads_from_docking_diagnostics() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: Vec::new(),
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: Vec::new(),
+        };
+
+        let mut docking = fret_runtime::DockingInteractionDiagnostics::default();
+        docking.dock_drop_resolve = Some(fret_runtime::DockDropResolveDiagnostics {
+            pointer_id: fret_core::PointerId(1),
+            position: fret_core::geometry::Point::new(Px(1.0), Px(2.0)),
+            window_bounds,
+            dock_bounds: window_bounds,
+            source: fret_runtime::DockDropResolveSource::None,
+            resolved: None,
+            preview: Some(fret_runtime::DockDropPreviewDiagnostics {
+                kind: fret_runtime::DockDropPreviewKindDiagnostics::WrapBinary,
+            }),
+            candidates: Vec::new(),
+        });
+
+        let pred = UiPredicateV1::DockDropPreviewKindIs {
+            preview_kind: "wrap_binary".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+
+        docking.dock_drop_resolve = Some(fret_runtime::DockDropResolveDiagnostics {
+            preview: Some(fret_runtime::DockDropPreviewDiagnostics {
+                kind: fret_runtime::DockDropPreviewKindDiagnostics::InsertIntoSplit {
+                    axis: fret_core::Axis::Horizontal,
+                    split: dock_node_id(1),
+                    insert_index: 1,
+                },
+            }),
+            ..docking.dock_drop_resolve.unwrap()
+        });
+
+        let pred = UiPredicateV1::DockDropPreviewKindIs {
+            preview_kind: "insert_into_split".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+    }
+
+    #[test]
+    fn dock_graph_stats_predicates_read_from_docking_diagnostics() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: Vec::new(),
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: Vec::new(),
+        };
+
+        let docking = fret_runtime::DockingInteractionDiagnostics {
+            dock_graph_stats: Some(fret_runtime::DockGraphStatsDiagnostics {
+                node_count: 10,
+                tabs_count: 2,
+                split_count: 3,
+                floating_count: 1,
+                max_depth: 4,
+                max_split_depth: 3,
+                canonical_ok: true,
+                has_nested_same_axis_splits: false,
+            }),
+            ..Default::default()
+        };
+
+        let pred = UiPredicateV1::DockGraphCanonicalIs { canonical: true };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested: false };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            Some(&docking),
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockGraphCanonicalIs { canonical: false };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                Some(&docking),
+                &pred
+            ),
+            "expected canonical=false to fail when snapshot reports canonical_ok=true"
         );
     }
 
@@ -13205,7 +13633,7 @@ mod tests {
         };
 
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "collapsed node should fail the min-size gate"
         );
     }
@@ -13263,7 +13691,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected overlap (a right edge > b left edge) to fail"
         );
 
@@ -13277,7 +13705,7 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to tolerate a small overlap"
         );
     }
@@ -13313,7 +13741,7 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected missing test id to satisfy NotExists"
         );
     }
@@ -13371,7 +13799,7 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected overlap (a right edge > b left edge) to pass"
         );
 
@@ -13385,7 +13813,7 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
             "expected eps_px to require more overlap than available"
         );
     }

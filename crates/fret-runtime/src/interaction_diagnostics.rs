@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fret_core::geometry::{Point, Rect};
-use fret_core::{AppWindowId, DockNodeId, DropZone, PointerId, RenderTargetId};
+use fret_core::{AppWindowId, Axis, DockNodeId, DropZone, PointerId, RenderTargetId};
 
 use crate::FrameId;
 
@@ -25,6 +25,37 @@ pub struct DockingInteractionDiagnostics {
     pub dock_drag: Option<DockDragDiagnostics>,
     pub dock_drop_resolve: Option<DockDropResolveDiagnostics>,
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
+    /// Best-effort dock graph stats snapshot for the current window.
+    pub dock_graph_stats: Option<DockGraphStatsDiagnostics>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockGraphStatsDiagnostics {
+    pub node_count: u32,
+    pub tabs_count: u32,
+    pub split_count: u32,
+    pub floating_count: u32,
+    pub max_depth: u32,
+    pub max_split_depth: u32,
+    /// True when the graph satisfies the key canonical-form invariants used by docking.
+    pub canonical_ok: bool,
+    /// True when a split contains a same-axis split child (an indicator of unflattened nesting).
+    pub has_nested_same_axis_splits: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropPreviewKindDiagnostics {
+    WrapBinary,
+    InsertIntoSplit {
+        axis: Axis,
+        split: DockNodeId,
+        insert_index: usize,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DockDropPreviewDiagnostics {
+    pub kind: DockDropPreviewKindDiagnostics,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +119,7 @@ pub struct DockDropResolveDiagnostics {
     pub dock_bounds: Rect,
     pub source: DockDropResolveSource,
     pub resolved: Option<DockDropTargetDiagnostics>,
+    pub preview: Option<DockDropPreviewDiagnostics>,
     pub candidates: Vec<DockDropCandidateRectDiagnostics>,
 }
 
@@ -129,5 +161,12 @@ impl WindowInteractionDiagnosticsStore {
     ) -> Option<&DockingInteractionDiagnostics> {
         let w = self.per_window.get(&window)?;
         (w.frame_id == frame_id).then_some(&w.docking)
+    }
+
+    pub fn docking_latest_for_window(
+        &self,
+        window: AppWindowId,
+    ) -> Option<&DockingInteractionDiagnostics> {
+        self.per_window.get(&window).map(|w| &w.docking)
     }
 }

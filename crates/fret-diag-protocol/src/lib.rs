@@ -605,6 +605,25 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the current docking drop preview kind matches `kind`.
+    ///
+    /// This predicate reads the window-local `DockDropResolveDiagnostics` snapshot published into
+    /// `WindowInteractionDiagnosticsStore` by policy-heavy ecosystem crates (e.g. docking).
+    ///
+    /// Supported kinds:
+    /// - `wrap_binary`
+    /// - `insert_into_split`
+    DockDropPreviewKindIs {
+        preview_kind: String,
+    },
+    /// True when the latest dock graph stats snapshot reports a canonical-form layout.
+    DockGraphCanonicalIs {
+        canonical: bool,
+    },
+    /// True when the latest dock graph stats snapshot reports nested same-axis split children.
+    DockGraphHasNestedSameAxisSplitsIs {
+        has_nested: bool,
+    },
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]

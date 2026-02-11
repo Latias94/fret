@@ -477,6 +477,8 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
+- `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 
 Notes:
 
@@ -563,8 +565,15 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
- - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+- `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+- `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+
+Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typically `docking_arbitration_demo`):
+
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"wrap_binary"}`
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
+- `{"kind":"dock_graph_canonical_is","canonical":true}`
+- `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

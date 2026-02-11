@@ -95,13 +95,22 @@ Each TODO is labeled:
 
 ## P1 — Observability (required for diag/perf gates)
 
-- [ ] DN-P1-obs-001 Add a small, stable dock graph stats snapshot for diagnostics bundles.
+- [x] DN-P1-obs-001 Add a small, stable dock graph stats snapshot for diagnostics bundles.
   - Example fields: node_count, max_depth, split_count, tabs_count, floating_count.
   - Must be cheap to compute (or cached per frame).
+  - Evidence:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockGraphStatsDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_graph_stats_for_window`, published via `WindowInteractionDiagnosticsStore`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export: `UiDockGraphStatsDiagnosticsV1`)
 
-- [ ] DN-P1-obs-002 Expose “preview kind” in diagnostics when hovering a drop target.
+- [x] DN-P1-obs-002 Expose “preview kind” in diagnostics when hovering a drop target.
   - Example: `wrap_binary` vs `insert_into_split(axis, index)`.
   - Goal: scripts can assert semantics without pixel checks.
+  - Evidence:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropPreviewDiagnostics`, `DockDropPreviewKindDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`compute_dock_drop_resolve_diagnostics` sets `preview`)
+    - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::DockDropPreviewKindIs`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + bundle export)
 
 ## P1 — Diagnostics (`fretboard diag`) gates
 
