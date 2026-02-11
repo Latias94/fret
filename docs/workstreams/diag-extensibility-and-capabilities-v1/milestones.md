@@ -80,6 +80,7 @@ Definition of done:
   - [x] emit `evidence.hit_test_trace` for injected pointer actions (click/drag/wheel),
   - [x] emit `evidence.overlay_placement_trace` (flip/shift/collision inputs + final rect; geometry-first overlay debugging),
   - [x] include input arbitration snapshot in hit-test trace (occlusion/capture/barrier roots),
+  - [x] include best-effort `blocking_reason` attribution in hit-test trace,
   - [ ] add deeper capture/barrier/occlusion *explainability* (hit path “why”, occluder hints, capture owner),
   - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
 - [ ] M4c: Focus + text/IME explainability:

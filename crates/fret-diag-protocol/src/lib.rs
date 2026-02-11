@@ -822,6 +822,26 @@ pub struct UiHitTestTraceEntryV1 {
     /// Useful for diagnosing “clicked the right region but an overlay/capture blocked delivery”.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_path_contains_intended: Option<bool>,
+    /// Best-effort attribution for why the intended target did not receive injected input.
+    ///
+    /// This is a convenience field intended for triage tools and AI. Prefer inspecting the raw
+    /// evidence fields when debugging novel cases.
+    ///
+    /// Stable strings (start small; expand only when evidence becomes more actionable):
+    /// - `modal_barrier` (a modal barrier is active)
+    /// - `focus_barrier` (a focus barrier is active)
+    /// - `pointer_capture` (pointer capture is active)
+    /// - `pointer_occlusion` (pointer occlusion blocks underlay input)
+    /// - `no_hit` (hit-test produced no node)
+    /// - `miss` (hit-test landed on a different node)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_reason: Option<String>,
+    /// Best-effort in-run root reference associated with `blocking_reason` (when applicable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_root: Option<u64>,
+    /// Best-effort layer id associated with `blocking_reason` (when applicable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking_layer_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub barrier_root: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

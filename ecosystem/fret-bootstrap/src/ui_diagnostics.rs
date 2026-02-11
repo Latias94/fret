@@ -11190,6 +11190,27 @@ fn record_hit_test_trace_for_selector(
         .pointer_capture_layer
         .map(|id| id.data().as_ffi());
 
+    let is_ok = includes_intended == Some(true) || hit_path_contains_intended == Some(true);
+    let (blocking_reason, blocking_root, blocking_layer_id) = if is_ok {
+        (None, None, None)
+    } else if barrier_root.is_some() {
+        (Some("modal_barrier"), barrier_root, None)
+    } else if focus_barrier_root.is_some() {
+        let layer_id = scope_roots
+            .iter()
+            .find(|r| r.kind == "focus_barrier_root")
+            .and_then(|r| r.layer_id);
+        (Some("focus_barrier"), focus_barrier_root, layer_id)
+    } else if arbitration.pointer_capture_active {
+        (Some("pointer_capture"), None, pointer_capture_layer_id)
+    } else if pointer_occlusion != "none" {
+        (Some("pointer_occlusion"), None, pointer_occlusion_layer_id)
+    } else if hit_node_id.is_none() {
+        (Some("no_hit"), None, None)
+    } else {
+        (Some("miss"), None, None)
+    };
+
     push_hit_test_trace(
         trace,
         UiHitTestTraceEntryV1 {
@@ -11208,6 +11229,9 @@ fn record_hit_test_trace_for_selector(
             hit_semantics_test_id,
             includes_intended,
             hit_path_contains_intended,
+            blocking_reason: blocking_reason.map(|s| s.to_string()),
+            blocking_root,
+            blocking_layer_id,
             barrier_root,
             focus_barrier_root,
             pointer_occlusion: Some(pointer_occlusion),
