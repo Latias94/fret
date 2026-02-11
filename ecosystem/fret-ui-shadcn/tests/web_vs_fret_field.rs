@@ -10,18 +10,12 @@ use std::sync::Arc;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-#[path = "support/web_tree.rs"]
-mod web_tree;
-
-use web_tree::contains_text;
-
-fn web_find_by_tag_and_text<'a>(root: &'a WebNode, tag: &str, text: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| n.tag == tag && contains_text(n, text))
-}
-
-fn web_find_by_class_tokens<'a>(root: &'a WebNode, tokens: &[&str]) -> Option<&'a WebNode> {
-    find_first(root, &|n| tokens.iter().all(|t| class_has_token(n, t)))
-}
+#[path = "support/web_find.rs"]
+mod web_find;
+use web_find::{
+    find_by_class_tokens as web_find_by_class_tokens,
+    find_by_tag_and_text as web_find_by_tag_and_text,
+};
 
 fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
     let delta = (actual.0 - expected).abs();

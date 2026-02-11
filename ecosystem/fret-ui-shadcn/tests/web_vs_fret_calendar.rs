@@ -16,16 +16,12 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn web_find_by_class_token<'a>(root: &'a WebNode, token: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| class_has_token(n, token))
-}
-
-fn web_find_by_class_token_in_theme<'a>(
-    theme: &'a WebGoldenTheme,
-    token: &str,
-) -> Option<&'a WebNode> {
-    find_first_in_theme(theme, &|n| class_has_token(n, token))
-}
+#[path = "support/web_find.rs"]
+mod web_find;
+use web_find::{
+    find_by_class_token as web_find_by_class_token,
+    find_by_class_token_in_theme as web_find_by_class_token_in_theme,
+};
 
 fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
     let delta = (actual.0 - expected).abs();
