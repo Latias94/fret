@@ -59,6 +59,7 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 ### Audit inputs (repo-ref)
 
 - `docs/audits/font-system-parley-zed-xilem-2026-02.md`
+- ADR: `docs/adr/0259-system-font-rescan-and-injected-font-retention-v1.md`
 
 ### What is already good
 

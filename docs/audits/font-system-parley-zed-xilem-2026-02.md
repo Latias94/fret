@@ -82,6 +82,21 @@ Status:
 
 - Implemented (2026-02): `RendererTextFontTraceSnapshot` is included in bundles via `fret-bootstrap`.
 
+### 1.5) Make font enumeration and rescans non-blocking (where possible)
+
+Zed’s Linux text system explicitly calls out that font loading should be non-blocking (`// todo(linux) make font loading
+non-blocking` in `repo-ref/zed/.../text_system.rs`). Font enumeration and system rescans can be expensive on large font
+sets, and editor-grade apps often want to keep the UI thread responsive.
+
+Takeaway for Fret:
+
+- Prefer runner-owned async system font rescans on desktop platforms.
+- Ensure injected fonts survive a rescan boundary, but keep retention bounded to avoid unbounded growth under hot reload.
+
+Status:
+
+- Implemented (2026-02): async-by-default desktop system font rescan + bounded injected font blob retention (ADR 0259).
+
 ### 2) Separate “policy composition” from “mechanism” in the renderer
 
 Problem:
@@ -130,4 +145,3 @@ Use `docs/workstreams/font-system-v1.md` as the living tracker, with these “au
 - M1: explicit fallback composition rules (script/locale + curated overrides).
 - M2: auditable traces + conformance strings (bundles + diag scripts).
 - M3: optional public shaping knobs (features/variations).
-

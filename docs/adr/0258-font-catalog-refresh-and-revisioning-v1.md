@@ -37,7 +37,7 @@ We want a contract where:
 ## Non-goals
 
 - Guarantee stable, cross-machine font enumeration results.
-- Require a new public “system font rescan” command/effect for v1 (it can be added incrementally).
+- Require that apps expose a user-facing “system font rescan” UI for v1 (the runner may still provide an effect/command).
 - Provide per-face/weight/style enumeration in the runtime contract (family-level is sufficient for v1 pickers).
 
 ## Decision
@@ -68,7 +68,7 @@ Runners should refresh the catalog only on:
 
 - initial renderer availability (startup/adopt),
 - `Effect::TextAddFonts` when fonts were actually added,
-- a future explicit “rescan system fonts” operation (optional, not required for v1).
+- an explicit “rescan system fonts” operation (native-only; may be async).
 
 No periodic scanning is implied by this ADR.
 
@@ -76,6 +76,7 @@ No periodic scanning is implied by this ADR.
 
 - Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Desktop runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
+- Desktop runner (`Effect::TextRescanSystemFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
 - Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`
 - Web runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
 

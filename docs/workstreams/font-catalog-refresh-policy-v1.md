@@ -53,18 +53,29 @@ Candidate shape:
 Status:
 
 - Landed: `Effect::TextRescanSystemFonts` is handled by the desktop runner and ignored on web.
+- Landed: desktop rescan is async-by-default (coalesced; see below).
 
 Evidence:
 
 - Effect contract: `crates/fret-runtime/src/effect.rs` (`TextRescanSystemFonts`)
 - Desktop wiring: `crates/fret-launch/src/runner/desktop/mod.rs`
 - Web wiring: `crates/fret-launch/src/runner/web/effects.rs`
-- Renderer rescan: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::rescan_system_fonts`)
+- Renderer rescan: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::system_font_rescan_seed`, `TextSystem::apply_system_font_rescan_result`)
 
 Open questions:
 
-- Whether rescans should be blocking, async, or “eventually consistent” (likely async).
+- Whether rescans should be blocking, async, or “eventually consistent”.
 - How to keep WASM deterministic (likely “no system rescan”, only `add_fonts`).
+
+Notes:
+
+- Desktop runner runs system font rescans on a background thread by default (request-coalesced). Set
+  `FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC=0` to force a synchronous rescan path (useful for debugging).
+- The renderer retains injected font bytes (from `Effect::TextAddFonts`) to re-register them during a system rescan.
+  This cache is deduped and LRU-evicted under soft caps:
+  - `FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT` (default: `256`, max: `4096`)
+  - `FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES` (default: `268435456` = 256 MiB, max: 2 GiB)
+  If a font blob is evicted, it may not survive a subsequent system rescan.
 
 ## Related docs
 
