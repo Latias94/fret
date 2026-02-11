@@ -95,6 +95,12 @@ Hit-test / routing trace entry fields:
 - `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
 - `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
 
+Click-stable trace entry fields (v2 `click_stable` only):
+
+- `step_index`
+- `stable_required` / `stable_count` / `moved_px` / `max_move_px` / `remaining_frames`
+- `hit_test` (a full `UiHitTestTraceEntryV1` captured at the would-be click point)
+
 Focus trace entry fields:
 
 - `step_index`

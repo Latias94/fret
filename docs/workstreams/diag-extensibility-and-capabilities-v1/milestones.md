@@ -82,7 +82,7 @@ Definition of done:
   - [x] include input arbitration snapshot in hit-test trace (occlusion/capture/barrier roots),
   - [x] include best-effort `blocking_reason` attribution in hit-test trace,
   - [ ] add deeper capture/barrier/occlusion *explainability* (hit path “why”, occluder hints, capture owner),
-  - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
+  - [x] add “chosen point” vs “hit-test path” mismatch evidence (via `evidence.click_stable_trace`).
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),
     - [x] include `text_input_snapshot` (selection/composition/cursor area; from `WindowTextInputSnapshot`),

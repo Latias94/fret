@@ -744,6 +744,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub click_stable_trace: Vec<UiClickStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -864,6 +866,17 @@ pub struct UiHitTestTraceEntryV1 {
     pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiClickStableTraceEntryV1 {
+    pub step_index: u32,
+    pub stable_required: u32,
+    pub stable_count: u32,
+    pub moved_px: f32,
+    pub max_move_px: f32,
+    pub remaining_frames: u32,
+    pub hit_test: UiHitTestTraceEntryV1,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

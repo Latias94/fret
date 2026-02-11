@@ -6,15 +6,15 @@ use fret_core::{
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
-    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiEdgesV1,
-    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
-    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
-    UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
-    UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
+    UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1,
+    UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1,
+    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
+    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -732,6 +732,7 @@ impl UiDiagnosticsService {
                     last_reported_step: Some(0),
                     selector_resolution_trace: Vec::new(),
                     hit_test_trace: Vec::new(),
+                    click_stable_trace: Vec::new(),
                     focus_trace: Vec::new(),
                     shortcut_routing_trace: Vec::new(),
                     last_shortcut_routing_seq: 0,
@@ -1415,32 +1416,91 @@ impl UiDiagnosticsService {
 
                             if state.stable_count >= stable_required {
                                 if let Some(ui) = ui {
-                                    record_hit_test_trace_for_selector(
-                                        &mut active.hit_test_trace,
+                                    let mut hit = build_hit_test_trace_entry_for_selector(
                                         ui,
                                         Some(snapshot),
                                         &target,
                                         step_index as u32,
                                         center,
                                         Some(node),
-                                        Some("click_stable.click"),
+                                        Some("click_stable.probe"),
                                     );
-                                }
-                                output.events.extend(click_events_with_modifiers(
-                                    center,
-                                    button,
-                                    click_count,
-                                    click_modifiers,
-                                ));
-                                active.wait_until = None;
-                                active.screenshot_wait = None;
-                                active.next_step = active.next_step.saturating_add(1);
-                                active.v2_step_state = None;
-                                output.request_redraw = true;
-                                if self.cfg.script_auto_dump {
-                                    force_dump_label = Some(format!(
-                                        "script-step-{step_index:04}-click_stable-click"
+                                    let ok = hit.includes_intended == Some(true);
+                                    if !ok {
+                                        hit.note = Some("click_stable.mismatch".to_string());
+                                        push_hit_test_trace(
+                                            &mut active.hit_test_trace,
+                                            hit.clone(),
+                                        );
+                                        push_click_stable_trace(
+                                            &mut active.click_stable_trace,
+                                            UiClickStableTraceEntryV1 {
+                                                step_index: step_index as u32,
+                                                stable_required,
+                                                stable_count: state.stable_count,
+                                                moved_px: moved,
+                                                max_move_px,
+                                                remaining_frames: state.remaining_frames,
+                                                hit_test: hit,
+                                            },
+                                        );
+
+                                        // Scroll and other transform-only updates can land after the
+                                        // semantics snapshot used to choose `center`. If the target
+                                        // is not actually hit-testable at this point, keep waiting
+                                        // instead of clicking a stale coordinate.
+                                        state.stable_count = 0;
+                                        state.last_center = None;
+                                        state.remaining_frames =
+                                            state.remaining_frames.saturating_sub(1);
+                                        active.v2_step_state =
+                                            Some(V2StepState::ClickStable(state));
+                                        output.request_redraw = true;
+                                    } else {
+                                        hit.note = Some("click_stable.click".to_string());
+                                        push_hit_test_trace(&mut active.hit_test_trace, hit);
+                                        record_overlay_placement_trace(
+                                            &mut active.overlay_placement_trace,
+                                            element_runtime,
+                                            Some(snapshot),
+                                            window,
+                                            step_index as u32,
+                                            "click_stable.click",
+                                        );
+                                        output.events.extend(click_events_with_modifiers(
+                                            center,
+                                            button,
+                                            click_count,
+                                            click_modifiers,
+                                        ));
+                                        active.wait_until = None;
+                                        active.screenshot_wait = None;
+                                        active.next_step = active.next_step.saturating_add(1);
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                        if self.cfg.script_auto_dump {
+                                            force_dump_label = Some(format!(
+                                                "script-step-{step_index:04}-click_stable-click"
+                                            ));
+                                        }
+                                    }
+                                } else {
+                                    output.events.extend(click_events_with_modifiers(
+                                        center,
+                                        button,
+                                        click_count,
+                                        click_modifiers,
                                     ));
+                                    active.wait_until = None;
+                                    active.screenshot_wait = None;
+                                    active.next_step = active.next_step.saturating_add(1);
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                    if self.cfg.script_auto_dump {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-click_stable-click"
+                                        ));
+                                    }
                                 }
                             } else {
                                 state.remaining_frames = state.remaining_frames.saturating_sub(1);
@@ -5746,6 +5806,7 @@ struct ActiveScript {
     last_reported_step: Option<usize>,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
+    click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     focus_trace: Vec<UiFocusTraceEntryV1>,
     shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     last_shortcut_routing_seq: u64,
@@ -10500,9 +10561,47 @@ fn push_hit_test_trace(trace: &mut Vec<UiHitTestTraceEntryV1>, entry: UiHitTestT
     }
 }
 
+const MAX_CLICK_STABLE_TRACE_ENTRIES: usize = 32;
+
+fn click_stable_trace_entry_eq(
+    a: &UiClickStableTraceEntryV1,
+    b: &UiClickStableTraceEntryV1,
+) -> bool {
+    a.step_index == b.step_index
+        && a.stable_required == b.stable_required
+        && a.stable_count == b.stable_count
+        && a.remaining_frames == b.remaining_frames
+        && a.hit_test.note == b.hit_test.note
+        && a.hit_test.position.x_px.to_bits() == b.hit_test.position.x_px.to_bits()
+        && a.hit_test.position.y_px.to_bits() == b.hit_test.position.y_px.to_bits()
+        && a.hit_test.blocking_reason == b.hit_test.blocking_reason
+        && a.hit_test.blocking_root == b.hit_test.blocking_root
+        && a.hit_test.blocking_layer_id == b.hit_test.blocking_layer_id
+}
+
+fn push_click_stable_trace(
+    trace: &mut Vec<UiClickStableTraceEntryV1>,
+    entry: UiClickStableTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| click_stable_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_CLICK_STABLE_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_CLICK_STABLE_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
 fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV1> {
     if active.selector_resolution_trace.is_empty()
         && active.hit_test_trace.is_empty()
+        && active.click_stable_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
         && active.overlay_placement_trace.is_empty()
@@ -10514,6 +10613,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
     Some(UiScriptEvidenceV1 {
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
+        click_stable_trace: active.click_stable_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
         overlay_placement_trace: active.overlay_placement_trace.clone(),
@@ -11132,6 +11232,27 @@ fn record_hit_test_trace_for_selector(
     intended: Option<&fret_core::SemanticsNode>,
     note: Option<&str>,
 ) {
+    let entry = build_hit_test_trace_entry_for_selector(
+        ui,
+        semantics_snapshot,
+        selector,
+        step_index,
+        position,
+        intended,
+        note,
+    );
+    push_hit_test_trace(trace, entry);
+}
+
+fn build_hit_test_trace_entry_for_selector(
+    ui: &UiTree<App>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    selector: &UiSelectorV1,
+    step_index: u32,
+    position: Point,
+    intended: Option<&fret_core::SemanticsNode>,
+    note: Option<&str>,
+) -> UiHitTestTraceEntryV1 {
     const MAX_HIT_NODE_PATH: usize = 64;
 
     let (hit_node, barrier_root, focus_barrier_root, scope_roots, arbitration) =
@@ -11231,38 +11352,35 @@ fn record_hit_test_trace_for_selector(
         (Some("miss"), None, None)
     };
 
-    push_hit_test_trace(
-        trace,
-        UiHitTestTraceEntryV1 {
-            step_index,
-            selector: selector.clone(),
-            position: UiPointV1 {
-                x_px: position.x.0,
-                y_px: position.y.0,
-            },
-            intended_node_id,
-            intended_test_id,
-            intended_bounds,
-            hit_node_id,
-            hit_node_path,
-            hit_semantics_node_id,
-            hit_semantics_test_id,
-            includes_intended,
-            hit_path_contains_intended,
-            blocking_reason: blocking_reason.map(|s| s.to_string()),
-            blocking_root,
-            blocking_layer_id,
-            barrier_root,
-            focus_barrier_root,
-            pointer_occlusion: Some(pointer_occlusion),
-            pointer_occlusion_layer_id,
-            pointer_capture_active: Some(arbitration.pointer_capture_active),
-            pointer_capture_layer_id,
-            pointer_capture_multiple_layers: Some(arbitration.pointer_capture_multiple_layers),
-            scope_roots,
-            note: note.map(|s| s.to_string()),
+    UiHitTestTraceEntryV1 {
+        step_index,
+        selector: selector.clone(),
+        position: UiPointV1 {
+            x_px: position.x.0,
+            y_px: position.y.0,
         },
-    );
+        intended_node_id,
+        intended_test_id,
+        intended_bounds,
+        hit_node_id,
+        hit_node_path,
+        hit_semantics_node_id,
+        hit_semantics_test_id,
+        includes_intended,
+        hit_path_contains_intended,
+        blocking_reason: blocking_reason.map(|s| s.to_string()),
+        blocking_root,
+        blocking_layer_id,
+        barrier_root,
+        focus_barrier_root,
+        pointer_occlusion: Some(pointer_occlusion),
+        pointer_occlusion_layer_id,
+        pointer_capture_active: Some(arbitration.pointer_capture_active),
+        pointer_capture_layer_id,
+        pointer_capture_multiple_layers: Some(arbitration.pointer_capture_multiple_layers),
+        scope_roots,
+        note: note.map(|s| s.to_string()),
+    }
 }
 
 fn select_semantics_node_with_trace<'a>(
