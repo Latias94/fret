@@ -55,15 +55,24 @@ impl ElementHostWidget {
             return;
         };
 
-        if let ElementInstance::PointerRegion(props) = instance
-            && matches!(
-                event,
-                Event::Pointer(fret_core::PointerEvent::Down { .. })
-                    | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                    | Event::PointerCancel(_)
-            )
-        {
-            pointer_region::handle_pointer_region(self, cx, window, props, event);
+        if matches!(
+            event,
+            Event::Pointer(fret_core::PointerEvent::Down { .. })
+                | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                | Event::PointerCancel(_)
+        ) {
+            match instance {
+                ElementInstance::PointerRegion(props) => {
+                    pointer_region::handle_pointer_region(self, cx, window, props, event);
+                }
+                ElementInstance::Scroll(props) => {
+                    let _ = scroll::handle_scroll(self, cx, window, props, event);
+                }
+                ElementInstance::VirtualList(props) => {
+                    let _ = scroll::handle_virtual_list(self, cx, window, props, event);
+                }
+                _ => {}
+            }
         }
     }
 
