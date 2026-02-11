@@ -164,7 +164,8 @@ Key ideas to borrow:
     wasm/bundled-only); supports both generic and named family stacks.
   - Next: mixed-script conformance test coverage + explicit policy “explainability” hooks (diagnostics)
 - M2 (implemented, partial): picker metadata (axes + monospace hint) is available via `FontCatalogMetadata`.
-  - Next: settings UI adoption + explicit refresh/invalidation policy and caching.
+  - Next: settings UI adoption + explicit refresh/invalidation policy and caching (tracked in
+    `docs/workstreams/font-catalog-refresh-policy-v1.md` and ADR 0258).
 - M3 (optional): public shaping knobs (OpenType features + variation axes) and serialized settings.
 
 ## Options (tradeoffs)

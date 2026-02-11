@@ -14,20 +14,22 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-02-10
-- ADR count (numbered): 228
+- Last updated: 2026-02-11
+- ADR count (numbered): 232
 
-- Aligned: 88
-- Aligned (with known gaps): 74
+- Aligned: 93
+- Aligned (with known gaps): 77
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 16
-- Partially aligned: 31
+- Not implemented: 9
+- Partially aligned: 33
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0258-font-catalog-refresh-and-revisioning-v1.md`](0258-font-catalog-refresh-and-revisioning-v1.md) | Proposed | Aligned (with known gaps) | Catalog revisioning is now “effective content changed”, not “refresh attempted”: `crates/fret-runtime/src/font_bootstrap.rs` (`apply_font_catalog_update_with_metadata`) only bumps revisions when entries differ, and keeps `TextFontFamilyConfig` seeding independent. Renderer catalog enumeration + family lookups are cached: `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`all_font_names_cache`, `all_font_catalog_entries_cache`, `family_id_cache_lower`). Gaps: no explicit “rescan system fonts” effect/command; refresh triggers are still runner-specific and not surfaced in end-user settings UI. |
+| [`0257-font-selection-fallback-and-variable-font-instances-v1.md`](0257-font-selection-fallback-and-variable-font-instances-v1.md) | Proposed | Aligned (with known gaps) | Variable font instance identity is carried end-to-end (normalized coords + synthesis participate in face keys and raster output): `crates/fret-render-wgpu/src/text/mod.rs` (`FontFaceKey`, `ensure_parley_glyph`) + tests (`variable_font_weight_changes_face_key_and_raster_output`, `synthesis_skew_participates_in_face_key_and_raster_output`). Missing-glyph selection is auditable via bundle-scoped traces: `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`), `crates/fret-render-wgpu/src/text/mod.rs` (`font_trace_snapshot`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`. Mixed-script bundled-only fallback conformance tests exist. Gaps: fallback policy composition (script/locale + curated overrides) needs more explicit, documented rules and additional conformance coverage on system-font builds. |
 | [`0219-state-driven-style-resolution-v1.md`](0219-state-driven-style-resolution-v1.md) | Proposed | Aligned (with known gaps) | Adds a minimal “state → style” primitive for ecosystem component libraries: `WidgetStates` and `WidgetStateProperty<T>` (last-match wins), plus a small color derivation fallback (`ColorFallback::ThemeTokenAlphaMul`). Evidence: `ecosystem/fret-ui-kit/src/style/{state.rs,tokens.rs,tests.rs,slots.rs}`, `docs/shadcn-style-override-patterns.md`, `ecosystem/fret-ui-shadcn/src/{button,checkbox,combobox,input,item,navigation_menu,radio_group,select,slider,switch,tabs,toggle,toggle_group}.rs`, `ecosystem/fret-ui-shadcn/src/{dropdown_menu,menubar}.rs`, `ecosystem/fret-ui-material3/src/{button,checkbox,icon_button,radio,switch,tabs,text_field}.rs`, `docs/workstreams/state-driven-style-resolution-v1.md`. Gaps: adoption is incomplete outside the shadcn core control set; some components still resolve state styling ad-hoc and have no public `*Style` override surface. |
 | [`0220-ecosystem-style-override-surface-v1.md`](0220-ecosystem-style-override-surface-v1.md) | Proposed | Aligned (with known gaps) | Defines a stable per-component `*Style` override surface for ecosystem component libraries, with partial per-state overrides via `Option<WidgetStateProperty<Option<T>>>` and shallow right-biased `merged()` semantics. Evidence: `docs/shadcn-style-override-patterns.md`, `ecosystem/fret-ui-shadcn/src/{button,checkbox,combobox,input,item,navigation_menu,radio_group,select,slider,switch,tabs,toggle,toggle_group}.rs`, `ecosystem/fret-ui-material3/src/{button,checkbox,icon_button,radio,switch,tabs,text_field}.rs`, `ecosystem/fret-ui-kit/src/style/slots.rs`. Gaps: Material3 and future ecosystems still need to adopt the public `*Style` surface broadly (tracked in `docs/workstreams/material3-style-api-alignment-v1.md`). |
 | [`0222-semantics-decorators-and-attach-semantics-v1.md`](0222-semantics-decorators-and-attach-semantics-v1.md) | Accepted | Aligned | `AnyElement::attach_semantics(...)` is implemented as a layout-transparent semantics decoration merged during snapshot production. Evidence: `crates/fret-ui/src/element.rs` (`SemanticsDecoration`, `AnyElement::attach_semantics`), `crates/fret-ui/src/declarative/mount.rs` (persist decoration in `ElementRecord`), `crates/fret-ui/src/declarative/host_widget/semantics.rs` (apply decoration), tests: `crates/fret-ui/src/declarative/tests/{layout.rs,semantics.rs}`. Extension: v2 adds state flags + relations via [`0227-semantics-decoration-states-and-relations-v2.md`](0227-semantics-decoration-states-and-relations-v2.md). |

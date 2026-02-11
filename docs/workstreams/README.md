@@ -62,6 +62,8 @@ Active workstreams:
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
+- `docs/workstreams/font-system-v1.md`
+- `docs/workstreams/font-catalog-refresh-policy-v1.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/imui-authoring-facade-v2.md`
