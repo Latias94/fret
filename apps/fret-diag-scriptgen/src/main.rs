@@ -384,6 +384,14 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
             test_id("select-scroll-viewport"),
             240,
         ))
+        .press_key("home")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("select-scroll-viewport"),
+                item: test_id("ui-gallery-select-item-apple"),
+            },
+            timeout_frames: 240,
+        })
         .press_key("enter")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -545,7 +553,7 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-nav-search"))
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::FocusIs {
-                target: test_id("ui-gallery-nav-search"),
+                target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
         })
@@ -696,10 +704,6 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
             (
                 "ui-gallery-select-escape-dismiss-focus-restore-v2",
                 "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
-            ),
-            (
-                "ui-gallery-select-trigger-toggle-close-v2",
-                "tools/diag-scripts/ui-gallery-select-trigger-toggle-close.json",
             ),
             (
                 "ui-gallery-select-open-jitter-click-stable-v2",

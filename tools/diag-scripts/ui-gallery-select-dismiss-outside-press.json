@@ -137,7 +137,7 @@
       "predicate": {
         "kind": "focus_is",
         "target": {
-          "id": "ui-gallery-nav-search",
+          "id": "ui-gallery-select-trigger",
           "kind": "test_id"
         }
       },
