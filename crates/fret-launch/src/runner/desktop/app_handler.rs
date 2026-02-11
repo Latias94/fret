@@ -290,6 +290,64 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         if self.context.is_some() {
+            let Some(context) = self.context.as_ref() else {
+                return;
+            };
+
+            let surface_usage = {
+                let base = self.diag_bundle_screenshots.surface_usage();
+                #[cfg(feature = "diag-screenshots")]
+                {
+                    if self.diag_screenshots.is_some() {
+                        base | wgpu::TextureUsages::COPY_SRC
+                    } else {
+                        base
+                    }
+                }
+                #[cfg(not(feature = "diag-screenshots"))]
+                {
+                    base
+                }
+            };
+
+            for (app_window, state) in self.windows.iter_mut() {
+                if state.surface.is_some() {
+                    continue;
+                }
+
+                let surface = match context.create_surface(state.window.clone()) {
+                    Ok(surface) => surface,
+                    Err(e) => {
+                        error!(window = ?app_window, error = ?e, "failed to recreate surface");
+                        continue;
+                    }
+                };
+
+                let size = state.window.surface_size();
+                let surface_state = match SurfaceState::new_with_usage(
+                    &context.adapter,
+                    &context.device,
+                    surface,
+                    size.width,
+                    size.height,
+                    surface_usage,
+                ) {
+                    Ok(state) => state,
+                    Err(e) => {
+                        error!(
+                            window = ?app_window,
+                            error = ?e,
+                            "failed to configure recreated surface"
+                        );
+                        continue;
+                    }
+                };
+
+                state.surface = Some(surface_state);
+                state.window.request_redraw();
+            }
+
+            self.drain_effects(event_loop);
             return;
         }
 
@@ -413,6 +471,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.driver.init(&mut self.app, main_window);
         self.app.request_redraw(main_window);
         self.drain_effects(event_loop);
+    }
+
+    fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        for (_app_window, state) in self.windows.iter_mut() {
+            state.surface = None;
+            state.pending_surface_resize = None;
+        }
+        self.raf_windows.clear();
     }
 
     fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
@@ -890,6 +956,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
+                    let Some(surface) = state.surface.as_mut() else {
+                        return;
+                    };
 
                     let capturing = self
                         .renderdoc
@@ -1051,10 +1120,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
                     let draw_result = (|| -> Result<(), fret_render::RenderError> {
-                        let (frame, view) =
-                            state.surface.get_current_frame_view().map_err(|source| {
-                                fret_render::RenderError::SurfaceAcquireFailed { source }
-                            })?;
+                        let (frame, view) = surface.get_current_frame_view().map_err(|source| {
+                            fret_render::RenderError::SurfaceAcquireFailed { source }
+                        })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -1064,12 +1132,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             &context.device,
                             &context.queue,
                             fret_render::RenderSceneParams {
-                                format: state.surface.format(),
+                                format: surface.format(),
                                 target_view: &view,
                                 scene: &state.scene,
                                 clear: self.config.clear_color,
                                 scale_factor,
-                                viewport_size: state.surface.size(),
+                                viewport_size: surface.size(),
                             },
                         );
                         if render_text_diag_enabled {
@@ -1106,8 +1174,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 &context.device,
                                 window_ffi,
                                 &frame.texture,
-                                state.surface.format(),
-                                state.surface.size(),
+                                surface.format(),
+                                surface.size(),
                             ) {
                                 cmd_buffers.push(cmd);
                                 screenshot_inflight = Some(inflight);
@@ -1120,8 +1188,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 self.diag_bundle_screenshots.begin_readback(
                                     &context.device,
                                     &frame.texture,
-                                    state.surface.format(),
-                                    state.surface.size(),
+                                    surface.format(),
+                                    surface.size(),
                                 )
                         {
                             cmd_buffers.push(copy_cmd);
@@ -1149,7 +1217,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 &context.device,
                                 pending,
                                 &dir,
-                                state.surface.format(),
+                                surface.format(),
                             );
                         }
 
@@ -1169,9 +1237,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 source: wgpu::SurfaceError::Lost,
                             } => {
                                 let size = state.window.surface_size();
-                                state
-                                    .surface
-                                    .resize(&context.device, size.width, size.height);
+                                surface.resize(&context.device, size.width, size.height);
                                 state.window.request_redraw();
                                 self.raf_windows.insert(app_window);
                                 return;
@@ -1180,9 +1246,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 source: wgpu::SurfaceError::Outdated,
                             } => {
                                 let size = state.window.surface_size();
-                                state
-                                    .surface
-                                    .resize(&context.device, size.width, size.height);
+                                surface.resize(&context.device, size.width, size.height);
                                 state.window.request_redraw();
                                 self.raf_windows.insert(app_window);
                                 return;

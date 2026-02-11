@@ -1119,7 +1119,7 @@ struct WindowRuntime<S> {
     window: Arc<dyn Window>,
     accessibility: Option<accessibility::WinitAccessibility>,
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
-    surface: SurfaceState<'static>,
+    surface: Option<SurfaceState<'static>>,
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
     /// Coalesced resizes awaiting application at the next frame boundary.
@@ -3557,7 +3557,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window,
                 accessibility,
                 last_accessibility_snapshot: None,
-                surface,
+                surface: Some(surface),
                 scene: Scene::default(),
                 platform: fret_runner_winit::WinitPlatform {
                     wheel: fret_runner_winit::WheelConfig {
@@ -3733,11 +3733,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
-        let (cur_w, cur_h) = state.surface.size();
+        let Some(surface) = state.surface.as_mut() else {
+            return;
+        };
+        let (cur_w, cur_h) = surface.size();
         if cur_w == width.max(1) && cur_h == height.max(1) {
             return;
         }
-        state.surface.resize(&context.device, width, height);
+        surface.resize(&context.device, width, height);
     }
 
     fn close_window(&mut self, window: fret_core::AppWindowId) -> bool {
