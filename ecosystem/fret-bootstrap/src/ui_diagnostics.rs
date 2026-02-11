@@ -11311,6 +11311,47 @@ fn build_hit_test_trace_entry_for_selector(
         .pointer_capture_layer
         .map(|id| id.data().as_ffi());
 
+    let pointer_occlusion_root = pointer_occlusion_layer_id.and_then(|layer_id| {
+        scope_roots
+            .iter()
+            .find(|r| r.kind == "layer_root" && r.layer_id == Some(layer_id))
+            .map(|r| r.root)
+    });
+    let (
+        pointer_occlusion_node_id,
+        pointer_occlusion_test_id,
+        pointer_occlusion_role,
+        pointer_occlusion_bounds,
+    ) = pointer_occlusion_root
+        .map(|root| {
+            let node = NodeId::from(KeyData::from_ffi(root));
+            let mut test_id: Option<String> = None;
+            let mut role: Option<String> = None;
+            let mut bounds: Option<UiRectV1> = None;
+            if let Some(snapshot) = semantics_snapshot {
+                if let Some(n) = snapshot.nodes.iter().find(|n| n.id == node) {
+                    test_id = n.test_id.clone();
+                    role = Some(semantics_role_label(n.role).to_string());
+                    bounds = Some(UiRectV1 {
+                        x_px: n.bounds.origin.x.0,
+                        y_px: n.bounds.origin.y.0,
+                        w_px: n.bounds.size.width.0,
+                        h_px: n.bounds.size.height.0,
+                    });
+                }
+            }
+            if bounds.is_none() {
+                bounds = ui.debug_node_bounds(node).map(|r| UiRectV1 {
+                    x_px: r.origin.x.0,
+                    y_px: r.origin.y.0,
+                    w_px: r.size.width.0,
+                    h_px: r.size.height.0,
+                });
+            }
+            (Some(root), test_id, role, bounds)
+        })
+        .unwrap_or((None, None, None, None));
+
     let is_ok = includes_intended == Some(true) || hit_path_contains_intended == Some(true);
     let (blocking_reason, blocking_root, blocking_layer_id) = if is_ok {
         (None, None, None)
@@ -11464,6 +11505,10 @@ fn build_hit_test_trace_entry_for_selector(
         focus_barrier_root,
         pointer_occlusion: Some(pointer_occlusion),
         pointer_occlusion_layer_id,
+        pointer_occlusion_node_id,
+        pointer_occlusion_test_id,
+        pointer_occlusion_role,
+        pointer_occlusion_bounds,
         pointer_capture_active: Some(arbitration.pointer_capture_active),
         pointer_capture_layer_id,
         pointer_capture_multiple_layers: Some(arbitration.pointer_capture_multiple_layers),

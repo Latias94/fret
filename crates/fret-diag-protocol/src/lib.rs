@@ -861,6 +861,18 @@ pub struct UiHitTestTraceEntryV1 {
     pub pointer_occlusion: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pointer_occlusion_layer_id: Option<u64>,
+    /// Best-effort pointer occlusion owner (in-run references only).
+    ///
+    /// When `pointer_occlusion_layer_id` is present, these fields attempt to resolve the layer
+    /// root to a semantics node for easier triage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_node_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pointer_capture_active: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
