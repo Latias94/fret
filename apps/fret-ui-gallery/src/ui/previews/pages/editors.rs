@@ -3379,6 +3379,13 @@ pub(in crate::ui) fn preview_text_measure_overlay(
             height: Px(56.0),
         },
         Case {
+            label: "Mixed script fallback (Latin + CJK + emoji)",
+            text: "m你\u{1F600}",
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            height: Px(56.0),
+        },
+        Case {
             label: "Wrap=Word, Overflow=Clip (expect multi-line height growth)",
             text: "Word wrap should break on spaces and increase measured height when max_width is tight.",
             wrap: TextWrap::Word,
