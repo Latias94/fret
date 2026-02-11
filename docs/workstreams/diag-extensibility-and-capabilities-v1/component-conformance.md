@@ -34,11 +34,17 @@ Examples of “good invariants”:
 
 - open/close lifecycle: trigger opens, Escape/outside-press dismisses,
 - focus behavior: close restores focus predictably,
-- selection outcome: commit updates the trigger label/value; disabled items do not commit,
- - selection outcome: commit persists selection state; disabled items do not commit,
+- selection outcome: commit updates selection state; disabled items do not commit,
 - roving/typeahead: active item updates as expected (and skips disabled items),
 - placement sanity: content bounds stay within window bounds; chosen side/align is explainable under collisions,
 - routing correctness: injected clicks/keys either land or emit a trace explaining barriers/capture/occlusion.
+
+Notes:
+
+- Avoid invariants that depend on label text when running with redaction enabled (use `selected_is` and other
+  flag-based predicates instead).
+- For item-aligned Select positioning, the overlay can cover the trigger; treat “click trigger toggles close” as an
+  optional behavior (prefer Escape / outside-press invariants).
 
 ## Recommended testing layers (stack, not one tool)
 

@@ -118,9 +118,18 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
 
 - [x] Add a component conformance playbook document (invariants-first, evidence-first).
 - [ ] Turn the shadcn `Select` suite into a reference-quality example:
+  - [x] Keep the suite redaction-friendly (`FRET_DIAG_REDACT_TEXT=1`):
+    - [x] add `selected_is` predicate and migrate selection assertions off label text.
+  - [x] Stabilize injected clicks for composed widgets:
+    - [x] allow `click_stable` to accept “hit path contains intended” (intended child intercepts input).
+  - [x] Make listbox-style predicates portable across scroll/viewport implementations:
+    - [x] ensure Select scroll viewport exposes `active_descendant_element` semantics.
+  - [x] Ensure keyboard roving keeps the active item visible:
+    - [x] scroll active option into view for jump keys (e.g. Home/End).
   - [ ] ensure stable `test_id` for trigger/content/items (value-stable, not index-stable),
   - [ ] cover: open/close, selection commit, disabled option, roving/typeahead, outside-press/Escape dismiss,
     focus restore, wheel scroll stability, collision/placement sanity.
+  - [ ] Optional: decide whether “click trigger toggles close” is required under item-aligned positioning.
 - [ ] Make suites run `diag lint` automatically (and fail on error-level findings):
   - [x] `fretboard diag suite` runs bundle lint by default (use `--no-lint` to disable).
 
@@ -139,7 +148,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
 - [ ] Add a small smoke suite for CI that:
   - [ ] avoids pixel assertions by default,
   - [ ] uses only `test_id`/role selectors,
-  - [ ] runs with predictable timeouts.
+  - [ ] runs with predictable timeouts (document a recommended `--timeout-ms` baseline).
 - [ ] Add checks that protect contract evolution:
   - [ ] script schema validation for the smoke suite,
   - [ ] normalization check (avoid “random diff churn”).

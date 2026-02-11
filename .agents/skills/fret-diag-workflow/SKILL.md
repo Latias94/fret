@@ -5,22 +5,12 @@ description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted
 
 # Fret diag workflow
 
-## When to use
-
-Use this skill when you need:
-
-- A **repro script** for a flaky/self-drawn UI bug.
-- A **shareable artifact** (bundle + optional screenshots) for triage.
-- A **CI-friendly gate** (script + assertions + lint/check outputs).
-
-If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
-If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
-
 ## Quick start
 
 - Native (recommended): run a script and launch the app:
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
-
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --timeout-ms 240000 --pack --launch -- cargo run -p fret-ui-gallery --release"`
+- Suite run (batch scripts):
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
 - Web/WASM: see `references/web-runner.md`.
 
 ## Common commands (copy/paste)
@@ -34,7 +24,7 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
     - `fretboard diag script lint tools/diag-scripts/ui-gallery-select-*.json`
 
 - Run + collect artifacts (recommended):
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; cargo run -p fretboard -- diag run <script.json> --launch -- <cmd...>"`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag run <script.json> --timeout-ms 240000 --launch -- <cmd...>"`
   - Use `FRET_DIAG_SCREENSHOTS=1` when the script captures screenshots.
 
 - Suite runs (batch scripts):
@@ -80,8 +70,10 @@ Where capabilities come from:
 
 - `capture_screenshot` without `FRET_DIAG_SCREENSHOTS=1`.
 - Pixel/coordinate targeting instead of `test_id` selectors.
+- Scripts that depend on label text while running with redaction enabled (`FRET_DIAG_REDACT_TEXT=1`).
 - Running a binary not wired through the diagnostics driver (no bundles/scripts).
 - Using sleeps instead of `click_stable` / `wait_bounds_stable`.
+- Windows: a previously-launched `fret-ui-gallery.exe` can keep `target/release/*.exe` locked during rebuilds.
 
 ## Related skills
 

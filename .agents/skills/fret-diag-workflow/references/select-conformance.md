@@ -11,6 +11,7 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
   - close restores focus predictably.
 - Selection outcome:
   - click/keyboard commit updates the selected state (and the next open highlights the selection),
+  - keep gates redaction-friendly: prefer `selected_is` / `active_item_is` over label text,
   - trigger label update can be verified via screenshot-based scripts when needed,
   - disabled items do not commit.
 - Routing correctness:
@@ -34,7 +35,7 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
 
 ## Run the suite
 
-- `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
+- `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
 
 ## Typed script template (optional)
 
