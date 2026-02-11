@@ -7,6 +7,9 @@ pub(crate) use web_golden_shadcn::*;
 #[path = "../support/web_query.rs"]
 mod web_query;
 
+#[path = "../support/web_portals.rs"]
+mod web_portals;
+
 pub(crate) fn web_find_by_data_slot_and_state<'a>(
     root: &'a WebNode,
     slot: &str,
@@ -23,13 +26,8 @@ pub(crate) fn web_portal_node_by_data_slot<'a>(
     theme: &'a WebGoldenTheme,
     slot: &str,
 ) -> &'a WebNode {
-    for portal in &theme.portals {
+    for portal in web_portals::portal_roots(theme) {
         if let Some(found) = web_find_by_data_slot(portal, slot) {
-            return found;
-        }
-    }
-    for wrapper in &theme.portal_wrappers {
-        if let Some(found) = web_find_by_data_slot(wrapper, slot) {
             return found;
         }
     }

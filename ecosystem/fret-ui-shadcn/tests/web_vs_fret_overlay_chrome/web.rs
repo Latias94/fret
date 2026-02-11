@@ -8,36 +8,21 @@ mod css_units;
 #[path = "../support/web_query.rs"]
 mod web_query;
 
+#[path = "../support/web_portals.rs"]
+mod web_portals;
+
 pub(super) fn find_portal_by_role<'a>(
     theme: &'a WebGoldenTheme,
     role: &str,
 ) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
-        .or_else(|| {
-            theme
-                .portal_wrappers
-                .iter()
-                .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
-        })
+    web_portals::portal_roots(theme).find(|n| n.attrs.get("role").is_some_and(|v| v == role))
 }
 
 pub(super) fn find_portal_by_slot<'a>(
     theme: &'a WebGoldenTheme,
     slot: &str,
 ) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-        .or_else(|| {
-            theme
-                .portal_wrappers
-                .iter()
-                .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-        })
+    web_portals::portal_roots(theme).find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
 }
 
 pub(super) fn find_by_data_slot_and_state<'a>(
