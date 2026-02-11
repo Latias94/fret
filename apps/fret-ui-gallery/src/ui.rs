@@ -705,6 +705,7 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17598,6 +17599,30 @@ fn preview_ai_transcript_torture(
         header,
         cx.container(container_props, |_cx| vec![transcript]),
     ]
+}
+
+fn preview_ai_context_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let context = ui_ai::Context::new(12_345, 128_000)
+        .model_id("gpt-4.1-mini")
+        .usage(ui_ai::ContextUsage {
+            prompt_tokens: Some(10_000),
+            completion_tokens: Some(2_345),
+            total_tokens: Some(12_345),
+        })
+        .test_id_trigger("ui-ai-context-demo-trigger")
+        .test_id_content("ui-ai-context-demo-content")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Context (AI Elements)"), context],
+    )]
 }
 
 fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {

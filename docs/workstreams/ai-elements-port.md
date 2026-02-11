@@ -83,6 +83,7 @@ an interactive chat demo:
 - `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
 - `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
 - `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
+- `Context`: AI Elements-aligned context usage hovercard surface (percent trigger + progress content).
 - `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
 - `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Feature-gated native embedding exists via `wry` (see `docs/workstreams/webview-wry-v1.md`); chrome-only remains the default when the backend is not enabled.
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
@@ -101,6 +102,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
+  - `AI context (demo)` (`ai_context_demo`): `Context` hovercard demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:

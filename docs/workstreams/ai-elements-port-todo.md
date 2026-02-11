@@ -59,7 +59,7 @@ Status legend:
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
 | `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
-| `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
+| `context` | Prototype | `fret-ui-ai` | Ported as a hovercard disclosure (`Context`) with a percent trigger and a progress+usage breakdown content; app owns the data model. |
 | `plan` | Prototype | `fret-ui-ai` | Ported as `Plan*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`). |
 | `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
 | `task` | Not started | `fret-ui-ai` | Optional; depends on “agent/task” UIs. |
@@ -202,6 +202,10 @@ Existing gates (UI Gallery `ai_tool_demo`):
 Existing gates (UI Gallery `ai_model_selector_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
+
+Existing gates (UI Gallery `ai_context_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
 
 Existing gates (UI Gallery `ai_web_preview_demo`):
 

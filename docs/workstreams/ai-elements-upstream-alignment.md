@@ -63,6 +63,7 @@ Legend:
 | `chain-of-thought.tsx` | `fret-ui-ai` | `chain_of_thought.rs` | Ported (prototype) | Step-list disclosure surface. |
 | `checkpoint.tsx` | `fret-ui-ai` | `checkpoint.rs` | Ported (prototype) | Basic alignment. |
 | `confirmation.tsx` | `fret-ui-ai` | `confirmation.rs` | Ported (prototype) | Approve/deny policy surface. |
+| `context.tsx` | `fret-ui-ai` | `context.rs` | Ported (prototype) | Context usage hovercard (percent + progress + compact counts). |
 | `plan.tsx` | `fret-ui-ai` | `plan.rs` | Ported (prototype) | Plan item list outcomes. |
 | `shimmer.tsx` | `fret-ui-ai` | `shimmer.rs` | Ported (prototype) | Animated shimmer text surface. |
 | `artifact.tsx` | `fret-ui-ai` | `artifact.rs` | Ported (prototype) | Artifact container chrome. |
@@ -83,7 +84,6 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 
 - `agent.tsx`
 - `audio-player.tsx`
-- `context.tsx`
 - `jsx-preview.tsx` (likely out of scope for Rust)
 - `open-in-chat.tsx`
 - `package-info.tsx`
@@ -107,4 +107,3 @@ $rsNames = (Get-ChildItem $rs -File -Filter '*.rs').BaseName | Where-Object { $_
 
 'missing:'; $upNorm | Where-Object { $rsNames -notcontains $_ } | Sort-Object
 ```
-

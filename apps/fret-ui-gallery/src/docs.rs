@@ -588,6 +588,23 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_CONTEXT_DEMO: &str = r#"
+## AI context (demo)
+
+This page demonstrates the AI Elements-aligned `Context` hovercard surface:
+
+- percent trigger,
+- progress + compact token counts in the content.
+
+The data model is app-owned; this surface is presentation-only.
+"#;
+
+pub(crate) const USAGE_AI_CONTEXT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Context;
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

@@ -1182,32 +1182,36 @@ impl WebPreviewConsole {
         let (logs, backend_logs_present) = {
             let mut out: Vec<WebPreviewConsoleLog> = self.logs.iter().cloned().collect();
 
+            let mut backend_logs_present = false;
+
             #[cfg(feature = "webview")]
-            let backend_entries = if self.backend_logs {
-                controller
-                    .backend
-                    .as_ref()
-                    .map(|b| webview_console_entries(cx.app, b.id))
-                    .unwrap_or_default()
-            } else {
-                Vec::new()
-            };
-            #[cfg(not(feature = "webview"))]
-            let backend_entries: Vec<fret_webview::WebViewConsoleEntry> = Vec::new();
-
-            let backend_logs_present = !backend_entries.is_empty();
-
-            for entry in backend_entries {
-                let level = match entry.level {
-                    fret_webview::WebViewConsoleLevel::Log => WebPreviewConsoleLogLevel::Log,
-                    fret_webview::WebViewConsoleLevel::Warn => WebPreviewConsoleLogLevel::Warn,
-                    fret_webview::WebViewConsoleLevel::Error => WebPreviewConsoleLogLevel::Error,
+            {
+                let backend_entries = if self.backend_logs {
+                    controller
+                        .backend
+                        .as_ref()
+                        .map(|b| webview_console_entries(cx.app, b.id))
+                        .unwrap_or_default()
+                } else {
+                    Vec::new()
                 };
-                out.push(WebPreviewConsoleLog {
-                    level,
-                    timestamp: Arc::<str>::from(""),
-                    message: entry.message,
-                });
+
+                backend_logs_present = !backend_entries.is_empty();
+
+                for entry in backend_entries {
+                    let level = match entry.level {
+                        fret_webview::WebViewConsoleLevel::Log => WebPreviewConsoleLogLevel::Log,
+                        fret_webview::WebViewConsoleLevel::Warn => WebPreviewConsoleLogLevel::Warn,
+                        fret_webview::WebViewConsoleLevel::Error => {
+                            WebPreviewConsoleLogLevel::Error
+                        }
+                    };
+                    out.push(WebPreviewConsoleLog {
+                        level,
+                        timestamp: Arc::<str>::from(""),
+                        message: entry.message,
+                    });
+                }
             }
 
             (
