@@ -115,6 +115,7 @@ pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
 pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
 pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
 pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
+pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -273,6 +274,7 @@ pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_conte
 pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
 pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str = "ui_gallery.nav.select.ai_package_info_demo";
 pub(crate) const CMD_NAV_AI_OPEN_IN_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_open_in_chat_demo";
+pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -909,6 +911,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "open", "chat", "menu", "providers", "url", "demo"],
                 docs::DOC_AI_OPEN_IN_CHAT_DEMO,
                 docs::USAGE_AI_OPEN_IN_CHAT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TASK_DEMO,
+                "AI Task (Demo)",
+                "AI Elements Task / Collapsible Task Demo",
+                "fret-ui-ai (task collapsible)",
+                CMD_NAV_AI_TASK_DEMO,
+                &["ai", "task", "collapsible", "search", "demo"],
+                docs::DOC_AI_TASK_DEMO,
+                docs::USAGE_AI_TASK_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,

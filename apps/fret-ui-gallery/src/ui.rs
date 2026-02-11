@@ -709,6 +709,7 @@ fn page_preview(
         PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
         PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
         PAGE_AI_OPEN_IN_CHAT_DEMO => preview_ai_open_in_chat_demo(cx, theme),
+        PAGE_AI_TASK_DEMO => preview_ai_task_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17803,6 +17804,82 @@ fn preview_ai_open_in_chat_demo(
                 menu,
             ]
         },
+    )]
+}
+
+fn preview_ai_task_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+    use fret_ui::element::{LayoutStyle, TextProps};
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    fn task_text(cx: &mut ElementContext<'_, App>, text: &str) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: Arc::<str>::from(text),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: theme.metric_required("component.text.sm_px"),
+                weight: FontWeight::NORMAL,
+                slant: Default::default(),
+                line_height: Some(theme.metric_required("component.text.sm_line_height")),
+                letter_spacing_em: None,
+            }),
+            color: Some(theme.color_required("muted-foreground")),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+
+    fn file_text(cx: &mut ElementContext<'_, App>, text: &str) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: Arc::<str>::from(text),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: theme.metric_required("component.text.xs_px"),
+                weight: FontWeight::NORMAL,
+                slant: Default::default(),
+                line_height: Some(theme.metric_required("component.text.xs_line_height")),
+                letter_spacing_em: None,
+            }),
+            color: Some(theme.color_required("foreground")),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+
+    let trigger = ui_ai::TaskTrigger::new("Search").test_id("ui-ai-task-demo-trigger");
+
+    let content = ui_ai::TaskContent::new([
+        ui_ai::TaskItem::new([
+            task_text(cx, "Searching in"),
+            ui_ai::TaskItemFile::new([file_text(cx, "src/main.rs")]).into_element(cx),
+        ])
+        .into_element(cx),
+        ui_ai::TaskItem::new([
+            task_text(cx, "Reading"),
+            ui_ai::TaskItemFile::new([file_text(cx, "docs/architecture.md")]).into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .test_id("ui-ai-task-demo-content");
+
+    let task = ui_ai::Task::new(trigger, content)
+        .default_open(false)
+        .test_id_root("ui-ai-task-demo-root")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Task (AI Elements)"), task],
     )]
 }
 

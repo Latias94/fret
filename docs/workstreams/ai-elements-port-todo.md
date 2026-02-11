@@ -62,7 +62,7 @@ Status legend:
 | `context` | Prototype | `fret-ui-ai` | Ported as a hovercard disclosure (`Context`) with a percent trigger and a progress+usage breakdown content; app owns the data model. |
 | `plan` | Prototype | `fret-ui-ai` | Ported as `Plan*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`). |
 | `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
-| `task` | Not started | `fret-ui-ai` | Optional; depends on “agent/task” UIs. |
+| `task` | Prototype | `fret-ui-ai` | Collapsible task surface (`Task*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`. |
 
 ### Code
 

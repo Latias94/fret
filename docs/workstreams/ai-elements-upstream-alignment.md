@@ -80,6 +80,7 @@ Legend:
 | `terminal.tsx` | `fret-ui-ai` | `terminal.rs` | Ported (prototype) | Viewer-only (output + copy/clear + auto-scroll); no PTY/TTY in v1. |
 | `package-info.tsx` | `fret-ui-ai` | `package_info.rs` | Ported (prototype) | Package card (name/change badge + version row + deps list building blocks). |
 | `open-in-chat.tsx` | `fret-ui-ai` | `open_in_chat.rs` | Ported (prototype) | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl` (URLs match upstream). |
+| `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 
 ## Known upstream files not yet ported
 
@@ -90,7 +91,6 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 - `jsx-preview.tsx` (likely out of scope for Rust)
 - `persona.tsx`
 - `sandbox.tsx`
-- `task.tsx`
 - Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
 - Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `transcription.tsx`, `voice-selector.tsx`
 

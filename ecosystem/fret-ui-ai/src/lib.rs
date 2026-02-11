@@ -122,7 +122,8 @@ pub use elements::{
     SchemaDisplayParameters, SchemaDisplayPath, SchemaDisplayProperty, SchemaDisplayRequest,
     SchemaDisplayResponse, SchemaParameter, SchemaParameterLocation, SchemaProperty, Shimmer,
     Snippet, SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock, StackFrame, StackTrace,
-    StackTraceCopyButton, StackTraceFrames, Suggestion, Suggestions, Terminal, TerminalActions,
+    StackTraceCopyButton, StackTraceFrames, Suggestion, Suggestions, Task, TaskContent,
+    TaskController, TaskItem, TaskItemFile, TaskTrigger, Terminal, TerminalActions,
     TerminalClearButton, TerminalContent, TerminalController, TerminalCopyButton, TerminalHeader,
     TerminalStatus, TerminalTitle, Test, TestError, TestErrorMessage, TestErrorStack, TestResults,
     TestResultsContent, TestResultsDuration, TestResultsHeader, TestResultsProgress,
@@ -133,7 +134,8 @@ pub use elements::{
     WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewUrl, parse_stack_trace,
     use_chain_of_thought_controller, use_environment_variables_controller, use_open_in_controller,
     use_package_info_controller, use_plan_controller, use_prompt_input_config,
-    use_prompt_input_controller, use_prompt_input_referenced_sources, use_web_preview_controller,
+    use_prompt_input_controller, use_prompt_input_referenced_sources, use_task_controller,
+    use_web_preview_controller,
 };
 pub use export::messages_to_markdown;
 pub use model::{

@@ -111,6 +111,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`
   - `AI open in chat (demo)` (`ai_open_in_chat_demo`): `OpenIn` provider dropdown demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`
+  - `AI task (demo)` (`ai_task_demo`): `Task` collapsible demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -708,7 +710,7 @@ Legend:
 | `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Done | Test results surfaces + suite disclosure + UI Gallery demo + diag gate. |
 | `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`. |
 | `queue.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Prototype | Queue surfaces + UI Gallery demo + diag gate pass (`tools/diag-scripts/ui-gallery-ai-queue-demo-section-scroll-action.json`); hover uses `HoverRegion` (group-hover parity), list cap uses `ScrollArea` root `max_h`. |
-| `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Defer | Workflow-specific. |
+| `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Prototype | Collapsible task surface (trigger + indented content) + UI Gallery demo + diag gate. |
 | `agent.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/agent.rs` | Defer | Likely app-specific persona chrome. |
 | `persona.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/persona.rs` | Defer | Same. |
 | `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Prototype | Optional; demo page + diag gate exist (`ai_model_selector_demo`, `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`). Provider logos are placeholders (no remote fetch). |

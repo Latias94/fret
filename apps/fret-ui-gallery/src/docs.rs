@@ -658,6 +658,22 @@ use fret_ui_ai::OpenIn;
 ```
 "#;
 
+pub(crate) const DOC_AI_TASK_DEMO: &str = r#"
+## AI task (demo)
+
+This page demonstrates the AI Elements-aligned `Task` collapsible surface:
+
+- a trigger row with title + chevron,
+- an indented content region with a muted left border,
+- lightweight `TaskItem` / `TaskItemFile` building blocks.
+"#;
+
+pub(crate) const USAGE_AI_TASK_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Task, TaskContent, TaskItem, TaskItemFile, TaskTrigger};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

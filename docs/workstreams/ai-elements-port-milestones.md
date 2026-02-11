@@ -114,6 +114,8 @@ Notes:
   - `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
 - `Plan` v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`
+- `Task` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 
