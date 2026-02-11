@@ -11,6 +11,7 @@ This workstream focuses on the *font system* (not the entire text pipeline):
 
 The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.md`.
 Conformance gates for fallback policy changes live in: `docs/workstreams/font-fallback-conformance-v1.md`.
+Audit follow-ups and refactor milestones are tracked in: `docs/workstreams/font-system-audit-zed-parley-xilem-v1.md`.
 
 ## Goals
 
