@@ -1,4 +1,4 @@
-use super::hit_test::hit_test_drop_target;
+use super::hit_test::{hit_test_drop_target, hit_test_split_handle};
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects_with_font, dock_space_regions,
     float_zone, split_tab_bar,

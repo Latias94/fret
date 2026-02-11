@@ -136,6 +136,74 @@ fn drag_update_adjacent_fractions_handle1_keeps_left_panel_stable() {
         layout1.sizes
     );
 }
+
+#[test]
+fn nary_split_handle_hit_test_reports_correct_handle_index() {
+    let mut graph = DockGraph::new();
+
+    let a = graph.insert_node(DockNode::Tabs {
+        tabs: vec![PanelKey::new("test.a")],
+        active: 0,
+    });
+    let b = graph.insert_node(DockNode::Tabs {
+        tabs: vec![PanelKey::new("test.b")],
+        active: 0,
+    });
+    let c = graph.insert_node(DockNode::Tabs {
+        tabs: vec![PanelKey::new("test.c")],
+        active: 0,
+    });
+
+    let fractions = vec![0.33, 0.34, 0.33];
+    let split = graph.insert_node(DockNode::Split {
+        axis: fret_core::Axis::Horizontal,
+        children: vec![a, b, c],
+        fractions: fractions.clone(),
+    });
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(900.0), Px(80.0)));
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let layout = compute_layout_map(
+        &graph,
+        split,
+        bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+    );
+
+    let split_bounds = layout.get(&split).copied().expect("expected split bounds");
+    let computed = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        split_bounds,
+        3,
+        &fractions,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+        &[],
+    );
+    assert_eq!(computed.handle_hit_rects.len(), 2);
+
+    for expected_handle_ix in 0..2 {
+        let rect = computed.handle_hit_rects[expected_handle_ix];
+        let pos = Point::new(
+            Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+            Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+        );
+
+        let handle = hit_test_split_handle(
+            &graph,
+            &layout,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+            pos,
+        )
+        .expect("expected split handle hit");
+
+        assert_eq!(handle.split, split);
+        assert_eq!(handle.axis, fret_core::Axis::Horizontal);
+        assert_eq!(handle.handle_ix, expected_handle_ix);
+    }
+}
 #[test]
 fn same_axis_nested_split_drag_preserves_inner_sibling_width() {
     let mut graph = DockGraph::new();

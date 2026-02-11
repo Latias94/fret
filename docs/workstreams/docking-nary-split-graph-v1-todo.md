@@ -61,9 +61,10 @@ Each TODO is labeled:
   - Gate: `ecosystem/fret-docking/src/dock/tests/drop_hints.rs` includes an edge-insert overlay rect test.
   - Evidence: `ecosystem/fret-docking/src/dock/tests/drop_hints.rs` (`dock_edge_drop_overlay_previews_insert_into_same_axis_split_slot`).
 
-- [ ] DN-P0-ui-002 Ensure split-handle hit-testing works for N-ary splits.
+- [x] DN-P0-ui-002 Ensure split-handle hit-testing works for N-ary splits.
   - Verify `resizable_panel_group::compute_layout` returns N-1 handles and we respect them.
   - Gate: tests in `ecosystem/fret-docking/src/dock/tests/*`.
+  - Evidence: `ecosystem/fret-docking/src/dock/tests/split.rs` (`nary_split_handle_hit_test_reports_correct_handle_index`).
 
 - [x] DN-P0-ui-003 Rework splitter drag update to adjust only adjacent shares.
   - Emit `DockOp::SetSplitFractions` / `Many` updates that preserve other children.
