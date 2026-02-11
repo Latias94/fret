@@ -4,23 +4,19 @@ use super::*;
 mod web_golden_shadcn;
 pub(crate) use web_golden_shadcn::*;
 
+#[path = "../support/web_query.rs"]
+mod web_query;
+
 pub(crate) fn web_find_by_data_slot_and_state<'a>(
     root: &'a WebNode,
     slot: &str,
     state: &str,
 ) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-    })
+    web_query::find_by_data_slot_and_state(root, slot, state)
 }
 
 pub(crate) fn web_find_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-    })
+    web_query::find_by_data_slot(root, slot)
 }
 
 pub(crate) fn web_portal_node_by_data_slot<'a>(

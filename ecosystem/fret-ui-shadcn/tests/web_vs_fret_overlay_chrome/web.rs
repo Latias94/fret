@@ -2,6 +2,9 @@
 mod web_golden_shadcn;
 pub(super) use web_golden_shadcn::*;
 
+#[path = "../support/web_query.rs"]
+mod web_query;
+
 pub(super) fn find_portal_by_role<'a>(
     theme: &'a WebGoldenTheme,
     role: &str,
@@ -39,12 +42,7 @@ pub(super) fn find_by_data_slot_and_state<'a>(
     slot: &str,
     state: &str,
 ) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-    })
+    web_query::find_by_data_slot_and_state(root, slot, state)
 }
 
 pub(super) fn find_by_data_slot_and_state_and_text<'a>(
@@ -53,13 +51,7 @@ pub(super) fn find_by_data_slot_and_state_and_text<'a>(
     state: &str,
     text: &str,
 ) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-            && n.text.as_deref() == Some(text)
-    })
+    web_query::find_by_data_slot_and_state_and_text(root, slot, state, text)
 }
 
 pub(super) fn parse_px(s: &str) -> Option<f32> {
@@ -108,9 +100,7 @@ pub(super) fn web_corner_radii_effective_px(node: &WebNode) -> Option<[f32; 4]> 
 }
 
 pub(super) fn find_by_data_slot<'a>(node: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
-    find_first(node, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-    })
+    web_query::find_by_data_slot(node, slot)
 }
 
 #[derive(Debug, Clone, Copy)]
