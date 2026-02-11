@@ -17,6 +17,12 @@ use parley::fontique::GenericFamily as ParleyGenericFamily;
 pub(crate) mod parley_shaper;
 pub(crate) mod wrapper;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommonFallbackMode {
+    PreferSystemFallback,
+    PreferCommonFallback,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FontCatalogEntryMetadata {
     pub family: String,
@@ -1396,6 +1402,7 @@ pub struct TextSystem {
     common_fallback_config: Vec<String>,
     generic_injected_by_family: HashMap<ParleyGenericFamily, Vec<ParleyFamilyId>>,
     text_locale: Option<String>,
+    common_fallback_mode: CommonFallbackMode,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1938,6 +1945,7 @@ impl TextSystem {
         let mono = first_available_family_id(&mut parley_shaper, default_monospace_candidates());
 
         let measure_shaping_entries = measure_shaping_cache_entries();
+        let common_fallback_mode = Self::platform_default_common_fallback_mode(&parley_shaper);
 
         let mut out = Self {
             parley_shaper,
@@ -1949,6 +1957,7 @@ impl TextSystem {
             common_fallback_config: Vec::new(),
             generic_injected_by_family: HashMap::new(),
             text_locale: None,
+            common_fallback_mode,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1994,23 +2003,46 @@ impl TextSystem {
         out
     }
 
+    fn platform_default_common_fallback_mode(
+        shaper: &crate::text::parley_shaper::ParleyShaper,
+    ) -> CommonFallbackMode {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = shaper;
+            CommonFallbackMode::PreferCommonFallback
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if shaper.system_fonts_enabled() {
+                CommonFallbackMode::PreferSystemFallback
+            } else {
+                CommonFallbackMode::PreferCommonFallback
+            }
+        }
+    }
+
     fn bootstrap_default_generic_families(
         &mut self,
         sans: Option<ParleyFamilyId>,
         serif: Option<ParleyFamilyId>,
         mono: Option<ParleyFamilyId>,
     ) {
-        let suffix = common_fallback_stack_suffix(
-            &self.common_fallback_config,
-            default_common_fallback_families(),
-        );
+        let suffix = match self.common_fallback_mode {
+            CommonFallbackMode::PreferSystemFallback => String::new(),
+            CommonFallbackMode::PreferCommonFallback => common_fallback_stack_suffix(
+                &self.common_fallback_config,
+                default_common_fallback_families(),
+            ),
+        };
         let _ = self.parley_shaper.set_common_fallback_stack_suffix(suffix);
 
         let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        for &family in default_common_fallback_families() {
-            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                if !fallback_ids.contains(&id) {
-                    fallback_ids.push(id);
+        if self.common_fallback_mode == CommonFallbackMode::PreferCommonFallback {
+            for &family in default_common_fallback_families() {
+                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                    if !fallback_ids.contains(&id) {
+                        fallback_ids.push(id);
+                    }
                 }
             }
         }
@@ -2089,10 +2121,27 @@ impl TextSystem {
         self.common_fallback_config
             .clone_from(&config.common_fallback);
 
-        let suffix = common_fallback_stack_suffix(
-            &self.common_fallback_config,
-            default_common_fallback_families(),
-        );
+        let next_mode = match config.common_fallback_injection {
+            fret_core::TextCommonFallbackInjection::PlatformDefault => {
+                Self::platform_default_common_fallback_mode(&self.parley_shaper)
+            }
+            fret_core::TextCommonFallbackInjection::None => {
+                CommonFallbackMode::PreferSystemFallback
+            }
+            fret_core::TextCommonFallbackInjection::CommonFallback => {
+                CommonFallbackMode::PreferCommonFallback
+            }
+        };
+        let mode_changed = self.common_fallback_mode != next_mode;
+        self.common_fallback_mode = next_mode;
+
+        let suffix = match self.common_fallback_mode {
+            CommonFallbackMode::PreferSystemFallback => String::new(),
+            CommonFallbackMode::PreferCommonFallback => common_fallback_stack_suffix(
+                &self.common_fallback_config,
+                default_common_fallback_families(),
+            ),
+        };
         let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(suffix);
 
         let pick_overrides =
@@ -2110,17 +2159,19 @@ impl TextSystem {
         let mono = pick_overrides(self, &config.ui_mono, default_monospace_candidates());
 
         let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
-        for family in &self.common_fallback_config {
-            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                if !fallback_ids.contains(&id) {
-                    fallback_ids.push(id);
+        if self.common_fallback_mode == CommonFallbackMode::PreferCommonFallback {
+            for family in &self.common_fallback_config {
+                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                    if !fallback_ids.contains(&id) {
+                        fallback_ids.push(id);
+                    }
                 }
             }
-        }
-        for &family in default_common_fallback_families() {
-            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                if !fallback_ids.contains(&id) {
-                    fallback_ids.push(id);
+            for &family in default_common_fallback_families() {
+                if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                    if !fallback_ids.contains(&id) {
+                        fallback_ids.push(id);
+                    }
                 }
             }
         }
@@ -2135,7 +2186,7 @@ impl TextSystem {
         changed |= self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
         changed |= self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
 
-        if !changed && !suffix_changed {
+        if !changed && !suffix_changed && !mode_changed {
             return false;
         }
 

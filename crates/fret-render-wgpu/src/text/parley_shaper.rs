@@ -58,18 +58,35 @@ pub(crate) struct ShapedLineLayout {
     pub clusters: Vec<ShapedCluster>,
 }
 
-#[derive(Default)]
 pub(crate) struct ParleyShaper {
     fcx: FontContext,
     lcx: LayoutContext<[u8; 4]>,
     layout: Layout<[u8; 4]>,
     default_locale: Option<String>,
     common_fallback_stack_suffix: String,
+    system_fonts_enabled: bool,
+}
+
+impl Default for ParleyShaper {
+    fn default() -> Self {
+        Self {
+            fcx: FontContext::default(),
+            lcx: LayoutContext::default(),
+            layout: Layout::default(),
+            default_locale: None,
+            common_fallback_stack_suffix: String::new(),
+            system_fonts_enabled: true,
+        }
+    }
 }
 
 impl ParleyShaper {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn system_fonts_enabled(&self) -> bool {
+        self.system_fonts_enabled
     }
 
     pub fn set_default_locale(&mut self, locale_bcp47: Option<String>) -> bool {
@@ -98,6 +115,7 @@ impl ParleyShaper {
                 system_fonts: false,
             });
         out.fcx.source_cache = parley::fontique::SourceCache::default();
+        out.system_fonts_enabled = false;
         out
     }
 

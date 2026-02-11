@@ -71,8 +71,9 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 2) Fallback chain semantics still need conformance + explicit policy composition.
    - Locale is now passed into Parley shaping, enabling fontique’s script+locale fallback on desktop when system fonts
      are present.
-   - Curated/common fallbacks now also apply to named family stacks (not just generic families), improving Web/WASM and
-     “explicit UI font” correctness.
+   - Curated/common fallbacks can be injected into both generic and named family stacks, and this is enabled by default
+     for wasm/bundled-only environments. On desktop, the platform default is to prefer system fallback unless explicitly
+     enabled via settings (`TextFontFamilyConfig.common_fallback_injection`).
    - Remaining work: define and test the exact composition rules (requested stack + script/locale fallback + overrides)
      with a focused mixed-script conformance suite.
 
@@ -122,7 +123,8 @@ Key ideas to borrow:
   deterministic fixture test.
 - M1 (in progress): script + locale fallbacks + curated overrides + `TextFontStackKey` participation.
   - Done: locale plumbing to Parley shaping + cache key bumps (`TextSystem::set_text_locale`)
-  - Done: common fallback stack applied to named family stacks (not only generics)
+  - Done: configurable common-fallback injection policy (platform-default prefers system fallback on desktop, injects on
+    wasm/bundled-only); supports both generic and named family stacks.
   - Next: mixed-script conformance test coverage + explicit policy “explainability” hooks (diagnostics)
 - M2 (implemented, partial): picker metadata (axes + monospace hint) is available via `FontCatalogMetadata`.
   - Next: settings UI adoption + explicit refresh/invalidation policy and caching.

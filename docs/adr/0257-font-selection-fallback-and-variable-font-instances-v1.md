@@ -112,6 +112,7 @@ Font selection uses three layers:
      behavior when system fonts are present.
 3) **Curated/override fallbacks** (`TextFontFamilyConfig.common_fallback` and bundled tiers):
    - used to keep wasm deterministic and to allow apps to enforce “no tofu” baselines.
+   - controlled by `TextFontFamilyConfig.common_fallback_injection` (platform default prefers system fallback on desktop).
 
 The effective fallback policy (including locale) must participate in `TextFontStackKey` so cached text cannot reuse
 stale selection behavior.
