@@ -18,6 +18,14 @@ pub fn snap_px_round(px: Px, scale_factor: f32) -> Px {
     Px((px.0 * sf).round() / sf)
 }
 
+/// Snap a logical pixel coordinate down to the nearest device pixel boundary.
+pub fn snap_px_floor(px: Px, scale_factor: f32) -> Px {
+    let Some(sf) = normalize_scale_factor(scale_factor) else {
+        return px;
+    };
+    Px((px.0 * sf).floor() / sf)
+}
+
 /// Snap a point to device pixel boundaries (rounding each axis).
 pub fn snap_point_round(point: Point, scale_factor: f32) -> Point {
     Point::new(
@@ -69,6 +77,15 @@ mod tests {
         let sf = 1.25;
         let snapped = snap_px_round(px, sf);
         assert_snapped(snapped.0, sf);
+    }
+
+    #[test]
+    fn snap_px_floor_lands_on_device_pixel_boundaries() {
+        let px = Px(10.1);
+        let sf = 1.25;
+        let snapped = snap_px_floor(px, sf);
+        assert_snapped(snapped.0, sf);
+        assert!((snapped.0 * sf) <= (px.0 * sf) + 1e-4);
     }
 
     #[test]

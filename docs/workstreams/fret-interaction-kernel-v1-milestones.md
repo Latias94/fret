@@ -1,0 +1,64 @@
+# Fret Interaction Kernel (v1) — Milestones
+
+## M0 — API + contracts (1–2 days)
+
+Deliverables:
+
+- `ecosystem/fret-interaction` crate exists and builds in the workspace.
+- Public types are documented with explicit coordinate conventions and ownership boundaries.
+- A single math source of truth is locked:
+  - viewport / pan-zoom mapping is canonical in `ecosystem/fret-canvas` (no duplicate mapping math in
+    `fret-interaction`).
+- Unit tests exist for kernel primitives (state machines + threshold/DPI helpers).
+
+Exit criteria:
+
+- `cargo test -p fret-interaction` passes.
+- The workstream doc + TODO doc reflect the chosen boundaries.
+- A one-shot gate script exists and is kept up to date:
+  - `pwsh tools/diag_gate_interaction_kernel_v1.ps1`
+
+## M1 — `imui` floating windows (3–5 days)
+
+Deliverables:
+
+- `imui` floating window drag/resize/activation uses `fret-interaction`.
+- Fractional DPI behavior stays correct:
+  - title bar does not spill into body,
+  - wrapped body text does not overlap following items.
+
+Exit criteria:
+
+- `cargo nextest run -p fret-ui-kit` passes.
+- `fretboard diag run` gates are added/updated for the floating windows demo.
+
+## M2 — `fret-node` viewport helpers (2–4 days)
+
+Deliverables:
+
+- `fret-node` continues to use the canonical `fret-canvas` viewport transform helpers without
+  changing external behavior.
+- Existing viewport conformance tests remain meaningful and pass.
+
+Exit criteria:
+
+- `cargo nextest run -p fret-node viewport_helper_conformance viewport_animation_conformance threshold_zoom_conformance translate_extent_conformance` passes.
+- No new drift is introduced in XyFlow parity surfaces.
+
+## M3 — docking / multi-window parity touchpoints (time-boxed)
+
+Deliverables:
+
+- Identify and unify the minimum required primitives:
+  - drag capture choreography (transparent moving window),
+  - hit-test/hover arbitration hooks.
+- A deterministic scripted repro exists for multi-window hover arbitration while dragging.
+  - Evidence: `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`
+
+Exit criteria:
+
+- A diag repro exists in `tools/diag-scripts/` that guards the parity behavior under a deterministic script.
+- Baseline gate passes (proves the scenario exercised docking drag):
+  - `--check-dock-drag-min 1`
+- Strong hover gate passes (proves cross-window hover was exercised):
+  - `--check-dock-drag-current-windows-min 2`

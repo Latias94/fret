@@ -3244,13 +3244,15 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
+        let allow_fast_wrap_measure =
+            constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
                 wrap: TextWrap::Word | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
-            } if !text.contains('\n') => Some(max_width),
+            } if allow_fast_wrap_measure && !text.contains('\n') => Some(max_width),
             _ => None,
         };
 
@@ -3362,11 +3364,25 @@ impl TextSystem {
                 metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             }
         } else {
-            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                &mut self.parley_shaper,
-                TextInputRef::plain(text, style),
-                normalized_constraints,
-            );
+            // Keep measurement aligned with prepare/paint under fractional scale factors.
+            //
+            // `shape_single_line_metrics` can disagree with full shaping near wrap boundaries when
+            // we also snap vertical layout to device pixels (common on Windows at 125%/150% DPI).
+            // Prefer the full wrapper in that case so layout height matches the prepared blob.
+            let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+            let wrapped = if snap_vertical {
+                crate::text::wrapper::wrap_with_constraints(
+                    &mut self.parley_shaper,
+                    TextInputRef::plain(text, style),
+                    normalized_constraints,
+                )
+            } else {
+                crate::text::wrapper::wrap_with_constraints_measure_only(
+                    &mut self.parley_shaper,
+                    TextInputRef::plain(text, style),
+                    normalized_constraints,
+                )
+            };
             metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
@@ -3430,13 +3446,15 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
+        let allow_fast_wrap_measure =
+            constraints.scale_factor.is_finite() && constraints.scale_factor.fract().abs() <= 1e-4;
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
                 wrap: TextWrap::Word | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
-            } if !rich.text.as_ref().contains('\n') => Some(max_width),
+            } if allow_fast_wrap_measure && !rich.text.as_ref().contains('\n') => Some(max_width),
             _ => None,
         };
 
@@ -3560,15 +3578,28 @@ impl TextSystem {
                 metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             }
         } else {
-            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-                &mut self.parley_shaper,
-                TextInputRef::Attributed {
-                    text: rich.text.as_ref(),
-                    base: base_style,
-                    spans: rich.spans.as_ref(),
-                },
-                normalized_constraints,
-            );
+            let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+            let wrapped = if snap_vertical {
+                crate::text::wrapper::wrap_with_constraints(
+                    &mut self.parley_shaper,
+                    TextInputRef::Attributed {
+                        text: rich.text.as_ref(),
+                        base: base_style,
+                        spans: rich.spans.as_ref(),
+                    },
+                    normalized_constraints,
+                )
+            } else {
+                crate::text::wrapper::wrap_with_constraints_measure_only(
+                    &mut self.parley_shaper,
+                    TextInputRef::Attributed {
+                        text: rich.text.as_ref(),
+                        base: base_style,
+                        spans: rich.spans.as_ref(),
+                    },
+                    normalized_constraints,
+                )
+            };
             metrics_from_wrapped_lines(&wrapped.lines, scale)
         };
 
@@ -5538,6 +5569,57 @@ mod tests {
                 "expected per-line baseline to be pixel-aligned, got {baseline_px}"
             );
         }
+    }
+
+    #[test]
+    fn wrapped_measure_matches_prepare_under_fractional_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content =
+            "This window starts on top of A's overlap target. Then click A's 'Activate' button.";
+        let scale_factor = 1.5_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(160.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let measured = text.measure(content, &style, constraints);
+        let (_blob_id, prepared) = text.prepare(content, &style, constraints);
+
+        let eps = 0.01_f32;
+        assert!(
+            (measured.size.width.0 - prepared.size.width.0).abs() <= eps,
+            "expected measure width to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
+        assert!(
+            (measured.size.height.0 - prepared.size.height.0).abs() <= eps,
+            "expected measure height to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
+        assert!(
+            (measured.baseline.0 - prepared.baseline.0).abs() <= eps,
+            "expected measure baseline to match prepare (scale={scale_factor}), got measured={:?} prepared={:?}",
+            measured,
+            prepared
+        );
     }
 
     #[test]

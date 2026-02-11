@@ -1,7 +1,7 @@
 # imui Ecosystem Facade v3 - TODO Tracker
 
 Status: In progress (M0+ pending)
-Last updated: 2026-02-07
+Last updated: 2026-02-10
 
 This tracker covers:
 
@@ -54,6 +54,8 @@ Exit criteria:
     - Any behavior-changing default must update: this tracker + migration notes in the v3 note.
     - Any perf-sensitive wrapper change must add (or update) a cheap regression gate test.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M0 contract notes: activation + `no_inputs` semantics).
+- [x] IMUIECO3-docs-002 Add explicit ImGui reference anchors and mapping notes.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` ("ImGui Reference Anchors (Audited)").
 
 ---
 
@@ -82,6 +84,95 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
+- [x] IMUIECO3-float-015 Define a click-through policy surface aligned with ImGui `NoMouseInputs`/`NoInputs`.
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiWindowFlags_NoMouseInputs`, `ImGuiWindowFlags_NoInputs`).
+  - Reference: `repo-ref/imgui/imgui.cpp` (hovered-viewport detection expects `ImGuiViewportFlags_NoInputs` to be honored).
+  - Note: current `inputs_enabled=false` is "non-interactive" but not click-through (by design).
+  - Evidence (initial click-through): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.pointer_passthrough`,
+    `FloatingAreaOptions.hit_test_passthrough`, `floating_area_show_ex` wrapping with `HitTestGate`).
+  - Evidence (gate): `ecosystem/fret-imui/src/lib.rs` (`floating_window_pointer_passthrough_allows_underlay_hit_testing`).
+  - Evidence (`NoInputs`): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.no_inputs`, `FloatingAreaOptions.no_inputs`,
+    `floating_area_show_ex` wrapping with `InteractivityGate`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`floating_window_no_inputs_allows_underlay_hit_testing`,
+    `floating_window_no_inputs_is_skipped_by_focus_traversal`, `no_inputs_is_click_through_and_skips_focus_traversal`).
+- [x] IMUIECO3-float-016 Align activation semantics with ImGui `NoBringToFrontOnFocus` (focus vs z-order).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiWindowFlags_NoBringToFrontOnFocus`).
+  - Evidence (options): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.focus_on_click`,
+    `FloatingWindowOptions.activate_on_click`).
+  - Evidence (wiring): `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (content pointer-region requests focus
+    independent of activation).
+  - Evidence (test): `ecosystem/fret-imui/src/lib.rs` (`floating_window_focus_on_click_can_be_independent_from_z_order_activation`).
+- [x] IMUIECO3-resp-017 Decide whether keyboard-nav highlight should participate in "hovered" (ImGui-style) or a separate signal.
+  - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemFocused`).
+  - Decision: keep `hovered` pointer-driven; add a separate `nav_highlighted` signal + a helper that composes them.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt.nav_highlighted`, `ResponseExt.hovered_like_imgui`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`hit_test_passthrough_keeps_focus_traversal_and_nav_highlight`).
+- [ ] IMUIECO3-scope-018 Add an explicit identity ergonomics note (and/or helper) covering ImGui `"##"`/`"###"` patterns.
+  - Reference: `repo-ref/imgui/imgui.h` (label/ID guidance) + `repo-ref/imgui/imgui.cpp` (`PushID`, `GetID`).
+  - Evidence (current Fret behavior): `ecosystem/fret-imui/src/lib.rs` (`id`, `for_each_keyed`, `for_each_unkeyed`) + `docs/workstreams/imui-authoring-facade-v1.md` (identity section).
+- [x] IMUIECO3-float-019 Make drag threshold a theme/metric knob (align with ImGui `MouseDragThreshold`).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiIO::MouseDragThreshold` default `6.0f`).
+  - Evidence (token + default): `ecosystem/fret-ui-kit/src/theme_tokens.rs` (`component.imui.drag_threshold_px`),
+    `ecosystem/fret-ui-kit/src/imui.rs` (`DEFAULT_DRAG_THRESHOLD_PX = 6.0`, `drag_threshold_sq_for`).
+  - Evidence (test): `ecosystem/fret-imui/src/lib.rs` (`drag_threshold_metric_controls_drag_start`).
+- [x] IMUIECO3-resp-020 Expose a facade-only ImGui-style hovered query helper (`ImGuiHoveredFlags_` subset).
+  - Reference: `repo-ref/imgui/imgui.h` (`enum ImGuiHoveredFlags_`, incl. `AllowWhenDisabled`, `AllowWhenBlockedByPopup`,
+    `DelayShort/DelayNormal`, `ForTooltip`, `NoNavOverride`).
+  - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered` implements nav-highlight participation, delay gating, and disabled gating).
+  - Decision: keep `fret-authoring::Response` stable/minimal; add a facade-only query helper surface on `ResponseExt`.
+  - Implemented flags (best-effort):
+    - `ALLOW_WHEN_DISABLED`: query hover even when the facade suppresses `core.hovered` for disabled widgets.
+    - `ALLOW_WHEN_BLOCKED_BY_POPUP`: query hover even when popup policy suppresses hover (pointer occlusion / modal barriers).
+    - `NO_NAV_OVERRIDE`: do not treat nav-highlight as hovered.
+    - `FOR_TOOLTIP`: expands to `STATIONARY | DELAY_SHORT | ALLOW_WHEN_DISABLED`.
+    - `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL`: hover intent gating via element-owned timers.
+    - `NO_SHARED_DELAY`: disables the window-scoped shared delay for the query (best-effort).
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags`, `ResponseExt::is_hovered`).
+  - Evidence (mechanism): `crates/fret-ui/src/tree/dispatch.rs` (raw hovered pressable target selection),
+    `crates/fret-ui/src/elements/cx.rs` (`PressableState.hovered_raw`) + `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`,
+    `hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled`,
+    `hovered_allow_when_blocked_by_popup_reads_underlay_hit_test`).
+- [x] IMUIECO3-resp-021 Add a scoped disable helper aligned with ImGui `BeginDisabled` (and define how it affects responses).
+  - Reference: `repo-ref/imgui/imgui.h` (`BeginDisabled`) + `repo-ref/imgui/imgui.cpp` (`BeginDisabled`, `EndDisabled`).
+  - Decision: disabled items are inert and report `hovered=false` / `pressed=false` / `focused=false` / `clicked=false` by default
+    (ImGui-style). Use `ResponseExt::is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)` when you need hover queries for disabled items.
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `begin_disabled`).
+  - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`sanitize_response_for_enabled`, `component.imui.disabled_alpha`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
+- [x] IMUIECO3-resp-022 Fill remaining `ImGuiHoveredFlags_` gaps (popup blocking + delays/stationary).
+  - Reference: `repo-ref/imgui/imgui.h` (`AllowWhenBlockedByPopup`, `DelayShort/DelayNormal`, `Stationary`, `ForTooltip`).
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags`, `ResponseExt::is_hovered`).
+  - Evidence (mechanism): `crates/fret-ui/src/tree/dispatch.rs` (hover allow-when-blocked target selection),
+    `ecosystem/fret-ui-kit/src/imui.rs` (`install_hover_query_hooks_for_pressable`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`hovered_allow_when_blocked_by_popup_reads_underlay_hit_test`,
+    `hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled`).
+- [x] IMUIECO3-resp-023 Implement ImGui-style "shared hover delay" semantics (best-effort).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiHoveredFlags_NoSharedDelay`, `ImGuiHoveredFlags_DelayShort/DelayNormal`)
+    + `repo-ref/imgui/imgui.cpp` (`ImGui::IsItemHovered` shared delay timer logic).
+  - Decision: add a window-scoped shared delay store to better match ImGui tooltip hand-feel, and keep `NO_SHARED_DELAY` as an
+    escape hatch for query-time behavior.
+  - Evidence (mechanism): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiSharedHoverDelayState`, `shared_hover_delay_on_hover_change`,
+    `install_hover_query_hooks_for_pressable`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`no_shared_delay_disables_window_scoped_hover_delay_sharing`).
+
+- [x] IMUIECO3-float-024 Audit the remaining `ImGuiWindowFlags_*` surface and record explicit non-goals for v3.
+  - Goal: keep the facade small, but make any divergences around decorations/scrolling/appearance explicit so ports
+    can compensate without guessing.
+  - Output: add a short "not mirrored" list (by flag family) to `docs/workstreams/imui-imgui-parity-audit-v1.md`
+    and link it from the v3 note.
+  - Evidence: `docs/workstreams/imui-imgui-parity-audit-v1.md` (section `1.1`, explicit non-goals list).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (link to parity audit in mapping notes).
+- [~] IMUIECO3-resp-024 Decide whether to implement ImGui-style "active item blocks hover" semantics.
+  - Reference: `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`.
+  - Rationale: this can affect editor hand-feel when dragging (window move/resize, docking drags, slider drags)
+    and then hovering unrelated items.
+  - If adopted: implement a minimal "active item blocks hover unless opted out" policy at the facade level and add
+    at least one nextest + one diag repro gate.
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM`).
+  - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::is_hovered` active-item suppression).
+  - Evidence (nextest): `ecosystem/fret-imui/src/lib.rs` (`hovered_allow_when_blocked_by_active_item_allows_hover_while_other_item_is_active`).
+  - Remaining: add a diag script gate (CI-friendly) that exercises the behavior in a running demo.
 
 ---
 
@@ -94,6 +185,9 @@ Exit criteria:
 - [x] IMUIECO3-dock-020 Document docking handshake touchpoints and required signals/metadata.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M2 touchpoints).
   - Evidence: `ecosystem/fret-docking/src/imui.rs`, `ecosystem/fret-docking/src/facade.rs`.
+  - Evidence (diagnostics + scripted repro): `debug.docking_interaction.dock_drop_resolve` in bundles,
+    `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json` + `fretboard diag`
+    gates `--check-dock-drop-resolve-min` / `--check-dock-drag-cross-window-max`.
 
 ---
 
