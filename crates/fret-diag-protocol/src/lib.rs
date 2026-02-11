@@ -274,6 +274,20 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Wait until a target's semantics bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for overlays/virtualized surfaces where measured bounds can jump across
+    /// frames (estimate -> measured, placement flip/shift, scroll settle), and you want a
+    /// deterministic “ready” point without relying on wall-clock sleeps.
+    WaitBoundsStable {
+        target: UiSelectorV1,
+        #[serde(default = "default_bounds_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_bounds_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     EnsureVisible {
         target: UiSelectorV1,
         #[serde(default)]
@@ -437,6 +451,14 @@ fn default_click_stable_frames() -> u32 {
 }
 
 fn default_click_stable_max_move_px() -> f32 {
+    1.0
+}
+
+fn default_bounds_stable_frames() -> u32 {
+    2
+}
+
+fn default_bounds_stable_max_move_px() -> f32 {
     1.0
 }
 
@@ -746,6 +768,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub click_stable_trace: Vec<UiClickStableTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
@@ -907,6 +931,21 @@ pub struct UiClickStableTraceEntryV1 {
     pub max_move_px: f32,
     pub remaining_frames: u32,
     pub hit_test: UiHitTestTraceEntryV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBoundsStableTraceEntryV1 {
+    pub step_index: u32,
+    pub selector: UiSelectorV1,
+    pub stable_required: u32,
+    pub stable_count: u32,
+    pub moved_px: f32,
+    pub max_move_px: f32,
+    pub remaining_frames: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

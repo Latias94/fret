@@ -71,6 +71,7 @@ Avoid duplicate `test_id` across the window; treat duplicates as error-level fin
 Prefer:
 
 - `click` / `click_stable` over coordinate injection,
+- `wait_bounds_stable` when you need “overlay settled” without sleeps,
 - `wait_until` predicates over wall-clock sleeps,
 - step-local `capture_bundle` at “interesting points” (to make failures explainable without reruns).
 
@@ -101,6 +102,7 @@ When you need a placement/collision matrix (many cases):
 - Prefer semantics bounds checks (in-window, non-empty) over pixel diffs.
 - When virtualization is involved, add `wait_until` that asserts the target item exists in semantics before clicking.
 - Use `click_stable` for jittery overlays and scrolling targets.
+- Use `wait_bounds_stable` for placement/size “settle” phases (flip/shift, transform-only updates, estimate -> measured).
 - Use `diag lint --all-test-ids` when you want out-of-window hints for all targeted nodes, not only focused ones.
 
 ## References

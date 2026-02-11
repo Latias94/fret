@@ -37,6 +37,8 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Common steps: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`.
    - If the target moves/animates during navigation, prefer `click_stable` (schema v2) to avoid “stale click” flake.
      - Example: click only after the target’s center stays within `eps_px` for `stable_frames`.
+   - If an overlay’s bounds “settle” across frames (flip/shift, estimate -> measured), use `wait_bounds_stable` (schema v2)
+     before making assertions or clicking inside it.
    - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
 3. Ensure diagnostics are enabled in the running app.
    - Minimum: `FRET_DIAG=1`
@@ -185,6 +187,7 @@ Practical authoring tips for scripts:
 
 - Put stable `test_id` on trigger/content/items at the shadcn recipe layer.
 - Use `click_stable` for jittery overlays/virtualized targets.
+- Use `wait_bounds_stable` to avoid magic sleeps during placement/scroll settle.
 - Prefer semantics selectors (`test_id`, role+name) over coordinates.
 - Add one `capture_bundle` near the “interesting” step so failures are explainable without rerunning.
 

@@ -107,6 +107,15 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn wait_bounds_stable(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::WaitBoundsStable {
+            target,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        })
+    }
+
     pub fn press_key(self, key: impl Into<String>) -> Self {
         self.push(UiActionStepV2::PressKey {
             key: key.into(),

@@ -7,14 +7,15 @@ use fret_core::{
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
-    UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1,
-    UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1,
-    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
-    UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1,
-    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
-    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
-    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
+    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiInspectConfigV1,
+    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
+    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
+    UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1,
+    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1,
+    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
+    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1,
+    UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -733,6 +734,7 @@ impl UiDiagnosticsService {
                     selector_resolution_trace: Vec::new(),
                     hit_test_trace: Vec::new(),
                     click_stable_trace: Vec::new(),
+                    bounds_stable_trace: Vec::new(),
                     focus_trace: Vec::new(),
                     shortcut_routing_trace: Vec::new(),
                     last_shortcut_routing_seq: 0,
@@ -809,6 +811,12 @@ impl UiDiagnosticsService {
             .hit_test_trace
             .retain(|e| e.step_index == step_index_u32);
         active
+            .click_stable_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
+            .bounds_stable_trace
+            .retain(|e| e.step_index == step_index_u32);
+        active
             .focus_trace
             .retain(|e| e.step_index == step_index_u32);
         active
@@ -826,6 +834,7 @@ impl UiDiagnosticsService {
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::WaitBoundsStable { .. }
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
@@ -2366,6 +2375,166 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
+                }
+            }
+            UiActionStepV2::WaitBoundsStable {
+                target,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let stable_required = stable_frames.max(1);
+                    let max_move_px = max_move_px.max(0.0);
+
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::WaitBoundsStable(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2WaitBoundsStableState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            stable_count: 0,
+                            last_bounds: None,
+                        },
+                    };
+
+                    let node = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    );
+
+                    if state.remaining_frames == 0 {
+                        push_bounds_stable_trace(
+                            &mut active.bounds_stable_trace,
+                            UiBoundsStableTraceEntryV1 {
+                                step_index: step_index as u32,
+                                selector: target.clone(),
+                                stable_required,
+                                stable_count: state.stable_count,
+                                moved_px: 0.0,
+                                max_move_px,
+                                remaining_frames: state.remaining_frames,
+                                bounds: node.map(|n| UiRectV1 {
+                                    x_px: n.bounds.origin.x.0,
+                                    y_px: n.bounds.origin.y.0,
+                                    w_px: n.bounds.size.width.0,
+                                    h_px: n.bounds.size.height.0,
+                                }),
+                                note: Some("wait_bounds_stable.timeout".to_string()),
+                            },
+                        );
+
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-wait_bounds_stable-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("wait_bounds_stable_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else if let Some(node) = node {
+                        let bounds = node.bounds;
+                        let moved = match state.last_bounds {
+                            Some(last) => {
+                                let dx = (bounds.origin.x.0 - last.origin.x.0).abs();
+                                let dy = (bounds.origin.y.0 - last.origin.y.0).abs();
+                                let dw = (bounds.size.width.0 - last.size.width.0).abs();
+                                let dh = (bounds.size.height.0 - last.size.height.0).abs();
+                                dx.max(dy).max(dw).max(dh)
+                            }
+                            None => 0.0,
+                        };
+
+                        if moved <= max_move_px {
+                            state.stable_count = state.stable_count.saturating_add(1);
+                        } else {
+                            state.stable_count = 1;
+                        }
+                        state.last_bounds = Some(bounds);
+
+                        push_bounds_stable_trace(
+                            &mut active.bounds_stable_trace,
+                            UiBoundsStableTraceEntryV1 {
+                                step_index: step_index as u32,
+                                selector: target.clone(),
+                                stable_required,
+                                stable_count: state.stable_count,
+                                moved_px: moved,
+                                max_move_px,
+                                remaining_frames: state.remaining_frames,
+                                bounds: Some(UiRectV1 {
+                                    x_px: bounds.origin.x.0,
+                                    y_px: bounds.origin.y.0,
+                                    w_px: bounds.size.width.0,
+                                    h_px: bounds.size.height.0,
+                                }),
+                                note: Some("wait_bounds_stable.waiting".to_string()),
+                            },
+                        );
+
+                        if state.stable_count >= stable_required {
+                            active.v2_step_state = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-wait_bounds_stable"));
+                            }
+                        } else {
+                            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                            active.v2_step_state = Some(V2StepState::WaitBoundsStable(state));
+                            output.request_redraw = true;
+                        }
+                    } else {
+                        push_bounds_stable_trace(
+                            &mut active.bounds_stable_trace,
+                            UiBoundsStableTraceEntryV1 {
+                                step_index: step_index as u32,
+                                selector: target.clone(),
+                                stable_required,
+                                stable_count: 0,
+                                moved_px: 0.0,
+                                max_move_px,
+                                remaining_frames: state.remaining_frames,
+                                bounds: None,
+                                note: Some("wait_bounds_stable.no_semantics_match".to_string()),
+                            },
+                        );
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-wait_bounds_stable-no-semantics-match"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("wait_bounds_stable_no_semantics_match".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                            active.v2_step_state = Some(V2StepState::WaitBoundsStable(state));
+                            output.request_redraw = true;
+                        }
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-wait_bounds_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::EnsureVisible {
@@ -4704,6 +4873,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     match step {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::ClickStable { .. }
+        | UiActionStepV2::WaitBoundsStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
@@ -5867,6 +6037,7 @@ struct ActiveScript {
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
     click_stable_trace: Vec<UiClickStableTraceEntryV1>,
+    bounds_stable_trace: Vec<UiBoundsStableTraceEntryV1>,
     focus_trace: Vec<UiFocusTraceEntryV1>,
     shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     last_shortcut_routing_seq: u64,
@@ -5922,6 +6093,7 @@ impl PendingScript {
 #[derive(Debug, Clone)]
 enum V2StepState {
     ClickStable(V2ClickStableState),
+    WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -5939,6 +6111,14 @@ struct V2ClickStableState {
     remaining_frames: u32,
     stable_count: u32,
     last_center: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+struct V2WaitBoundsStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_bounds: Option<fret_core::Rect>,
 }
 
 #[derive(Debug, Clone)]
@@ -10621,7 +10801,34 @@ fn push_hit_test_trace(trace: &mut Vec<UiHitTestTraceEntryV1>, entry: UiHitTestT
     }
 }
 
+const MAX_BOUNDS_STABLE_TRACE_ENTRIES: usize = 32;
 const MAX_CLICK_STABLE_TRACE_ENTRIES: usize = 32;
+
+fn bounds_stable_trace_entry_eq(
+    a: &UiBoundsStableTraceEntryV1,
+    b: &UiBoundsStableTraceEntryV1,
+) -> bool {
+    a.step_index == b.step_index && selector_trace_eq(&a.selector, &b.selector)
+}
+
+fn push_bounds_stable_trace(
+    trace: &mut Vec<UiBoundsStableTraceEntryV1>,
+    entry: UiBoundsStableTraceEntryV1,
+) {
+    if let Some(existing) = trace
+        .iter_mut()
+        .rev()
+        .find(|e| bounds_stable_trace_entry_eq(e, &entry))
+    {
+        *existing = entry;
+        return;
+    }
+    trace.push(entry);
+    if trace.len() > MAX_BOUNDS_STABLE_TRACE_ENTRIES {
+        let extra = trace.len().saturating_sub(MAX_BOUNDS_STABLE_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
 
 fn click_stable_trace_entry_eq(
     a: &UiClickStableTraceEntryV1,
@@ -10662,6 +10869,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
     if active.selector_resolution_trace.is_empty()
         && active.hit_test_trace.is_empty()
         && active.click_stable_trace.is_empty()
+        && active.bounds_stable_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
         && active.overlay_placement_trace.is_empty()
@@ -10674,6 +10882,7 @@ fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScriptEvidenceV
         selector_resolution_trace: active.selector_resolution_trace.clone(),
         hit_test_trace: active.hit_test_trace.clone(),
         click_stable_trace: active.click_stable_trace.clone(),
+        bounds_stable_trace: active.bounds_stable_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
         overlay_placement_trace: active.overlay_placement_trace.clone(),

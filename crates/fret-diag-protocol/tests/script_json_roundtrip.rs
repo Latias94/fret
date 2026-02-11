@@ -171,6 +171,24 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_wait_bounds_stable() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "x" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,
