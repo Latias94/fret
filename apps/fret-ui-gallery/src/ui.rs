@@ -707,6 +707,7 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
         PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
+        PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17689,6 +17690,69 @@ fn preview_ai_terminal_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) ->
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Terminal (AI Elements)"), terminal, marker],
+    )]
+}
+
+fn preview_ai_package_info_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let minor = ui_ai::PackageInfo::new("fret-ui-ai")
+        .current_version("0.1.0")
+        .new_version("0.2.0")
+        .change_type(ui_ai::PackageInfoChangeKind::Minor)
+        .test_id_root("ui-ai-package-info-demo-root-minor")
+        .into_element_with_children(cx, move |cx, _controller| {
+            vec![
+                ui_ai::PackageInfoHeader::new()
+                    .children([
+                        ui_ai::PackageInfoName::new().into_element(cx),
+                        ui_ai::PackageInfoChangeType::new()
+                            .test_id("ui-ai-package-info-demo-badge-minor")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ui_ai::PackageInfoVersion::new()
+                    .test_id("ui-ai-package-info-demo-version-minor")
+                    .into_element(cx),
+                ui_ai::PackageInfoDescription::new(
+                    "AI Elements-aligned package card surface (demo values).",
+                )
+                .into_element(cx),
+                ui_ai::PackageInfoContent::new([ui_ai::PackageInfoDependencies::new([
+                    ui_ai::PackageInfoDependency::new("fret-ui-shadcn")
+                        .version("^0.1")
+                        .into_element(cx),
+                    ui_ai::PackageInfoDependency::new("fret-ui-kit")
+                        .version("^0.1")
+                        .into_element(cx),
+                ])
+                .into_element(cx)])
+                .into_element(cx),
+            ]
+        });
+
+    let added = ui_ai::PackageInfo::new("fret-webview")
+        .new_version("0.1.0")
+        .change_type(ui_ai::PackageInfoChangeKind::Added)
+        .test_id_root("ui-ai-package-info-demo-root-added")
+        .into_element(cx);
+
+    let removed = ui_ai::PackageInfo::new("old-ai-helpers")
+        .current_version("0.0.9")
+        .change_type(ui_ai::PackageInfoChangeKind::Removed)
+        .test_id_root("ui-ai-package-info-demo-root-removed")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("PackageInfo (AI Elements)"), minor, added, removed],
     )]
 }
 

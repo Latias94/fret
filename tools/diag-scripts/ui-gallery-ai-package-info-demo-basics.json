@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai packageinfo" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-package-info-demo" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-package-info-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-badge-minor" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-version-minor" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-package-info-demo-basics" }
+  ]
+}
+

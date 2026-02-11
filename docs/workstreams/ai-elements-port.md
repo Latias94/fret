@@ -107,6 +107,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
   - `AI terminal (demo)` (`ai_terminal_demo`): `Terminal` viewer demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
+  - `AI package info (demo)` (`ai_package_info_demo`): `PackageInfo` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -722,7 +724,7 @@ Legend:
 | `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |
 | `connection.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/connection.rs` | Defer | Workflow-specific. |
 | `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`. |
-| `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Defer | Workflow-specific. |
+| `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Prototype | Package info card surface (name + change badge + version row + deps list building blocks) + UI Gallery demo + diag gate. |
 
 ## Risks & design constraints (track proactively)
 

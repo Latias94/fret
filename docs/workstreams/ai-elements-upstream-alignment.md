@@ -78,6 +78,7 @@ Legend:
 | `web-preview.tsx` | `fret-ui-ai` | `web_preview.rs` | Ported (prototype) | Chrome always available; native embed via `webview-wry` behind feature flags. |
 | `image.tsx` | `fret-ui-ai` | `image.rs` | Ported (prototype) | Rendering only; decoding/upload is app-owned. |
 | `terminal.tsx` | `fret-ui-ai` | `terminal.rs` | Ported (prototype) | Viewer-only (output + copy/clear + auto-scroll); no PTY/TTY in v1. |
+| `package-info.tsx` | `fret-ui-ai` | `package_info.rs` | Ported (prototype) | Package card (name/change badge + version row + deps list building blocks). |
 
 ## Known upstream files not yet ported
 
@@ -87,7 +88,6 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 - `audio-player.tsx`
 - `jsx-preview.tsx` (likely out of scope for Rust)
 - `open-in-chat.tsx`
-- `package-info.tsx`
 - `persona.tsx`
 - `sandbox.tsx`
 - `task.tsx`

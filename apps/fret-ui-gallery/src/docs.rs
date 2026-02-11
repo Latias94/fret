@@ -623,6 +623,24 @@ use fret_ui_ai::Terminal;
 ```
 "#;
 
+pub(crate) const DOC_AI_PACKAGE_INFO_DEMO: &str = r#"
+## AI package info (demo)
+
+This page demonstrates the AI Elements-aligned `PackageInfo` surface:
+
+- name + change type badge,
+- current/new version display,
+- dependency list building blocks (`PackageInfoDependencies` / `PackageInfoDependency`).
+
+The data model is app-owned; this surface is presentation-only.
+"#;
+
+pub(crate) const USAGE_AI_PACKAGE_INFO_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{PackageInfo, PackageInfoChangeKind};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

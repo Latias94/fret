@@ -81,7 +81,7 @@ Status legend:
 | `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
 | `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 | `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
-| `package-info` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `package-info` | Prototype | `fret-ui-ai` | `PackageInfo*` surfaces + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`. |
 | `environment-variables` | Prototype | `fret-ui-ai` | Ported as `EnvironmentVariables*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`). |
 
 ### Utilities
