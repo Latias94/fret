@@ -13,7 +13,7 @@ See:
 - [x] Add a minimal diagnostics seam for `RecipeDegraded { label, reason }` (best-effort).
 - [x] Migrate existing recipes (glass/pixelate) to the shared resolve/fallback/report shape without
       changing their public wrapper signatures.
-- [ ] Create a `VisualCatalog`/`MaterialCatalog` skeleton API and decide where it is stored (app model vs service).
+- [x] Create a `VisualCatalog`/`MaterialCatalog` skeleton API and decide where it is stored (app model vs service).
 
 Next (recommended order):
 

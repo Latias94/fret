@@ -13,25 +13,14 @@ See:
 - Keep existing public helpers (e.g. glass/pixelate wrappers) stable; migrate internals only.
 - Add a minimal diagnostics sink seam for “recipe degraded” events (best-effort).
 
-Status: Landed (partial; catalog skeleton pending)
+Status: Landed
 
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/recipes/resolve.rs`
+- `ecosystem/fret-ui-kit/src/recipes/catalog.rs`
 - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
 - `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
-
-Remaining gate (to fully close M0):
-
-- Land a `VisualCatalog`/`MaterialCatalog` skeleton API (stable storage + resolve surface + diag seam).
-
-Status: Not started
-
-Evidence (planned):
-
-- `ecosystem/fret-ui-kit/src/recipes/catalog.rs` (or similar)
-- `ecosystem/fret-ui-kit/src/recipes/mod.rs`
-- `docs/workstreams/creative-recipes-v1-todo.md` (P0 foundation checklist)
 
 ## M1 — Paint v1 (gradients)
 

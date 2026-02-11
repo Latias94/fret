@@ -105,6 +105,5 @@ Landed kernel primitives:
 
 Not yet landed (tracked in this workstream):
 
-1. `VisualCatalog`/`MaterialCatalog` skeleton API (ecosystem foundation; see TODO list)
-2. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
-3. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)
+1. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
+2. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)
