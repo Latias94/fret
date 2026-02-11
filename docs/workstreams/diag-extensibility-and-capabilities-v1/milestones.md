@@ -108,6 +108,7 @@ Definition of done:
 - [ ] Make suites evidence-first by default:
   - [x] run `diag lint` for every captured bundle (fail on error-level findings; use `--no-lint` to disable),
   - [x] emit `check.lint.json` next to `bundle.json` (and include it in `diag pack` outputs).
+  - [x] emit `suite.summary.json` for suite runs (per-script rows + aggregates + small evidence highlights).
 
 ### M6: Text & IME gates (self-drawn UI pain point)
 

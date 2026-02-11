@@ -677,6 +677,10 @@ When you use `fretboard diag run`, the running app writes a small status file:
 
 `fretboard diag suite` runs multiple scripts sequentially using the same mechanism.
 
+After a suite run, the CLI writes `suite.summary.json` under the diagnostics output dir (default: `.fret/diag/`).
+This file is intended as the “open first” overview (stage/reason-code aggregates, plus small evidence
+highlights) before you start opening individual bundles.
+
 ## Regression suites (starter)
 
 The `tools/diag-scripts/` directory contains curated scripts intended to become a baseline suite.

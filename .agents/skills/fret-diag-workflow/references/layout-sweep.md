@@ -25,6 +25,7 @@ Run a single sweep script:
 
 ## What to read when it fails
 
+0. `suite.summary.json` (suite-level overview; stage/reason/lint + evidence aggregates).
 1. `script.result.json` (reason code + last bundle dir).
 2. `check.lint.json` (error-level findings should be actionable without screenshots).
 3. `triage.json` / `check.triage.json` (high-level summary, useful for AI triage).
@@ -34,4 +35,3 @@ Tips:
 
 - Use `diag lint --all-test-ids` when you want window-boundary hints for all targeted nodes, not only focused ones.
 - If a failure is “jitter”, prefer `click_stable` / `wait_bounds_stable` in the script rather than adding sleeps.
-

@@ -23,44 +23,36 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 
 - Web/WASM: see `references/web-runner.md`.
 
-## Workflow
+## Common commands (copy/paste)
 
-1. Pick the smallest target that shows the bug.
-   - Prefer a UI gallery page or a dedicated demo binary.
-2. Create or edit a script in `tools/diag-scripts/`.
-   - Use stable `test_id` targets instead of pixel coordinates.
-   - Prefer **intent-level v2 steps** over sleeps:
-     - `click_stable`: avoid stale coordinates when bounds jump.
-     - `wait_bounds_stable`: wait for overlay/content bounds to settle (flip/shift/estimate→measured).
-   - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
-   - Keep scripts reviewable and CI-friendly:
-     - `fretboard diag script normalize <script.json> --write`
-     - `fretboard diag script validate <script.json>`
-     - `fretboard diag script lint <script.json>`
-     - You can also lint/validate by directory or glob (the CLI expands patterns):
-       - `fretboard diag script lint tools/diag-scripts/ui-gallery-select-*.json`
-       - `fretboard diag script validate tools/diag-scripts`
-3. Ensure diagnostics are enabled in the running app.
-   - Minimum: `FRET_DIAG=1`
-   - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
-   - While authoring scripts, consider disabling text redaction: `FRET_DIAG_REDACT_TEXT=0`.
-   - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
-4. Run the script via `fretboard` and collect artifacts.
-   - Prefer `fretboard diag run ... --launch -- <cmd...>` so env vars are applied consistently.
-5. Turn the repro into a gate (stable assertions first).
-   - Prefer geometry/semantics invariants over pixel diffs when possible.
-   - If you need pixel diffs, add `capture_screenshot` steps and use `--check-pixels-changed <test_id>`.
-6. Package and share.
-   - `fretboard diag pack --include-screenshots` (bundle + screenshots)
-   - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
-   - `fretboard diag lint <bundle_dir|bundle.json> --json` (sanity checks: duplicate `test_id`, focused/active out-of-window, etc.)
-   - Note: `fretboard diag suite ...` runs lint for every captured bundle by default (use `--no-lint` to disable).
-7. Compare before/after runs for regressions.
-   - `fretboard diag compare <bundle_a> <bundle_b> --json`
-8. For flaky regressions, run repeat-run triage.
-   - `fretboard diag repeat <script.json> --repeat 7 --launch -- <cmd...>`
-9. For “too big” failing scripts, shrink to a minimal repro (requires `--reuse-launch` when using `--launch`).
-   - `fretboard diag script shrink <script.json> --reuse-launch --launch -- <cmd...>`
+- Author scripts:
+  - `fretboard diag script normalize <script.json> --write`
+  - `fretboard diag script validate <script.json>`
+  - `fretboard diag script lint <script.json>`
+  - Directory/glob inputs work too:
+    - `fretboard diag script validate tools/diag-scripts`
+    - `fretboard diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+
+- Run + collect artifacts (recommended):
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; cargo run -p fretboard -- diag run <script.json> --launch -- <cmd...>"`
+  - Use `FRET_DIAG_SCREENSHOTS=1` when the script captures screenshots.
+
+- Suite runs (batch scripts):
+  - `fretboard diag suite ui-gallery-select --launch -- <cmd...>`
+  - After a suite run, check `suite.summary.json` under the output dir for a one-file overview.
+
+- Flake triage:
+  - `fretboard diag repeat <script.json> --repeat 7 --launch -- <cmd...>`
+  - Read `repeat.summary.json` (highlights + evidence aggregates) before opening bundles.
+
+- Minimize a failing script (ddmin):
+  - `fretboard diag script shrink <script.json> --reuse-launch --launch -- <cmd...>`
+
+- Compare bundles:
+  - `fretboard diag compare <bundle_a> <bundle_b> --json`
+
+- Select conformance suite “template ↔ JSON” closure:
+  - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
 
 ## Capabilities & fail-fast gating
 
@@ -77,26 +69,12 @@ Where capabilities come from:
 - filesystem transport: runner writes `capabilities.json` under `FRET_DIAG_DIR`
 - devtools-ws transport: the app advertises capabilities as part of hello/session descriptors
 
-## Evidence-first debugging (what to read)
+## Playbooks
 
-Evidence and triage checklist: `references/evidence-triage.md`.
-
-## Component conformance playbook (example: shadcn `Select`)
-
-Select conformance playbook: `references/select-conformance.md`.
-
-## Evidence anchors
-
-Where the code lives:
-
-- Doc: `docs/ui-diagnostics-and-scripted-tests.md`
-- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- CLI entry: `apps/fretboard/src/diag.rs`
-- Headless exporter (devtools-ws -> `.fret/diag/exports/`): `apps/fret-diag-export`
-- Loopback WS hub: `apps/fret-devtools-ws`
-- DevTools GUI (optional): `apps/fret-devtools`
-- Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
-- Triage/compare engine: `crates/fret-diag`
+- Evidence triage checklist: `references/evidence-triage.md`
+- Select conformance playbook: `references/select-conformance.md`
+- Layout sweep playbook: `references/layout-sweep.md`
+- Perf handoff notes: `references/perf-handoff.md`
 
 ## Common pitfalls
 

@@ -85,6 +85,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
 - [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
   - [x] emit `target/fret-diag/shrink/script.min.json` + `target/fret-diag/shrink/shrink.summary.json` (or `--shrink-out`).
+- [x] Add a suite-level summary artifact for `diag suite`:
+  - [x] emit `suite.summary.json` (per-script rows + aggregates + small evidence highlights).
 
 ## Text & IME (self-drawn UI pain point)
 

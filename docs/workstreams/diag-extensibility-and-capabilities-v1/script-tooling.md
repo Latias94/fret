@@ -141,3 +141,18 @@ Initial checks (expand over time, but keep codes stable):
 - `semantics.active_descendant_missing`,
 - focused/active out-of-window geometry sanity,
 - empty/zero-size bounds on focused or `test_id` nodes.
+
+## Suite summary (batch runs)
+
+When running a suite (`fretboard diag suite ...`), the CLI writes a one-file overview:
+
+- `suite.summary.json` (under the diagnostics output dir, e.g. `.fret/diag/`)
+
+This summary is intentionally “AI-friendly” and “human-first”:
+
+- per-script rows (stage/reason + last bundle dir),
+- stage/reason-code aggregates,
+- small evidence highlights (hit-test blocking reasons, overlay chosen sides, IME event kinds, focus mismatch counts).
+
+Goal: when a suite fails (layout sweep, component conformance), you should be able to answer
+“which scripts failed, and why?” without opening every bundle directory.

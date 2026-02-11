@@ -20,6 +20,7 @@ mod perf_seed_policy;
 mod script_tooling;
 mod shrink;
 mod stats;
+mod suite_summary;
 pub mod transport;
 mod util;
 
@@ -5310,6 +5311,17 @@ See: `docs/tracy.md`.\n";
             } else {
                 None
             };
+
+            let suite_summary_path = resolved_out_dir.join("suite.summary.json");
+            let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
+            let suite_summary_generated_unix_ms = now_unix_ms();
+            let mut suite_stage_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut suite_reason_code_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut suite_rows: Vec<serde_json::Value> = Vec::new();
+            let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
+
             for src in scripts {
                 if !reuse_process {
                     child = maybe_launch_demo(
@@ -5353,10 +5365,50 @@ See: `docs/tracy.md`.\n";
                 let result = match result {
                     Ok(v) => v,
                     Err(e) => {
+                        let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                        suite_rows.push(serde_json::json!({
+                            "script": script_key,
+                            "error": e,
+                        }));
+                        let payload = serde_json::json!({
+                            "schema_version": 1,
+                            "generated_unix_ms": suite_summary_generated_unix_ms,
+                            "kind": "suite_summary",
+                            "status": "error",
+                            "suite": suite_summary_suite,
+                            "out_dir": resolved_out_dir.display().to_string(),
+                            "warmup_frames": warmup_frames,
+                            "reuse_launch": reuse_launch,
+                            "wants_screenshots": suite_wants_screenshots,
+                            "stage_counts": suite_stage_counts,
+                            "reason_code_counts": suite_reason_code_counts,
+                            "evidence_aggregate": suite_evidence_agg.as_json(),
+                            "rows": suite_rows,
+                        });
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(e);
+                        let _ = write_json_value(&suite_summary_path, &payload);
+                        return Err("suite run failed (see suite.summary.json)".to_string());
                     }
                 };
+
+                if let Some(stage) = result.stage.as_deref() {
+                    *suite_stage_counts.entry(stage.to_string()).or_default() += 1;
+                }
+                if let Some(code) = result.reason_code.as_deref() {
+                    if !code.trim().is_empty() {
+                        *suite_reason_code_counts
+                            .entry(code.to_string())
+                            .or_default() += 1;
+                    }
+                }
+
+                let script_key = normalize_repo_relative_path(&workspace_root, &src);
+                let mut lint_summary: Option<serde_json::Value> = None;
+                let evidence_highlights =
+                    suite_summary::evidence_highlights_from_script_result_path(
+                        &resolved_script_result_path,
+                        &mut suite_evidence_agg,
+                    );
                 match result.stage.as_deref() {
                     Some("passed") => {
                         println!("PASS {} (run_id={})", src.display(), result.run_id)
@@ -5370,7 +5422,34 @@ See: `docs/tracy.md`.\n";
                             result.reason.as_deref().unwrap_or("unknown"),
                             result.last_bundle_dir.as_deref().unwrap_or("")
                         );
+                        suite_rows.push(serde_json::json!({
+                            "script": script_key,
+                            "run_id": result.run_id,
+                            "stage": result.stage,
+                            "step_index": result.step_index,
+                            "reason_code": result.reason_code,
+                            "reason": result.reason,
+                            "last_bundle_dir": result.last_bundle_dir,
+                            "lint": lint_summary,
+                            "evidence_highlights": evidence_highlights,
+                        }));
+                        let payload = serde_json::json!({
+                            "schema_version": 1,
+                            "generated_unix_ms": suite_summary_generated_unix_ms,
+                            "kind": "suite_summary",
+                            "status": "failed",
+                            "suite": suite_summary_suite,
+                            "out_dir": resolved_out_dir.display().to_string(),
+                            "warmup_frames": warmup_frames,
+                            "reuse_launch": reuse_launch,
+                            "wants_screenshots": suite_wants_screenshots,
+                            "stage_counts": suite_stage_counts,
+                            "reason_code_counts": suite_reason_code_counts,
+                            "evidence_aggregate": suite_evidence_agg.as_json(),
+                            "rows": suite_rows,
+                        });
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        let _ = write_json_value(&suite_summary_path, &payload);
                         std::process::exit(1);
                     }
                     _ => {
@@ -5379,7 +5458,34 @@ See: `docs/tracy.md`.\n";
                             src.display(),
                             result
                         );
+                        suite_rows.push(serde_json::json!({
+                            "script": script_key,
+                            "run_id": result.run_id,
+                            "stage": result.stage,
+                            "step_index": result.step_index,
+                            "reason_code": result.reason_code,
+                            "reason": result.reason,
+                            "last_bundle_dir": result.last_bundle_dir,
+                            "lint": lint_summary,
+                            "evidence_highlights": evidence_highlights,
+                        }));
+                        let payload = serde_json::json!({
+                            "schema_version": 1,
+                            "generated_unix_ms": suite_summary_generated_unix_ms,
+                            "kind": "suite_summary",
+                            "status": "failed",
+                            "suite": suite_summary_suite,
+                            "out_dir": resolved_out_dir.display().to_string(),
+                            "warmup_frames": warmup_frames,
+                            "reuse_launch": reuse_launch,
+                            "wants_screenshots": suite_wants_screenshots,
+                            "stage_counts": suite_stage_counts,
+                            "reason_code_counts": suite_reason_code_counts,
+                            "evidence_aggregate": suite_evidence_agg.as_json(),
+                            "rows": suite_rows,
+                        });
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        let _ = write_json_value(&suite_summary_path, &payload);
                         std::process::exit(1);
                     }
                 }
@@ -5418,6 +5524,20 @@ See: `docs/tracy.md`.\n";
                         )?;
 
                         let out = default_lint_out_path(&bundle_path);
+                        lint_summary = Some(serde_json::json!({
+                            "out": out.display().to_string(),
+                            "error_issues": report
+                                .payload
+                                .get("error_issues")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(report.error_issues),
+                            "warning_issues": report
+                                .payload
+                                .get("warning_issues")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0),
+                            "counts_by_code": report.payload.get("counts_by_code").cloned(),
+                        }));
                         if let Some(parent) = out.parent() {
                             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
                         }
@@ -5433,7 +5553,35 @@ See: `docs/tracy.md`.\n";
                                 report.error_issues,
                                 out.display()
                             );
+                            suite_rows.push(serde_json::json!({
+                                "script": script_key,
+                                "run_id": result.run_id,
+                                "stage": result.stage,
+                                "step_index": result.step_index,
+                                "reason_code": result.reason_code,
+                                "reason": result.reason,
+                                "last_bundle_dir": result.last_bundle_dir,
+                                "lint": lint_summary,
+                                "evidence_highlights": evidence_highlights,
+                            }));
+                            let payload = serde_json::json!({
+                                "schema_version": 1,
+                                "generated_unix_ms": suite_summary_generated_unix_ms,
+                                "kind": "suite_summary",
+                                "status": "failed",
+                                "suite": suite_summary_suite,
+                                "out_dir": resolved_out_dir.display().to_string(),
+                                "warmup_frames": warmup_frames,
+                                "reuse_launch": reuse_launch,
+                                "wants_screenshots": suite_wants_screenshots,
+                                "stage_counts": suite_stage_counts,
+                                "reason_code_counts": suite_reason_code_counts,
+                                "evidence_aggregate": suite_evidence_agg.as_json(),
+                                "rows": suite_rows,
+                                "failure_kind": "lint_failed",
+                            });
                             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            let _ = write_json_value(&suite_summary_path, &payload);
                             std::process::exit(1);
                         }
                     }
@@ -6113,12 +6261,43 @@ See: `docs/tracy.md`.\n";
                     )?;
                 }
 
+                suite_rows.push(serde_json::json!({
+                    "script": script_key,
+                    "run_id": result.run_id,
+                    "stage": result.stage,
+                    "step_index": result.step_index,
+                    "reason_code": result.reason_code,
+                    "reason": result.reason,
+                    "last_bundle_dir": result.last_bundle_dir,
+                    "lint": lint_summary,
+                    "evidence_highlights": evidence_highlights,
+                }));
+
                 if !reuse_process {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
             }
 
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+            let payload = serde_json::json!({
+                "schema_version": 1,
+                "generated_unix_ms": suite_summary_generated_unix_ms,
+                "kind": "suite_summary",
+                "status": "passed",
+                "suite": suite_summary_suite,
+                "out_dir": resolved_out_dir.display().to_string(),
+                "warmup_frames": warmup_frames,
+                "reuse_launch": reuse_launch,
+                "wants_screenshots": suite_wants_screenshots,
+                "stage_counts": suite_stage_counts,
+                "reason_code_counts": suite_reason_code_counts,
+                "evidence_aggregate": suite_evidence_agg.as_json(),
+                "rows": suite_rows,
+            });
+            let _ = write_json_value(&suite_summary_path, &payload);
+            if !stats_json {
+                println!("SUITE-SUMMARY {}", suite_summary_path.display());
+            }
             std::process::exit(0);
         }
         "perf-baseline-from-bundles" => {
