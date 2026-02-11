@@ -169,6 +169,8 @@ struct UiGalleryWindowState {
     settings_menu_bar_in_window_open: Model<bool>,
     settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
     settings_text_common_fallback_injection_open: Model<bool>,
+    settings_text_locale_override: Model<Option<Arc<str>>>,
+    settings_text_locale_override_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
     undo_doc: DocumentId,
@@ -1036,6 +1038,9 @@ impl UiGalleryDriver {
                     font_config.common_fallback_injection,
                 )));
         let settings_text_common_fallback_injection_open = app.models_mut().insert(false);
+        let settings_text_locale_override =
+            app.models_mut().insert(Some(Arc::<str>::from("no_change")));
+        let settings_text_locale_override_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
         let undo_doc: DocumentId = "ui_gallery.window".into();
@@ -1225,6 +1230,8 @@ impl UiGalleryDriver {
             settings_menu_bar_in_window_open,
             settings_text_common_fallback_injection,
             settings_text_common_fallback_injection_open,
+            settings_text_locale_override,
+            settings_text_locale_override_open,
             settings_edit_can_undo,
             settings_edit_can_redo,
             undo_doc,
@@ -2235,6 +2242,8 @@ impl UiGalleryDriver {
             state.settings_text_common_fallback_injection.clone();
         let settings_text_common_fallback_injection_open =
             state.settings_text_common_fallback_injection_open.clone();
+        let settings_text_locale_override = state.settings_text_locale_override.clone();
+        let settings_text_locale_override_open = state.settings_text_locale_override_open.clone();
         let settings_edit_can_undo = state.settings_edit_can_undo.clone();
         let settings_edit_can_redo = state.settings_edit_can_redo.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
@@ -2664,6 +2673,8 @@ impl UiGalleryDriver {
                         settings_menu_bar_in_window_open.clone(),
                         settings_text_common_fallback_injection.clone(),
                         settings_text_common_fallback_injection_open.clone(),
+                        settings_text_locale_override.clone(),
+                        settings_text_locale_override_open.clone(),
                         settings_edit_can_undo.clone(),
                         settings_edit_can_redo.clone(),
                         &mut content,
@@ -3630,6 +3641,11 @@ impl WinitAppDriver for UiGalleryDriver {
                             ));
                         },
                     );
+                    let _ = app
+                        .models_mut()
+                        .update(&state.settings_text_locale_override, |v| {
+                            *v = Some(Arc::<str>::from("no_change"));
+                        });
                 }
                 let _ = app
                     .models_mut()
@@ -3658,6 +3674,12 @@ impl WinitAppDriver for UiGalleryDriver {
                     .flatten()
                     .as_deref()
                     .map(str::to_string);
+                let locale_override = app
+                    .models()
+                    .get_cloned(&state.settings_text_locale_override)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
@@ -3674,6 +3696,19 @@ impl WinitAppDriver for UiGalleryDriver {
                     let mut next = prev_font_config;
                     next.common_fallback_injection = injection;
                     app.set_global::<fret_core::TextFontFamilyConfig>(next);
+                }
+
+                if let Some(locale_override) = locale_override
+                    && locale_override.as_str() != "no_change"
+                    && let Ok(locale_id) =
+                        fret_runtime::fret_i18n::LocaleId::parse(&locale_override)
+                {
+                    app.with_global_mut(
+                        fret_runtime::fret_i18n::I18nService::default,
+                        |svc, _app| {
+                            svc.set_preferred_locales(vec![locale_id]);
+                        },
+                    );
                 }
                 Self::sync_menu_bar_after_state_change(app, window);
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
