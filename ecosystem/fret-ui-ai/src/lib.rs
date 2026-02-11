@@ -134,3 +134,6 @@ pub use model::{
     AiMessage, CitationItem, ExternalId, MarkdownPart, MessageId, MessagePart, MessageRole,
     SourceItem, ToolCall, ToolCallPayload, ToolCallState,
 };
+
+#[cfg(feature = "webview")]
+pub use elements::WebPreviewBackendController;
