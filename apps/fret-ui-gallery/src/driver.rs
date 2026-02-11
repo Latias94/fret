@@ -50,10 +50,12 @@ use crate::ui;
 
 mod chrome;
 mod debug_hud;
+mod debug_stats;
 mod inspector;
 mod menubar;
 mod router;
 mod settings_sheet;
+mod shell;
 mod status_bar;
 mod toaster;
 use router::{
@@ -2190,192 +2192,20 @@ impl UiGalleryDriver {
         }
 
         Self::sync_shadcn_theme(app, state);
-
         let last_debug_stats = state.ui.debug_stats();
-        let frame_dt = if debug_on {
-            state.debug_hud.tick(fret_core::time::Instant::now())
-        } else {
-            None
-        };
-        let fps = state.debug_hud.ema_fps();
-        let last_cache_roots = state.ui.debug_cache_root_stats();
-        let cache_root_breakdown: Option<Vec<Arc<str>>> = if !last_cache_roots.is_empty() {
-            let total = last_cache_roots.len();
-            let hits = last_cache_roots.iter().filter(|r| r.reused).count();
-            let replayed_ops: u32 = last_cache_roots.iter().map(|r| r.paint_replayed_ops).sum();
 
-            let mut lines: Vec<Arc<str>> = vec![Arc::from(format!(
-                "cache_roots total={total} hits={hits} replayed_ops={replayed_ops}"
-            ))];
-
-            let max_items = 3usize;
-            for (index, root) in last_cache_roots.iter().take(max_items).enumerate() {
-                let element_path = root.element.and_then(|element| {
-                    app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
-                        runtime.debug_path_for_element(window, element)
-                    })
-                });
-
-                lines.push(Arc::from(format!(
-                    "cache_root[{index}] node={:?} reused={} contained_layout={} replayed_ops={} el={} {}",
-                    root.root,
-                    root.reused as u8,
-                    root.contained_layout as u8,
-                    root.paint_replayed_ops,
-                    root.element
-                        .map(|id| format!("{:#x}", id.0))
-                        .unwrap_or_else(|| "<none>".to_string()),
-                    element_path.as_deref().unwrap_or(""),
-                )));
-            }
-
-            Some(lines)
-        } else {
-            None
-        };
-        let hot_model_breakdown: Option<Arc<str>> = {
-            let hotspots = state.ui.debug_model_change_hotspots();
-            if hotspots.is_empty() {
-                None
-            } else {
-                let mut line = String::from("hot_models");
-                for hs in hotspots.iter().take(3) {
-                    line.push(' ');
-                    line.push_str(&format!("{:?}={}", hs.model, hs.observation_edges));
-                }
-                Some(Arc::from(line))
-            }
-        };
-        let unobserved_model_breakdown: Option<Arc<str>> = {
-            let unobserved = state.ui.debug_model_change_unobserved();
-            if unobserved.is_empty() {
-                None
-            } else {
-                let mut line = format!(
-                    "unobs_models={}",
-                    state.ui.debug_stats().model_change_unobserved_models
-                );
-                for entry in unobserved.iter().take(3) {
-                    let type_name = entry.created.map(|c| c.type_name).unwrap_or("<unknown>");
-                    let type_name = type_name.rsplit("::").next().unwrap_or(type_name);
-                    line.push(' ');
-                    line.push_str(&format!("{:?}={}", entry.model, type_name));
-                }
-                Some(Arc::from(line))
-            }
-        };
-
-        let show_debug_hud = debug_on;
-        let mut debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
-            let mut lines: Vec<Arc<str>> = Vec::new();
-
-            lines.push(Arc::from(format!(
-                "fps={:.1} frame_dt_ms={:.2} solve_us={}",
-                fps.unwrap_or(0.0),
-                frame_dt.map(|dt| dt.as_secs_f64() * 1000.0).unwrap_or(0.0),
-                last_debug_stats.layout_engine_solve_time.as_micros()
-            )));
-            lines.push(Arc::from(format!(
-                "frame={:?} layout_us={} paint_us={} layout_nodes={}/{} paint_nodes={}/{}",
-                last_debug_stats.frame_id,
-                last_debug_stats.layout_time.as_micros(),
-                last_debug_stats.paint_time.as_micros(),
-                last_debug_stats.layout_nodes_performed,
-                last_debug_stats.layout_nodes_visited,
-                last_debug_stats.paint_nodes_performed,
-                last_debug_stats.paint_nodes,
-            )));
-            lines.push(Arc::from(format!(
-                "paint_cache hits={} misses={} replayed_ops={}",
-                last_debug_stats.paint_cache_hits,
-                last_debug_stats.paint_cache_misses,
-                last_debug_stats.paint_cache_replayed_ops
-            )));
-            lines.push(Arc::from(format!(
-                "view_cache active={} trunc={} relayouts={}",
-                last_debug_stats.view_cache_active as u8,
-                last_debug_stats.view_cache_invalidation_truncations,
-                last_debug_stats.view_cache_contained_relayouts
-            )));
-            lines.push(Arc::from(format!(
-                "changes models={} edges={} roots={} walks={} nodes={}",
-                last_debug_stats.model_change_models,
-                last_debug_stats.model_change_observation_edges,
-                last_debug_stats.model_change_invalidation_roots,
-                last_debug_stats.invalidation_walk_calls_model_change,
-                last_debug_stats.invalidation_walk_nodes_model_change
-            )));
-            lines.push(Arc::from(format!(
-                "globals count={} edges={} roots={} walks={} nodes={}",
-                last_debug_stats.global_change_globals,
-                last_debug_stats.global_change_observation_edges,
-                last_debug_stats.global_change_invalidation_roots,
-                last_debug_stats.invalidation_walk_calls_global_change,
-                last_debug_stats.invalidation_walk_nodes_global_change
-            )));
-            lines.push(Arc::from(format!(
-                "hover edges pressable={} region={} decl inst={} hit={} layout={} paint={}",
-                last_debug_stats.hover_pressable_target_changes,
-                last_debug_stats.hover_hover_region_target_changes,
-                last_debug_stats.hover_declarative_instance_changes,
-                last_debug_stats.hover_declarative_hit_test_invalidations,
-                last_debug_stats.hover_declarative_layout_invalidations,
-                last_debug_stats.hover_declarative_paint_invalidations,
-            )));
-
-            let hover_hotspots = state.ui.debug_hover_declarative_invalidation_hotspots(3);
-            for (index, hs) in hover_hotspots.iter().enumerate() {
-                let element_path = hs.element.and_then(|element| {
-                    app.with_global_mut_untracked(fret_ui::ElementRuntime::new, |runtime, _| {
-                        runtime.debug_path_for_element(window, element)
-                    })
-                });
-
-                lines.push(Arc::from(format!(
-                    "hover_decl[{index}] node={:?} hit={} layout={} paint={} el={} {}",
-                    hs.node,
-                    hs.hit_test,
-                    hs.layout,
-                    hs.paint,
-                    hs.element
-                        .map(|id| format!("{:#x}", id.0))
-                        .unwrap_or_else(|| "<none>".to_string()),
-                    element_path.as_deref().unwrap_or(""),
-                )));
-            }
-
-            if let Some(extra) = cache_root_breakdown.as_ref() {
-                lines.extend(extra.iter().cloned());
-            }
-            if let Some(line) = hot_model_breakdown.as_ref() {
-                lines.push(line.clone());
-            }
-            if let Some(line) = unobserved_model_breakdown.as_ref() {
-                lines.push(line.clone());
-            }
-
-            lines
-        } else {
-            Vec::new()
-        };
-        let inspector_status = if app.models().get_copied(&inspector_enabled).unwrap_or(false) {
-            let pointer = app
-                .models()
-                .get_copied(&inspector_last_pointer)
-                .unwrap_or(None);
-            Some(Self::compute_inspector_status(
-                app, &state.ui, window, pointer,
-            ))
-        } else {
-            None
-        };
-        if show_debug_hud && let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
-            debug_hud_lines.push(Arc::from("--- inspector ---"));
-            debug_hud_lines.push(cursor.clone());
-            debug_hud_lines.push(hit.clone());
-            debug_hud_lines.push(focus.clone());
-            debug_hud_lines.push(text.clone());
-        }
+        let debug_hud = debug_stats::compute_debug_hud_bundle(
+            app,
+            &state.ui,
+            window,
+            &mut state.debug_hud,
+            &inspector_enabled,
+            &inspector_last_pointer,
+            debug_on,
+        );
+        let show_debug_hud = debug_hud.show;
+        let debug_hud_lines = debug_hud.lines;
+        let inspector_status = debug_hud.inspector_status;
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
@@ -2386,156 +2216,23 @@ impl UiGalleryDriver {
 
                     let theme = cx.theme().clone();
 
-                    let sidebar = if cache_shell {
-                        cx.view_cache(
-                            {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Px(Px(280.0));
-                                layout.size.height = fret_ui::element::Length::Fill;
-                                fret_ui::element::ViewCacheProps {
-                                    layout,
-                                    ..Default::default()
-                                }
-                            },
-                            |cx| {
-                                let selected = cx
-                                    .get_model_cloned(&selected_page, Invalidation::Layout)
-                                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                                let query = cx
-                                    .get_model_cloned(&nav_query, Invalidation::Layout)
-                                    .unwrap_or_default();
-
-                                vec![if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
-                                    cx.container(
-                                        decl_style::container_props(
-                                            &theme,
-                                            ChromeRefinement::default()
-                                                .bg(ColorRef::Color(theme.color_required("muted")))
-                                                .p(Space::N4),
-                                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
-                                        ),
-                                        |cx| vec![cx.text("Sidebar (disabled)")],
-                                    )
-                                } else {
-                                    ui::sidebar_view(
-                                        cx,
-                                        &theme,
-                                        selected.as_ref(),
-                                        query.as_str(),
-                                        nav_query.clone(),
-                                        selected_page.clone(),
-                                        state.workspace_tabs.clone(),
-                                    )
-                                }]
-                            },
-                        )
-                    } else {
-                        cx.keyed("ui_gallery.sidebar", |cx| {
-                            let selected = cx
-                                .get_model_cloned(&selected_page, Invalidation::Layout)
-                                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                            let query = cx
-                                .get_model_cloned(&nav_query, Invalidation::Layout)
-                                .unwrap_or_default();
-
-                            if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
-                                cx.container(
-                                    decl_style::container_props(
-                                        &theme,
-                                        ChromeRefinement::default()
-                                            .bg(ColorRef::Color(theme.color_required("muted")))
-                                            .p(Space::N4),
-                                        LayoutRefinement::default().w_px(Px(280.0)).h_full(),
-                                    ),
-                                    |cx| vec![cx.text("Sidebar (disabled)")],
-                                )
-                            } else {
-                                ui::sidebar_view(
-                                    cx,
-                                    &theme,
-                                    selected.as_ref(),
-                                    query.as_str(),
-                                    nav_query.clone(),
-                                    selected_page.clone(),
-                                    state.workspace_tabs.clone(),
-                                )
-                            }
-                        })
-                    };
-
-                    let content = if cache_shell {
-                        cx.view_cache(
-                            {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Fill;
-                                layout.size.height = fret_ui::element::Length::Fill;
-                                layout.flex.grow = 1.0;
-                                fret_ui::element::ViewCacheProps {
-                                    layout,
-                                    ..Default::default()
-                                }
-                            },
-                            |cx| {
-                                let selected = cx
-                                    .get_model_cloned(&selected_page, Invalidation::Layout)
-                                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-
-                                vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
-                                    if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
-                                        cx.container(
-                                            decl_style::container_props(
-                                                &theme,
-                                                ChromeRefinement::default()
-                                                    .bg(ColorRef::Color(
-                                                        theme.color_required("background"),
-                                                    ))
-                                                    .p(Space::N6),
-                                                LayoutRefinement::default().w_full().h_full(),
-                                            ),
-                                            |cx| vec![cx.text("Content (disabled)")],
-                                        )
-                                    } else {
-                                        ui::content_view(
-                                            cx,
-                                            &theme,
-                                            selected.as_ref(),
-                                            content_models.as_ref(),
-                                        )
-                                    }
-                                })]
-                            },
-                        )
-                    } else {
-                        cx.keyed("ui_gallery.content_root", |cx| {
-                            let selected = cx
-                                .get_model_cloned(&selected_page, Invalidation::Layout)
-                                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-
-                            cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
-                                if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
-                                    cx.container(
-                                        decl_style::container_props(
-                                            &theme,
-                                            ChromeRefinement::default()
-                                                .bg(ColorRef::Color(
-                                                    theme.color_required("background"),
-                                                ))
-                                                .p(Space::N6),
-                                            LayoutRefinement::default().w_full().h_full(),
-                                        ),
-                                        |cx| vec![cx.text("Content (disabled)")],
-                                    )
-                                } else {
-                                    ui::content_view(
-                                        cx,
-                                        &theme,
-                                        selected.as_ref(),
-                                        content_models.as_ref(),
-                                    )
-                                }
-                            })
-                        })
-                    };
+                    let sidebar = shell::sidebar_view(
+                        cx,
+                        &theme,
+                        bisect,
+                        cache_shell,
+                        &nav_query,
+                        &selected_page,
+                        &workspace_tabs,
+                    );
+                    let content = shell::content_view(
+                        cx,
+                        &theme,
+                        bisect,
+                        cache_shell,
+                        &selected_page,
+                        content_models.as_ref(),
+                    );
 
                     let tab_strip = chrome::tab_strip_view(
                         cx,
