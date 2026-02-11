@@ -25,16 +25,18 @@ Definition of done:
   - can type with IME,
   - focused input is not obscured by keyboard.
 
-## M1 — Touch pan-to-scroll policy (ecosystem)
+## M1 — Touch pan-to-scroll baseline (runtime)
 
 Definition of done:
 
-- A reusable touch pan-to-scroll policy exists in `ecosystem/fret-ui-kit` (not in `crates/fret-ui`).
-- `ecosystem/fret-ui-shadcn::ScrollArea` adopts the policy so gallery pages can scroll on touch.
+- Touch pan-to-scroll works for core scroll surfaces:
+  - `crates/fret-ui` `Scroll`
+  - `crates/fret-ui` `VirtualList`
+- The implementation is touch-only and does not change layout/semantics in steady-state frames (no snapshot churn).
 
 Evidence:
 
-- Unit test proves touch dragging updates the bound `ScrollHandle` offset.
+- Unit test proves touch dragging updates the bound `ScrollHandle` offset (via `fret-ui-shadcn::ScrollArea`).
 - Optional: a UI-gallery scripted diag scenario demonstrates scroll on a real device.
 
 ## M2 — Keyboard avoidance seam (occlusion insets)
@@ -75,4 +77,3 @@ Definition of done:
 Evidence:
 
 - Same acceptance criteria as M3, but on iOS.
-
