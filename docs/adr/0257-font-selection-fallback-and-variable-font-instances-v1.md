@@ -19,6 +19,8 @@ gaps remain that can cause correctness drift and make refactors risky:
    - Parley shaping can apply variable font instance coordinates and (optionally) synthesis.
    - The renderer must ensure rasterization matches shaping, and glyph cache keys must include instance identity.
    - As of 2026-02-11, normalized coords are carried end-to-end; synthesis is tracked but not yet applied to raster output.
+   - As of 2026-02-11, normalized coords are carried end-to-end; synthesis is now applied to raster output and
+     participates in glyph cache identity.
 
 2) **Fallback chain semantics are underspecified**.
    - Fret currently injects a curated/common fallback list into generic families.
@@ -46,6 +48,7 @@ Current Fret evidence anchors:
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ParleyGlyph::normalized_coords`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variation_key_from_normalized_coords`, Swash `normalized_coords(...)`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`variable_font_weight_changes_face_key_and_raster_output`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (synthesis: `synthesis_skew_participates_in_face_key_and_raster_output`)
 - Missing-glyph + selected-family diagnostics trace (bundle-scoped, renderer-owned):
   - `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`)
   - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::font_trace_snapshot`)

@@ -85,8 +85,11 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 ### Known gaps (must-fix)
 
 1) Variable fonts: synthesis + diagnostics are incomplete.
-   - Normalized coords are now applied consistently, but synthesis (embolden/skew) is not yet applied to rasterization
-     and is not part of `variation_key`.
+   - Normalized coords are applied consistently, and synthesis (embolden/skew) is now applied at rasterization time and
+     participates in glyph cache identity.
+     - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`FontFaceKey` synthesis fields,
+       `TextSystem::ensure_parley_glyph` render embolden/skew, test:
+       `synthesis_skew_participates_in_face_key_and_raster_output`)
    - We also lack a human-auditable representation for “axis tag + value” settings (useful for debugging and future UI).
 
 2) Fallback chain semantics still need conformance + explicit policy composition.
