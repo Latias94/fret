@@ -30,7 +30,16 @@ pub struct FontCatalogEntryMetadata {
     pub family: String,
     pub has_variable_axes: bool,
     pub known_variable_axes: Vec<String>,
+    pub variable_axes: Vec<FontVariableAxisMetadata>,
     pub is_monospace_candidate: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FontVariableAxisMetadata {
+    pub tag: String,
+    pub min_bits: u32,
+    pub max_bits: u32,
+    pub default_bits: u32,
 }
 
 #[derive(Debug, Clone)]

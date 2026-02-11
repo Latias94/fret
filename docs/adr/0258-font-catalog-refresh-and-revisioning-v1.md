@@ -8,7 +8,7 @@
 Fret exposes a best-effort font catalog to settings UIs via runtime globals:
 
 - `FontCatalog` (family list + revision)
-- `FontCatalogMetadata` (entry list + revision, including best-effort axis/monospace hints)
+- `FontCatalogMetadata` (entry list + revision, including best-effort axis ranges + monospace hints)
 - `FontCatalogCache` (UI-friendly `Arc<[Arc<str>]>` derived from `FontCatalog`)
 
 These globals are populated by runners from the renderer’s text backend (Parley/fontique).

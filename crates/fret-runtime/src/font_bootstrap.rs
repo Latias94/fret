@@ -326,12 +326,14 @@ mod tests {
                 family: "Inter".to_string(),
                 has_variable_axes: false,
                 known_variable_axes: vec![],
+                variable_axes: vec![],
                 is_monospace_candidate: false,
             },
             FontCatalogEntry {
                 family: "Roboto Flex".to_string(),
                 has_variable_axes: true,
                 known_variable_axes: vec!["wght".to_string(), "wdth".to_string()],
+                variable_axes: vec![],
                 is_monospace_candidate: false,
             },
         ];
@@ -364,12 +366,14 @@ mod tests {
                 family: "Inter".to_string(),
                 has_variable_axes: false,
                 known_variable_axes: vec![],
+                variable_axes: vec![],
                 is_monospace_candidate: false,
             },
             FontCatalogEntry {
                 family: "Roboto Flex".to_string(),
                 has_variable_axes: true,
                 known_variable_axes: vec!["wght".to_string(), "wdth".to_string()],
+                variable_axes: vec![],
                 is_monospace_candidate: false,
             },
         ];

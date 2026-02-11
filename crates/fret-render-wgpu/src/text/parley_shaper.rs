@@ -15,6 +15,7 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use super::FontCatalogEntryMetadata;
+use super::FontVariableAxisMetadata;
 
 fn env_disables_system_fonts() -> bool {
     let Ok(raw) = std::env::var("FRET_TEXT_SYSTEM_FONTS") else {
@@ -271,6 +272,10 @@ impl ParleyShaper {
             return cache.clone();
         }
 
+        fn axis_tag_string(tag_be_bytes: [u8; 4]) -> String {
+            String::from_utf8_lossy(&tag_be_bytes).to_string()
+        }
+
         let mut by_lower: HashMap<String, String> = HashMap::new();
         for name in self.fcx.collection.family_names() {
             let key = name.to_ascii_lowercase();
@@ -326,6 +331,22 @@ impl ParleyShaper {
                 known_variable_axes.push("opsz".to_string());
             }
 
+            let variable_axes = info
+                .default_font()
+                .map(|font| {
+                    font.axes()
+                        .iter()
+                        .take(64)
+                        .map(|axis| FontVariableAxisMetadata {
+                            tag: axis_tag_string(axis.tag.to_be_bytes()),
+                            min_bits: axis.min.to_bits(),
+                            max_bits: axis.max.to_bits(),
+                            default_bits: axis.default.to_bits(),
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
             let is_monospace_candidate = info
                 .default_font()
                 .and_then(|font| {
@@ -340,6 +361,7 @@ impl ParleyShaper {
                 family,
                 has_variable_axes,
                 known_variable_axes,
+                variable_axes,
                 is_monospace_candidate,
             });
         }

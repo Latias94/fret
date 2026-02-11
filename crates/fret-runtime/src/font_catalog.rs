@@ -1,5 +1,32 @@
 use serde::{Deserialize, Serialize};
 
+/// Best-effort metadata for a variable font axis.
+///
+/// Floats are stored as raw `f32` bit patterns to keep the struct `Eq` and stable under
+/// serialization while remaining lossless.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FontVariableAxisInfo {
+    pub tag: String,
+    pub min_bits: u32,
+    pub max_bits: u32,
+    pub default_bits: u32,
+}
+
+impl FontVariableAxisInfo {
+    pub fn min(&self) -> f32 {
+        f32::from_bits(self.min_bits)
+    }
+
+    pub fn max(&self) -> f32 {
+        f32::from_bits(self.max_bits)
+    }
+
+    pub fn default(&self) -> f32 {
+        f32::from_bits(self.default_bits)
+    }
+}
+
 /// Best-effort font family catalog for settings UIs.
 ///
 /// This is populated by the runner from the renderer's text backend and is platform-dependent by
@@ -28,6 +55,11 @@ pub struct FontCatalogEntry {
     pub has_variable_axes: bool,
     /// Known variable axis tags (best-effort), e.g. `wght`, `wdth`, `slnt`, `ital`, `opsz`.
     pub known_variable_axes: Vec<String>,
+    /// Best-effort variable axis metadata for the family's default face.
+    ///
+    /// Axis tags beyond the known set may be present (e.g. `GRAD` for Roboto Flex).
+    #[serde(default)]
+    pub variable_axes: Vec<FontVariableAxisInfo>,
     /// Best-effort monospace hint derived from font tables (typically PostScript `isFixedPitch`).
     pub is_monospace_candidate: bool,
 }
