@@ -68,6 +68,14 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "not_exists",
         "target": { "kind": "test_id", "id": "select-scroll-viewport" }
       },

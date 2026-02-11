@@ -8855,6 +8855,8 @@ fn ui_gallery_script_wheel_scroll_hit_changes_test_id(script: &Path) -> Option<&
     };
 
     match name {
+        "ui-gallery-select-wheel-scroll.json" => Some("select-scroll-viewport"),
+        "ui-gallery-select-wheel-up-from-bottom.json" => Some("select-scroll-viewport"),
         "ui-gallery-code-view-torture-wheel-scroll-hit-changes.json" => {
             Some("ui-gallery-code-view-root")
         }
