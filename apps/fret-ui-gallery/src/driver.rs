@@ -434,6 +434,89 @@ struct UiGalleryWindowState {
     last_config_files_status_seq: u64,
 }
 
+impl UiGalleryWindowState {
+    fn content_models(&self) -> ui::UiGalleryModels {
+        ui::UiGalleryModels {
+            content_tab: self.content_tab.clone(),
+            theme_preset: self.theme_preset.clone(),
+            theme_preset_open: self.theme_preset_open.clone(),
+            view_cache_enabled: self.view_cache_enabled.clone(),
+            view_cache_cache_shell: self.view_cache_cache_shell.clone(),
+            view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
+            view_cache_popover_open: self.view_cache_popover_open.clone(),
+            view_cache_continuous: self.view_cache_continuous.clone(),
+            view_cache_counter: self.view_cache_counter.clone(),
+            popover_open: self.popover_open.clone(),
+            dialog_open: self.dialog_open.clone(),
+            alert_dialog_open: self.alert_dialog_open.clone(),
+            sheet_open: self.sheet_open.clone(),
+            portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
+            select_value: self.select_value.clone(),
+            select_open: self.select_open.clone(),
+            combobox_value: self.combobox_value.clone(),
+            combobox_open: self.combobox_open.clone(),
+            combobox_query: self.combobox_query.clone(),
+            date_picker_open: self.date_picker_open.clone(),
+            date_picker_month: self.date_picker_month.clone(),
+            date_picker_selected: self.date_picker_selected.clone(),
+            time_picker_open: self.time_picker_open.clone(),
+            time_picker_selected: self.time_picker_selected.clone(),
+            resizable_h_fractions: self.resizable_h_fractions.clone(),
+            resizable_v_fractions: self.resizable_v_fractions.clone(),
+            data_table_state: self.data_table_state.clone(),
+            data_grid_selected_row: self.data_grid_selected_row.clone(),
+            tabs_value: self.tabs_value.clone(),
+            accordion_value: self.accordion_value.clone(),
+            avatar_demo_image: self.avatar_demo_image.clone(),
+            image_fit_demo_wide_image: self.image_fit_demo_wide_image.clone(),
+            image_fit_demo_tall_image: self.image_fit_demo_tall_image.clone(),
+            image_fit_demo_streaming_image: self.image_fit_demo_streaming_image.clone(),
+            progress: self.progress.clone(),
+            checkbox: self.checkbox.clone(),
+            switch: self.switch.clone(),
+            material3_checkbox: self.material3_checkbox.clone(),
+            material3_switch: self.material3_switch.clone(),
+            material3_radio_value: self.material3_radio_value.clone(),
+            material3_tabs_value: self.material3_tabs_value.clone(),
+            material3_list_value: self.material3_list_value.clone(),
+            material3_expressive: self.material3_expressive.clone(),
+            material3_navigation_bar_value: self.material3_navigation_bar_value.clone(),
+            material3_navigation_rail_value: self.material3_navigation_rail_value.clone(),
+            material3_navigation_drawer_value: self.material3_navigation_drawer_value.clone(),
+            material3_modal_navigation_drawer_open: self
+                .material3_modal_navigation_drawer_open
+                .clone(),
+            material3_dialog_open: self.material3_dialog_open.clone(),
+            material3_text_field_value: self.material3_text_field_value.clone(),
+            material3_text_field_disabled: self.material3_text_field_disabled.clone(),
+            material3_text_field_error: self.material3_text_field_error.clone(),
+            material3_autocomplete_value: self.material3_autocomplete_value.clone(),
+            material3_autocomplete_disabled: self.material3_autocomplete_disabled.clone(),
+            material3_autocomplete_error: self.material3_autocomplete_error.clone(),
+            material3_autocomplete_dialog_open: self.material3_autocomplete_dialog_open.clone(),
+            material3_menu_open: self.material3_menu_open.clone(),
+            text_input: self.text_input.clone(),
+            text_area: self.text_area.clone(),
+            dropdown_open: self.dropdown_open.clone(),
+            context_menu_open: self.context_menu_open.clone(),
+            context_menu_edge_open: self.context_menu_edge_open.clone(),
+            cmdk_open: self.cmdk_open.clone(),
+            cmdk_query: self.cmdk_query.clone(),
+            last_action: self.last_action.clone(),
+            sonner_position: self.sonner_position.clone(),
+            virtual_list_torture_jump: self.virtual_list_torture_jump.clone(),
+            virtual_list_torture_edit_row: self.virtual_list_torture_edit_row.clone(),
+            virtual_list_torture_edit_text: self.virtual_list_torture_edit_text.clone(),
+            virtual_list_torture_scroll: self.virtual_list_torture_scroll.clone(),
+            code_editor_syntax_rust: self.code_editor_syntax_rust.clone(),
+            code_editor_boundary_identifier: self.code_editor_boundary_identifier.clone(),
+            code_editor_soft_wrap: self.code_editor_soft_wrap.clone(),
+            code_editor_folds: self.code_editor_folds.clone(),
+            code_editor_inlays: self.code_editor_inlays.clone(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct UiGalleryDriver;
 
@@ -2273,24 +2356,11 @@ impl UiGalleryDriver {
             }
         }
 
+        let content_models = Arc::new(state.content_models());
         let selected_page = state.selected_page.clone();
         let workspace_tabs = state.workspace_tabs.clone();
         let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
         let nav_query = state.nav_query.clone();
-        let content_tab = state.content_tab.clone();
-        let theme_preset = state.theme_preset.clone();
-        let theme_preset_open = state.theme_preset_open.clone();
-        let view_cache_enabled = state.view_cache_enabled.clone();
-        let view_cache_cache_shell = state.view_cache_cache_shell.clone();
-        let view_cache_inner_enabled = state.view_cache_inner_enabled.clone();
-        let view_cache_popover_open = state.view_cache_popover_open.clone();
-        let view_cache_continuous = state.view_cache_continuous.clone();
-        let view_cache_counter = state.view_cache_counter.clone();
-        let popover_open = state.popover_open.clone();
-        let dialog_open = state.dialog_open.clone();
-        let alert_dialog_open = state.alert_dialog_open.clone();
-        let sheet_open = state.sheet_open.clone();
-        let portal_geometry_popover_open = state.portal_geometry_popover_open.clone();
         let settings_open = state.settings_open.clone();
         let settings_menu_bar_os = state.settings_menu_bar_os.clone();
         let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
@@ -2298,68 +2368,7 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
         let settings_edit_can_undo = state.settings_edit_can_undo.clone();
         let settings_edit_can_redo = state.settings_edit_can_redo.clone();
-        let select_value = state.select_value.clone();
-        let select_open = state.select_open.clone();
-        let combobox_value = state.combobox_value.clone();
-        let combobox_open = state.combobox_open.clone();
-        let combobox_query = state.combobox_query.clone();
-        let date_picker_open = state.date_picker_open.clone();
-        let date_picker_month = state.date_picker_month.clone();
-        let date_picker_selected = state.date_picker_selected.clone();
-        let time_picker_open = state.time_picker_open.clone();
-        let time_picker_selected = state.time_picker_selected.clone();
-        let resizable_h_fractions = state.resizable_h_fractions.clone();
-        let resizable_v_fractions = state.resizable_v_fractions.clone();
-        let data_table_state = state.data_table_state.clone();
-        let data_grid_selected_row = state.data_grid_selected_row.clone();
-        let tabs_value = state.tabs_value.clone();
-        let accordion_value = state.accordion_value.clone();
-        let avatar_demo_image = state.avatar_demo_image.clone();
-        let image_fit_demo_wide_image = state.image_fit_demo_wide_image.clone();
-        let image_fit_demo_tall_image = state.image_fit_demo_tall_image.clone();
-        let image_fit_demo_streaming_image = state.image_fit_demo_streaming_image.clone();
-        let progress = state.progress.clone();
-        let checkbox = state.checkbox.clone();
-        let switch = state.switch.clone();
-        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
-        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
-        let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
-        let code_editor_folds = state.code_editor_folds.clone();
-        let code_editor_inlays = state.code_editor_inlays.clone();
-        let material3_checkbox = state.material3_checkbox.clone();
-        let material3_switch = state.material3_switch.clone();
-        let material3_radio_value = state.material3_radio_value.clone();
-        let material3_tabs_value = state.material3_tabs_value.clone();
-        let material3_list_value = state.material3_list_value.clone();
-        let material3_expressive = state.material3_expressive.clone();
-        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
-        let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
-        let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
-        let material3_modal_navigation_drawer_open =
-            state.material3_modal_navigation_drawer_open.clone();
-        let material3_dialog_open = state.material3_dialog_open.clone();
-        let material3_text_field_value = state.material3_text_field_value.clone();
-        let material3_text_field_disabled = state.material3_text_field_disabled.clone();
-        let material3_text_field_error = state.material3_text_field_error.clone();
-        let material3_autocomplete_value = state.material3_autocomplete_value.clone();
-        let material3_autocomplete_disabled = state.material3_autocomplete_disabled.clone();
-        let material3_autocomplete_error = state.material3_autocomplete_error.clone();
-        let material3_autocomplete_dialog_open = state.material3_autocomplete_dialog_open.clone();
-        let material3_menu_open = state.material3_menu_open.clone();
-        let text_input = state.text_input.clone();
-        let text_area = state.text_area.clone();
-        let dropdown_open = state.dropdown_open.clone();
-        let context_menu_open = state.context_menu_open.clone();
-        let context_menu_edge_open = state.context_menu_edge_open.clone();
-        let cmdk_open = state.cmdk_open.clone();
-        let cmdk_query = state.cmdk_query.clone();
-        let last_action = state.last_action.clone();
-        let sonner_position = state.sonner_position.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
-        let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
-        let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
-        let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
-        let virtual_list_torture_scroll = state.virtual_list_torture_scroll.clone();
         let inspector_enabled = state.inspector_enabled.clone();
         let inspector_last_pointer = state.inspector_last_pointer.clone();
 
@@ -2682,83 +2691,12 @@ impl UiGalleryDriver {
                                             |cx| vec![cx.text("Content (disabled)")],
                                         )
                                     } else {
-                                        let models = ui::UiGalleryModels {
-                                            content_tab: content_tab.clone(),
-                                            theme_preset: theme_preset.clone(),
-                                            theme_preset_open: theme_preset_open.clone(),
-                                            view_cache_enabled: view_cache_enabled.clone(),
-                                            view_cache_cache_shell: view_cache_cache_shell.clone(),
-                                            view_cache_inner_enabled: view_cache_inner_enabled.clone(),
-                                            view_cache_popover_open: view_cache_popover_open.clone(),
-                                            view_cache_continuous: view_cache_continuous.clone(),
-                                            view_cache_counter: view_cache_counter.clone(),
-                                            popover_open: popover_open.clone(),
-                                            dialog_open: dialog_open.clone(),
-                                            alert_dialog_open: alert_dialog_open.clone(),
-                                            sheet_open: sheet_open.clone(),
-                                            portal_geometry_popover_open: portal_geometry_popover_open.clone(),
-                                            select_value: select_value.clone(),
-                                            select_open: select_open.clone(),
-                                            combobox_value: combobox_value.clone(),
-                                            combobox_open: combobox_open.clone(),
-                                            combobox_query: combobox_query.clone(),
-                                            date_picker_open: date_picker_open.clone(),
-                                            date_picker_month: date_picker_month.clone(),
-                                            date_picker_selected: date_picker_selected.clone(),
-                                            time_picker_open: time_picker_open.clone(),
-                                            time_picker_selected: time_picker_selected.clone(),
-                                            resizable_h_fractions: resizable_h_fractions.clone(),
-                                            resizable_v_fractions: resizable_v_fractions.clone(),
-                                            data_table_state: data_table_state.clone(),
-                                            data_grid_selected_row: data_grid_selected_row.clone(),
-                                            tabs_value: tabs_value.clone(),
-                                            accordion_value: accordion_value.clone(),
-                                            avatar_demo_image: avatar_demo_image.clone(),
-                                            image_fit_demo_wide_image: image_fit_demo_wide_image.clone(),
-                                            image_fit_demo_tall_image: image_fit_demo_tall_image.clone(),
-                                            image_fit_demo_streaming_image: image_fit_demo_streaming_image.clone(),
-                                            progress: progress.clone(),
-                                            checkbox: checkbox.clone(),
-                                            switch: switch.clone(),
-                                            material3_checkbox: material3_checkbox.clone(),
-                                            material3_switch: material3_switch.clone(),
-                                            material3_radio_value: material3_radio_value.clone(),
-                                            material3_tabs_value: material3_tabs_value.clone(),
-                                            material3_list_value: material3_list_value.clone(),
-                                            material3_expressive: material3_expressive.clone(),
-                                            material3_navigation_bar_value: material3_navigation_bar_value.clone(),
-                                            material3_navigation_rail_value: material3_navigation_rail_value.clone(),
-                                            material3_navigation_drawer_value: material3_navigation_drawer_value.clone(),
-                                            material3_modal_navigation_drawer_open: material3_modal_navigation_drawer_open.clone(),
-                                            material3_dialog_open: material3_dialog_open.clone(),
-                                            material3_text_field_value: material3_text_field_value.clone(),
-                                            material3_text_field_disabled: material3_text_field_disabled.clone(),
-                                            material3_text_field_error: material3_text_field_error.clone(),
-                                            material3_autocomplete_value: material3_autocomplete_value.clone(),
-                                            material3_autocomplete_disabled: material3_autocomplete_disabled.clone(),
-                                            material3_autocomplete_error: material3_autocomplete_error.clone(),
-                                            material3_autocomplete_dialog_open: material3_autocomplete_dialog_open.clone(),
-                                            material3_menu_open: material3_menu_open.clone(),
-                                            text_input: text_input.clone(),
-                                            text_area: text_area.clone(),
-                                            dropdown_open: dropdown_open.clone(),
-                                            context_menu_open: context_menu_open.clone(),
-                                            context_menu_edge_open: context_menu_edge_open.clone(),
-                                            cmdk_open: cmdk_open.clone(),
-                                            cmdk_query: cmdk_query.clone(),
-                                            last_action: last_action.clone(),
-                                            sonner_position: sonner_position.clone(),
-                                            virtual_list_torture_jump: virtual_list_torture_jump.clone(),
-                                            virtual_list_torture_edit_row: virtual_list_torture_edit_row.clone(),
-                                            virtual_list_torture_edit_text: virtual_list_torture_edit_text.clone(),
-                                            virtual_list_torture_scroll: virtual_list_torture_scroll.clone(),
-                                            code_editor_syntax_rust: code_editor_syntax_rust.clone(),
-                                            code_editor_boundary_identifier: code_editor_boundary_identifier.clone(),
-                                            code_editor_soft_wrap: code_editor_soft_wrap.clone(),
-                                            code_editor_folds: code_editor_folds.clone(),
-                                            code_editor_inlays: code_editor_inlays.clone(),
-                                        };
-                                        ui::content_view(cx, &theme, selected.as_ref(), &models)
+                                        ui::content_view(
+                                            cx,
+                                            &theme,
+                                            selected.as_ref(),
+                                            content_models.as_ref(),
+                                        )
                                     }
                                 })]
                             },
@@ -2784,83 +2722,12 @@ impl UiGalleryDriver {
                                         |cx| vec![cx.text("Content (disabled)")],
                                     )
                                 } else {
-                                    let models = ui::UiGalleryModels {
-                                        content_tab: content_tab.clone(),
-                                        theme_preset: theme_preset.clone(),
-                                        theme_preset_open: theme_preset_open.clone(),
-                                        view_cache_enabled: view_cache_enabled.clone(),
-                                        view_cache_cache_shell: view_cache_cache_shell.clone(),
-                                        view_cache_inner_enabled: view_cache_inner_enabled.clone(),
-                                        view_cache_popover_open: view_cache_popover_open.clone(),
-                                        view_cache_continuous: view_cache_continuous.clone(),
-                                        view_cache_counter: view_cache_counter.clone(),
-                                        popover_open: popover_open.clone(),
-                                        dialog_open: dialog_open.clone(),
-                                        alert_dialog_open: alert_dialog_open.clone(),
-                                        sheet_open: sheet_open.clone(),
-                                        portal_geometry_popover_open: portal_geometry_popover_open.clone(),
-                                        select_value: select_value.clone(),
-                                        select_open: select_open.clone(),
-                                        combobox_value: combobox_value.clone(),
-                                        combobox_open: combobox_open.clone(),
-                                        combobox_query: combobox_query.clone(),
-                                        date_picker_open: date_picker_open.clone(),
-                                        date_picker_month: date_picker_month.clone(),
-                                        date_picker_selected: date_picker_selected.clone(),
-                                        time_picker_open: time_picker_open.clone(),
-                                        time_picker_selected: time_picker_selected.clone(),
-                                        resizable_h_fractions: resizable_h_fractions.clone(),
-                                        resizable_v_fractions: resizable_v_fractions.clone(),
-                                        data_table_state: data_table_state.clone(),
-                                        data_grid_selected_row: data_grid_selected_row.clone(),
-                                        tabs_value: tabs_value.clone(),
-                                        accordion_value: accordion_value.clone(),
-                                        avatar_demo_image: avatar_demo_image.clone(),
-                                        image_fit_demo_wide_image: image_fit_demo_wide_image.clone(),
-                                        image_fit_demo_tall_image: image_fit_demo_tall_image.clone(),
-                                        image_fit_demo_streaming_image: image_fit_demo_streaming_image.clone(),
-                                        progress: progress.clone(),
-                                        checkbox: checkbox.clone(),
-                                        switch: switch.clone(),
-                                        material3_checkbox: material3_checkbox.clone(),
-                                        material3_switch: material3_switch.clone(),
-                                        material3_radio_value: material3_radio_value.clone(),
-                                        material3_tabs_value: material3_tabs_value.clone(),
-                                        material3_list_value: material3_list_value.clone(),
-                                        material3_expressive: material3_expressive.clone(),
-                                        material3_navigation_bar_value: material3_navigation_bar_value.clone(),
-                                        material3_navigation_rail_value: material3_navigation_rail_value.clone(),
-                                        material3_navigation_drawer_value: material3_navigation_drawer_value.clone(),
-                                        material3_modal_navigation_drawer_open: material3_modal_navigation_drawer_open.clone(),
-                                        material3_dialog_open: material3_dialog_open.clone(),
-                                        material3_text_field_value: material3_text_field_value.clone(),
-                                        material3_text_field_disabled: material3_text_field_disabled.clone(),
-                                        material3_text_field_error: material3_text_field_error.clone(),
-                                        material3_autocomplete_value: material3_autocomplete_value.clone(),
-                                        material3_autocomplete_disabled: material3_autocomplete_disabled.clone(),
-                                        material3_autocomplete_error: material3_autocomplete_error.clone(),
-                                        material3_autocomplete_dialog_open: material3_autocomplete_dialog_open.clone(),
-                                        material3_menu_open: material3_menu_open.clone(),
-                                        text_input: text_input.clone(),
-                                        text_area: text_area.clone(),
-                                        dropdown_open: dropdown_open.clone(),
-                                        context_menu_open: context_menu_open.clone(),
-                                        context_menu_edge_open: context_menu_edge_open.clone(),
-                                        cmdk_open: cmdk_open.clone(),
-                                        cmdk_query: cmdk_query.clone(),
-                                        last_action: last_action.clone(),
-                                        sonner_position: sonner_position.clone(),
-                                        virtual_list_torture_jump: virtual_list_torture_jump.clone(),
-                                        virtual_list_torture_edit_row: virtual_list_torture_edit_row.clone(),
-                                        virtual_list_torture_edit_text: virtual_list_torture_edit_text.clone(),
-                                        virtual_list_torture_scroll: virtual_list_torture_scroll.clone(),
-                                        code_editor_syntax_rust: code_editor_syntax_rust.clone(),
-                                        code_editor_boundary_identifier: code_editor_boundary_identifier.clone(),
-                                        code_editor_soft_wrap: code_editor_soft_wrap.clone(),
-                                        code_editor_folds: code_editor_folds.clone(),
-                                        code_editor_inlays: code_editor_inlays.clone(),
-                                    };
-                                    ui::content_view(cx, &theme, selected.as_ref(), &models)
+                                    ui::content_view(
+                                        cx,
+                                        &theme,
+                                        selected.as_ref(),
+                                        content_models.as_ref(),
+                                    )
                                 }
                             })
                         })
@@ -2957,17 +2824,17 @@ impl UiGalleryDriver {
 
                     let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
                         let status_last_action = cx
-                            .get_model_cloned(&last_action, Invalidation::Layout)
+                            .get_model_cloned(&content_models.last_action, Invalidation::Layout)
                             .unwrap_or_else(|| Arc::<str>::from("<none>"));
                         let status_theme = cx
-                            .get_model_cloned(&theme_preset, Invalidation::Layout)
+                            .get_model_cloned(&content_models.theme_preset, Invalidation::Layout)
                             .flatten()
                             .unwrap_or_else(|| Arc::<str>::from("<default>"));
                         let status_view_cache = cx
-                            .get_model_copied(&view_cache_enabled, Invalidation::Layout)
+                            .get_model_copied(&content_models.view_cache_enabled, Invalidation::Layout)
                             .unwrap_or(false);
                         let status_cache_shell = cx
-                            .get_model_copied(&view_cache_cache_shell, Invalidation::Layout)
+                            .get_model_copied(&content_models.view_cache_cache_shell, Invalidation::Layout)
                             .unwrap_or(false);
 
                         let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
@@ -3118,7 +2985,7 @@ impl UiGalleryDriver {
                         } else {
                             {
                                 let position = cx
-                                    .get_model_copied(&sonner_position, Invalidation::Layout)
+                                    .get_model_copied(&content_models.sonner_position, Invalidation::Layout)
                                     .unwrap_or(shadcn::ToastPosition::TopCenter);
                                 shadcn::Toaster::new().position(position).into_element(cx)
                             }
