@@ -748,15 +748,37 @@ fn shaping_properties_for_span(
         )));
     }
 
+    let mut effective_weight = *weight;
+    let mut axes_for_variations: Vec<fret_core::TextFontAxisSetting> = Vec::new();
     if !axes.is_empty() {
-        let variations = font_variations_for_axes(axes);
+        // `wght` overlaps with the `FontWeight` attribute path. Prefer expressing it as
+        // `FontWeight` so fontique synthesis participates consistently (and avoid duplicate
+        // tag resolution ambiguity in the underlying shaping stack).
+        let mut wght_axis_override: Option<f32> = None;
+        for axis in axes {
+            if axis.tag.trim().eq_ignore_ascii_case("wght") && axis.value.is_finite() {
+                wght_axis_override = Some(axis.value);
+                continue;
+            }
+            axes_for_variations.push(axis.clone());
+        }
+        if effective_weight.is_none()
+            && let Some(wght) = wght_axis_override
+        {
+            let wght = wght.clamp(1.0, 1000.0).round() as u16;
+            effective_weight = Some(fret_core::FontWeight(wght));
+        }
+    }
+
+    if !axes_for_variations.is_empty() {
+        let variations = font_variations_for_axes(&axes_for_variations);
         if !variations.is_empty() {
             out.push(StyleProperty::FontVariations(FontSettings::List(
                 Cow::Owned(variations.into()),
             )));
         }
     }
-    if let Some(weight) = weight {
+    if let Some(weight) = effective_weight {
         out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
             weight.0 as f32,
         )));
@@ -827,12 +849,44 @@ pub(super) fn run_system_font_rescan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::Px;
+    use fret_core::{FontId, FontWeight, Px, TextSpan, TextStyle};
     use std::sync::{Mutex, OnceLock};
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    #[test]
+    fn shaping_properties_map_wght_axis_to_font_weight() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let span = TextSpan {
+            len: 1,
+            shaping: TextShapingStyle::default().with_axis("wght", 900.0),
+            paint: Default::default(),
+        };
+
+        let props =
+            shaping_properties_for_span(&base, &span, "").expect("expected shaping properties");
+
+        assert!(
+            props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontWeight(_))),
+            "expected `wght` axis to map to FontWeight"
+        );
+        assert!(
+            !props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontVariations(_))),
+            "expected `wght` axis to be removed from FontVariations"
+        );
     }
 
     #[test]

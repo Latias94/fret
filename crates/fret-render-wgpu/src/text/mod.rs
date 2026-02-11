@@ -4620,6 +4620,7 @@ fn span_has_any_overrides(span: &TextSpan) -> bool {
         || span.shaping.weight.is_some()
         || span.shaping.slant.is_some()
         || span.shaping.letter_spacing_em.is_some()
+        || !span.shaping.axes.is_empty()
         || span.paint.fg.is_some()
         || span.paint.bg.is_some()
         || span.paint.underline.is_some()
@@ -5289,8 +5290,8 @@ mod tests {
     };
     use fret_core::{
         AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
-        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
-        TextWrap, UnderlineStyle,
+        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextShapingStyle,
+        TextSpan, TextStyle, TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
 
@@ -5841,6 +5842,17 @@ mod tests {
         let text = "hello";
         let spans = vec![TextSpan::new(text.len())];
         assert!(super::sanitize_spans_for_text(text, &spans).is_none());
+    }
+
+    #[test]
+    fn sanitize_spans_treats_axis_overrides_as_non_noop() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: text.len(),
+            shaping: TextShapingStyle::default().with_axis("wght", 300.0),
+            paint: Default::default(),
+        }];
+        assert!(super::sanitize_spans_for_text(text, &spans).is_some());
     }
 
     #[test]
@@ -6857,7 +6869,16 @@ mod tests {
         let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
         assert!(added > 0, "expected variable font to load");
 
-        let family = "Roboto Flex";
+        let family = text
+            .all_font_names()
+            .into_iter()
+            .find(|n| n.to_ascii_lowercase().contains("roboto flex"))
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected a Roboto Flex family name after loading the fixture font (names_head={:?})",
+                    text.all_font_names().into_iter().take(8).collect::<Vec<_>>()
+                )
+            });
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -6866,13 +6887,14 @@ mod tests {
         };
 
         let base_style = TextStyle {
-            font: fret_core::FontId::family(family),
+            font: fret_core::FontId::family(family.clone()),
             size: Px(64.0),
             weight: FontWeight(400),
             ..Default::default()
         };
 
         let rich_with_wght = |wght: f32| {
+            assert!(wght.is_finite());
             let spans = vec![TextSpan {
                 len: 1,
                 shaping: TextShapingStyle::default().with_axis("wght", wght),
@@ -6883,6 +6905,9 @@ mod tests {
 
         let rich_light = rich_with_wght(200.0);
         let rich_heavy = rich_with_wght(900.0);
+        assert_eq!(rich_light.spans.len(), 1);
+        assert_eq!(rich_light.spans[0].shaping.axes.len(), 1);
+        assert_eq!(rich_light.spans[0].shaping.axes[0].tag, "wght");
 
         let (blob_light, _) = text.prepare_attributed(&rich_light, &base_style, constraints);
         let key_light = {
@@ -6896,9 +6921,14 @@ mod tests {
             blob.shape.glyphs.first().expect("glyph").key
         };
 
-        assert_ne!(
-            key_light.font.variation_key, key_heavy.font.variation_key,
-            "expected axis overrides to participate in the face key"
+        assert!(
+            key_light.font.face_index != key_heavy.font.face_index
+                || key_light.font.variation_key != key_heavy.font.variation_key,
+            "expected axis overrides to participate in font face identity (face_index {} vs {}, variation_key {} vs {})",
+            key_light.font.face_index,
+            key_heavy.font.face_index,
+            key_light.font.variation_key,
+            key_heavy.font.variation_key
         );
 
         text.mask_atlas.reset();
@@ -7167,6 +7197,54 @@ mod tests {
         assert_eq!(
             key0, key1,
             "expected fallback policy key to ignore case/whitespace changes"
+        );
+    }
+
+    #[test]
+    fn fallback_policy_key_changes_when_common_fallback_injection_changes() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let mut config0 = fret_core::TextFontFamilyConfig::default();
+        config0.common_fallback_injection = fret_core::TextCommonFallbackInjection::PlatformDefault;
+        let _ = text.set_font_families(&config0);
+        let snap0 = text.fallback_policy_snapshot(fret_core::FrameId(1));
+        assert!(
+            !snap0.prefer_common_fallback,
+            "expected PlatformDefault to prefer system fallback when system fonts are enabled"
+        );
+        assert_eq!(
+            snap0.common_fallback_stack_suffix, "",
+            "expected no explicit common fallback suffix when prefer_common_fallback=false"
+        );
+        assert!(
+            snap0.common_fallback_candidates.is_empty(),
+            "expected no explicit common fallback candidates when prefer_common_fallback=false"
+        );
+
+        let mut config1 = fret_core::TextFontFamilyConfig::default();
+        config1.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        let changed = text.set_font_families(&config1);
+        assert!(
+            changed,
+            "expected font families to update when common_fallback_injection changes"
+        );
+        let snap1 = text.fallback_policy_snapshot(fret_core::FrameId(2));
+        assert!(
+            snap1.prefer_common_fallback,
+            "expected CommonFallback injection to prefer common fallback"
+        );
+        assert!(
+            !snap1.common_fallback_stack_suffix.is_empty(),
+            "expected a non-empty common fallback stack suffix when prefer_common_fallback=true"
+        );
+        assert!(
+            !snap1.common_fallback_candidates.is_empty(),
+            "expected non-empty common fallback candidates when prefer_common_fallback=true"
+        );
+        assert_ne!(
+            snap0.fallback_policy_key, snap1.fallback_policy_key,
+            "expected fallback_policy_key to change when the fallback injection mode changes"
         );
     }
 
