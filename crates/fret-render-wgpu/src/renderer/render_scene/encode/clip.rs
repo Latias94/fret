@@ -63,7 +63,14 @@ pub(super) fn push_clip_rect(state: &mut EncodeState<'_>, rect: Rect) -> bool {
     });
     state.clip_head = node_index;
     state.clip_count = state.clip_count.saturating_add(1);
-    state.current_uniform_index = state.push_uniform_snapshot(state.clip_head, state.clip_count);
+    state.current_uniform_index = state.push_uniform_snapshot(
+        state.clip_head,
+        state.clip_count,
+        state.mask_head,
+        state.mask_count,
+        state.mask_scope_head,
+        state.mask_scope_count,
+    );
     state.clip_pop_stack.push(ClipPop::Shader { prev_head });
     true
 }
@@ -140,7 +147,14 @@ pub(super) fn push_clip_rrect(
     });
     state.clip_head = node_index;
     state.clip_count = state.clip_count.saturating_add(1);
-    state.current_uniform_index = state.push_uniform_snapshot(state.clip_head, state.clip_count);
+    state.current_uniform_index = state.push_uniform_snapshot(
+        state.clip_head,
+        state.clip_count,
+        state.mask_head,
+        state.mask_count,
+        state.mask_scope_head,
+        state.mask_scope_count,
+    );
     state.clip_pop_stack.push(ClipPop::Shader { prev_head });
     true
 }
@@ -166,7 +180,13 @@ pub(super) fn pop_clip(state: &mut EncodeState<'_>) {
         } else {
             prev_head
         };
-        state.current_uniform_index =
-            state.push_uniform_snapshot(state.clip_head, state.clip_count);
+        state.current_uniform_index = state.push_uniform_snapshot(
+            state.clip_head,
+            state.clip_count,
+            state.mask_head,
+            state.mask_count,
+            state.mask_scope_head,
+            state.mask_scope_count,
+        );
     }
 }

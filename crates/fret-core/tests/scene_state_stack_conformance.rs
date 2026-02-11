@@ -81,8 +81,12 @@ impl Interpreter {
             }
             SceneOp::PushLayer { .. }
             | SceneOp::PopLayer
+            | SceneOp::PushMask { .. }
+            | SceneOp::PopMask
             | SceneOp::PushEffect { .. }
             | SceneOp::PopEffect
+            | SceneOp::PushCompositeGroup { .. }
+            | SceneOp::PopCompositeGroup
             | SceneOp::Quad { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }
