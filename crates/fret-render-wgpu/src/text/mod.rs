@@ -6632,4 +6632,164 @@ mod tests {
             "expected raster output to differ across variable font weights"
         );
     }
+
+    #[test]
+    fn common_fallback_stack_suffix_dedupes_and_preserves_order() {
+        let config = vec![
+            "  Noto Color Emoji  ".to_string(),
+            "Noto Sans CJK SC".to_string(),
+            "noto color emoji".to_string(),
+            "".to_string(),
+        ];
+        let defaults = &["Noto Sans CJK SC", "Noto Sans Arabic", "Noto Color Emoji"];
+
+        let suffix = super::common_fallback_stack_suffix(&config, defaults);
+        assert_eq!(
+            suffix,
+            "Noto Color Emoji, Noto Sans CJK SC, Noto Sans Arabic"
+        );
+    }
+
+    #[test]
+    fn mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+        text.text_locale = None;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .chain(fret_fonts::emoji_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        let family_cjk = "Noto Sans CJK SC";
+        let family_emoji = "Noto Color Emoji";
+
+        for family in [family_inter, family_cjk, family_emoji] {
+            assert!(
+                text.all_font_names()
+                    .iter()
+                    .any(|n| n.eq_ignore_ascii_case(family)),
+                "expected {family} to be present after loading bundled fonts"
+            );
+        }
+
+        // Use Inter for the UI generic, and let common fallbacks handle mixed-script coverage.
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
+        let _ = text.set_font_families(&config);
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let expected_inter_faces = {
+            let style = TextStyle {
+                font: fret_core::FontId::family(family_inter),
+                size: Px(24.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("m", &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_inter_faces.is_empty(),
+            "expected at least one resolved face for the explicit {family_inter} family"
+        );
+
+        let expected_cjk_faces = {
+            let style = TextStyle {
+                font: fret_core::FontId::family(family_cjk),
+                size: Px(24.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("你", &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_cjk_faces.is_empty(),
+            "expected at least one resolved face for the explicit {family_cjk} family"
+        );
+
+        let expected_emoji_faces = {
+            let style = TextStyle {
+                font: fret_core::FontId::family(family_emoji),
+                size: Px(24.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("\u{1F600}", &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_emoji_faces.is_empty(),
+            "expected at least one resolved face for the explicit {family_emoji} family"
+        );
+
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob_id, _metrics) = text.prepare("m你\u{1F600}", &style, constraints);
+        let blob = text.blob(blob_id).expect("text blob");
+
+        assert_eq!(
+            blob.shape.missing_glyphs, 0,
+            "expected mixed-script fallback to avoid tofu when system fonts are absent"
+        );
+
+        let used_faces: std::collections::HashSet<super::FontFaceKey> =
+            blob.shape.glyphs.iter().map(|g| g.key.font).collect();
+        assert!(
+            used_faces.iter().any(|k| expected_inter_faces.contains(k)),
+            "expected the UI stack to use {family_inter} for Latin glyphs"
+        );
+        assert!(
+            used_faces.iter().any(|k| expected_cjk_faces.contains(k)),
+            "expected the UI stack to use {family_cjk} (or its subset) for CJK glyphs"
+        );
+        assert!(
+            used_faces.iter().any(|k| expected_emoji_faces.contains(k)),
+            "expected the UI stack to use {family_emoji} for emoji glyphs"
+        );
+
+        assert!(
+            blob.shape
+                .glyphs
+                .iter()
+                .any(|g| g.kind() == super::GlyphQuadKind::Color),
+            "expected at least one color glyph for emoji"
+        );
+    }
 }
