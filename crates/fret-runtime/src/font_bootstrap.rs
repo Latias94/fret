@@ -121,14 +121,29 @@ pub fn apply_font_catalog_update(
     policy: FontFamilyDefaultsPolicy,
 ) -> FontCatalogUpdate {
     let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
-    let revision = prev_rev.saturating_add(1);
+    let catalog_changed = app
+        .global::<FontCatalog>()
+        .map(|c| c.families.as_slice() != families.as_slice())
+        .unwrap_or(true);
+    let revision = if catalog_changed {
+        prev_rev.saturating_add(1)
+    } else {
+        prev_rev
+    };
 
-    let cache = FontCatalogCache::from_families(revision, &families);
-    app.set_global::<FontCatalog>(FontCatalog {
-        families: families.clone(),
-        revision,
-    });
-    app.set_global::<FontCatalogCache>(cache.clone());
+    let cache = if catalog_changed {
+        let cache = FontCatalogCache::from_families(revision, &families);
+        app.set_global::<FontCatalog>(FontCatalog {
+            families: families.clone(),
+            revision,
+        });
+        app.set_global::<FontCatalogCache>(cache.clone());
+        cache
+    } else {
+        app.global::<FontCatalogCache>()
+            .cloned()
+            .unwrap_or_else(|| FontCatalogCache::from_families(revision, &families))
+    };
 
     let prev_config = app
         .global::<TextFontFamilyConfig>()
@@ -276,6 +291,30 @@ mod tests {
                 .common_fallback
                 .iter()
                 .any(|v| v == "Noto Color Emoji")
+        );
+    }
+
+    #[test]
+    fn apply_update_does_not_bump_revision_when_families_unchanged() {
+        let mut app = TestApp::default();
+
+        let update0 = apply_font_catalog_update(
+            &mut app,
+            vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+            FontFamilyDefaultsPolicy::None,
+        );
+        let update1 = apply_font_catalog_update(
+            &mut app,
+            vec!["Inter".to_string(), "JetBrains Mono".to_string()],
+            FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+        );
+
+        assert_eq!(update0.revision, update1.revision);
+        let catalog = app.global::<FontCatalog>().expect("font catalog");
+        assert_eq!(catalog.revision, update0.revision);
+        assert_eq!(
+            catalog.families,
+            vec!["Inter".to_string(), "JetBrains Mono".to_string()]
         );
     }
 
