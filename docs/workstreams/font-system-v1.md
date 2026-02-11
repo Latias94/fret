@@ -171,6 +171,8 @@ Key ideas to borrow:
   - Next: settings UI adoption + explicit refresh/invalidation policy and caching (tracked in
     `docs/workstreams/font-catalog-refresh-policy-v1.md` and ADR 0258).
 - M3 (optional): public shaping knobs (OpenType features + variation axes) and serialized settings.
+  - Partial: per-span axis overrides are now supported via `TextShapingStyle.axes` and mapped to Parley
+    `StyleProperty::FontVariations` (advanced surface; best-effort).
 
 ## Options (tradeoffs)
 

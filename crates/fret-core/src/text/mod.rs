@@ -211,6 +211,20 @@ pub struct TextShapingStyle {
     pub slant: Option<TextSlant>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
+    /// Explicit variable font axis overrides.
+    ///
+    /// This is an advanced surface intended for code editors and diagnostics. Callers should treat
+    /// this as best-effort: if the requested axis is not supported by the resolved font face, it
+    /// will be ignored by the shaping backend.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub axes: Vec<TextFontAxisSetting>,
+}
+
+/// A single variable font axis setting, identified by a 4-byte OpenType axis tag.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextFontAxisSetting {
+    pub tag: String,
+    pub value: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -263,6 +277,14 @@ impl TextShapingStyle {
 
     pub fn with_letter_spacing_em(mut self, letter_spacing_em: f32) -> Self {
         self.letter_spacing_em = Some(letter_spacing_em);
+        self
+    }
+
+    pub fn with_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.axes.push(TextFontAxisSetting {
+            tag: tag.into(),
+            value,
+        });
         self
     }
 }

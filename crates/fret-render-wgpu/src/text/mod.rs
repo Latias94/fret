@@ -1431,7 +1431,7 @@ fn hash_text(text: &str) -> u64 {
 
 fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    "fret.text.spans.shaping.v0".hash(&mut hasher);
+    "fret.text.spans.shaping.v1".hash(&mut hasher);
     for s in spans {
         s.len.hash(&mut hasher);
         s.shaping.font.hash(&mut hasher);
@@ -1441,8 +1441,46 @@ fn spans_shaping_fingerprint(spans: &[TextSpan]) -> u64 {
             .letter_spacing_em
             .map(|v| v.to_bits())
             .hash(&mut hasher);
+        axes_shaping_fingerprint(&mut hasher, &s.shaping.axes);
     }
     hasher.finish()
+}
+
+fn axes_shaping_fingerprint(
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+    axes: &[fret_core::TextFontAxisSetting],
+) {
+    use std::collections::BTreeMap;
+
+    if axes.is_empty() {
+        0u8.hash(hasher);
+        return;
+    }
+    1u8.hash(hasher);
+
+    let mut by_tag: BTreeMap<u32, u32> = BTreeMap::new();
+    for axis in axes {
+        let tag = axis.tag.trim();
+        if tag.is_empty() || !axis.value.is_finite() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 {
+            continue;
+        }
+
+        let tag_u32 = (bytes[0] as u32) << 24
+            | (bytes[1] as u32) << 16
+            | (bytes[2] as u32) << 8
+            | bytes[3] as u32;
+        by_tag.insert(tag_u32, axis.value.to_bits());
+    }
+
+    by_tag.len().hash(hasher);
+    for (tag, bits) in by_tag {
+        tag.hash(hasher);
+        bits.hash(hasher);
+    }
 }
 
 fn spans_paint_fingerprint(spans: &[TextSpan]) -> u64 {
@@ -6642,6 +6680,14 @@ mod tests {
             spans_paint_fingerprint(&spans_c)
         );
 
+        let mut spans_d = spans_a.clone();
+        spans_d[0].shaping = spans_d[0].shaping.clone().with_axis("wght", 700.0);
+        assert_ne!(
+            spans_shaping_fingerprint(&spans_a),
+            spans_shaping_fingerprint(&spans_d),
+            "axis overrides must participate in shaping fingerprints"
+        );
+
         let rich_a = fret_core::AttributedText::new(
             Arc::<str>::from(text),
             Arc::<[TextSpan]>::from(spans_a),
@@ -6658,6 +6704,92 @@ mod tests {
             TextShapeKey::from_blob_key(&k_a),
             TextShapeKey::from_blob_key(&k_b),
             "paint changes must not affect shape cache keys"
+        );
+    }
+
+    #[test]
+    fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
+        // `repo-ref/` is pinned reference source; use a small variable-font subset as a deterministic fixture.
+        const ROBOTO_FLEX_SUBSET: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../repo-ref/xilem/xilem/resources/fonts/roboto_flex/RobotoFlex-Subset.ttf"
+        ));
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
+        assert!(added > 0, "expected variable font to load");
+
+        let family = "Roboto Flex";
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let base_style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(64.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let rich_with_wght = |wght: f32| {
+            let spans = vec![TextSpan {
+                len: 1,
+                shaping: TextShapingStyle::default().with_axis("wght", wght),
+                paint: Default::default(),
+            }];
+            fret_core::AttributedText::new(Arc::<str>::from("0"), Arc::<[TextSpan]>::from(spans))
+        };
+
+        let rich_light = rich_with_wght(200.0);
+        let rich_heavy = rich_with_wght(900.0);
+
+        let (blob_light, _) = text.prepare_attributed(&rich_light, &base_style, constraints);
+        let key_light = {
+            let blob = text.blob(blob_light).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        let (blob_heavy, _) = text.prepare_attributed(&rich_heavy, &base_style, constraints);
+        let key_heavy = {
+            let blob = text.blob(blob_heavy).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        assert_ne!(
+            key_light.font.variation_key, key_heavy.font.variation_key,
+            "expected axis overrides to participate in the face key"
+        );
+
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+        let epoch = 1;
+
+        text.ensure_glyph_in_atlas(key_light, epoch);
+        let bytes_light = pending_upload_bytes_for_key(&text, key_light);
+
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+
+        text.ensure_glyph_in_atlas(key_heavy, epoch);
+        let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
+
+        assert_ne!(
+            bytes_light, bytes_heavy,
+            "expected raster output to differ across axis overrides"
         );
     }
 

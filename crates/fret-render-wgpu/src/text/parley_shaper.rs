@@ -5,7 +5,8 @@ use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
-    FontStyle, FontWeight as ParleyFontWeight, StyleProperty, TextStyle as ParleyTextStyle,
+    FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight, StyleProperty,
+    TextStyle as ParleyTextStyle,
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
@@ -731,6 +732,7 @@ fn shaping_properties_for_span(
         weight,
         slant,
         letter_spacing_em,
+        axes,
     } = &span.shaping;
 
     let mut out: Vec<StyleProperty<'static, [u8; 4]>> = Vec::new();
@@ -740,6 +742,15 @@ fn shaping_properties_for_span(
         out.push(StyleProperty::FontStack(parley::style::FontStack::Source(
             Cow::Owned(stack),
         )));
+    }
+
+    if !axes.is_empty() {
+        let variations = font_variations_for_axes(axes);
+        if !variations.is_empty() {
+            out.push(StyleProperty::FontVariations(FontSettings::List(
+                Cow::Owned(variations.into()),
+            )));
+        }
     }
     if let Some(weight) = weight {
         out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
@@ -756,6 +767,33 @@ fn shaping_properties_for_span(
     }
 
     (!out.is_empty()).then_some(out)
+}
+
+fn font_variations_for_axes(axes: &[fret_core::TextFontAxisSetting]) -> Vec<FontVariation> {
+    use std::collections::BTreeMap;
+
+    let mut by_tag: BTreeMap<u32, FontVariation> = BTreeMap::new();
+    for axis in axes {
+        let tag = axis.tag.trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 {
+            continue;
+        }
+        if !axis.value.is_finite() {
+            continue;
+        }
+
+        let mut tag_bytes = [0u8; 4];
+        tag_bytes.copy_from_slice(bytes);
+        let tuple = (tag_bytes, axis.value);
+        let setting = FontVariation::from(&tuple);
+        by_tag.insert(setting.tag, setting);
+    }
+
+    by_tag.into_values().collect::<Vec<_>>()
 }
 
 pub(super) fn run_system_font_rescan(

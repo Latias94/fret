@@ -162,6 +162,29 @@ This ADR does not mandate that font enumeration is stable across machines, but i
 
 Follow-up (recommended): extend the catalog to a `FontCatalogEntry` list that can carry metadata such as axis presence.
 
+### 5) Expose per-span variable font axis overrides (advanced)
+
+To support editor-grade typography and deterministic debugging, the portable text contract exposes a minimal, advanced
+surface for variable font axes:
+
+- `fret-core::TextShapingStyle.axes: Vec<TextFontAxisSetting>`
+- Each `TextFontAxisSetting` is `{ tag: String, value: f32 }`, where `tag` is the 4-byte OpenType axis tag (e.g. `wght`,
+  `opsz`).
+
+Rationale:
+
+- Parley/fontique and Swash already support variable fonts; the missing piece is a portable way to express axis intent in
+  attributed spans without leaking backend indexes.
+- This allows experiments like optical sizing (`opsz`) and non-weight axes without requiring a full end-user UI yet.
+
+Semantics (v1):
+
+- Axis settings are best-effort: unsupported tags are ignored by the shaping backend.
+- Tags must be exactly 4 bytes (after trimming) and values must be finite; invalid entries are ignored.
+- For duplicate tags, last-write-wins (canonicalized for cache keys).
+- Axis overrides participate in shaping cache keys (span shaping fingerprints) so glyph caches cannot alias across axis
+  changes.
+
 ## Consequences
 
 - Variable fonts become safe to adopt broadly (including in code editor surfaces).
@@ -186,3 +209,13 @@ See `docs/audits/font-system-parley-zed-xilem-2026-02.md` for a focused comparis
 - Zed/GPUI’s cosmic-text-based system and caching patterns,
 - Parley/fontique’s design goals and fallback model,
 - Xilem’s Parley-based variable font usage.
+
+## Implementation anchors
+
+- Public axis surface:
+  - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle.axes`, `TextFontAxisSetting`)
+- Parley style mapping:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`StyleProperty::FontVariations`)
+- Cache keys and conformance tests:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`spans_shaping_fingerprint`,
+    `variable_font_axis_overrides_participate_in_face_key_and_raster_output`)
