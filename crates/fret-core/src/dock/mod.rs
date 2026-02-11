@@ -48,6 +48,27 @@ pub enum DockNode {
     },
 }
 
+/// A pure decision describing how an edge-dock operation will commit in the core graph.
+///
+/// This is intended to be consumed by the docking UI layer so that preview geometry matches core
+/// semantics (avoids “preview vs commit” drift).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EdgeDockDecision {
+    /// Insert a new tabs node into an existing same-axis split container.
+    ///
+    /// - `split` is the container being inserted into.
+    /// - `anchor_index` is the existing child whose share is split in half (v1 default).
+    /// - `insert_index` is where the new child is inserted.
+    InsertIntoSplit {
+        split: DockNodeId,
+        anchor_index: usize,
+        insert_index: usize,
+    },
+
+    /// Wrap the target in a new split container (legacy behavior / fallback).
+    WrapNewSplit,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockFloatingWindow {
     pub floating: DockNodeId,

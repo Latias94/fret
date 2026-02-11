@@ -7,9 +7,9 @@ pub(super) use std::{
 };
 
 pub(super) use fret_core::{
-    Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, Edges, NodeId, PanelKey,
-    RenderTargetId, Scene, SceneOp, SemanticsRole, TextConstraints, TextOverflow, TextStyle,
-    TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
+    Color, DockGraph, DockNode, DockNodeId, DockOp, DropZone, EdgeDockDecision, Edges, NodeId,
+    PanelKey, RenderTargetId, Scene, SceneOp, SemanticsRole, TextConstraints, TextOverflow,
+    TextStyle, TextWrap, ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
     WindowMetricsService,
     geometry::{Point, Px, Rect, Size},
 };

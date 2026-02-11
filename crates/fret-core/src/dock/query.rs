@@ -1,6 +1,74 @@
 use super::*;
 
 impl DockGraph {
+    /// Decide whether an edge-dock into `target` will insert into an existing same-axis split, or
+    /// wrap the target in a new split.
+    ///
+    /// Returns `None` for `DropZone::Center` (not an edge dock) or if the target is not present in
+    /// the window's dock forest.
+    pub fn edge_dock_decision(
+        &self,
+        window: AppWindowId,
+        target: DockNodeId,
+        zone: DropZone,
+    ) -> Option<EdgeDockDecision> {
+        if zone == DropZone::Center {
+            return None;
+        }
+
+        let axis = match zone {
+            DropZone::Left | DropZone::Right => Axis::Horizontal,
+            DropZone::Top | DropZone::Bottom => Axis::Vertical,
+            DropZone::Center => unreachable!(),
+        };
+
+        let root = self.root_for_node_in_window_forest(window, target)?;
+
+        // Outer docking can target an existing split container. In that case we can insert at the
+        // boundary without searching for an ancestor.
+        if let Some(DockNode::Split {
+            axis: split_axis,
+            children,
+            fractions,
+        }) = self.nodes.get(target)
+        {
+            if *split_axis == axis && !children.is_empty() && children.len() == fractions.len() {
+                let len = children.len();
+                let (anchor_index, insert_index) = match zone {
+                    DropZone::Left | DropZone::Top => (0, 0),
+                    DropZone::Right | DropZone::Bottom => {
+                        let last = len.saturating_sub(1);
+                        (last, last.saturating_add(1))
+                    }
+                    DropZone::Center => unreachable!(),
+                };
+                return Some(EdgeDockDecision::InsertIntoSplit {
+                    split: target,
+                    anchor_index,
+                    insert_index,
+                });
+            }
+        }
+
+        let Some((split, anchor_index)) =
+            self.find_nearest_same_axis_split_and_anchor(root, target, axis)
+        else {
+            return Some(EdgeDockDecision::WrapNewSplit);
+        };
+
+        let insert_index = match zone {
+            DropZone::Left | DropZone::Top => anchor_index,
+            DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
+            DropZone::Center => unreachable!(),
+        };
+
+        Some(EdgeDockDecision::InsertIntoSplit {
+            split,
+            anchor_index,
+            insert_index,
+        })
+    }
+
     pub fn compute_layout(
         &self,
         root: DockNodeId,

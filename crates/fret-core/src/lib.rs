@@ -44,7 +44,8 @@ pub use dock::layout::{
 };
 pub use dock::op::{DockOp, SplitFractionsUpdate};
 pub use dock::{
-    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
+    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind,
+    DropZone, EdgeDockDecision,
 };
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,

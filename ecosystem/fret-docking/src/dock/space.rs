@@ -4622,6 +4622,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 bounds,
                 &dock.graph,
                 &layout_all,
+                split_handle_gap,
+                split_handle_hit_thickness,
                 &self.tab_scroll,
                 &self.tab_widths,
                 drag_source_tabs_for_preview,

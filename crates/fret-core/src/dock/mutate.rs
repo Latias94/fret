@@ -700,48 +700,16 @@ impl DockGraph {
         zone: DropZone,
         new_child: DockNodeId,
     ) -> bool {
-        let Some(root) = self.root_for_node_in_window_forest(window, target) else {
+        // Keep core commit semantics and docking preview semantics aligned: use the shared, pure
+        // decision helper.
+        let Some(decision) = self.edge_dock_decision(window, target, zone) else {
             return false;
         };
-
-        // Outer docking can target a split root. If the target is already a same-axis split, we
-        // can insert directly at the boundary.
-        let target_split_len = match self.nodes.get(target) {
-            Some(DockNode::Split {
-                axis: split_axis,
-                children,
-                fractions,
-            }) if *split_axis == axis
-                && !children.is_empty()
-                && children.len() == fractions.len() =>
-            {
-                Some(children.len())
-            }
-            _ => None,
-        };
-        if let Some(len) = target_split_len {
-            let (anchor_index, insert_index) = match zone {
-                DropZone::Left | DropZone::Top => (0, 0),
-                DropZone::Right | DropZone::Bottom => {
-                    let last = len.saturating_sub(1);
-                    (last, last.saturating_add(1))
-                }
-                DropZone::Center => unreachable!(),
-            };
-            if let Some(DockNode::Split {
-                children,
-                fractions,
-                ..
-            }) = self.nodes.get_mut(target)
-            {
-                split_share_and_insert(children, fractions, anchor_index, insert_index, new_child);
-                return true;
-            }
-            return false;
-        }
-
-        let Some((split, anchor_index)) =
-            self.find_nearest_same_axis_split_and_anchor(root, target, axis)
+        let EdgeDockDecision::InsertIntoSplit {
+            split,
+            anchor_index,
+            insert_index,
+        } = decision
         else {
             return false;
         };
@@ -758,17 +726,11 @@ impl DockGraph {
             return false;
         }
 
-        let insert_index = match zone {
-            DropZone::Left | DropZone::Top => anchor_index,
-            DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
-            DropZone::Center => unreachable!(),
-        };
-
         split_share_and_insert(children, fractions, anchor_index, insert_index, new_child);
         true
     }
 
-    fn find_nearest_same_axis_split_and_anchor(
+    pub(super) fn find_nearest_same_axis_split_and_anchor(
         &self,
         root: DockNodeId,
         target: DockNodeId,
@@ -940,7 +902,7 @@ impl DockGraph {
         self.simplify_window_forest(window);
     }
 
-    fn root_for_node_in_window_forest(
+    pub(super) fn root_for_node_in_window_forest(
         &self,
         window: AppWindowId,
         target: DockNodeId,
