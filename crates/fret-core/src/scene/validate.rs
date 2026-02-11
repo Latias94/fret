@@ -6,7 +6,9 @@ pub enum SceneValidationErrorKind {
     OpacityUnderflow,
     LayerUnderflow,
     ClipUnderflow,
+    MaskUnderflow,
     EffectUnderflow,
+    CompositeGroupUnderflow,
     NonFiniteTransform,
     NonFiniteOpacity,
     NonFiniteOpData,
@@ -14,7 +16,11 @@ pub enum SceneValidationErrorKind {
     UnbalancedOpacityStack { remaining: usize },
     UnbalancedLayerStack { remaining: usize },
     UnbalancedClipStack { remaining: usize },
+    UnbalancedMaskStack { remaining: usize },
     UnbalancedEffectStack { remaining: usize },
+    UnbalancedCompositeGroupStack { remaining: usize },
+    EffectMaskCrossing,
+    CompositeGroupMaskCrossing,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -107,6 +113,43 @@ impl SceneRecording {
             }
         }
 
+        fn mask_is_finite(m: Mask) -> bool {
+            match m {
+                Mask::LinearGradient(g) => {
+                    if !g.start.x.0.is_finite()
+                        || !g.start.y.0.is_finite()
+                        || !g.end.x.0.is_finite()
+                        || !g.end.y.0.is_finite()
+                    {
+                        return false;
+                    }
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    for i in 0..n {
+                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                Mask::RadialGradient(g) => {
+                    if !g.center.x.0.is_finite()
+                        || !g.center.y.0.is_finite()
+                        || !g.radius.width.0.is_finite()
+                        || !g.radius.height.0.is_finite()
+                    {
+                        return false;
+                    }
+                    let n = usize::from(g.stop_count).min(MAX_STOPS);
+                    for i in 0..n {
+                        if !g.stops[i].offset.is_finite() || !color_is_finite(g.stops[i].color) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+            }
+        }
+
         fn uv_is_finite(uv: UvRect) -> bool {
             uv.u0.is_finite() && uv.v0.is_finite() && uv.u1.is_finite() && uv.v1.is_finite()
         }
@@ -115,7 +158,11 @@ impl SceneRecording {
         let mut opacity_depth: usize = 0;
         let mut layer_depth: usize = 0;
         let mut clip_depth: usize = 0;
+        let mut mask_depth: usize = 0;
         let mut effect_depth: usize = 0;
+        let mut effect_mask_depths: Vec<usize> = Vec::new();
+        let mut composite_group_depth: usize = 0;
+        let mut composite_group_mask_depths: Vec<usize> = Vec::new();
 
         for (index, &op) in self.ops.iter().enumerate() {
             match op {
@@ -205,6 +252,26 @@ impl SceneRecording {
                     }
                     clip_depth = clip_depth.saturating_sub(1);
                 }
+                SceneOp::PushMask { bounds, mask } => {
+                    if !rect_is_finite(bounds) || !mask_is_finite(mask) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                    mask_depth = mask_depth.saturating_add(1);
+                }
+                SceneOp::PopMask => {
+                    if mask_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::MaskUnderflow,
+                        });
+                    }
+                    mask_depth = mask_depth.saturating_sub(1);
+                }
                 SceneOp::PushEffect { bounds, chain, .. } => {
                     if !rect_is_finite(bounds) {
                         return Err(SceneValidationError {
@@ -241,6 +308,7 @@ impl SceneRecording {
                         }
                     }
 
+                    effect_mask_depths.push(mask_depth);
                     effect_depth = effect_depth.saturating_add(1);
                 }
                 SceneOp::PopEffect => {
@@ -251,7 +319,44 @@ impl SceneRecording {
                             kind: SceneValidationErrorKind::EffectUnderflow,
                         });
                     }
+                    let expected = effect_mask_depths.pop().unwrap_or(mask_depth);
+                    if expected != mask_depth {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::EffectMaskCrossing,
+                        });
+                    }
                     effect_depth = effect_depth.saturating_sub(1);
+                }
+                SceneOp::PushCompositeGroup { desc } => {
+                    if !rect_is_finite(desc.bounds) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                    composite_group_mask_depths.push(mask_depth);
+                    composite_group_depth = composite_group_depth.saturating_add(1);
+                }
+                SceneOp::PopCompositeGroup => {
+                    if composite_group_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::CompositeGroupUnderflow,
+                        });
+                    }
+                    let expected = composite_group_mask_depths.pop().unwrap_or(mask_depth);
+                    if expected != mask_depth {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::CompositeGroupMaskCrossing,
+                        });
+                    }
+                    composite_group_depth = composite_group_depth.saturating_sub(1);
                 }
                 SceneOp::Quad {
                     rect,
@@ -402,12 +507,30 @@ impl SceneRecording {
                 },
             });
         }
+        if mask_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopMask,
+                kind: SceneValidationErrorKind::UnbalancedMaskStack {
+                    remaining: mask_depth,
+                },
+            });
+        }
         if effect_depth != 0 {
             return Err(SceneValidationError {
                 index: self.ops.len(),
                 op: SceneOp::PopEffect,
                 kind: SceneValidationErrorKind::UnbalancedEffectStack {
                     remaining: effect_depth,
+                },
+            });
+        }
+        if composite_group_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopCompositeGroup,
+                kind: SceneValidationErrorKind::UnbalancedCompositeGroupStack {
+                    remaining: composite_group_depth,
                 },
             });
         }

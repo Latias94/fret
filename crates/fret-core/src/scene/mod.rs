@@ -6,14 +6,18 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
+mod composite;
 mod fingerprint;
 mod image_object_fit;
+mod mask;
 mod paint;
 mod replay;
 mod validate;
 
+pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
+pub use mask::Mask;
 pub use paint::{
     ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
     TileMode,
@@ -226,6 +230,13 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_mask<T>(&mut self, bounds: Rect, mask: Mask, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushMask { bounds, mask });
+        let out = f(self);
+        self.push(SceneOp::PopMask);
+        out
+    }
+
     pub fn with_effect<T>(
         &mut self,
         bounds: Rect,
@@ -242,6 +253,17 @@ impl SceneRecording {
         });
         let out = f(self);
         self.push(SceneOp::PopEffect);
+        out
+    }
+
+    pub fn with_composite_group<T>(
+        &mut self,
+        desc: CompositeGroupDesc,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushCompositeGroup { desc });
+        let out = f(self);
+        self.push(SceneOp::PopCompositeGroup);
         out
     }
 
@@ -310,6 +332,13 @@ pub enum SceneOp {
     },
     PopClip,
 
+    PushMask {
+        /// Computation bounds (not an implicit clip), see ADR 0239.
+        bounds: Rect,
+        mask: Mask,
+    },
+    PopMask,
+
     PushEffect {
         /// Computation bounds (not an implicit clip), see ADR 0117.
         bounds: Rect,
@@ -318,6 +347,11 @@ pub enum SceneOp {
         quality: EffectQuality,
     },
     PopEffect,
+
+    PushCompositeGroup {
+        desc: CompositeGroupDesc,
+    },
+    PopCompositeGroup,
 
     Quad {
         order: DrawOrder,

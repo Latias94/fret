@@ -10,9 +10,6 @@ use fret_core::{
     ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, SemanticsRole,
     TimerToken, UiServices,
 };
-use fret_kit::prelude::{
-    InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
-};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -25,18 +22,16 @@ use fret_runtime::{
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
+use fret_workspace::WorkspaceFrame;
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
-};
-use fret_workspace::{
-    WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -53,7 +48,14 @@ use crate::harness::{
 use crate::spec::*;
 use crate::ui;
 
+mod chrome;
+mod debug_hud;
+mod inspector;
+mod menubar;
 mod router;
+mod settings_sheet;
+mod status_bar;
+mod toaster;
 use router::{
     UiGalleryHistory, UiGalleryRouteId, apply_page_route_side_effects_via_router,
     apply_page_router_update_side_effects, build_ui_gallery_page_router,
@@ -2410,9 +2412,7 @@ impl UiGalleryDriver {
                                             ChromeRefinement::default()
                                                 .bg(ColorRef::Color(theme.color_required("muted")))
                                                 .p(Space::N4),
-                                            LayoutRefinement::default()
-                                                .w_px(Px(280.0))
-                                                .h_full(),
+                                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                                         ),
                                         |cx| vec![cx.text("Sidebar (disabled)")],
                                     )
@@ -2445,9 +2445,7 @@ impl UiGalleryDriver {
                                         ChromeRefinement::default()
                                             .bg(ColorRef::Color(theme.color_required("muted")))
                                             .p(Space::N4),
-                                        LayoutRefinement::default()
-                                            .w_px(Px(280.0))
-                                            .h_full(),
+                                        LayoutRefinement::default().w_px(Px(280.0)).h_full(),
                                     ),
                                     |cx| vec![cx.text("Sidebar (disabled)")],
                                 )
@@ -2539,143 +2537,27 @@ impl UiGalleryDriver {
                         })
                     };
 
-                    let tab_strip = cx.keyed("ui_gallery.tab_strip", |cx| {
-                        if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
-                            return cx.text("Tabs (disabled)");
-                        }
-
-                        let selected = cx
-                            .get_model_cloned(&selected_page, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                        let workspace_tab_ids = cx
-                            .get_model_cloned(&workspace_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-                        let workspace_dirty_ids = cx
-                            .get_model_cloned(&workspace_dirty_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-
-                        WorkspaceTabStrip::new(selected.clone())
-                            .tabs(workspace_tab_ids.iter().map(|tab_id| {
-                                let (title, _origin, _docs, _usage) =
-                                    crate::spec::page_meta(tab_id.as_ref());
-                                let dirty = workspace_dirty_ids
-                                    .iter()
-                                    .any(|d| d.as_ref() == tab_id.as_ref());
-                                WorkspaceTab::new(
-                                    tab_id.clone(),
-                                    title,
-                                    page_spec(tab_id.as_ref())
-                                        .map(|spec| CommandId::from(spec.command))
-                                        .unwrap_or_else(|| {
-                                            CommandId::new(format!(
-                                                "ui_gallery.nav.select.{}",
-                                                tab_id.as_ref()
-                                            ))
-                                        }),
-                                )
-                                .close_command(CommandId::new(format!(
-                                    "{}{}",
-                                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                                    tab_id.as_ref()
-                                )))
-                                .dirty(dirty)
-                            }))
-                            .into_element(cx)
-                    });
-
-                    let menu_bar_seq_value = cx
-                        .get_model_copied(&menu_bar_seq, Invalidation::Layout)
-                        .unwrap_or(0);
-                    let menu_bar = fret_app::effective_menu_bar(cx.app);
-                    let show_in_window_menu_bar = fret_app::should_render_in_window_menu_bar(
-                        cx.app,
-                        fret_app::Platform::current(),
+                    let tab_strip = chrome::tab_strip_view(
+                        cx,
+                        (bisect & BISECT_DISABLE_TAB_STRIP) != 0,
+                        &selected_page,
+                        &workspace_tabs,
+                        &workspace_dirty_tabs,
                     );
-                    cx.app.with_global_mut(
-                        fret_runtime::WindowMenuBarFocusService::default,
-                        |svc, _app| {
-                            svc.set_present(cx.window, show_in_window_menu_bar && menu_bar.is_some());
-                        },
+
+                    let menubar_handle = std::cell::RefCell::new(None);
+                    let in_window_menu_bar =
+                        menubar::build_in_window_menu_bar(cx, &menu_bar_seq, &menubar_handle);
+
+                    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
+
+                    let status_bar = status_bar::status_bar_view(
+                        cx,
+                        content_models.as_ref(),
+                        inspector_status.as_ref(),
+                        last_debug_stats.layout_time.as_micros(),
+                        last_debug_stats.paint_time.as_micros(),
                     );
-                    let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
-                        std::cell::RefCell::new(None);
-                    let in_window_menu_bar = if show_in_window_menu_bar {
-                        menu_bar.as_ref().map(|menu_bar| {
-                            cx.keyed(format!("ui_gallery.menubar.{menu_bar_seq_value}"), |cx| {
-                                let (menu, handle) = menubar_from_runtime_with_focus_handle(
-                                    cx,
-                                    menu_bar,
-                                    MenubarFromRuntimeOptions::default(),
-                                );
-                                *menubar_handle.borrow_mut() = Some(handle);
-                                menu
-                            })
-                        })
-                    } else {
-                        None
-                    };
-
-                    let top_bar = WorkspaceTopBar::new()
-                        .left(in_window_menu_bar.into_iter().collect::<Vec<_>>())
-                        .center(vec![tab_strip])
-                        .right(vec![
-                            shadcn::Button::new("Command palette")
-                                .test_id("ui-gallery-command-palette")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(fret_app::core_commands::COMMAND_PALETTE)
-                                .into_element(cx),
-                        ])
-                        .into_element(cx);
-
-                    let status_bar = cx.keyed("ui_gallery.status_bar", |cx| {
-                        let status_last_action = cx
-                            .get_model_cloned(&content_models.last_action, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from("<none>"));
-                        let status_theme = cx
-                            .get_model_cloned(&content_models.theme_preset, Invalidation::Layout)
-                            .flatten()
-                            .unwrap_or_else(|| Arc::<str>::from("<default>"));
-                        let status_view_cache = cx
-                            .get_model_copied(&content_models.view_cache_enabled, Invalidation::Layout)
-                            .unwrap_or(false);
-                        let status_cache_shell = cx
-                            .get_model_copied(&content_models.view_cache_cache_shell, Invalidation::Layout)
-                            .unwrap_or(false);
-
-                        let mut right_items: Vec<AnyElement> = vec![cx.text(format!(
-                            "theme: {} view_cache={} shell_cache={} layout_us={} paint_us={}",
-                            status_theme.as_ref(),
-                            status_view_cache as u8,
-                            status_cache_shell as u8,
-                            last_debug_stats.layout_time.as_micros(),
-                            last_debug_stats.paint_time.as_micros()
-                        ))];
-                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
-                            right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
-                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
-                        }
-
-                        let status_last_action_label =
-                            Arc::<str>::from(format!("last action: {}", status_last_action.as_ref()));
-                        let status_last_action_text = status_last_action_label.clone();
-                        let status_last_action_item = cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Text,
-                                label: Some(status_last_action_label),
-                                test_id: Some(Arc::from("ui-gallery-status-last-action")),
-                                ..Default::default()
-                            },
-                            move |cx| vec![cx.text(status_last_action_text.as_ref())],
-                        );
-
-                        WorkspaceStatusBar::new()
-                            .left(vec![status_last_action_item])
-                            .right(right_items)
-                            .into_element(cx)
-                    });
 
                     let mut center_layout = fret_ui::element::LayoutStyle::default();
                     center_layout.size.width = fret_ui::element::Length::Fill;
@@ -2701,376 +2583,43 @@ impl UiGalleryDriver {
                             .role(SemanticsRole::Panel)
                             .label("fret-ui-gallery"),
                     );
-                    if let Some(handle) = menubar_handle.borrow().clone() {
-                        let group_active = handle.group_active.clone();
-                        let trigger_registry = handle.trigger_registry.clone();
-                        let last_focus_before_menubar = handle.last_focus_before_menubar.clone();
-                        let focus_is_trigger = handle.focus_is_trigger.clone();
-                        let group_active_for_command = group_active.clone();
-                        let trigger_registry_for_command = trigger_registry.clone();
-                        let last_focus_for_command = last_focus_before_menubar.clone();
-                        cx.command_add_on_command_for(
-                            panel.id,
-                            Arc::new(move |host, acx, command| {
-                                if command.as_str() != fret_app::core_commands::FOCUS_MENU_BAR {
-                                    return false;
-                                }
-
-                                let active = host
-                                    .models_mut()
-                                    .get_cloned(&group_active_for_command)
-                                    .flatten();
-                                if let Some(active) = active {
-                                    let _ = host.models_mut().update(&active.open, |v| *v = false);
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&group_active_for_command, |v| *v = None);
-                                    let restore =
-                                        host.models_mut().get_cloned(&last_focus_for_command).flatten();
-                                    host.request_focus(restore.unwrap_or(active.trigger));
-                                    host.request_redraw(acx.window);
-                                    return true;
-                                }
-
-                                let entries = host
-                                    .models_mut()
-                                    .get_cloned(&trigger_registry_for_command)
-                                    .unwrap_or_default();
-                                let target = entries.iter().find(|e| e.enabled).cloned();
-                                let Some(target) = target else {
-                                    return false;
-                                };
-
-                                let open_for_state = target.open.clone();
-                                let _ = host
-                                    .models_mut()
-                                    .update(&group_active_for_command, |v| {
-                                        *v = Some(
-                                            fret_ui_kit::primitives::menubar::trigger_row::MenubarActiveTrigger {
-                                                trigger: target.trigger,
-                                                open: open_for_state,
-                                            },
-                                        );
-                                    });
-
-                                host.request_focus(target.trigger);
-                                host.request_redraw(acx.window);
-                                true
-                            }),
-                        );
-
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::open_on_alt_mnemonic(
-                                group_active.clone(),
-                                trigger_registry.clone(),
-                            ),
-                        );
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::open_on_mnemonic_when_active(
-                                group_active.clone(),
-                                trigger_registry.clone(),
-                                focus_is_trigger.clone(),
-                            ),
-                        );
-                        cx.key_add_on_key_down_for(
-                            panel.id,
-                            fret_ui_kit::primitives::menubar::trigger_row::exit_active_on_escape_when_closed(
-                                group_active.clone(),
-                                last_focus_before_menubar.clone(),
-                                focus_is_trigger.clone(),
-                            ),
-                        );
-                    }
+                    menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
 
                     let mut content: Vec<AnyElement> = vec![
                         panel,
-                        if (bisect & BISECT_DISABLE_TOASTER) != 0 {
-                            cx.text("")
-                        } else {
-                            {
-                                let position = cx
-                                    .get_model_copied(&content_models.sonner_position, Invalidation::Layout)
-                                    .unwrap_or(shadcn::ToastPosition::TopCenter);
-                                shadcn::Toaster::new().position(position).into_element(cx)
-                            }
-                        },
+                        toaster::toaster_view(
+                            cx,
+                            content_models.as_ref(),
+                            (bisect & BISECT_DISABLE_TOASTER) != 0,
+                        ),
                     ];
 
-                    content.push(cx.keyed("ui_gallery.settings_sheet", |cx| {
-                        shadcn::Sheet::new(settings_open.clone())
-                            .side(shadcn::SheetSide::Right)
-                            .size(Px(420.0))
-                            .into_element(
-                                cx,
-                                |cx| {
-                                    let mut layout = fret_ui::element::LayoutStyle::default();
-                                    layout.size.width = fret_ui::element::Length::Px(Px(0.0));
-                                    layout.size.height = fret_ui::element::Length::Px(Px(0.0));
-                                    cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            layout,
-                                            ..Default::default()
-                                        },
-                                        |_cx| Vec::new(),
-                                    )
-                                },
-                                |cx| {
-                                    let os_select = shadcn::Select::new(
-                                        settings_menu_bar_os.clone(),
-                                        settings_menu_bar_os_open.clone(),
-                                    )
-                                    .placeholder("OS menubar")
-                                    .trigger_test_id("ui-gallery-settings-os-menubar")
-                                    .items([
-                                        shadcn::SelectItem::new(
-                                            "auto",
-                                            "Auto (Windows/macOS on; Linux/Web off)",
-                                        )
-                                        .test_id("ui-gallery-settings-os-menubar-auto"),
-                                        shadcn::SelectItem::new("on", "On")
-                                            .test_id("ui-gallery-settings-os-menubar-on"),
-                                        shadcn::SelectItem::new("off", "Off")
-                                            .test_id("ui-gallery-settings-os-menubar-off"),
-                                    ])
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx);
+                    settings_sheet::push_settings_sheet(
+                        cx,
+                        settings_open.clone(),
+                        settings_menu_bar_os.clone(),
+                        settings_menu_bar_os_open.clone(),
+                        settings_menu_bar_in_window.clone(),
+                        settings_menu_bar_in_window_open.clone(),
+                        settings_edit_can_undo.clone(),
+                        settings_edit_can_redo.clone(),
+                        &mut content,
+                    );
 
-                                    let in_window_select = shadcn::Select::new(
-                                        settings_menu_bar_in_window.clone(),
-                                        settings_menu_bar_in_window_open.clone(),
-                                    )
-                                    .placeholder("In-window menubar")
-                                    .trigger_test_id("ui-gallery-settings-in-window-menubar")
-                                    .items([
-                                        shadcn::SelectItem::new(
-                                            "auto",
-                                            "Auto (Linux/Web on; Windows/macOS off)",
-                                        )
-                                        .test_id("ui-gallery-settings-in-window-menubar-auto"),
-                                        shadcn::SelectItem::new("on", "On")
-                                            .test_id("ui-gallery-settings-in-window-menubar-on"),
-                                        shadcn::SelectItem::new("off", "Off")
-                                            .test_id("ui-gallery-settings-in-window-menubar-off"),
-                                    ])
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx);
+                    debug_hud::maybe_push_debug_hud(
+                        cx,
+                        theme.clone(),
+                        show_debug_hud,
+                        debug_hud_lines.clone(),
+                        &mut content,
+                    );
 
-                                    let body = stack::vstack(
-                                        cx,
-                                        stack::VStackProps::default()
-                                            .layout(LayoutRefinement::default().w_full())
-                                            .gap(Space::N4),
-                                        |cx| {
-                                            vec![
-                                                stack::vstack(
-                                                    cx,
-                                                    stack::VStackProps::default()
-                                                        .layout(LayoutRefinement::default().w_full())
-                                                        .gap(Space::N2),
-                                                    |cx| {
-                                                        vec![
-                                                            shadcn::SheetHeader::new(vec![
-                                                                shadcn::SheetTitle::new("Settings")
-                                                                    .into_element(cx),
-                                                                shadcn::SheetDescription::new(
-                                                                    "Menu bar presentation (OS vs in-window).",
-                                                                )
-                                                                .into_element(cx),
-                                                            ])
-                                                            .into_element(cx),
-                                                            shadcn::Separator::new().into_element(cx),
-                                                            cx.text("Menu bar surfaces"),
-                                                            os_select,
-                                                            in_window_select,
-                                                            cx.text("Command availability (debug)"),
-                                                            stack::hstack(
-                                                                cx,
-                                                                stack::HStackProps::default()
-                                                                    .gap(Space::N2)
-                                                                    .items_center(),
-                                                                |cx| {
-                                                                    vec![
-                                                                        shadcn::Switch::new(
-                                                                            settings_edit_can_undo
-                                                                                .clone(),
-                                                                        )
-                                                                        .a11y_label("Can Undo")
-                                                                        .disabled(true)
-                                                                        .into_element(cx),
-                                                                        cx.text(
-                                                                            "edit.can_undo (enables OS/in-window Undo)",
-                                                                        ),
-                                                                    ]
-                                                                },
-                                                            ),
-                                                            stack::hstack(
-                                                                cx,
-                                                                stack::HStackProps::default()
-                                                                    .gap(Space::N2)
-                                                                    .items_center(),
-                                                                |cx| {
-                                                                    vec![
-                                                                        shadcn::Switch::new(
-                                                                            settings_edit_can_redo
-                                                                                .clone(),
-                                                                        )
-                                                                        .a11y_label("Can Redo")
-                                                                        .disabled(true)
-                                                                        .into_element(cx),
-                                                                        cx.text(
-                                                                            "edit.can_redo (enables OS/in-window Redo)",
-                                                                        ),
-                                                                    ]
-                                                                },
-                                                            ),
-                                                        ]
-                                                    },
-                                                ),
-                                                shadcn::SheetFooter::new(vec![
-                                                    shadcn::Button::new("Apply (in memory)")
-                                                        .variant(shadcn::ButtonVariant::Secondary)
-                                                        .test_id("ui-gallery-settings-apply")
-                                                        .on_click(CMD_APP_SETTINGS_APPLY)
-                                                        .into_element(cx),
-                                                    shadcn::Button::new(
-                                                        "Write project .fret/settings.json",
-                                                    )
-                                                    .variant(shadcn::ButtonVariant::Outline)
-                                                    .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
-                                                    .into_element(cx),
-                                                    shadcn::Button::new("Close")
-                                                        .variant(shadcn::ButtonVariant::Ghost)
-                                                        .toggle_model(settings_open.clone())
-                                                        .into_element(cx),
-                                                ])
-                                                .into_element(cx),
-                                            ]
-                                        },
-                                    );
-
-                                    shadcn::SheetContent::new(vec![body]).into_element(cx)
-                                },
-                            )
-                    }));
-
-                    if show_debug_hud {
-                        let debug_hud_lines = debug_hud_lines.clone();
-                        content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
-                            let hud_layout = fret_ui::element::LayoutStyle {
-                                position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    top: Some(Px(8.0)),
-                                    right: Some(Px(8.0)),
-                                    ..Default::default()
-                                },
-                                size: fret_ui::element::SizeStyle {
-                                    width: fret_ui::element::Length::Px(Px(520.0)),
-                                    height: fret_ui::element::Length::Px(Px(220.0)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            };
-
-                            let gate = fret_ui::element::InteractivityGateProps {
-                                layout: hud_layout,
-                                present: true,
-                                interactive: false,
-                            };
-
-                            cx.interactivity_gate_props(gate, |cx| {
-                                let mut container_props = decl_style::container_props(
-                                    &theme,
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(theme.color_required("background")))
-                                        .border_1()
-                                        .rounded(Radius::Md)
-                                        .p(Space::N3),
-                                    LayoutRefinement::default().w_full().h_full(),
-                                );
-                                container_props.layout.size.width = fret_ui::element::Length::Fill;
-                                container_props.layout.size.height = fret_ui::element::Length::Fill;
-                                container_props.layout.overflow = fret_ui::element::Overflow::Clip;
-
-                                let body = stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .gap(Space::N1),
-                                    |cx| {
-                                        debug_hud_lines
-                                            .iter()
-                                            .map(|line| {
-                                                cx.text_props(TextProps {
-                                                    layout: Default::default(),
-                                                    text: line.clone(),
-                                                    style: None,
-                                                    color: Some(theme.color_required("foreground")),
-                                                    wrap: TextWrap::Word,
-                                                    overflow: TextOverflow::Clip,
-                                                })
-                                            })
-                                            .collect::<Vec<_>>()
-                                    },
-                                );
-
-                                [cx.container(container_props, |cx| {
-                                    [shadcn::ScrollArea::new([body])
-                                        .refine_layout(LayoutRefinement::default().w_full().h_full())
-                                        .into_element(cx)]
-                                })]
-                            })
-                        }));
-                    }
-
-                    if cx
-                        .get_model_copied(&inspector_enabled, Invalidation::Layout)
-                        .unwrap_or(false)
-                    {
-                        cx.observe_model(&inspector_last_pointer, Invalidation::Paint);
-
-                        let mut props = fret_ui::element::PointerRegionProps::default();
-                        props.layout.size.width = fret_ui::element::Length::Fill;
-                        props.layout.size.height = fret_ui::element::Length::Fill;
-
-                        let on_pointer_move = {
-                            let inspector_last_pointer = inspector_last_pointer.clone();
-                            Arc::new(
-                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                                      cx: fret_ui::action::ActionCx,
-                                      mv: fret_ui::action::PointerMoveCx| {
-                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
-                                        *v = Some(mv.position);
-                                    });
-                                    host.request_redraw(cx.window);
-                                    false
-                                },
-                            )
-                        };
-                        let on_pointer_down = {
-                            let inspector_last_pointer = inspector_last_pointer.clone();
-                            Arc::new(
-                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                                      cx: fret_ui::action::ActionCx,
-                                      down: fret_ui::action::PointerDownCx| {
-                                    let _ = host.models_mut().update(&inspector_last_pointer, |v| {
-                                        *v = Some(down.position);
-                                    });
-                                    host.request_redraw(cx.window);
-                                    false
-                                },
-                            )
-                        };
-
-                        vec![cx.pointer_region(props, |cx| {
-                            cx.pointer_region_on_pointer_move(on_pointer_move);
-                            cx.pointer_region_on_pointer_down(on_pointer_down);
-                            content
-                        })]
-                    } else {
-                        content
-                    }
+                    inspector::wrap_content_if_enabled(
+                        cx,
+                        &inspector_enabled,
+                        &inspector_last_pointer,
+                        content,
+                    )
                 });
 
         state.ui.set_root(root);

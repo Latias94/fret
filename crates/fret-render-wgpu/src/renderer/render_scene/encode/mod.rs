@@ -2,6 +2,7 @@ pub(super) use super::super::*;
 
 mod clip;
 mod draw;
+mod mask;
 mod ops;
 mod state;
 

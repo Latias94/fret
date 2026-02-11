@@ -201,6 +201,46 @@ This section exists to keep reviews grounded: “which file owns which part of t
 
 ---
 
+## ImGui “multi-viewports” docking best practices (portable outcomes)
+
+This section is a short “hand feel” checklist distilled from Dear ImGui’s docking branch + multi-viewport
+backend guidance. It is not an API map: the goal is to preserve the *outcome* across platforms/backends.
+
+- **Always keep a dock host alive**
+  - ImGui: call `DockSpaceOverViewport()` (or `DockSpace()`) every frame. If a dockspace is conditionally hidden, submit it
+    with `ImGuiDockNodeFlags_KeepAliveOnly` so docked windows are not force-undocked.
+  - Fret: always submit a `DockSpace` host for every participating window; do not omit the dock host when a window/tab is hidden.
+    See `docs/docking-arbitration-checklist.md` (“Keep the dock host alive”).
+
+- **Latch “dock previews enabled” at drag activation (avoid modifier flapping)**
+  - ImGui: `BeginDockableDragDropSource()` has a FIXME to make “drag docking” stateful/explicit; today it can infer docking mode
+    from `ConfigDockingWithShift` and click offset.
+  - Fret: latch at activation into the drag payload (`DockPanelDragPayload::dock_previews_enabled`, `DockTabsDragPayload::dock_previews_enabled`)
+    using `DockDragInversionSettings` (`crates/fret-runtime/src/docking_settings.rs`).
+
+- **Hovered viewport/window selection must ignore “NoInputs”/moving payload surfaces**
+  - ImGui: best case is a backend providing `io.AddMouseViewportEvent()` and ignoring `ImGuiViewportFlags_NoInputs`
+    (`ImGuiBackendFlags_HasMouseHoveredViewport` guidance in `repo-ref/imgui/docs/BACKENDS.md`).
+  - Fret: when a dock tear-off window follows the cursor, prefer the window behind it (`prefer_not`) so re-docking remains possible
+    without flicker. See `crates/fret-launch/src/runner/desktop/mod.rs` (`route_internal_drag_hover_from_cursor`, `window_under_cursor`).
+
+- **Drop hint hit-testing uses a 5-way selection with hysteresis**
+  - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
+  - Fret: `dock_hint_pick_zone(...)` mirrors the same hysteresis approach (`ecosystem/fret-docking/src/dock/layout.rs`).
+
+- **Dock drags must not fight non-modal overlays or viewport capture**
+  - ImGui: docking drag/drop uses explicit payload ownership and preview overlays.
+  - Fret: ADR 0072 defines the arbitration rules; conformance is gated by unit tests + scripted diag suites:
+    - `ecosystem/fret-docking/src/dock/tests.rs`
+    - `tools/diag-scripts/docking-arbitration-demo-*.json`
+
+- **Mouse-up outside any window still completes the drop, and cancel paths stop follow**
+  - ImGui: multi-viewport backends must handle pointer up and hovered-viewport selection reliably; fallbacks are heuristic and “flawed”.
+  - Fret: runner owns cross-window internal drag routing and is responsible for robust “drop outside windows” delivery and cancel hygiene.
+    See `docs/workstreams/docking-multiwindow-imgui-parity.md` and the tracker `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`.
+
+---
+
 # 1) Coordinate spaces and DPI correctness
 
 This category is the #1 source of “hand-feel” regressions: early tear-off, wrong drop target, and
