@@ -65,6 +65,9 @@ pub(crate) struct ParleyShaper {
     default_locale: Option<String>,
     common_fallback_stack_suffix: String,
     system_fonts_enabled: bool,
+    family_id_cache_lower: HashMap<String, FamilyId>,
+    all_font_names_cache: Option<Vec<String>>,
+    all_font_catalog_entries_cache: Option<Vec<FontCatalogEntryMetadata>>,
 }
 
 impl Default for ParleyShaper {
@@ -76,6 +79,9 @@ impl Default for ParleyShaper {
             default_locale: None,
             common_fallback_stack_suffix: String::new(),
             system_fonts_enabled: true,
+            family_id_cache_lower: HashMap::new(),
+            all_font_names_cache: None,
+            all_font_catalog_entries_cache: None,
         }
     }
 }
@@ -83,6 +89,12 @@ impl Default for ParleyShaper {
 impl ParleyShaper {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn invalidate_catalog_caches(&mut self) {
+        self.family_id_cache_lower.clear();
+        self.all_font_names_cache = None;
+        self.all_font_catalog_entries_cache = None;
     }
 
     pub fn system_fonts_enabled(&self) -> bool {
@@ -120,6 +132,10 @@ impl ParleyShaper {
     }
 
     pub fn all_font_names(&mut self) -> Vec<String> {
+        if let Some(cache) = self.all_font_names_cache.as_ref() {
+            return cache.clone();
+        }
+
         let mut by_lower: HashMap<String, String> = HashMap::new();
         for name in self.fcx.collection.family_names() {
             let key = name.to_ascii_lowercase();
@@ -132,10 +148,16 @@ impl ParleyShaper {
                 .cmp(&b.to_ascii_lowercase())
                 .then(a.cmp(b))
         });
+
+        self.all_font_names_cache = Some(names.clone());
         names
     }
 
     pub fn all_font_catalog_entries(&mut self) -> Vec<FontCatalogEntryMetadata> {
+        if let Some(cache) = self.all_font_catalog_entries_cache.as_ref() {
+            return cache.clone();
+        }
+
         let mut by_lower: HashMap<String, String> = HashMap::new();
         for name in self.fcx.collection.family_names() {
             let key = name.to_ascii_lowercase();
@@ -209,24 +231,42 @@ impl ParleyShaper {
             });
         }
 
+        self.all_font_catalog_entries_cache = Some(out.clone());
         out
     }
 
     pub fn resolve_family_id(&mut self, name: &str) -> Option<FamilyId> {
+        let name = name.trim();
+        if name.is_empty() {
+            return None;
+        }
+
         if let Some(id) = self.fcx.collection.family_id(name) {
             return Some(id);
         }
 
         let target = name.to_ascii_lowercase();
-        let mut resolved: Option<String> = None;
-        for candidate in self.fcx.collection.family_names() {
-            if candidate.to_ascii_lowercase() == target {
-                resolved = Some(candidate.to_string());
-                break;
-            }
+        if let Some(id) = self.family_id_cache_lower.get(&target).copied() {
+            return Some(id);
         }
-        let resolved = resolved?;
-        self.fcx.collection.family_id(&resolved)
+
+        let mut resolved_name: Option<String> = None;
+        for candidate in self.fcx.collection.family_names() {
+            if candidate.to_ascii_lowercase() != target {
+                continue;
+            }
+            resolved_name = Some(candidate.to_string());
+            break;
+        }
+
+        let resolved = resolved_name
+            .as_deref()
+            .and_then(|name| self.fcx.collection.family_id(name));
+
+        if let Some(id) = resolved {
+            self.family_id_cache_lower.insert(target, id);
+        }
+        resolved
     }
 
     pub fn generic_family_ids(&mut self, generic: GenericFamily) -> Vec<FamilyId> {
@@ -250,6 +290,9 @@ impl ParleyShaper {
             let blob = parley::fontique::Blob::<u8>::from(data);
             let families = self.fcx.collection.register_fonts(blob, None);
             added = added.saturating_add(families.iter().map(|(_, fonts)| fonts.len()).sum());
+        }
+        if added > 0 {
+            self.invalidate_catalog_caches();
         }
         added
     }
@@ -598,6 +641,52 @@ fn shaping_properties_for_span(
 mod tests {
     use super::*;
     use fret_core::Px;
+
+    #[test]
+    fn font_catalog_caches_invalidate_after_add_fonts() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+
+        let names0 = shaper.all_font_names();
+        assert!(
+            !names0.iter().any(|n| n.eq_ignore_ascii_case("Inter")),
+            "expected Inter to be absent before adding bundled fonts"
+        );
+
+        let entries0 = shaper.all_font_catalog_entries();
+        assert!(
+            !entries0
+                .iter()
+                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+            "expected catalog entries to be empty of Inter before adding bundled fonts"
+        );
+
+        let added = shaper.add_fonts(fret_fonts::bootstrap_fonts().iter().map(|b| b.to_vec()));
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let names1 = shaper.all_font_names();
+        assert!(
+            names1.iter().any(|n| n.eq_ignore_ascii_case("Inter")),
+            "expected Inter to be present after adding bundled fonts"
+        );
+        assert_eq!(
+            names1,
+            shaper.all_font_names(),
+            "expected repeated catalog reads to be stable"
+        );
+
+        let entries1 = shaper.all_font_catalog_entries();
+        assert!(
+            entries1
+                .iter()
+                .any(|e| e.family.eq_ignore_ascii_case("Inter")),
+            "expected catalog entries to include Inter after adding bundled fonts"
+        );
+        assert_eq!(
+            entries1,
+            shaper.all_font_catalog_entries(),
+            "expected repeated catalog reads to be stable"
+        );
+    }
 
     #[test]
     fn shapes_basic_single_line() {
