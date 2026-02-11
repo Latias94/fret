@@ -2239,10 +2239,9 @@ struct FloatWindowState {
 
 fn float_layer_bring_to_front_if_activated<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    surface_id: GlobalElementId,
     window_id: GlobalElementId,
 ) {
-    if !cx.take_transient_for(surface_id, KEY_FLOAT_WINDOW_ACTIVATE) {
+    if !cx.take_transient_for(window_id, KEY_FLOAT_WINDOW_ACTIVATE) {
         return;
     }
     let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() else {
@@ -2341,11 +2340,14 @@ where
     let on_left_double_click_for_down = on_left_double_click.clone();
     cx.pointer_region(props, move |cx| {
         let region_id = cx.root_id();
-        float_layer_bring_to_front_if_activated(cx, region_id, area.id);
+        float_layer_bring_to_front_if_activated(cx, area.id);
 
+        cx.key_clear_on_key_down_for(region_id);
         if let Some(setup) = setup.take() {
             setup(cx, region_id);
         }
+        // Ensure the surface remains focusable even when `setup` does not attach key handlers.
+        cx.key_add_on_key_down_for(region_id, Arc::new(|_host, _acx, _down| false));
 
         let drag_kind = area.drag_kind;
         cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
@@ -2377,7 +2379,13 @@ where
                 );
             }
             if enable_activation {
-                host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+                host.record_transient_event(
+                    fret_ui::action::ActionCx {
+                        window: acx.window,
+                        target: area.id,
+                    },
+                    KEY_FLOAT_WINDOW_ACTIVATE,
+                );
             }
             host.notify(acx);
             false
@@ -2892,7 +2900,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     ..Default::default()
                 };
 
-                let mut area = if options.no_inputs {
+                let area = if options.no_inputs {
                     let layout = props.layout;
                     let mut gate = cx.interactivity_gate_props(
                         fret_ui::element::InteractivityGateProps {
@@ -3515,6 +3523,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                     cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
                         if down.button == MouseButton::Left {
+                            host.request_focus(acx.target);
                             let _ = host.update_model(&active_item_model_for_down, |st| {
                                 st.active = Some(acx.target);
                             });
@@ -5604,9 +5613,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 move |cx| {
                                     let region_id = cx.root_id();
 
-                                    float_layer_bring_to_front_if_activated(
-                                        cx, region_id, window_id,
-                                    );
+                                    float_layer_bring_to_front_if_activated(cx, window_id);
 
                                     cx.key_clear_on_key_down_for(region_id);
                                     if let Some(open) = open_for_key.clone() {
@@ -5642,7 +5649,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                                 );
                                             }
                                             host.record_transient_event(
-                                                acx,
+                                                fret_ui::action::ActionCx {
+                                                    window: acx.window,
+                                                    target: window_id,
+                                                },
                                                 KEY_FLOAT_WINDOW_ACTIVATE,
                                             );
                                             host.notify(acx);
@@ -5876,8 +5886,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 ..Default::default()
                             },
                             move |cx| {
-                                let region_id = cx.root_id();
-                                float_layer_bring_to_front_if_activated(cx, region_id, window_id);
+                                let _region_id = cx.root_id();
+                                float_layer_bring_to_front_if_activated(cx, window_id);
 
                                 cx.pointer_region_clear_on_pointer_down();
                                 cx.pointer_region_clear_on_pointer_move();
@@ -5900,7 +5910,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                                 down.position,
                                             );
                                         }
-                                        host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+                                        host.record_transient_event(
+                                            fret_ui::action::ActionCx {
+                                                window: acx.window,
+                                                target: window_id,
+                                            },
+                                            KEY_FLOAT_WINDOW_ACTIVATE,
+                                        );
                                         host.notify(acx);
                                         false
                                     },
