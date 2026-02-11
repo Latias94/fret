@@ -2900,7 +2900,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     else {
                                         return;
                                     };
-                                    if let Some(next) = resizable::drag_update_fractions(
+                                    if let Some(next) = resizable::drag_update_adjacent_fractions(
                                         divider.handle.axis,
                                         divider.handle.bounds,
                                         children_len,

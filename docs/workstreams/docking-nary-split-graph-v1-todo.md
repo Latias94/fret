@@ -63,9 +63,13 @@ Each TODO is labeled:
   - Verify `resizable_panel_group::compute_layout` returns N-1 handles and we respect them.
   - Gate: tests in `ecosystem/fret-docking/src/dock/tests/*`.
 
-- [ ] DN-P0-ui-003 Rework splitter drag update to adjust only adjacent shares.
+- [x] DN-P0-ui-003 Rework splitter drag update to adjust only adjacent shares.
   - Emit `DockOp::SetSplitFractions` / `Many` updates that preserve other children.
-  - Gate: tests for stable splitter behavior after multiple drags.
+  - Gate: deterministic unit tests for N-ary splits (adjacent-only behavior).
+  - Evidence:
+    - `crates/fret-ui/src/retained_bridge.rs` (`drag_update_adjacent_fractions`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (divider drag uses adjacent-only update)
+    - `ecosystem/fret-docking/src/dock/tests/split.rs` (N-ary adjacency tests)
 
 - [ ] DN-P0-ui-004 Reduce or remove nested same-axis stabilization once canonical form is enforced.
   - Target: delete or simplify `ecosystem/fret-docking/src/dock/split_stabilize.rs`.

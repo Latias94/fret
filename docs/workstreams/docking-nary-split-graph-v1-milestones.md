@@ -95,6 +95,12 @@ Outcome:
 - Splitter drags update adjacent shares only (stable, no oscillation).
 - Nested split stabilization is reduced as canonical form guarantees take over.
 
+Status:
+
+- Preview semantics aligned via `DockGraph::edge_dock_decision` (insert vs wrap).
+- Splitter drag updates use adjacent-only resizing for N-ary splits.
+- Remaining: deterministic preview geometry tests + N-ary handle hit-test coverage + stabilization cleanup.
+
 Implementation targets:
 
 - `ecosystem/fret-docking/src/dock/layout.rs`:

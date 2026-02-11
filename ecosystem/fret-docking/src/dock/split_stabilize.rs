@@ -67,7 +67,7 @@ fn collect_same_axis_locks_in_subtree(
             ..
         } => {
             if children.len() != 2 {
-                // The current docking graph operations produce only binary splits.
+                // This stabilization currently only supports binary splits.
                 return;
             }
 
@@ -114,7 +114,7 @@ pub(super) fn compute_same_axis_locks_for_split_drag(
     handle_ix: usize,
 ) -> Vec<SplitSizeLock> {
     if handle_ix != 0 {
-        // DockGraph currently only creates binary splits, so this is the only supported handle.
+        // This stabilization is currently defined only for binary splits, so only handle 0 is supported.
         return Vec::new();
     }
 

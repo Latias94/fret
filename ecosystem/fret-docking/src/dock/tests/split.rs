@@ -19,6 +19,123 @@ fn drag_update_fractions_updates_two_panel_split() {
     .expect("expected drag to update fractions");
     assert!(next[0] > 0.5, "expected left to grow, got {next:?}");
 }
+
+#[test]
+fn drag_update_adjacent_fractions_updates_only_adjacent_panels_in_three_panel_split() {
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(600.0), Px(40.0)));
+    let fractions = vec![0.33, 0.34, 0.33];
+    let min_px = [Px(120.0), Px(120.0), Px(120.0)];
+
+    let layout0 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &fractions,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+    );
+    let center0 = layout0.handle_centers[0];
+
+    // Try to drag far enough that the middle panel would hit its min size.
+    let next = resizable::drag_update_adjacent_fractions(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &fractions,
+        0,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+        0.0,
+        Point::new(Px(center0 + 250.0), Px(20.0)),
+    )
+    .expect("expected drag to update fractions");
+
+    let layout1 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &next,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+    );
+
+    assert!(
+        (layout1.sizes[2] - layout0.sizes[2]).abs() < 0.01,
+        "expected far-right panel unchanged, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+    assert!(
+        (layout1.sizes[1] - 120.0).abs() < 0.01,
+        "expected middle panel clamped to min, got {:?}",
+        layout1.sizes
+    );
+    assert!(
+        layout1.sizes[0] > layout0.sizes[0] + 1.0,
+        "expected left panel to grow, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+}
+
+#[test]
+fn drag_update_adjacent_fractions_handle1_keeps_left_panel_stable() {
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(600.0), Px(40.0)));
+    let fractions = vec![0.33, 0.34, 0.33];
+    let min_px = [Px(120.0), Px(120.0), Px(120.0)];
+
+    let layout0 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &fractions,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+    );
+    let center1 = layout0.handle_centers[1];
+
+    // Drag handle 1 left: shrink the middle panel, grow the right panel.
+    let next = resizable::drag_update_adjacent_fractions(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &fractions,
+        1,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+        0.0,
+        Point::new(Px(center1 - 80.0), Px(20.0)),
+    )
+    .expect("expected drag to update fractions");
+
+    let layout1 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        bounds,
+        3,
+        &next,
+        Px(0.0),
+        Px(10.0),
+        &min_px,
+    );
+
+    assert!(
+        (layout1.sizes[0] - layout0.sizes[0]).abs() < 0.01,
+        "expected left panel unchanged, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+    assert!(
+        layout1.sizes[2] > layout0.sizes[2] + 1.0,
+        "expected right panel to grow, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+}
 #[test]
 fn same_axis_nested_split_drag_preserves_inner_sibling_width() {
     let mut graph = DockGraph::new();
