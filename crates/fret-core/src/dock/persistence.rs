@@ -281,6 +281,7 @@ impl DockGraph {
                 });
             }
 
+            self.simplify_window_forest(window);
             imported_any = true;
         }
 
@@ -320,6 +321,7 @@ impl DockGraph {
                 });
             }
 
+            self.simplify_window_forest(window);
             imported_any = true;
         }
 
@@ -404,6 +406,7 @@ impl DockGraph {
                     });
                 }
 
+                self.simplify_window_forest(window);
                 imported_any = true;
                 continue;
             }
@@ -436,6 +439,7 @@ impl DockGraph {
             imported_any = true;
         }
 
+        self.simplify_window_forest(fallback_window);
         imported_any
     }
 
@@ -503,6 +507,7 @@ impl DockGraph {
                     });
                 }
 
+                self.simplify_window_forest(window);
                 imported_any = true;
                 continue;
             }
@@ -530,6 +535,7 @@ impl DockGraph {
             imported_any = true;
         }
 
+        self.simplify_window_forest(fallback_window);
         Ok(imported_any)
     }
 }

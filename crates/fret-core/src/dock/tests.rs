@@ -242,6 +242,90 @@ fn dock_layout_json_roundtrips_and_validates() {
 }
 
 #[test]
+fn import_layout_simplifies_nested_same_axis_splits() {
+    let w = window(1);
+
+    let layout = crate::DockLayout::new(
+        vec![crate::DockLayoutWindow {
+            logical_window_id: "main".to_string(),
+            root: 5,
+            placement: None,
+            floatings: Vec::new(),
+        }],
+        vec![
+            crate::DockLayoutNode::Tabs {
+                id: 1,
+                tabs: vec![PanelKey::new("test.a")],
+                active: 0,
+            },
+            crate::DockLayoutNode::Tabs {
+                id: 2,
+                tabs: vec![PanelKey::new("test.b")],
+                active: 0,
+            },
+            crate::DockLayoutNode::Tabs {
+                id: 3,
+                tabs: vec![PanelKey::new("test.c")],
+                active: 0,
+            },
+            crate::DockLayoutNode::Split {
+                id: 4,
+                axis: Axis::Horizontal,
+                children: vec![1, 2],
+                fractions: vec![0.5, 0.5],
+            },
+            crate::DockLayoutNode::Split {
+                id: 5,
+                axis: Axis::Horizontal,
+                children: vec![4, 3],
+                fractions: vec![0.5, 0.5],
+            },
+        ],
+    );
+
+    let mut g = DockGraph::new();
+    assert!(g.import_layout_for_windows(&layout, &[(w, "main".to_string())]));
+
+    let root = g.window_root(w).expect("expected window root");
+    let Some(DockNode::Split {
+        axis,
+        children,
+        fractions,
+    }) = g.node(root)
+    else {
+        panic!("expected imported window root to be a split");
+    };
+    assert_eq!(*axis, Axis::Horizontal);
+    assert_eq!(children.len(), 3);
+    assert_eq!(children.len(), fractions.len());
+
+    let panels: Vec<PanelKey> = children
+        .iter()
+        .filter_map(|&id| match g.node(id) {
+            Some(DockNode::Tabs { tabs, .. }) => tabs.first().cloned(),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        panels,
+        vec![
+            PanelKey::new("test.a"),
+            PanelKey::new("test.b"),
+            PanelKey::new("test.c"),
+        ],
+        "expected same-axis nested splits flattened on import"
+    );
+
+    let expected = [0.25, 0.25, 0.5];
+    for (got, exp) in fractions.iter().copied().zip(expected) {
+        assert!(
+            (got - exp).abs() <= 1.0e-6,
+            "expected {expected:?}, got {fractions:?}"
+        );
+    }
+}
+
+#[test]
 fn import_layout_degrades_unmapped_windows_into_floating_containers() {
     let window_a = window(1);
     let panel_a = PanelKey::new("test.a");

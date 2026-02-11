@@ -11,7 +11,7 @@ impl DockGraph {
     /// - Single-child splits are pruned.
     /// - Nested same-axis splits are flattened (bounded-depth property).
     /// - `Floating` nodes keep their container identity, but their `child` is simplified.
-    fn simplify_window_forest(&mut self, window: AppWindowId) {
+    pub(crate) fn simplify_window_forest(&mut self, window: AppWindowId) {
         if let Some(root) = self.window_root(window) {
             match self.simplify_subtree(root) {
                 Some(next_root) => self.set_window_root(window, next_root),
