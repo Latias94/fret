@@ -83,9 +83,13 @@ Hit-test / routing trace entry fields:
 - `selector` (the selector associated with the injected action)
 - `position` (the injected pointer position)
 - `hit_node_id` (the immediate hit-test result, if any; not stable across runs)
+- `hit_node_path` (debug-only root→leaf path for `hit_node_id`; treat as in-run references only)
 - `hit_semantics_node_id` / `hit_semantics_test_id` (best-effort semantics node observed at that position)
 - `includes_intended` (best-effort: whether the hit semantics matches the intended target)
+- `hit_path_contains_intended` (best-effort: whether the hit-test path contains the intended node id)
 - `barrier_root` / `focus_barrier_root` (in-run references)
+- `pointer_occlusion` / `pointer_occlusion_layer_id` (input arbitration snapshot; explains occlusion)
+- `pointer_capture_active` / `pointer_capture_layer_id` / `pointer_capture_multiple_layers` (input arbitration snapshot; explains capture)
 - `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
 - `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
 

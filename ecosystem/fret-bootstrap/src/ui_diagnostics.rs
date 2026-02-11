@@ -11092,12 +11092,14 @@ fn hit_test_scope_roots_evidence(
     position: Point,
     ui: &UiTree<App>,
 ) -> (
-    Option<u64>,
+    Option<NodeId>,
     Option<u64>,
     Option<u64>,
     Vec<UiHitTestScopeRootEvidenceV1>,
+    fret_ui::tree::UiInputArbitrationSnapshot,
 ) {
     let snap = UiHitTestSnapshotV1::from_tree(position, ui);
+    let arbitration = ui.input_arbitration_snapshot();
     let scope_roots = snap
         .scope_roots
         .into_iter()
@@ -11111,10 +11113,12 @@ fn hit_test_scope_roots_evidence(
         })
         .collect();
     (
-        snap.hit,
+        snap.hit
+            .map(|id| NodeId::from(slotmap::KeyData::from_ffi(id))),
         snap.barrier_root,
         snap.focus_barrier_root,
         scope_roots,
+        arbitration,
     )
 }
 
@@ -11128,7 +11132,9 @@ fn record_hit_test_trace_for_selector(
     intended: Option<&fret_core::SemanticsNode>,
     note: Option<&str>,
 ) {
-    let (hit_node_id, barrier_root, focus_barrier_root, scope_roots) =
+    const MAX_HIT_NODE_PATH: usize = 64;
+
+    let (hit_node, barrier_root, focus_barrier_root, scope_roots, arbitration) =
         hit_test_scope_roots_evidence(position, ui);
 
     let hit_semantics =
@@ -11145,6 +11151,21 @@ fn record_hit_test_trace_for_selector(
         h_px: n.bounds.size.height.0,
     });
 
+    let hit_node_id = hit_node.map(|id| id.data().as_ffi());
+    let hit_node_path: Vec<u64> = hit_node
+        .map(|id| {
+            ui.debug_node_path(id)
+                .into_iter()
+                .rev()
+                .take(MAX_HIT_NODE_PATH)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .map(|n| n.data().as_ffi())
+                .collect()
+        })
+        .unwrap_or_default();
+
     let includes_intended = intended.map(|target| {
         if let Some(hit_id) = hit_semantics_node_id {
             if hit_id == target.id.data().as_ffi() {
@@ -11159,6 +11180,16 @@ fn record_hit_test_trace_for_selector(
         false
     });
 
+    let hit_path_contains_intended = intended_node_id.map(|id| hit_node_path.contains(&id));
+
+    let pointer_occlusion = pointer_occlusion_label(arbitration.pointer_occlusion).to_string();
+    let pointer_occlusion_layer_id = arbitration
+        .pointer_occlusion_layer
+        .map(|id| id.data().as_ffi());
+    let pointer_capture_layer_id = arbitration
+        .pointer_capture_layer
+        .map(|id| id.data().as_ffi());
+
     push_hit_test_trace(
         trace,
         UiHitTestTraceEntryV1 {
@@ -11172,11 +11203,18 @@ fn record_hit_test_trace_for_selector(
             intended_test_id,
             intended_bounds,
             hit_node_id,
+            hit_node_path,
             hit_semantics_node_id,
             hit_semantics_test_id,
             includes_intended,
+            hit_path_contains_intended,
             barrier_root,
             focus_barrier_root,
+            pointer_occlusion: Some(pointer_occlusion),
+            pointer_occlusion_layer_id,
+            pointer_capture_active: Some(arbitration.pointer_capture_active),
+            pointer_capture_layer_id,
+            pointer_capture_multiple_layers: Some(arbitration.pointer_capture_multiple_layers),
             scope_roots,
             note: note.map(|s| s.to_string()),
         },

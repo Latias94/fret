@@ -79,7 +79,8 @@ Definition of done:
 - [ ] M4b: Hit-test + input routing explainability (why did the click/drag not land?):
   - [x] emit `evidence.hit_test_trace` for injected pointer actions (click/drag/wheel),
   - [x] emit `evidence.overlay_placement_trace` (flip/shift/collision inputs + final rect; geometry-first overlay debugging),
-  - [ ] add capture/barrier/occlusion *explainability* (hit path, occluder hints, capture owner),
+  - [x] include input arbitration snapshot in hit-test trace (occlusion/capture/barrier roots),
+  - [ ] add deeper capture/barrier/occlusion *explainability* (hit path “why”, occluder hints, capture owner),
   - [ ] add “chosen point” vs “hit-test path” mismatch evidence.
 - [ ] M4c: Focus + text/IME explainability:
   - [x] emit `evidence.focus_trace` (focused element/node + expected target for focus waits),

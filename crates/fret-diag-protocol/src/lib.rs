@@ -806,16 +806,40 @@ pub struct UiHitTestTraceEntryV1 {
     pub intended_bounds: Option<UiRectV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_node_id: Option<u64>,
+    /// Debug-only path from the root to `hit_node_id` (inclusive).
+    ///
+    /// Treat node ids as in-run references only; they are not stable across runs.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hit_node_path: Vec<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_semantics_node_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_semantics_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub includes_intended: Option<bool>,
+    /// Best-effort: whether the hit-test path contains the intended node id.
+    ///
+    /// Useful for diagnosing “clicked the right region but an overlay/capture blocked delivery”.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_path_contains_intended: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub barrier_root: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_barrier_root: Option<u64>,
+    /// The input arbitration snapshot at the time this trace entry was recorded.
+    ///
+    /// These fields are primarily useful for explaining why injected input did not reach the
+    /// underlay (pointer occlusion/capture/focus barriers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_active: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer_capture_multiple_layers: Option<bool>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scope_roots: Vec<UiHitTestScopeRootEvidenceV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
