@@ -218,6 +218,12 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::HitTestGate(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::FocusTraversalGate(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::PointerRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
