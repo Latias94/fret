@@ -55,7 +55,7 @@ arboard = "3.4.1"
 rfd = "0.17"
 webbrowser = "1.0.4"
 wgpu = "28.0.0"
-winit = { version = "0.31.0-beta.2", features = ["android-native-activity"] }
+winit = { version = "0.31.0-beta.2", features = ["android-game-activity"] }
 naga = "28.0.0"
 renderdog = "0.2.0"
 renderdog-automation = "0.2.0"

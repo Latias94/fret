@@ -12,6 +12,10 @@ Usage: $(basename "$0") [--package <name>] [--release] [--device <serial>] [--no
 
 Builds and runs an Android APK on a connected device/emulator using cargo-apk.
 
+NOTE: The workspace now targets GameActivity for Android IME support. For a working
+device loop (including soft keyboard), use:
+  tools/mobile/android_game_activity_run.sh
+
 Defaults:
   --package ${package}
 EOF

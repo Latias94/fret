@@ -14,20 +14,22 @@ It is **not** a long-term packaging decision.
 
 Current bring-up loop:
 
-- Use `cargo-apk` + `NativeActivity` to package a `cdylib`:
+- Use a minimal Gradle wrapper + `GameActivity` to package a `cdylib`:
   - Entry crate: `apps/fret-ui-gallery-mobile`
-  - Script: `tools/mobile/android_apk_run.sh`
+  - Gradle wrapper: `apps/fret-ui-gallery-mobile/android`
+  - Script: `tools/mobile/android_game_activity_run.sh`
 
 Prereqs (typical):
 
 - Android SDK + platform-tools (`adb`)
-- Android NDK (cargo-apk will try to discover it from the SDK install)
+- Android NDK (the helper script will try to discover it from the SDK install)
+- `cargo-ndk` (`cargo install cargo-ndk`)
 
 Notes:
 
-- The upstream tool is deprecated in favour of `xbuild`, but it is still useful for a quick smoke test.
-- When we need Java/Kotlin integration (GameActivity / IME improvements / clipboard / share sheet),
-  we should revisit the packaging choice.
+- `NativeActivity` is still useful for low-friction rendering bring-up, but it is not sufficient for
+  reliable IME / composing text input on modern devices.
+- `GameActivity` is treated as the baseline for our MVP UX (scroll + input + keyboard avoidance).
 
 ## iOS (real device)
 
@@ -67,4 +69,3 @@ Candidates (evaluate later):
 Tradeoffs:
 
 - Faster “one command” packaging, but introduces a toolchain dependency and a generated-project story.
-
