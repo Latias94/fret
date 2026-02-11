@@ -6,7 +6,7 @@
 //!
 //! In Fret, trigger nodes are typically `Pressable` or `Semantics` wrappers. These helpers keep
 //! the stamping logic consistent across primitives while staying typed and non-DOM-specific
-//! (see ADR 0117).
+//! (see ADR 0115).
 
 use std::sync::Arc;
 

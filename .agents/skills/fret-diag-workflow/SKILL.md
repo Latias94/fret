@@ -132,7 +132,7 @@ Common `script.result.json` evidence fields (bounded ring buffers):
 - `evidence.shortcut_routing_trace`: explains whether keydown went to IME/widget path or dispatched a command
 - `evidence.overlay_placement_trace`: overlay placement decisions (flip/shift/collision inputs + final rect), when available
 - `evidence.ime_event_trace`: IME event kinds + length/cursor summaries (no raw text)
-- `evidence.web_ime_trace`: wasm textarea bridge debug summary (ADR 0195; debug-only)
+- `evidence.web_ime_trace`: wasm textarea bridge debug summary (ADR 0165; debug-only)
 
 Reason-code first triage:
 

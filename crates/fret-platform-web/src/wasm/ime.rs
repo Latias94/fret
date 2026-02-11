@@ -279,7 +279,7 @@ impl WebImeBridge {
         let _ = style.set_property("left", "0px");
         let _ = style.set_property("top", "0px");
         // Keep the element effectively invisible but still "layout-real" so browser IME can anchor
-        // composition UI reliably across platforms (ADR 0195).
+        // composition UI reliably across platforms (ADR 0180).
         let _ = style.set_property("opacity", "0.001");
         // Avoid line wrapping during composition updates; some IMEs anchor their candidate UI to the
         // textarea caret position, so wrapping causes vertical jitter as the preedit string grows.
@@ -808,7 +808,7 @@ impl WebImeBridge {
         }
 
         // Prefer `beforeinput` for simple insertions so we can keep the textarea empty and avoid
-        // relying on the post-mutation `input` event for common typing paths (ADR 0195).
+        // relying on the post-mutation `input` event for common typing paths (ADR 0180).
         {
             let textarea = self.textarea.clone();
             let dom_state = self.dom_state.clone();
@@ -829,7 +829,7 @@ impl WebImeBridge {
                     DomInputDisposition::IgnoreSuppressed => {
                         // If a command path already handled the edit (or a composition commit was
                         // already emitted via `compositionend`), prevent the DOM mutation so we
-                        // don't get a follow-up `input` that would double-insert (ADR 0195).
+                        // don't get a follow-up `input` that would double-insert (ADR 0180).
                         dom_state.borrow_mut().on_beforeinput_handled();
                         input.prevent_default();
                         textarea.set_value("");
@@ -1043,7 +1043,7 @@ impl WebFileDialogState {
 }
 
 impl WebPlatformServices {
-    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0195).
+    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0180).
     pub fn register_ime_mount(&mut self, window: AppWindowId, mount: HtmlElement) {
         self.ime_mounts.insert(window, mount);
     }

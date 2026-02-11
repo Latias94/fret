@@ -475,8 +475,8 @@ Conformance gates:
   - Nested group spacing: `has-[>[data-slot=button-group]]:gap-2` (8px) should be reflected in Fret flex gap.
   - Border merge: `border-l-0` on non-first buttons (avoids double borders).
   - Radius merge: `rounded-l-none` / `rounded-r-none` on middle buttons (keeps only outer corners rounded).
-  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0117).
-  - Scope: do not introduce generic slot/asChild support (see ADR 0117).
+  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0115).
+  - Scope: do not introduce generic slot/asChild support (see ADR 0115).
 - Conformance gates:
   - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_demo_button_chrome_matches`).

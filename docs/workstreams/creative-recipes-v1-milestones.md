@@ -15,7 +15,7 @@ See:
 
 ## M1 — Paint v1 (gradients)
 
-- Land `Paint` and gradient evaluation (ADR 1172) and wire it to `SceneOp::Quad` (and optionally `Path`).
+- Land `Paint` and gradient evaluation (ADR 0233) and wire it to `SceneOp::Quad` (and optionally `Path`).
 - Add renderer conformance tests for linear/radial mapping and deterministic sanitization.
 
 Status: Landed
@@ -28,8 +28,8 @@ Evidence:
 
 ## M2 — Materials v1 (params-only)
 
-- Land `MaterialId` + registration API and baseline kinds (ADR 1174).
-- Implement determinism rules (explicit seeds, no hidden time; ADR 1183).
+- Land `MaterialId` + registration API and baseline kinds (ADR 0235).
+- Implement determinism rules (explicit seeds, no hidden time; ADR 0244).
 - Add renderer telemetry counters and a minimal “procedural paint conformance” test.
 
 Status: Landed
@@ -44,27 +44,27 @@ Evidence:
 
 ## M3 — Masks v1 (gradient alpha masks)
 
-- Land `PushMask/PopMask` (ADR 1178) with gradient-only sources.
+- Land `PushMask/PopMask` (ADR 0239) with gradient-only sources.
 - Add conformance tests for coverage correctness and clip/effect interaction boundaries.
 
 ## M4 — Compositing groups v1 (blend modes)
 
-- Land `PushCompositeGroup/PopCompositeGroup` (ADR 1180) with a small blend vocabulary.
-- Budget intermediates and deterministic degradation (ADR 0120).
+- Land `PushCompositeGroup/PopCompositeGroup` (ADR 0241) with a small blend vocabulary.
+- Budget intermediates and deterministic degradation (ADR 0118).
 
 ## M5 — Motion + pointer snapshots
 
-- Land frame clock reads (non-reactive) and pointer motion snapshot seam (ADR 1179 / ADR 1182).
+- Land frame clock reads (non-reactive) and pointer motion snapshot seam (ADR 0240 / ADR 0243).
 - Add a reduced-motion policy helper in `fret-ui-kit` and verify fallback behavior.
 
 ## M6 — Effect steps extension
 
-- Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 1175) with conformance tests.
+- Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
 
 ## M7 — Sampled materials v2a (catalog textures)
 
-This milestone is the recommended first step for ADR 1181: sampled materials bind a renderer-owned
+This milestone is the recommended first step for ADR 0242: sampled materials bind a renderer-owned
 catalog texture selected at registration time (no per-instance `ImageId` yet).
 
 - Land `BindingShape::ParamsPlusCatalogTexture` in the renderer registry and capability-gate it.

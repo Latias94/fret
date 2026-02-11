@@ -9,7 +9,7 @@ Status: Accepted
 ## Update: Multi-pointer and pointer identity (2026-01)
 
 This ADR was originally authored with a “single pointer” mental model. Fret’s input contracts are evolving to
-support multi-pointer interaction via explicit `PointerId` (ADR 0165) and pointer-keyed drag sessions (ADR 0166).
+support multi-pointer interaction via explicit `PointerId` (ADR 0150) and pointer-keyed drag sessions (ADR 0151).
 
 This section locks the arbitration rules in the presence of multiple concurrent pointers.
 
@@ -89,8 +89,8 @@ This section applies when multiple pointers (mouse/touch/pen contacts) are activ
 
 Definitions:
 
-- **Pointer identity**: Each pointer stream has a stable `PointerId` for the duration of the contact (ADR 0165).
-- **Per-pointer capture**: capture is stored per `PointerId` (ADR 0165).
+- **Pointer identity**: Each pointer stream has a stable `PointerId` for the duration of the contact (ADR 0150).
+- **Per-pointer capture**: capture is stored per `PointerId` (ADR 0150).
 - **Per-pointer session ownership**: for a given `PointerId`, at most one subsystem owns the “active session”
   (docking drag, viewport capture, or normal hit-tested interaction).
 
@@ -192,5 +192,5 @@ Implementation note (current):
 - `docs/adr/0013-docking-ops-and-persistence.md`
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
-- `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
-- `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- `docs/adr/0150-pointer-identity-and-multi-pointer-capture.md`
+- `docs/adr/0151-multi-pointer-drag-sessions-and-routing-keys.md`

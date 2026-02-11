@@ -6,7 +6,7 @@ Fret’s kernel intentionally stays runtime-agnostic and main-thread UI only. Pe
 the same portability rules as other background work:
 
 - run blocking/async I/O off the UI thread,
-- send **data-only** results back to the UI via an inbox drainer (ADR 0190),
+- send **data-only** results back to the UI via an inbox drainer (ADR 0175),
 - apply results on the UI thread by updating `Model<T>` values.
 
 This document shows a practical “golden path” for using `sqlx` (SQLite) with:
@@ -49,7 +49,7 @@ Treat a DB read like any other “resource”:
 - returns a typed value `T`,
 - cached behind `QueryClient`, observable via `Model<QueryState<T>>`.
 
-Lifecycle reminder (ADR 1164 semantics):
+Lifecycle reminder (ADR 0225 semantics):
 
 - `stale_time` gates freshness only,
 - `cache_time` controls retention/GC,

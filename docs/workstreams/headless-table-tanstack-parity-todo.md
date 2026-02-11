@@ -3,7 +3,7 @@ Status: Active (workstream tracker; keep updated as parity gates land)
 This document tracks executable TODOs for the TanStack Table v8 `table-core` parity workstream.
 
 - Narrative plan: `docs/workstreams/headless-table-tanstack-parity.md`
-- Related ADR: `docs/adr/0101-headless-table-engine.md`
+- Related ADR: `docs/adr/0100-headless-table-engine.md`
 - Fret engine: `ecosystem/fret-ui-headless/src/table/`
 
 Tracking format:

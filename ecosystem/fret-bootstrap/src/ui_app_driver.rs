@@ -72,7 +72,7 @@ type RecordEngineFrameHookFn<S> = fn(
 /// - conservative hot reload reset (Subsecond-friendly)
 ///
 /// This driver intentionally uses `fn` pointers (not captured closures) to keep dev hotpatch behavior
-/// predictable (ADR 0107).
+/// predictable (ADR 0105).
 pub struct UiAppDriver<S> {
     root_name: &'static str,
     init_window: fn(&mut App, AppWindowId) -> S,
@@ -152,7 +152,7 @@ impl<S> UiAppDriver<S> {
     /// caches from the event pipeline.
     ///
     /// This makes `ImageAssetCache` work out-of-the-box in golden-path apps without additional
-    /// boilerplate (ADR 0108 / ADR 0112).
+    /// boilerplate (ADR 0106 / ADR 0110).
     #[cfg(feature = "ui-assets")]
     pub fn drive_ui_assets(mut self, enabled: bool) -> Self {
         self.drive_ui_assets = enabled;

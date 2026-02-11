@@ -3,7 +3,7 @@
 //! v1 is intentionally minimal: "display rows" are logical lines split by `\n` and columns are
 //! counted as Unicode scalar values (not graphemes, not rendered cells).
 //!
-//! See ADR 0200 for the normative buffer/view/surface split and v1 rollout constraints.
+//! See ADR 0185 for the normative buffer/view/surface split and v1 rollout constraints.
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
@@ -68,7 +68,7 @@ pub struct MaterializedDisplayRow {
     /// The spans cover:
     /// - fold placeholders (buffer removal -> display insertion),
     /// - inlays (buffer insertion point -> display insertion),
-    /// - inline preedit (buffer insertion point -> display insertion) (ADR 0203).
+    /// - inline preedit (buffer insertion point -> display insertion) (ADR 0188).
     pub spans: Vec<DisplayRowSpan>,
     /// Display-local range of the inline preedit fragment within `text` (when present for this
     /// row).
@@ -118,7 +118,7 @@ impl DisplayMap {
     }
 
     /// Build a display map from the current buffer state, including view-layer fold/inlay
-    /// decorations (ADR 0200).
+    /// decorations (ADR 0185).
     ///
     /// v1 notes:
     /// - Folds and inlays participate in wrapped row-breaking.
@@ -134,7 +134,7 @@ impl DisplayMap {
     }
 
     /// Build a display map from the current buffer state, including view-layer fold/inlay
-    /// decorations and an optional inline preedit insertion (ADR 0203).
+    /// decorations and an optional inline preedit insertion (ADR 0188).
     ///
     /// Preedit is treated as an atomic insertion fragment and participates in wrapped row-breaking.
     pub fn new_with_decorations_and_preedit(
@@ -328,8 +328,8 @@ impl DisplayMap {
     /// Materialize a display row's composed text for windowed export.
     ///
     /// This is a view-owned seam used by paint, semantics export, and diagnostics snapshots. It
-    /// keeps output bounded to a single display row (ADR 0190) and avoids spreading display text
-    /// composition across layers (ADR 0203).
+    /// keeps output bounded to a single display row (ADR 0175) and avoids spreading display text
+    /// composition across layers (ADR 0188).
     ///
     /// Mapping spans are returned in row-local coordinates (0..base.len() -> 0..text.len()) so
     /// downstream consumers can build stable caret/hit-test/a11y conversions without re-deriving
@@ -617,7 +617,7 @@ impl DisplayMap {
 
     /// Return display-row text fragments for unwrapped (1 row == 1 logical line) mapping.
     ///
-    /// This is a view-layer contract surface for fold/placeholder expansion (ADR 0200). It is
+    /// This is a view-layer contract surface for fold/placeholder expansion (ADR 0185). It is
     /// intentionally restricted to the unwrapped baseline until we define the combined wrap+fold
     /// semantics (avoid partially materializing placeholders across wrapped rows).
     pub fn display_row_fragments_unwrapped(
@@ -677,7 +677,7 @@ impl DisplayMap {
     }
 
     /// Return display-row text fragments for unwrapped mapping, including fold placeholders and
-    /// injected inlay text (ADR 0200).
+    /// injected inlay text (ADR 0185).
     ///
     /// This is intentionally restricted to the unwrapped baseline until we define the combined
     /// wrap+fold/inlay semantics.
@@ -987,7 +987,7 @@ fn compute_wrapped_row_start_cols(
         if let Some((anchor, token_cols)) = preedit
             && anchor == cursor
         {
-            // Atomic: never split preedit text across wrapped rows (ADR 0203).
+            // Atomic: never split preedit text across wrapped rows (ADR 0188).
             let remaining = wrap_cols.saturating_sub(in_row);
             if in_row > 0 && token_cols > remaining {
                 starts.push(col);
@@ -1214,7 +1214,7 @@ fn inline_preedit_for_line(
     let mut local = anchor.saturating_sub(line_start).min(line_text.len());
     local = clamp_to_char_boundary(line_text, local);
 
-    // If the anchor lands inside a folded span, clamp to the fold start (ADR 0203).
+    // If the anchor lands inside a folded span, clamp to the fold start (ADR 0188).
     for fold in folds {
         let start = fold.range.start.min(line_text.len());
         let end = fold.range.end.min(line_text.len()).max(start);

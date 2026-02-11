@@ -13,7 +13,7 @@ use crate::Skeleton;
 /// A small shadcn-style image recipe for cards/media rows.
 ///
 /// This stays policy-owned (ecosystem layer) and only depends on the stable mechanism contract:
-/// `SceneOp::Image { fit: ViewportFit, .. }` (ADR 1170).
+/// `SceneOp::Image { fit: ViewportFit, .. }` (ADR 0231).
 #[derive(Debug, Clone)]
 pub struct MediaImage {
     source: MediaImageSource,
@@ -97,7 +97,7 @@ impl MediaImage {
     /// derived from the app-owned `ImageMetadataStore` global.
     ///
     /// This is intentionally opt-in: intrinsic metadata must not implicitly affect layout
-    /// (ADR 0126).
+    /// (ADR 0124).
     pub fn intrinsic_aspect_ratio_from_metadata(mut self, enabled: bool) -> Self {
         self.intrinsic_aspect_ratio_from_metadata = enabled;
         self

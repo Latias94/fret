@@ -72,7 +72,7 @@ add soft clip, but the ordering semantics remain the same.
 ## Future Work
 
 - Formalize how `DrawOrder` should evolve (keep as internal/debug, or remove from the public contract).
-  - Update: `docs/adr/0082-draworder-is-non-semantic.md`
+  - Update: `docs/adr/0081-draworder-is-non-semantic.md`
 - Define additional “stateful” ops (transform, opacity groups, layers) while preserving order semantics.
 - Add a renderer test harness that verifies ordering for mixed primitives (quad + viewport + text).
 

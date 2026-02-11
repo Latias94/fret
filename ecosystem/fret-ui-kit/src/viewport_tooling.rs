@@ -5,7 +5,7 @@
 //! - selection tools,
 //! - camera navigation tools.
 //!
-//! It is built on top of the policy-light protocol types in `fret-viewport-tooling` (ADR 0168).
+//! It is built on top of the policy-light protocol types in `fret-viewport-tooling` (ADR 0153).
 
 use std::cmp::Reverse;
 

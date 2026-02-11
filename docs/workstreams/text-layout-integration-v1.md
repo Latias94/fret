@@ -243,7 +243,7 @@ If we need “wrap but clamp to N lines with ellipsis”, it must be representab
 This is a separate feature from single-line ellipsis.
 
 Decision (v1): `TextOverflow::Ellipsis` is single-line only; multiline “line clamp” requires an
-explicit contract. See `docs/adr/1160-text-overflow-ellipsis-and-line-clamp-v1.md`.
+explicit contract. See `docs/adr/0221-text-overflow-ellipsis-and-line-clamp-v1.md`.
 
 ### F3 — Flex min-size behavior (“min-width: auto” vs “min-width: 0”)
 

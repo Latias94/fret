@@ -726,7 +726,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::mvu::app::<Program>(...)` golden path (ADR 0107 / 0112).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
 "#
     )
 }

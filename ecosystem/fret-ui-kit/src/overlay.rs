@@ -30,7 +30,7 @@ pub fn outer_bounds_with_window_margin(window_bounds: Rect, window_margin: Px) -
 }
 
 /// Returns an "outer viewport" rect inset by a uniform window margin, observing the committed
-/// environment snapshot (ADR 1171).
+/// environment snapshot (ADR 0232).
 #[track_caller]
 pub fn outer_bounds_with_window_margin_for_environment<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

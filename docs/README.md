@@ -102,7 +102,7 @@ so the default authoring story lives in ecosystem crates.
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
 - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
 - Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
-   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
+   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0092): `docs/adr/0092-crate-structure-core-backends-apps.md`
 - UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render-wgpu/src/renderer/mod.rs`

@@ -18,7 +18,7 @@ baseline policies so future features do not force a large rewrite.
 
 - ADR 0128: headless engine + `WorkBudget`.
 - ADR 0129: transform pipeline and dataZoom semantics (filtering vs windowing).
-- ADR 0096: renderer perf/stress harness (repo-level performance culture).
+- ADR 0095: renderer perf/stress harness (repo-level performance culture).
 
 ## Decision
 
@@ -104,5 +104,5 @@ P1:
 ## References
 
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
+- ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`

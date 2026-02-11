@@ -44,9 +44,9 @@ at least one regression test before expanding usage.
 - Anchoring helpers for overlays: `fret_ui_kit::overlay::*`
 - Control chrome wrapper (focus ring + clipping split): `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 - Styling refinements: `fret_ui_kit::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
-- Unified authoring builder surface (ADR 0175): `fret_ui_kit::{UiExt, UiPatchTarget, UiIntoElement, UiBuilder}`
+- Unified authoring builder surface (ADR 0160): `fret_ui_kit::{UiExt, UiPatchTarget, UiIntoElement, UiBuilder}`
 
-## Unified authoring builder surface (ADR 0175)
+## Unified authoring builder surface (ADR 0160)
 
 Goal: allow ecosystem and third-party crates to compose components with a single default “dialect”:
 
@@ -180,7 +180,7 @@ Practical guidance:
 - Use focus scopes for dialogs/sheets/tab-traps; do not bake “modal policy” into the runtime.
 - Keep focus restore rules in component overlay policy (see `window_overlays` and ADR 0069).
 
-## Overflow and clipping (ADR 0088)
+## Overflow and clipping (ADR 0087)
 
 `LayoutStyle.overflow` is a **paint + hit-test contract** (ADR 0057, ADR 0063), not a styling knob.
 Components should converge on predictable conventions instead of sprinkling ad-hoc `Overflow::Clip`:

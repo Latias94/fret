@@ -30,3 +30,16 @@ fn floating_layer_z_order_does_not_clone_vec_each_frame() {
         "floating_layer should avoid cloning the z-order Vec on every frame"
     );
 }
+
+#[test]
+fn popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds() {
+    let source = include_str!("../src/imui.rs");
+    assert!(
+        source.contains("environment_viewport_bounds"),
+        "imui popup menu should derive popper outer bounds from committed environment viewport bounds"
+    );
+    assert!(
+        !source.contains("popper_content_layout_sized(cx.bounds"),
+        "imui popup menu should not use cx.bounds as the popper outer bounds (bypasses environment query deps)"
+    );
+}

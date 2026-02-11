@@ -19,9 +19,11 @@ devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 anyhow.workspace = true
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-fonts = { path = "../../crates/fret-fonts" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
+fret-render = { path = "../../crates/fret-render" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["image-decode", "image-metadata"] }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
@@ -50,7 +52,6 @@ image.workspace = true
 fret-node = { path = "../../ecosystem/fret-node" }
 
 [dev-dependencies]
-fret-render = { path = "../../crates/fret-render" }
 pollster.workspace = true
 slotmap.workspace = true
 stacksafe.workspace = true

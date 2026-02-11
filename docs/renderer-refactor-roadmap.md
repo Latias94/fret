@@ -8,18 +8,18 @@ It is a planning document. Hard-to-change contracts must be specified in ADRs.
 
 Primary ADR:
 
-- `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
-- Effect semantics ADR: `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
-- User-facing recipes + tier selection ADR: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
-- Budgets + degradation ADR: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
-- Streaming image/video ingestion ADR: `docs/adr/0121-streaming-images-and-video-surfaces.md`
-- Offscreen capture/readback ADR: `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
-- Streaming upload budgets ADR: `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
-- Renderer capabilities ADR: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
-- Extensibility ADR: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
-- Streaming update model ADR: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
-- Capture options ADR: `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
-- Effect clip masks ADR: `docs/adr/0153-renderer-effect-clip-masks-and-soft-clipping-v1.md`
+- `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+- Effect semantics ADR: `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+- User-facing recipes + tier selection ADR: `docs/adr/0134-effect-recipes-and-tier-selection-v1.md`
+- Budgets + degradation ADR: `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- Streaming image/video ingestion ADR: `docs/adr/0119-streaming-images-and-video-surfaces.md`
+- Offscreen capture/readback ADR: `docs/adr/0120-offscreen-rendering-frame-capture-and-readback.md`
+- Streaming upload budgets ADR: `docs/adr/0121-streaming-upload-budgets-and-backpressure-v1.md`
+- Renderer capabilities ADR: `docs/adr/0122-renderer-capabilities-and-optional-zero-copy-imports.md`
+- Extensibility ADR: `docs/adr/0123-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
+- Streaming update model ADR: `docs/adr/0124-streaming-image-update-effects-and-metadata-v1.md`
+- Capture options ADR: `docs/adr/0125-frame-capture-options-and-determinism-v1.md`
+- Effect clip masks ADR: `docs/adr/0138-renderer-effect-clip-masks-and-soft-clipping-v1.md`
 
 ## Goals
 
@@ -111,7 +111,7 @@ Deliverables:
 
 Decision gate:
 
-- Before enabling any heavy effect by default, lock budgets + degradation behavior (ADR 0120).
+- Before enabling any heavy effect by default, lock budgets + degradation behavior (ADR 0118).
 
 Acceptance criteria:
 
@@ -157,15 +157,15 @@ These scenarios are not separate goals; they are the reason the substrate ADRs e
 - **GameView / engine viewport**
   - Path: `RenderTargetId` + `SceneOp::ViewportSurface` (ADR 0007 / ADR 0038).
 - **Video playback UI / scrubbing / thumbnails**
-  - Path: streaming `ImageId` updates with backpressure (ADR 0121 / ADR 0123).
+  - Path: streaming `ImageId` updates with backpressure (ADR 0119 / ADR 0121).
 - **Remote desktop / cloud editor previews**
-  - Same as video ingestion, plus partial updates/stride support (ADR 0121).
+  - Same as video ingestion, plus partial updates/stride support (ADR 0119).
 - **Screenshots / recording / golden tests**
-  - Path: offscreen render + readback via effects/events (ADR 0122).
+  - Path: offscreen render + readback via effects/events (ADR 0120).
 - **User/plugin GPU-heavy panels**
-  - Path: external pipelines render to `RenderTargetId` (ADR 0125 tier A).
+  - Path: external pipelines render to `RenderTargetId` (ADR 0123 tier A).
 - **Portable stylized UI effects**
-  - Path: effect layers + renderer-enforced budgets/degradation (ADR 0119 / ADR 0120).
+  - Path: effect layers + renderer-enforced budgets/degradation (ADR 0117 / ADR 0118).
 
 ## P0 Recommendations (Default Positions)
 
@@ -204,13 +204,13 @@ This section is intentionally lightweight and should be updated as work lands.
   forwards pointer + wheel as `Effect::ViewportInput` using `ViewportMapping`
   (`ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`).
 - Streaming images/video ingestion is wired through a cross-frame latest-wins queue with per-window budgets
-  (ADR 0123 / ADR 0126): `crates/fret-launch/src/runner/streaming_upload.rs`.
+  (ADR 0121 / ADR 0124): `crates/fret-launch/src/runner/streaming_upload.rs`.
 - YUV updates are applied in the runner at drain time (queue coalescing stays separate from apply), keeping a clean
-  extension point for future zero-copy imports/capability gates (ADR 0124).
-- An experimental NV12 GPU conversion path exists behind capability gating (ADR 0124) and an enable switch
+  extension point for future zero-copy imports/capability gates (ADR 0122).
+- An experimental NV12 GPU conversion path exists behind capability gating (ADR 0122) and an enable switch
   (`WinitRunnerConfig.streaming_nv12_gpu_convert_enabled` or `FRET_STREAMING_GPU_YUV=1`): NV12 planes + a tiny conversion
   pass into RGBA8 sRGB image storage in `crates/fret-launch/src/runner/yuv_gpu.rs`.
-- A unified renderer-wide perf snapshot exists (ADR 0096): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
+- A unified renderer-wide perf snapshot exists (ADR 0095): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
   P0 counters (draw calls, pipeline/bind group sets, upload bytes, encode/prepare timing) and is printed by
   `apps/fret-svg-atlas-stress/src/main.rs` and stress demos in `apps/fret-examples/src/` (e.g. `plot_stress_demo.rs`, `table_stress_demo.rs`, `virtual_list_stress_demo.rs`) (`renderer_perf:`).
   Set `FRET_RENDERER_PERF_PIPELINES=1` to emit `renderer_perf_pipelines:` lines that break down pipeline switches by
@@ -248,10 +248,10 @@ Example pipeline breakdowns (typical, from `effects_demo`):
 - Only panel2 (filter-content pixelate): `quad≈180 text_mask≈60 composite≈60 fullscreen≈120 clip_mask≈0`
 
 - **ADRs (Accepted / implemented as MVP):**
-  - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
-  - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
-  - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
-  - `docs/adr/0153-renderer-effect-clip-masks-and-soft-clipping-v1.md` (v1 clip mask substrate)
+  - `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+  - `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+  - `docs/adr/0118-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+  - `docs/adr/0138-renderer-effect-clip-masks-and-soft-clipping-v1.md` (v1 clip mask substrate)
 - **Implementation status (as of now):**
   - M0: Landed on `main` (prototype implemented):
     - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
@@ -277,10 +277,10 @@ Example pipeline breakdowns (typical, from `effects_demo`):
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
     - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by scissored effect writeback passes.
     - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter of the effect viewport rect) with deterministic sampling (origin-aware mapping).
-    - Mask tier selection is driven by `EffectQuality` (ADR 0153) and may be further capped when an effect is already
+    - Mask tier selection is driven by `EffectQuality` (ADR 0138) and may be further capped when an effect is already
       forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
     - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
-    - Streaming image v1 (RGBA8 dirty-rect updates): runner holds uploaded textures and applies `Effect::ImageUpdateRgba8` via dirty-rect `queue.write_texture` writes (desktop + web), with deterministic latest-wins coalescing + cross-frame queueing + per-window upload/staging budgets (ADR 0123). Metadata is plumbed through `ImageColorInfo` / `AlphaMode` (ADR 0126): `encoding` selects sRGB vs linear formats, and `AlphaMode` controls whether the viewport/image blit shader premultiplies sampled RGB or treats it as already premultiplied. NV12/I420 update variants are supported via a CPU fallback conversion to RGBA8 at the runner apply stage (no zero-copy imports yet). Optional counters are exposed via `fret_core::StreamingUploadPerfSnapshot` when enabled (`WinitRunnerConfig.streaming_perf_snapshot_enabled`). Visual smoke demo: `cargo run -p fret-demo --bin streaming_image_demo` (RGBA8) and `cargo run -p fret-demo --bin streaming_nv12_demo` (NV12).
+    - Streaming image v1 (RGBA8 dirty-rect updates): runner holds uploaded textures and applies `Effect::ImageUpdateRgba8` via dirty-rect `queue.write_texture` writes (desktop + web), with deterministic latest-wins coalescing + cross-frame queueing + per-window upload/staging budgets (ADR 0121). Metadata is plumbed through `ImageColorInfo` / `AlphaMode` (ADR 0124): `encoding` selects sRGB vs linear formats, and `AlphaMode` controls whether the viewport/image blit shader premultiplies sampled RGB or treats it as already premultiplied. NV12/I420 update variants are supported via a CPU fallback conversion to RGBA8 at the runner apply stage (no zero-copy imports yet). Optional counters are exposed via `fret_core::StreamingUploadPerfSnapshot` when enabled (`WinitRunnerConfig.streaming_perf_snapshot_enabled`). Visual smoke demo: `cargo run -p fret-demo --bin streaming_image_demo` (RGBA8) and `cargo run -p fret-demo --bin streaming_nv12_demo` (NV12).
     - Next: consider region/tiled masks to reduce peak bytes, and lock down any future clip-path expansion strategy (ADR-gated).
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
@@ -317,7 +317,7 @@ This checklist is a suggested decomposition for implementation. Items may move a
 
 Exit criteria:
 
-- No-regression harness scene renders identically when no effects are present (ADR 0118).
+- No-regression harness scene renders identically when no effects are present (ADR 0116).
 - Pass list + intermediate allocation/reuse + peak bytes are observable in debug/perf snapshots.
 
 ### M1: Fullscreen pass runner
@@ -340,11 +340,11 @@ Exit criteria:
   - a `ViewportSurface` behind,
   - UI overlays in front,
   - nested clips/transforms,
-  - a forced budget-degradation case (ADR 0120).
+  - a forced budget-degradation case (ADR 0118).
 
 Exit criteria:
 
-- At least one effect group (`FilterContent` or `Backdrop`) works end-to-end with correct ordering/clip/transform (ADR 0119).
+- At least one effect group (`FilterContent` or `Backdrop`) works end-to-end with correct ordering/clip/transform (ADR 0117).
 
 ### M2.5: Mask-aware effects (rounded clip integration)
 
@@ -360,15 +360,15 @@ Deliverables:
 - Add GPU conformance scenes that validate:
   - rounded “overflow-hidden” glass panel does not bleed into corners,
   - blur/pixelate do not leak outside the rounded clip under transforms,
-  - behavior is deterministic under budget degradation (ADR 0120).
+  - behavior is deterministic under budget degradation (ADR 0118).
 
 Exit criteria:
 
-- A rounded clip + effect chain (Backdrop and FilterContent) is visually correct and covered by GPU conformance tests (ADR 0063 / ADR 0153).
+- A rounded clip + effect chain (Backdrop and FilterContent) is visually correct and covered by GPU conformance tests (ADR 0063 / ADR 0138).
 
 ### M3: Budgets + observability hardening
 
-- Implement per-window budgets and deterministic degradation order (ADR 0120).
+- Implement per-window budgets and deterministic degradation order (ADR 0118).
 - Add budget configuration plumbing (start with debug/config overrides; later integrate with settings).
 - Add stress harnesses that validate:
   - peak intermediate bytes remain bounded,
@@ -376,4 +376,4 @@ Exit criteria:
 
 Exit criteria:
 
-- For fixed inputs, degradation decisions are deterministic across runs and observable (ADR 0120).
+- For fixed inputs, degradation decisions are deterministic across runs and observable (ADR 0118).

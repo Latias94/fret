@@ -15,7 +15,7 @@ This workstream implements **container queries** for editor-grade Fret UIs:
 
 Contract source of truth:
 
-- ADR 1170: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+- ADR 0231: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
 
 ## Why this matters (editor-grade rationale)
 

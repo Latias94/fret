@@ -3,7 +3,7 @@
 //! This module is intentionally policy-layer code:
 //! - It does not change the mechanism-layer `fret-ui` contract surface.
 //! - It reuses `ImageAssetCache` (ADR 0004 flush-point resources) for GPU registration and budgets.
-//! - Decoding runs off-thread via the runner-provided `DispatcherHandle` (ADR 0190).
+//! - Decoding runs off-thread via the runner-provided `DispatcherHandle` (ADR 0175).
 //!
 //! The primary goal is to avoid ad-hoc per-app crop/math and decode pipelines for common needs like
 //! shadcn-style avatars and thumbnail grids.

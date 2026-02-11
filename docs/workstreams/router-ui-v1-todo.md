@@ -73,9 +73,9 @@ Status legend:
   - `router.back`
   - `router.forward`
 
-## Phase 5 - Link semantics conformance (ADR 1180)
+## Phase 5 - Link semantics conformance (ADR 0241)
 
-- `[x]` Define the minimal v1 Link semantics contract (ADR 1180).
+- `[x]` Define the minimal v1 Link semantics contract (ADR 0241).
 - `[x]` Add a `Pressable` configuration seam for activation key policy (Link = Enter-only).
 - `[x]` Update `fret-router-ui` link helpers to:
   - stamp `SemanticsRole::Link`

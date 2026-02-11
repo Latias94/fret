@@ -59,7 +59,7 @@ Key invariants:
 - **Determinism**: same inputs → same hit-testing / layering / placement results.
 - **Identity stability**: element identity survives churn (ADR 0028 / ADR 0033).
 - **Multi-root correctness**: overlays and modal barriers are first-class roots (ADR 0011).
-- **Coordinate closure**: paint, hit-testing, and event coordinates agree under transforms (ADR 0083).
+- **Coordinate closure**: paint, hit-testing, and event coordinates agree under transforms (ADR 0082).
 
 ---
 
@@ -82,7 +82,7 @@ Key invariants:
   - paint emission,
   - hit-testing,
   - pointer event coordinates,
-  - and anchored overlay geometry queries (ADR 0083).
+  - and anchored overlay geometry queries (ADR 0082).
 
 Implementation anchors:
 
@@ -176,7 +176,7 @@ Validation anchors:
 - Scene state stacks: `docs/adr/0019-scene-state-stack-and-layers.md`
 - Rounded clipping: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
 - Transform + clip composition: `docs/adr/0078-scene-transform-and-clip-composition.md`
-- Draw order is non-semantic: `docs/adr/0082-draworder-is-non-semantic.md`
+- Draw order is non-semantic: `docs/adr/0081-draworder-is-non-semantic.md`
 
 **Code entry points**
 
@@ -289,7 +289,7 @@ Validation anchors:
 **Contract**
 
 - Observability strategy: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
-- Diagnostics snapshot + scripted interaction tests: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- Diagnostics snapshot + scripted interaction tests: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 
 **Code entry points**
 
@@ -316,7 +316,7 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
      - and explicit constraints when virtualization is involved.
     - Reference: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
    - Virtualized collections baseline (locked):
-     - `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
+     - `docs/adr/0084-virtualized-accessibility-and-collection-semantics.md`
 
 2. **Docking + overlay + viewport capture conformance**
    - Status:
@@ -336,11 +336,11 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
 1. **Multi-window capability degradation policy**
    - Define a single, explicit policy for “logical windows” on platforms without OS multi-window.
    - Tie it to the capabilities matrix (ADR 0054) and docking layout persistence rules (ADR 0013/0017).
-   - Contract: `docs/adr/0084-multi-window-degradation-policy.md`
+   - Contract: `docs/adr/0083-multi-window-degradation-policy.md`
 
 2. **UI inspector surface**
    - Decide a minimal, stable inspector data shape and a scripted interaction test harness surface:
-     - `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+     - `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
      - (observability strategy baseline): `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 
 3. **Placement solver expansion**

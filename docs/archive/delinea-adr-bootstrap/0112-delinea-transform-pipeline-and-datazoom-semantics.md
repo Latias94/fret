@@ -28,7 +28,7 @@ features without destabilizing core contracts.
 ## Relationship to Other ADRs
 
 - ADR 0128 introduces `delinea` as the headless chart engine and sets scope boundaries.
-- ADR 0097 / ADR 0099 cover the ImPlot-like retained plot surface (`fret-plot`), which is not replaced by `delinea`.
+- ADR 0096 / ADR 0098 cover the ImPlot-like retained plot surface (`fret-plot`), which is not replaced by `delinea`.
 - ADR 0080 defines `SceneOp::Path` and `PathService` caching; this ADR lists chart-driven “must-have” semantics
   that may require future contract extensions.
 

@@ -15,7 +15,7 @@ Tracking format:
 - [ ] FC-P0-layout-001 Update `docs/layout-engine-v2-migration-inventory.md` with a “current default path” snapshot
       (what is still on the manual path vs engine-fast-path), and link the tests that guard it.
   - Primary docs: `docs/layout-engine-refactor-roadmap.md`
-  - Contract gate: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+  - Contract gate: `docs/adr/0114-window-scoped-layout-engine-and-viewport-roots.md`
   - Evidence anchors should include at least: `crates/fret-ui/src/tree/layout.rs` and the layout conformance tests in `crates/fret-ui/src/declarative/tests/layout.rs`.
 
 ## M1 — Overlay + input arbitration (determinism)
@@ -29,7 +29,7 @@ Tracking format:
 
 - [ ] FC-P0-prepaint-020 Define the minimal “interaction stream v1 payload” acceptance list and mark each item as:
       `In stream` / `Not in stream (still tree-walk)` / `Out of scope`.
-  - Contract gate: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+  - Contract gate: `docs/adr/0167-prepaint-interaction-stream-and-range-reuse.md`
   - Workstream: `docs/workstreams/gpui-parity-refactor.md`
   - Initial candidates to audit:
     - cursor requests / cursor icon routing
@@ -39,14 +39,14 @@ Tracking format:
 - [ ] FC-P0-virt-030 Add a “VirtualList window derivation roadmap snapshot” section to the GPUI parity TODO tracker:
       current behavior, target behavior, and the first surface to migrate (code view vs list/table).
   - Workstream: `docs/workstreams/gpui-parity-refactor-todo.md`
-  - Contract gate: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
+  - Contract gate: `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`
 
 ## M3 — Text system v2 (UI surfaces + quality baseline)
 
 - [ ] FC-P0-text-040 Add an “ecosystem migration checklist” table to `docs/workstreams/text-system-v2-parley.md`
       (Markdown, CodeView, Syntax highlighting spans) with per-crate status + evidence anchors.
   - Workstream: `docs/workstreams/text-system-v2-parley.md`
-  - Contract gate: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+  - Contract gate: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
 
 ## M4 — Multi-window tear-off (capability-driven)
 

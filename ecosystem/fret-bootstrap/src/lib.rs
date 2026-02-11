@@ -295,13 +295,34 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
             .with_layered_menu_bar(".")?)
     }
 
+    pub fn with_default_config_files_for_root(
+        self,
+        project_root: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        let project_root = project_root.as_ref();
+        Ok(self
+            .with_layered_settings(project_root)?
+            .with_command_default_keybindings()
+            .with_layered_keymap(project_root)?
+            .with_layered_menu_bar(project_root)?)
+    }
+
     /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` / `menubar.json` files.
     ///
     /// This uses a repeating `Effect::SetTimer` and checks file metadata (mtime/len) on each tick.
     /// It is intended for local dev workflows and stays portable (no platform-specific watcher deps).
-    pub fn with_config_files_watcher(mut self, poll_interval: Duration) -> Self {
+    pub fn with_config_files_watcher(self, poll_interval: Duration) -> Self {
+        self.with_config_files_watcher_for_root(poll_interval, ".")
+    }
+
+    pub fn with_config_files_watcher_for_root(
+        mut self,
+        poll_interval: Duration,
+        project_root: impl AsRef<Path>,
+    ) -> Self {
+        let project_root = project_root.as_ref().to_path_buf();
         self.inner = self.inner.init_app(move |app| {
-            fret_app::ConfigFilesWatcher::install(app, poll_interval, ".");
+            fret_app::ConfigFilesWatcher::install(app, poll_interval, &project_root);
         });
         self
     }

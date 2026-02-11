@@ -6,7 +6,7 @@
 //!
 //! For module ownership and “where should this go?” guidance, see `crates/fret-runner-web/README.md`.
 //!
-//! Long-term direction: a dedicated DOM adapter for IME/keyboard fidelity (see ADR 0091/0093).
+//! Long-term direction: a dedicated DOM adapter for IME/keyboard fidelity (see ADR 0089/0092).
 
 #[cfg(target_arch = "wasm32")]
 pub use fret_platform_web::*;

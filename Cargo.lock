@@ -2263,6 +2263,7 @@ dependencies = [
  "fret-code-editor-view",
  "fret-code-view",
  "fret-core",
+ "fret-fonts",
  "fret-icons",
  "fret-kit",
  "fret-launch",

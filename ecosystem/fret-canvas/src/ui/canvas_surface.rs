@@ -2,7 +2,7 @@
 //!
 //! This module provides a small declarative wrapper that:
 //! - wires `PointerRegion` input hooks around a leaf `Canvas`,
-//! - keeps the "mechanism vs. policy" boundary explicit (ADR 0156).
+//! - keeps the "mechanism vs. policy" boundary explicit (ADR 0141).
 //!
 //! Policy-heavy behaviors like pan/zoom, tool modes, selection, and snapping should be layered
 //! above this helper (e.g. in `crate::ui`), not embedded here.

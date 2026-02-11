@@ -9,7 +9,7 @@ This document is an **execution plan** for aligning `ecosystem/fret-node` (Rust)
 For the capability-by-capability parity map, see:
 - Detailed parity matrix: `docs/node-graph-xyflow-parity.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
-- Contracts: `docs/adr/0135-node-graph-editor-and-typed-connections.md`
+- Contracts: `docs/adr/0126-node-graph-editor-and-typed-connections.md`
 
 ## Operating mode (refactor-friendly)
 
@@ -371,7 +371,7 @@ Exit criteria:
 Evidence anchors:
 
 - Workstream checklist: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`
-- ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+- ADR: `docs/adr/0183-deterministic-graph-diff-and-patch-units.md`
 - Diff implementation: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
 - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 

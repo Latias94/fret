@@ -75,7 +75,7 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
   - `docs/adr/0044-text-editing-state-and-commands.md`
   - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
   - `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-  - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
+  - `docs/adr/0180-web-ime-and-text-input-bridge-v1.md`
 - Code entry points:
   - `crates/fret-runtime/src/platform_text_input.rs` (`PlatformTextInputQuery`, `Utf16Range`)
   - `crates/fret-runtime/src/window_text_input_snapshot.rs` (snapshots / platform bridge)

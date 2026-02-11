@@ -71,7 +71,7 @@ Status legend:
 - `[x]` Add transition-based invalidate/prefetch planning:
   - input: `RouterTransition`
   - output: list of namespaces + keys to prefetch
-- `[x]` Add route-level hook surface (ADR 1169):
+- `[x]` Add route-level hook surface (ADR 0230):
   - `before_load` (per-route middleware)
   - `loader` (prefetch intents)
 - `[x]` Add update-scoped helpers:

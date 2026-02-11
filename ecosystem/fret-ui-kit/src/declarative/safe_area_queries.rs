@@ -1,7 +1,7 @@
 use fret_core::Edges;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// Returns runner-committed safe-area insets for the current window (ADR 1171).
+/// Returns runner-committed safe-area insets for the current window (ADR 0232).
 ///
 /// This is intended for future mobile targets. When unavailable, returns `None`.
 #[track_caller]

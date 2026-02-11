@@ -9,7 +9,7 @@ Goal: enumerate **feature-level parity** (what users can do + how it feels), mar
 status** per item, and provide an ordered list of **next alignment targets**.
 
 Note: Fret intentionally renders gizmos as **engine-pass 3D geometry** (depth-tested) rather than a pure
-UI overlay, per ADR 0139. That means some "rendering topology" items will be *intentionally different*
+UI overlay, per ADR 0130. That means some "rendering topology" items will be *intentionally different*
 while still aiming for equivalent UX outcomes.
 
 ## References (source of truth)
@@ -217,7 +217,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Per-axis colors + hover color | Yes | Yes | **Aligned** | `GizmoConfig::{x_color,y_color,z_color,hover_color}`. |
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Per-part occlusion policy | N/A | N/A | **Aligned (Fret enhancement)** | `GizmoPartVisuals::occlusion: GizmoOcclusionPolicy` allows enabling/disabling the occluded ghost pass per feature group (rings, plane fills, bounds, handles, feedback). Feedback defaults to non-ghost overlay semantics (Always + no ghost triangles) to match mature editor UX. |
-| Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
+| Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0130). |
 | Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Rotate rings use a separate view-angle fade window (`rotate_ring_fade_dot`) to avoid edge-on rings stealing interaction. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Partially aligned (basic)** | Fret provides `ViewGizmo` (cube) with hover + face/edge/corner click -> view intent, drag orbit output, center-button projection toggle, and basic labels rendered by the host (`ecosystem/fret-gizmo/src/view_gizmo.rs`, demo integration in `apps/fret-examples/src/gizmo3d_demo.rs`). Missing: richer host camera policies. |
 | Grid draw helper | Yes (`DrawGrid`) | No | **Aligned (basic)** | `Grid3d` helper outputs depth-tested line geometry (`ecosystem/fret-gizmo/src/grid.rs`) and is rendered in `apps/fret-examples/src/gizmo3d_demo.rs` via the viewport overlay pass. |
@@ -265,7 +265,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
       in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
    - Status: **Aligned (with known gaps)** - Fret now has:
      - reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`, `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs`
-     - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0155)
+     - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0140)
      - built-in transform gizmo routed through the manager (`TransformGizmoPlugin` in `ecosystem/fret-gizmo/src/transform_plugin.rs`)
      - custom property edit payloads for non-transform gizmos (`GizmoUpdate.custom_edits`, `GizmoCustomEdit`, `GizmoPropertyKey`) in `ecosystem/fret-gizmo/src/gizmo/runtime.rs`
      - real custom plugins shipped:
@@ -273,7 +273,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
        - `LightRadiusGizmoPlugin` (non-transform scalar edits) in `ecosystem/fret-gizmo/src/light_radius_plugin.rs`
 
      Known gaps (future-facing):
-     - Host-side property source contract is read-only today (ADR 0167). Writes remain host-owned via `GizmoCustomEdit` (no direct write API).
+     - Host-side property source contract is read-only today (ADR 0152). Writes remain host-owned via `GizmoCustomEdit` (no direct write API).
      - 3D picking primitives / acceleration (Godot-style collision + BVH) for complex gizmos.
      - Engine/editor undo/redo coalescing integration for `custom_edits` (framework support is still evolving).
 

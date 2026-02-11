@@ -42,7 +42,7 @@ mod floating_window_on_area;
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
 ///
-/// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0175) into
+/// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0160) into
 /// immediate-mode frontends (`UiWriter`).
 pub trait UiKitIntoElement<H: UiHost> {
     fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
@@ -2138,8 +2138,12 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size))
                 .unwrap_or(options.estimated_size);
 
-            let layout =
-                popper::popper_content_layout_sized(cx.bounds, anchor, desired, options.placement);
+            let layout = popper::popper_content_layout_sized(
+                cx.environment_viewport_bounds(fret_ui::Invalidation::Layout),
+                anchor,
+                desired,
+                options.placement,
+            );
 
             let (popover, border) = {
                 let theme = fret_ui::Theme::global(&*cx.app);

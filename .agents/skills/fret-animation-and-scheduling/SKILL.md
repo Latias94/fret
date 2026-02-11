@@ -98,7 +98,7 @@ Use `WeakModel<T>` in long-lived callbacks when the timer should not keep state 
 ## Evidence anchors (where to look)
 
 - Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-- Execution/portability surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- Execution/portability surface: `docs/adr/0184-execution-and-concurrency-surface-v1.md`
 - Runtime APIs:
   - `crates/fret-ui/src/elements/cx.rs` (`request_frame`, `request_animation_frame`, `begin_continuous_frames`)
   - `crates/fret-runtime/src/effect.rs` (`Effect::Redraw`, `Effect::RequestAnimationFrame`, timers)

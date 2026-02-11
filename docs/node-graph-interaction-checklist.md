@@ -13,7 +13,7 @@ Roadmap / TODO tracker:
 
 Authoritative contracts:
 
-- `docs/adr/0135-node-graph-editor-and-typed-connections.md`
+- `docs/adr/0126-node-graph-editor-and-typed-connections.md`
 
 ## Status Legend
 

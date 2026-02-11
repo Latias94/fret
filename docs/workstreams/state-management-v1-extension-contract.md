@@ -5,8 +5,8 @@ Status: Draft (implementation guidance; ADRs remain the source of truth)
 Related:
 
 - `docs/workstreams/state-management-v1.md`
-- `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
-- `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md`
+- `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- `docs/adr/0225-query-lifecycle-and-cache-semantics-v1.md`
 - `docs/integrating-tokio-and-reqwest.md`
 
 This document defines the **official extension boundaries** for `fret-selector` and `fret-query`,

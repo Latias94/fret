@@ -2989,7 +2989,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                 // Wayland compositors do not provide a reliable "window under cursor" contract and
                 // may ignore programmatic window positioning/z-level hints. Prefer a predictable
-                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0084).
+                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0083).
                 if linux_is_wayland_session() {
                     caps.ui.window_tear_off = false;
                     caps.ui.window_hover_detection =

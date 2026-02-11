@@ -46,6 +46,27 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"
@@ -174,6 +195,28 @@ fn script_v2_roundtrip_click_count() {
       "type": "click",
       "target": { "kind": "test_id", "id": "x" },
       "click_count": 2
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_bounds_max_size_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "x" },
+        "max_w_px": 100.0,
+        "max_h_px": 20.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 1
     }
   ]
 }"#,

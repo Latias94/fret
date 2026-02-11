@@ -78,13 +78,13 @@ Reserved future extension:
 
 ## Future Work
 
-- Maintain alignment with `keyboard-types::Code` as the canonical physical key universe (ADR 0092).
+- Maintain alignment with `keyboard-types::Code` as the canonical physical key universe (ADR 0091).
 - Define a canonical keymap file format (see ADR 0014) including platform-specific bindings.
 - Add optional left/right modifier locations if needed by advanced users.
 
 ## Implementation Notes
 
-Current implementation aligns `fret-core::KeyCode` with `keyboard-types::Code` (ADR 0092) and forwards winit physical
+Current implementation aligns `fret-core::KeyCode` with `keyboard-types::Code` (ADR 0091) and forwards winit physical
 key codes directly:
 
 - `crates/fret-core/src/input.rs`

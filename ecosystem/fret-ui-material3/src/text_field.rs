@@ -739,7 +739,7 @@ impl TextField {
                                 out.set(Some(input_id));
                             }
 
-                            // Keep subtree shape stable across hover transitions (ADR 0181).
+                            // Keep subtree shape stable across hover transitions (ADR 0166).
                             // We always include the overlay node, but only paint when `state_layer`
                             // is present.
                             let overlay = {

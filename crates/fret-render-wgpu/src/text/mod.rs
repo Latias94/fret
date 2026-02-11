@@ -588,7 +588,7 @@ pub struct TextQualitySettings {
 
 impl Default for TextQualitySettings {
     fn default() -> Self {
-        // Windows-first defaults, aligned with the Zed/GPUI baseline (see ADR 0109/0157).
+        // Windows-first defaults, aligned with the Zed/GPUI baseline (see ADR 0105/0142).
         Self {
             gamma: 1.8,
             grayscale_enhanced_contrast: 1.0,
@@ -631,7 +631,7 @@ impl TextQualityState {
 }
 
 // Adapted from the Microsoft Terminal alpha correction tables (via Zed/GPUI).
-// See ADR 0029 / ADR 0109 for the rationale and references.
+// See ADR 0029 / ADR 0107 for the rationale and references.
 fn gamma_correction_ratios(gamma: f32) -> [f32; 4] {
     const GAMMA_INCORRECT_TARGET_RATIOS: [[f32; 4]; 13] = [
         [0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0], // gamma = 1.0

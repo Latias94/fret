@@ -38,7 +38,7 @@ Out of scope (unless required to validate a contract):
 
 - New end-user features (new add-ons, new interaction policies).
 - Visual design changes (theme tokens, styling, animation polish).
-- Headless model/rules changes (those are covered by ADR 0135 and other workstreams).
+- Headless model/rules changes (those are covered by ADR 0126 and other workstreams).
 
 ## Definitions (coordinate spaces)
 

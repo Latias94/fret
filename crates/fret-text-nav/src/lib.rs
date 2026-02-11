@@ -8,7 +8,7 @@
 //! (`TextBoundaryMode`). This crate only provides deterministic algorithms for those modes.
 //!
 //! Normative behavior is defined by:
-//! - ADR 0194: Text Navigation and Word Boundaries (v1)
+//! - ADR 0179: Text Navigation and Word Boundaries (v1)
 //! - ADR 0044: Text editing command vocabulary and UTF-8 byte indices (clamping rules)
 
 use fret_runtime::TextBoundaryMode;

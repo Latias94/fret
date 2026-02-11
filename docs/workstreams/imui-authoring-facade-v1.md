@@ -528,7 +528,7 @@ v1 status (2026-02-03):
 Motivation for v2:
 
 - The ecosystem now has a separate “golden path” authoring surface for styling/layout patches:
-  `ui()` / `UiBuilder<T>` (ADR 0175 + related workstreams).
+  `ui()` / `UiBuilder<T>` (ADR 0160 + related workstreams).
 - If we keep expanding both the immediate-mode façade (imui) and the fluent builder chain independently, we will
   end up with duplicated widget APIs and long-term ecosystem maintenance cost.
 

@@ -752,7 +752,7 @@ fn default_keymap_service() -> KeymapService {
                         key: "KeyA".into(),
                     },
                 },
-                // Document/window-level undo/redo (ADR 0136).
+                // Document/window-level undo/redo (ADR 0127).
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("windows".into()),

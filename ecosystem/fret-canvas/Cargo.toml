@@ -19,13 +19,13 @@ default = []
 # by default. When enabled, this pulls in `fret-ui` + `fret-runtime` for declarative integration.
 ui = ["dep:fret-ui", "dep:fret-runtime"]
 
-# Reserved for a future declarative canvas element surface (ADR 0137).
+# Reserved for a future declarative canvas element surface (ADR 0128).
 declarative = []
 
 # Optional spatial index backend.
 rstar = ["dep:rstar"]
 
-# Optional geometry backend for hit-testing and path ops (ADR 0167).
+# Optional geometry backend for hit-testing and path ops (ADR 0152).
 kurbo = ["dep:kurbo"]
 
 [dependencies]

@@ -138,7 +138,7 @@ router links should also behave like links (not buttons):
 - `href` exposure for automation/diagnostics: `SemanticsNode.value = href`
 - keyboard activation: Enter-only (no Space activation by default)
 
-Contract: ADR 1180 (`docs/adr/1180-link-semantics-and-href-activation-v1.md`).
+Contract: ADR 0241 (`docs/adr/0241-link-semantics-and-href-activation-v1.md`).
 
 ### 4) Command integration
 

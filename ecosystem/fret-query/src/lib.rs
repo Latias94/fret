@@ -2,7 +2,7 @@
 //!
 //! This crate is inspired by TanStack Query, but adapted to Fret's constraints:
 //! - UI/runtime state is main-thread only.
-//! - Background work must communicate across a driver boundary (`InboxDrainRegistry`, ADR 0190).
+//! - Background work must communicate across a driver boundary (`InboxDrainRegistry`, ADR 0175).
 //! - Commands and effects remain data-only.
 //!
 //! The core contract is:

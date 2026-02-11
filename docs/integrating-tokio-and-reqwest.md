@@ -6,7 +6,7 @@ Fret intentionally does **not** force a specific async runtime. Instead, async w
 
 - run on an app-provided runtime (Tokio, etc.),
 - return results as **data-only** messages,
-- be applied on the UI thread at a **driver boundary** (ADR 0190).
+- be applied on the UI thread at a **driver boundary** (ADR 0175).
 
 `ecosystem/fret-query` supports this by exposing async variants of `use_query`, while keeping the
 apply boundary the same (`InboxDrainRegistry`).

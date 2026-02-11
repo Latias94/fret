@@ -1,6 +1,6 @@
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// Returns a policy-friendly reduced-transparency boolean (ADR 1185).
+/// Returns a policy-friendly reduced-transparency boolean (ADR 0246).
 ///
 /// When the environment value is unknown/unavailable, `default_when_unknown` is returned.
 #[track_caller]

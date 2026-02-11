@@ -14,7 +14,7 @@ Guiding idea: keep `diag` useful for day-to-day debugging *and* safe to depend o
 ## Foundations (contract hygiene)
 
 - [x] Write an extensibility-focused ADR:
-  - [x] `docs/adr/0204-ui-diagnostics-extensibility-and-capabilities-v1.md`
+  - [x] `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - [x] Split the workstream into small sub-documents (capabilities/evidence/script tooling/text+IME/determinism).
 - [x] Enforce “single source of truth” for script protocol types:
   - [x] runner MUST not fork protocol structs/enums (parse/execute against `crates/fret-diag-protocol`).

@@ -50,7 +50,7 @@ Fret already locks a strong cross-crate boundary (UI does not shape):
 Recent work also improved determinism around font bootstrapping and invalidation:
 
 - Web/wasm bootstrap now seeds curated defaults and bumps `TextFontStackKey` on font/config mutation
-  (ADR 0162, and the font bootstrap plumbing in `crates/fret-runtime` + `crates/fret-launch`).
+  (ADR 0147, and the font bootstrap plumbing in `crates/fret-runtime` + `crates/fret-launch`).
 - A dedicated emoji conformance demo exists (`apps/fret-examples/src/emoji_conformance_demo.rs`).
 - A dedicated CJK conformance demo exists (`apps/fret-examples/src/cjk_conformance_demo.rs`) and can
   use an optional `cjk-lite` bundled font tier on Web/WASM.
@@ -71,7 +71,7 @@ Goal: avoid a permanent split-brain text pipeline.
 - Keep wrapping/truncation in a renderer-owned wrapper layer (so the UI boundary stays stable).
 - Avoid feature-gated backends for the mainline (“no backend gate”).
 
-Tracking: ADR 0157 + `docs/workstreams/text-system-v2-parley.md`.
+Tracking: ADR 0142 + `docs/workstreams/text-system-v2-parley.md`.
 
 ### 2) Fallback stack and missing glyph semantics must be explicit
 
@@ -82,7 +82,7 @@ Fret needs an equivalent explicit “fallback policy surface”:
 - Any change in config or font DB must bump `TextFontStackKey` and invalidate shaping/raster caches.
 - Provide a deterministic, cross-platform “known good” default stack, with optional emoji layer.
 
-Tracking: ADR 0162 + ADR 0157.
+Tracking: ADR 0147 + ADR 0142.
 
 ### 3) Color emoji / polychrome glyph pipeline needs a v2 contract
 
@@ -109,7 +109,7 @@ Tracking: ADR 0045 / ADR 0046 + v2 workstream.
 
 P0 (contracts + harness first):
 
-1) Confirm/adjust ADR 0157 to cover:
+1) Confirm/adjust ADR 0142 to cover:
    - single Parley backend direction
    - cache key rules (what participates in shaping keys)
 2) Add an ADR for polychrome glyphs / emoji pipeline.
@@ -134,7 +134,7 @@ P0/P1 (implementation):
 
 - Zed/GPUI text system: `repo-ref/zed/crates/gpui/src/text_system.rs`
 - Zed Linux cosmic-text backend (emoji/VS quirks): `repo-ref/zed/crates/gpui/src/platform/linux/text_system.rs`
-- Fret font bootstrap + invalidation: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
+- Fret font bootstrap + invalidation: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
 - Fret text system boundary: `docs/adr/0006-text-system.md`
 - Fret text pipeline strategy: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
-- Fret text system v2 direction: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+- Fret text system v2 direction: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`

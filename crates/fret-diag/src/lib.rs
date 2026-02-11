@@ -3227,6 +3227,8 @@ See: `docs/tracy.md`.\n";
             let is_ui_gallery_date_picker_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-date-picker";
             let is_ui_gallery_select_suite = rest.len() == 1 && rest[0] == "ui-gallery-select";
+            let is_ui_gallery_shadcn_conformance_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-shadcn-conformance";
             let is_ui_gallery_virt_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
             let is_ui_gallery_virt_retained_measured_suite =
@@ -3357,6 +3359,25 @@ See: `docs/tracy.md`.\n";
                             .collect(),
                         Some(BuiltinSuite::UiGallery),
                     )
+                } else if is_ui_gallery_shadcn_conformance_suite {
+                    // Conformance scripts rely on stable role-and-name semantics selectors and use
+                    // screenshot evidence for overlap regressions.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
+
+                    let mut scripts: Vec<PathBuf> = ui_gallery_shadcn_conformance_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect();
+                    scripts.extend(
+                        ui_gallery_select_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p))),
+                    );
+
+                    (scripts, Some(BuiltinSuite::UiGallery))
                 } else if is_ui_gallery_layout_suite {
                     (
                         ui_gallery_layout_suite_scripts()
@@ -3687,8 +3708,8 @@ See: `docs/tracy.md`.\n";
                         "1",
                     );
                     // Default to the non-retained VirtualList path so this harness gates the
-                    // highest-risk, most common implementation track (ADR 0190 Track B). The
-                    // retained-host track (ADR 0192) has dedicated suites/scripts.
+                    // highest-risk, most common implementation track (ADR 0175 Track B). The
+                    // retained-host track (ADR 0177) has dedicated suites/scripts.
                     push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
                     (
                         vec![resolve_path(
@@ -3725,7 +3746,7 @@ See: `docs/tracy.md`.\n";
                     )
                 } else if is_ui_gallery_vlist_window_boundary_retained_suite {
                     // Retained-host counterpart of the window-boundary harness. This suite is used
-                    // to validate the ADR 0192 track (retained reconcile) with the same script and
+                    // to validate the ADR 0177 track (retained reconcile) with the same script and
                     // baseline env, while keeping the non-retained suite as the default.
                     //
                     // Callers can still override them explicitly via `--env KEY=...`.
@@ -8518,6 +8539,24 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 8] {
         "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
         "tools/diag-scripts/ui-gallery-select-wheel-scroll.json",
         "tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json",
+    ]
+}
+
+fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 13] {
+    [
+        "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+        "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
+        "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
+        "tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
+        "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+        "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json",
+        "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json",
+        "tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json",
     ]
 }
 

@@ -19,8 +19,8 @@ Material3 alignment depends on the repository’s shared “state → style” i
 Prefer reusing these primitives over re-inventing per-component state precedence rules:
 
 - State-driven style resolution v1: `docs/workstreams/state-driven-style-resolution-v1.md`
-  - Contract gate: `docs/adr/1158-state-driven-style-resolution-v1.md`
-  - Ecosystem override surface: `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+  - Contract gate: `docs/adr/0219-state-driven-style-resolution-v1.md`
+  - Ecosystem override surface: `docs/adr/0220-ecosystem-style-override-surface-v1.md`
 - Post-MVP next wave: `docs/workstreams/material3-next-wave-v2.md`
 
 ## Goals
@@ -67,7 +67,7 @@ Prefer reusing these primitives over re-inventing per-component state precedence
 - Fret overlay policy boundary: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - Fret theme tokens: `docs/adr/0032-style-tokens-and-theme-resolution.md`,
   `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
-- Interactivity pseudoclasses contract (hover/pressed as paint-only): `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+- Interactivity pseudoclasses contract (hover/pressed as paint-only): `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`
 
 ## Compose Baseline: Infrastructure vs Components
 
@@ -219,7 +219,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Add a Material 3 "state matrix" gallery page for manual regression.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_STATE_MATRIX`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_state_matrix`).
-- [x] Align core Material 3 components with the ecosystem `*Style` override surface (ADR 1159).
+- [x] Align core Material 3 components with the ecosystem `*Style` override surface (ADR 0220).
   - Evidence: `docs/workstreams/material3-style-api-alignment-v1.md`,
     `ecosystem/fret-ui-material3/src/{button,checkbox,dialog,dropdown_menu,icon_button,menu,radio,switch,tabs,text_field}.rs`,
     `apps/fret-ui-gallery/src/ui.rs` (default vs override blocks for core controls and overlays).
@@ -244,7 +244,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - Focus-visible + focus rings: `crates/fret-ui/src/focus_visible.rs`, `crates/fret-ui/src/paint.rs`
 - Shadows/elevation primitive: `crates/fret-ui/src/paint.rs`
 - Overlay mechanisms: `crates/fret-ui/src/tree/*` + `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-- Interactivity pseudoclasses contract: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+- Interactivity pseudoclasses contract: `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`
 
 ### Token System
 
@@ -737,5 +737,5 @@ These files are primarily *shared policy primitives*, not one-off component layo
 
 ## Proposed ADRs (drafts)
 
-- `docs/adr/1167-theme-value-kinds-and-themeconfig-v2.md`
-- `docs/adr/1165-material3-state-layer-and-ripple-primitives.md`
+- `docs/adr/0228-theme-value-kinds-and-themeconfig-v2.md`
+- `docs/adr/0226-material3-state-layer-and-ripple-primitives.md`

@@ -9,7 +9,7 @@ pub struct ImageObjectFitMapped {
 }
 
 /// Maps a destination rect + source image size into a draw rect and a normalized UV rect,
-/// following the `SceneOp::Image` v1 `object-fit` contract (ADR 1170).
+/// following the `SceneOp::Image` v1 `object-fit` contract (ADR 0231).
 ///
 /// Returns `None` for degenerate inputs (zero/negative destination size or zero source size).
 pub fn map_image_object_fit(

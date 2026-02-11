@@ -4,7 +4,7 @@ Status: Active (ecosystem-level; ADRs remain the source of truth)
 
 Related ADR:
 
-- `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md`
+- `docs/adr/0225-query-lifecycle-and-cache-semantics-v1.md`
 
 This workstream turns the “async resource state” story into a predictable, debuggable, portable
 default for Fret apps by:
@@ -18,7 +18,7 @@ default for Fret apps by:
 
 1. **No implicit polling:** `stale_time` is freshness only; refetch is triggered only by explicit
    invalidation/refetch, retry policy, or remount+stale.
-2. **Portable concurrency:** do not assume threads or a specific async runtime (ADR 0190).
+2. **Portable concurrency:** do not assume threads or a specific async runtime (ADR 0175).
 3. **Predictable UI states:** Loading/Error/Success should be straightforward to render from
    `Model<QueryState<T>>`.
 4. **Debuggability:** provide a minimal tracing vocabulary and a way to snapshot cache state.

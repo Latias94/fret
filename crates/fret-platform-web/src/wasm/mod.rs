@@ -73,7 +73,7 @@ impl std::fmt::Debug for WebPlatformServices {
 }
 
 impl WebPlatformServices {
-    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0195).
+    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0180).
     pub fn register_ime_mount(&mut self, window: AppWindowId, mount: HtmlElement) {
         self.ime_mounts.insert(window, mount);
     }

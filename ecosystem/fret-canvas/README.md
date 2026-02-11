@@ -5,7 +5,7 @@ Policy-light canvas substrate helpers for Fret ecosystem widgets.
 This crate exists to reduce duplication across "canvas-like" retained widgets (node graphs, plots,
 charts, editors) without pushing interaction policy into `crates/fret-ui`.
 
-Design reference: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`.
+Design reference: `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`.
 
 ## Goals
 
@@ -25,7 +25,7 @@ Fret uses **window-local logical pixels** as its “screen px” unit (similar t
 In code, this is typically represented as `fret_core::Px` (or plain `f32` values documented as
 screen-space pixels).
 
-When a canvas widget uses `Widget::render_transform` for pan/zoom (ADR 0083), pointer event
+When a canvas widget uses `Widget::render_transform` for pan/zoom (ADR 0082), pointer event
 positions are delivered in the widget's **local (untransformed) coordinate space**. In that case,
 any UX tuning expressed in screen pixels (hit slop, click distance, drag threshold, handle radius)
 should be converted to canvas units before comparison:
@@ -75,7 +75,7 @@ If you have multiple retained caches, you can aggregate touch behavior into one 
 
 ## Future: declarative surface
 
-Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
+Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0141).
 
 - Declarative: use `fret_ui::ElementContext::canvas(...)` + `fret_ui::canvas::CanvasPainter` to
   emit `SceneOp`s with hosted resources (`TextBlobId`/`PathId`/`SvgId`) and scoped helpers for
@@ -112,7 +112,7 @@ available via the `rstar` feature:
 ## Optional: kurbo backend
 
 For robust 2D geometry operations (Bezier refinement, path hit-testing, intersection helpers),
-`fret-canvas` can optionally use `kurbo` (ADR 0167).
+`fret-canvas` can optionally use `kurbo` (ADR 0152).
 
 - Enable: `fret-canvas/kurbo`
 - Current scope: Bezier wire refinement (`bezier_wire_distance2`, `closest_point_on_bezier_wire`).

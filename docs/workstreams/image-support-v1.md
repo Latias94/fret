@@ -11,14 +11,14 @@ focus on editor-grade workloads:
 Related ADRs (existing):
 
 - Resource handles + flush point: `docs/adr/0004-resource-handles.md`
-- Streaming images + video surfaces: `docs/adr/0121-streaming-images-and-video-surfaces.md`
-- Streaming update model + metadata: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
-- Renderer capabilities + optional fast paths: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
+- Streaming images + video surfaces: `docs/adr/0119-streaming-images-and-video-surfaces.md`
+- Streaming update model + metadata: `docs/adr/0124-streaming-image-update-effects-and-metadata-v1.md`
+- Renderer capabilities + optional fast paths: `docs/adr/0122-renderer-capabilities-and-optional-zero-copy-imports.md`
 - Color/compositing contracts: `docs/adr/0040-color-management-and-compositing-contracts.md`
 
 Related ADRs (planned / in progress):
 
-- Image `object-fit` for `SceneOp::Image`: `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
+- Image `object-fit` for `SceneOp::Image`: `docs/adr/0237-image-object-fit-for-sceneop-image-v1.md`
 
 Tracking:
 
@@ -32,7 +32,7 @@ Fret already supports:
 - Register/unregister image resources at a flush point via effects (`Effect::ImageRegisterRgba8`,
   `Effect::ImageUnregister`).
 - Streaming image updates (`Effect::ImageUpdateRgba8/Nv12/I420`) with coalescing, budgets, and
-  optional acknowledgements (ADR 0121/0123/0126).
+  optional acknowledgements (ADR 0117/0121/0124).
 - Viewport surfaces (`RenderTargetId` + `SceneOp::ViewportSurface`) for GPU-native pipelines.
 
 Gaps that create “future rewrite” pressure:
@@ -51,18 +51,18 @@ Gaps that create “future rewrite” pressure:
 2. Preserve Fret’s layering invariants:
    - no `wgpu` types in `fret-core` / `fret-ui`,
    - resources managed at a flush point; UI only holds IDs (ADR 0004),
-   - decoding/network/media engines remain app-owned (ADR 0121).
+   - decoding/network/media engines remain app-owned (ADR 0119).
 3. Provide a path to **gpui-like ergonomics** in ecosystem crates without baking policy into
    `fret-ui`.
 4. Keep streaming/video surfaces correct and predictable:
    - latest-wins updates,
    - deterministic backpressure,
-   - explicit color/alpha semantics (ADR 0040/0126).
+   - explicit color/alpha semantics (ADR 0040/0124).
 
 ## Non-goals
 
 - Framework-owned codecs, audio, network streaming, or a “media engine”.
-- Forcing all video to go through `RenderTargetId` (both ingestion paths remain valid; ADR 0121).
+- Forcing all video to go through `RenderTargetId` (both ingestion paths remain valid; ADR 0119).
 - Implicit layout based on “intrinsic image size” (components should be explicit and predictable).
 
 ## Proposed direction (recommended)
@@ -93,7 +93,7 @@ the mechanism layer, use a **policy-owned metadata store**:
   - app/decoder/caches record known intrinsic dimensions (`set_intrinsic_size_px`)
   - components opt-in to reading it (e.g. aspect-ratio wrappers)
 
-This keeps `fret-ui` backend-agnostic and aligns with ADR 0126’s guidance: intrinsic size must not
+This keeps `fret-ui` backend-agnostic and aligns with ADR 0124’s guidance: intrinsic size must not
 implicitly drive layout.
 
 ### C) Ecosystem `img(source)` story (deferred until A is locked)
@@ -110,7 +110,7 @@ This stays out of `fret-ui` and is capability-gated for wasm vs native.
 
 ## Video / RenderTarget considerations (how this avoids a later rewrite)
 
-Fret should keep *both* ingestion paths (ADR 0121):
+Fret should keep *both* ingestion paths (ADR 0119):
 
 1) `RenderTargetId` + `SceneOp::ViewportSurface` for GPU-native render graphs and engine viewports.
 2) `ImageId` + streaming update effects for decoder-owned frames (video, camera, remote desktop).

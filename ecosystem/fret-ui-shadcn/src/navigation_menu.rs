@@ -597,7 +597,7 @@ pub struct NavigationMenu {
     disabled: bool,
     viewport: bool,
     indicator: bool,
-    /// Optional override for which query region drives responsive variants (ADR 1170).
+    /// Optional override for which query region drives responsive variants (ADR 0231).
     ///
     /// When unset, the component uses its own internal region wrapper. When set, the caller must
     /// ensure the id refers to a `LayoutQueryRegion`, otherwise changes will not participate in
@@ -682,7 +682,7 @@ impl NavigationMenu {
         self
     }
 
-    /// Overrides which query region drives responsive variants (ADR 1170).
+    /// Overrides which query region drives responsive variants (ADR 0231).
     ///
     /// This is primarily intended for editor-grade layouts where the navigation menu lives inside
     /// a resizable panel/dock split and should adapt to the local container width.

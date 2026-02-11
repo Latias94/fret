@@ -261,7 +261,7 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
     }
 }
 
-/// Command availability query result used by `UiTree::is_command_available` (ADR 1157).
+/// Command availability query result used by `UiTree::is_command_available` (ADR 0218).
 ///
 /// This is a pure query signal (no side effects). Consumers typically interpret:
 /// - `Available`: command should be treated as enabled for the current dispatch path.
@@ -538,7 +538,7 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
 /// Prepaint context invoked after layout, before paint.
 ///
 /// This is intentionally narrow: it exists to support GPUI-aligned "ephemeral prepaint items"
-/// workflows (ADR 0182 / ADR 0190) without forcing a full rerender/relayout of a cache root.
+/// workflows (ADR 0167 / ADR 0175) without forcing a full rerender/relayout of a cache root.
 ///
 /// Notes:
 /// - Prepaint runs after layout bounds are known.
@@ -1075,7 +1075,7 @@ pub trait Widget<H: UiHost> {
     /// Optional cursor icon request for a pointer position.
     ///
     /// This is a pure query used to build an interaction stream that can be reused on cache-hit
-    /// frames (ADR 0182). Prefer this over setting cursor icons via pointer-move event handlers
+    /// frames (ADR 0167). Prefer this over setting cursor icons via pointer-move event handlers
     /// when the cursor choice is a function of the current input state only.
     ///
     /// The provided `position` is already mapped into this node's coordinate space (including

@@ -120,7 +120,7 @@ Implementation anchors:
 
 - Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
-- ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
 - TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
 

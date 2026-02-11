@@ -279,7 +279,13 @@ fn tooltip_policy_root<H: UiHost>(
             disable_hoverable_content_override.unwrap_or(provider_cfg.disable_hoverable_content);
         let last_pointer = tooltip_prim::tooltip_last_pointer_model(cx);
 
-        let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
+        let primary_can_hover = fret_ui_kit::declarative::primary_pointer_can_hover(
+            cx,
+            fret_ui::Invalidation::Layout,
+            true,
+        );
+        let trigger_hovered =
+            primary_can_hover && hovered && has_pointer_move_opened && !suppress_hover_open;
         let trigger_focused = focused && !suppress_focus_open;
 
         let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -817,7 +823,13 @@ impl PlainTooltip {
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = tooltip_prim::tooltip_last_pointer_model(cx);
 
-            let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
+            let primary_can_hover = fret_ui_kit::declarative::primary_pointer_can_hover(
+                cx,
+                fret_ui::Invalidation::Layout,
+                true,
+            );
+            let trigger_hovered =
+                primary_can_hover && hovered && has_pointer_move_opened && !suppress_hover_open;
             let trigger_focused = focused && !suppress_focus_open;
 
             let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -826,8 +838,9 @@ impl PlainTooltip {
                 let estimated_size = Size::new(Px(240.0), Px(32.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(
-                    cx.bounds,
+                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
                     window_margin,
                 );
 
@@ -1022,8 +1035,9 @@ impl PlainTooltip {
                 let estimated_size = Size::new(Px(240.0), Px(32.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(
-                    cx.bounds,
+                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
                     window_margin,
                 );
 

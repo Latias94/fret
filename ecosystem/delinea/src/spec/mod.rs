@@ -126,12 +126,12 @@ pub enum FilterMode {
     /// ECharts-like `weakFilter`.
     ///
     /// v1 note: treated as equivalent to `Filter` until multi-dimensional filtering is introduced
-    /// (see ADR 1150).
+    /// (see ADR 0211).
     WeakFilter,
     /// ECharts-like `empty`.
     ///
     /// Out-of-window samples are treated as "missing" for mark emission while preserving a stable
-    /// row/index space (see ADR 1150).
+    /// row/index space (see ADR 0211).
     Empty,
     None,
 }
@@ -247,7 +247,7 @@ pub struct DataZoomYSpec {
     pub axis: AxisId,
     /// Row filtering mode for Y dataZoom.
     ///
-    /// v1 default is `None` (mapping-only; ADR 1136). When enabled, the view/transform pipeline
+    /// v1 default is `None` (mapping-only; ADR 0198). When enabled, the view/transform pipeline
     /// may materialize sparse selections (ECharts-like) which can be more expensive on large data.
     pub filter_mode: FilterMode,
     /// Minimum allowed span (in data value space) for interaction-derived zoom updates.

@@ -293,7 +293,7 @@ impl ChartStressDriver {
             let t = i as f64 / (n as f64).max(1.0);
             let xi = i as f64;
 
-            // Deterministic discontinuities to validate missing/segment policy (ADR 1141).
+            // Deterministic discontinuities to validate missing/segment policy (ADR 0188).
             let yi_line = if i != 0 && i % 50_000 == 0 {
                 f64::NAN
             } else {

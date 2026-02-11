@@ -1230,7 +1230,7 @@ impl ChartEngine {
         self.nearest_x_index_stage.prepare_requests(&self.datasets);
         let nearest_x_done = self.nearest_x_index_stage.step(&self.datasets, &mut budget);
 
-        // Brush selection is an output-only interaction (ADR 1144). We compute the derived X-only
+        // Brush selection is an output-only interaction (ADR 0205). We compute the derived X-only
         // row range output after the participation contract has been updated so the output is
         // scoped to the effective series view (base range + X dataZoom + optional indices views).
         if let Some(brush) = self.state.brush_selection_2d {

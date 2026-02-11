@@ -71,7 +71,7 @@ pub enum ImeEvent {
     },
 }
 
-/// Debug snapshot for the wasm textarea IME bridge (ADR 0195).
+/// Debug snapshot for the wasm textarea IME bridge (ADR 0180).
 ///
 /// This is intended for diagnostics/harness views and is not a normative contract surface.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -368,14 +368,14 @@ pub enum Event {
     /// Optional acknowledgement that a streaming image update was applied.
     ///
     /// This is intended for debugging/telemetry surfaces and must be capability-gated by the
-    /// runner to avoid flooding the event loop during video playback (ADR 0126).
+    /// runner to avoid flooding the event loop during video playback (ADR 0124).
     ImageUpdateApplied {
         token: ImageUpdateToken,
         image: ImageId,
     },
     /// Optional acknowledgement that a streaming image update was dropped.
     ///
-    /// See `ImageUpdateApplied` for rationale (ADR 0126).
+    /// See `ImageUpdateApplied` for rationale (ADR 0124).
     ImageUpdateDropped {
         token: ImageUpdateToken,
         image: ImageId,

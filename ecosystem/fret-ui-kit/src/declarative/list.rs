@@ -125,7 +125,7 @@ where
     )
 }
 
-/// Retained-host virtualized list helper (ADR 0192).
+/// Retained-host virtualized list helper (ADR 0177).
 ///
 /// Prefer this over [`list_virtualized`] when the list is hosted inside a view-cache root and
 /// scroll stability matters. The retained-host path allows window shifts to attach/detach rows

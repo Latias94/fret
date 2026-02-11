@@ -2,8 +2,8 @@
 
 Contract gate:
 
-- `docs/adr/1158-state-driven-style-resolution-v1.md`
-- `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+- `docs/adr/0219-state-driven-style-resolution-v1.md`
+- `docs/adr/0220-ecosystem-style-override-surface-v1.md`
 
 ## Goal
 
@@ -30,8 +30,8 @@ repository state, not the historical worktree.
 
 ## Worktree Progress
 
-- `fret-ui-shadcn` exports v1 `*Style` override surfaces for core interactive controls (ADR 1159).
-- `fret-ui-kit` exports shared helpers to resolve ADR 1159 override slots (`resolve_override_slot*`).
+- `fret-ui-shadcn` exports v1 `*Style` override surfaces for core interactive controls (ADR 0220).
+- `fret-ui-kit` exports shared helpers to resolve ADR 0220 override slots (`resolve_override_slot*`).
 - Some shadcn surfaces still use ad-hoc `PressableState` branching (see adoption snapshot).
 
 Material 3 is tracked separately:
@@ -45,7 +45,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 ### P0 — API Shape + First-Class Overrides
 
-- [x] SDSR-000 Add `WidgetStates` / `WidgetStateProperty<T>` and minimal token-derived fallback (ADR 1158 baseline).
+- [x] SDSR-000 Add `WidgetStates` / `WidgetStateProperty<T>` and minimal token-derived fallback (ADR 0219 baseline).
 - [x] SDSR-010 Pilot: migrate `Button` to state-driven background + focus-visible border semantics.
 - [x] SDSR-011 Worktree: introduce and export `ButtonStyle` (override background/foreground/border with per-state properties).
 
@@ -55,7 +55,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
   - Per-control `style(...)` builder method.
 
 - [x] SDSR-030 Standardize stateful `*Style` slots to `WidgetStateProperty<Option<T>>` and resolve-time fallback (Flutter-style partial overrides).
-- [x] SDSR-031 Add ADR 1159 for the ecosystem `*Style` override surface and update `docs/shadcn-style-override-patterns.md`.
+- [x] SDSR-031 Add ADR 0220 for the ecosystem `*Style` override surface and update `docs/shadcn-style-override-patterns.md`.
 
 ### P1 — Migrate Core Interactive Controls
 

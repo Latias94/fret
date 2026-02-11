@@ -35,7 +35,7 @@ Each item is “done” when we have: (a) accepted contract or explicit decision
 
 ### 1) RenderTransform-aware hit testing + anchored overlays (Done)
 
-- Contract: `docs/adr/0083-render-transform-hit-testing.md`
+- Contract: `docs/adr/0082-render-transform-hit-testing.md`
 - Validation: `cargo nextest run -p fret-ui` and shadcn overlay anchoring tests (`cargo nextest run -p fret-ui-shadcn`)
 
 ### 2) Docking interaction arbitration (Done, keep hardening)
@@ -58,7 +58,7 @@ components, overlays, and viewport tooling.
 - Contract anchors:
   - `docs/adr/0078-scene-transform-and-clip-composition.md`
   - `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`
-  - `docs/adr/0083-render-transform-hit-testing.md`
+  - `docs/adr/0082-render-transform-hit-testing.md`
 - Required validation:
   - baseline `fret-ui` parity tests (rounded overflow clip under `render_transform`, overlay transforms, nested transforms),
   - incremental hardening for deeper stacks across multi-root overlays,

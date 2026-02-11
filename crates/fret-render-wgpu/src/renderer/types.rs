@@ -216,7 +216,7 @@ pub struct RenderPerfSnapshot {
     pub scene_encoding_cache_hits: u64,
     pub scene_encoding_cache_misses: u64,
 
-    // Tier B materials (ADR 1174) observability (best-effort).
+    // Tier B materials (ADR 0235) observability (best-effort).
     pub material_quad_ops: u64,
     pub material_distinct: u64,
     pub material_unknown_ids: u64,

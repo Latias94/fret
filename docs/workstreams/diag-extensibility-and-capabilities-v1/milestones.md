@@ -20,7 +20,7 @@ Conventions:
 ### M0: Doc decomposition (docs-first, checkable)
 
 - [x] Add an ADR for extensibility and capability negotiation:
-  - [x] `docs/adr/0204-ui-diagnostics-extensibility-and-capabilities-v1.md`
+  - [x] `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - [x] Add this workstream doc + TODO + milestones.
 - [x] Split the workstream into sub-documents (capabilities/evidence/script tooling/text+IME/determinism).
 

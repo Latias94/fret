@@ -107,7 +107,7 @@ Evidence anchors:
 - If it changes **hit testing, routing, or semantics snapshot production**, it is likely `fret-ui`
   and must be justified by an ADR + tests (ADR 0066).
 - If it is a **state machine** or **interaction policy composition**, it belongs in
-  `fret-ui-kit` (ADR 0074 / ADR 0090).
+  `fret-ui-kit` (ADR 0074 / ADR 0089).
 - If it is **shadcn naming or default styling**, it belongs in `fret-ui-shadcn`.
 
 ## Related: ai-elements port (ecosystem)

@@ -75,7 +75,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
         }
 
-        // Selected group border overlay must remain ordered before edges (ADR 0082).
+        // Selected group border overlay must remain ordered before edges (ADR 0081).
         let group_corner = Px(10.0 / zoom);
         let selected_groups = snapshot.selected_groups.clone();
         let _ = self.graph.read_ref(cx.app, |g| {

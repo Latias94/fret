@@ -155,12 +155,12 @@ Each section below answers:
 - Layout contract: ADR 0035 / 0057 / 0062 / 0076 (constraints, Tailwind semantics, perf hardening)
 - Overlays: ADR 0011 / 0067 / 0069 (`multi-root`, `policy architecture`, `outside press`)
 - Placement: ADR 0064 `docs/adr/0064-overlay-placement-contract.md`
-- RenderTransform (paint + hit-test + overlay anchors): ADR 0083 `docs/adr/0083-render-transform-hit-testing.md`
+- RenderTransform (paint + hit-test + overlay anchors): ADR 0082 `docs/adr/0082-render-transform-hit-testing.md`
 - Frame recording + replay caching: ADR 0055 `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - Virtualization: ADR 0070 + 0047
 - Text input: ADR 0044/0045/0046/0071 + ADR 0012/0043 for IME arbitration
 - Semantics / A11y boundary: ADR 0033 / 0073 + `docs/a11y-acceptance-checklist.md`
-- Virtualized collection accessibility: ADR 0085
+- Virtualized collection accessibility: ADR 0084
 - UI closure map (this subsystem): `docs/ui-closure-map.md`
 
 **Code entry points**
@@ -202,9 +202,9 @@ flowchart LR
 - **Event routing + capture + focus**: ADR 0005 / 0020 / 0068; code: `crates/fret-ui/src/tree/mod.rs`
 - **Overlays + barriers + outside press**: ADR 0011 / 0067 / 0069; code: `crates/fret-ui/src/tree/mod.rs`; policy: `ecosystem/fret-ui-kit/src/window_overlays/*`
 - **Anchored overlays (placement)**: ADR 0064; code: `crates/fret-ui/src/overlay_placement/mod.rs`; reference: `repo-ref/floating-ui`
-- **RenderTransform + anchor geometry**: ADR 0083; code: `crates/fret-ui/src/tree/mod.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements/mod.rs` (cross-frame geometry queries)
+- **RenderTransform + anchor geometry**: ADR 0082; code: `crates/fret-ui/src/tree/mod.rs` (hit-test mapping + `visual_bounds_for_element` recording) + `crates/fret-ui/src/elements/mod.rs` (cross-frame geometry queries)
 - **Layout**: ADR 0035 / 0057 / 0062 / 0076; code: `crates/fret-ui/src/declarative.rs`, `crates/fret-ui/src/element.rs`
-- **Painting + clip/transform semantics**: ADR 0002 / 0019 / 0063 / 0078 / 0082; code: `crates/fret-ui/src/paint.rs` + declarative paint emission
+- **Painting + clip/transform semantics**: ADR 0002 / 0019 / 0063 / 0078 / 0081; code: `crates/fret-ui/src/paint.rs` + declarative paint emission
 - **Performance primitives**: ADR 0051 / 0055 / 0034; code: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/elements/mod.rs`
 - **Scrolling + virtualization**: ADR 0042 / 0047 / 0070; code: `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/virtual_list.rs`
 - **Text input + IME**: ADR 0012 / 0043 / 0044 / 0045 / 0046 / 0071; code: `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
@@ -251,7 +251,7 @@ flowchart LR
 
 - ADR 0075 (B-route): `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
 - Docking contracts: ADR 0013 / 0017 / 0015 / 0072
-- Single-window platforms (degradation policy): ADR 0084 `docs/adr/0084-multi-window-degradation-policy.md`
+- Single-window platforms (degradation policy): ADR 0083 `docs/adr/0083-multi-window-degradation-policy.md`
 - Viewport tools boundary: ADR 0049 + ADR 0025
 
 **Code entry points**

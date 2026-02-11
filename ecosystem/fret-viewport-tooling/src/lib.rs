@@ -2,7 +2,7 @@
 //!
 //! This crate provides policy-light, unit-explicit glue for building editor-style viewport tools
 //! (gizmos, selection, camera navigation, debug overlays) on top of `ViewportSurface` and
-//! `Effect::ViewportInput` (ADR 0007 / ADR 0147).
+//! `Effect::ViewportInput` (ADR 0007 / ADR 0132).
 //!
 //! The goal is to share recurring input mapping logic across ecosystem crates without forcing
 //! them to depend on `fret-gizmo`.
@@ -63,7 +63,7 @@ pub struct ViewportToolCx<'a> {
 /// A viewport tool protocol for editor-style affordances (gizmo, selection, camera navigation).
 ///
 /// This is intentionally policy-light: tool priority and tool activation/capture are decisions
-/// made by the host router (see ADR 0168).
+/// made by the host router (see ADR 0153).
 pub trait ViewportTool {
     fn id(&self) -> ViewportToolId;
 

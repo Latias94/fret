@@ -5997,7 +5997,7 @@ pub struct UiTreeDebugSnapshotV1 {
     pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
     /// Viewport input forwarding events observed during the current frame.
     ///
-    /// This records `Effect::ViewportInput` deliveries (ADR 0147) so scripted diagnostics can
+    /// This records `Effect::ViewportInput` deliveries (ADR 0132) so scripted diagnostics can
     /// gate on “viewport tooling input was actually exercised” without scraping logs.
     #[serde(default)]
     pub viewport_input: Vec<UiViewportInputEventV1>,
@@ -6036,7 +6036,7 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
     #[serde(default)]
     pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
-    /// A committed per-window environment snapshot (ADR 1171), exported under `debug.environment`
+    /// A committed per-window environment snapshot (ADR 0232), exported under `debug.environment`
     /// for easy diagnostics consumption.
     ///
     /// This duplicates the committed fields also present under `debug.element_runtime.environment`
@@ -11674,6 +11674,26 @@ fn eval_predicate(
             let eps = eps_px.max(0.0);
 
             w + eps >= min_w && h + eps >= min_h
+        }
+        UiPredicateV1::BoundsMaxSize {
+            target,
+            max_w_px,
+            max_h_px,
+            eps_px,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+
+            let w = node.bounds.size.width.0.max(0.0);
+            let h = node.bounds.size.height.0.max(0.0);
+
+            let max_w = max_w_px.max(0.0);
+            let max_h = max_h_px.max(0.0);
+            let eps = eps_px.max(0.0);
+
+            w <= max_w + eps && h <= max_h + eps
         }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {

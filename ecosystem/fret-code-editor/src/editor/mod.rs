@@ -511,7 +511,7 @@ impl CodeEditorState {
     }
 
     fn refresh_display_map(&mut self) {
-        // ADR 0200 / ADR 0203:
+        // ADR 0185 / ADR 0188:
         //
         // v1 baseline: inline IME preedit is modeled as a paint-time injection. This means we
         // cannot allow wrap-driven row breaking to depend on the preedit string, so by default we
@@ -520,7 +520,7 @@ impl CodeEditorState {
         // Staging: downstream consumers (and the UI Gallery harness) can opt into keeping
         // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
         // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
-        // composed DisplayMap (ADR 0203).
+        // composed DisplayMap (ADR 0188).
         let suppress_decorations = !self.compose_inline_preedit
             && self.preedit.is_some()
             && self.display_wrap_cols.is_some()

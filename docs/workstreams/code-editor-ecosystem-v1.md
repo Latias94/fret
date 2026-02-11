@@ -5,13 +5,13 @@ Last updated: 2026-02-09
 
 Recent changes (2026-02-09):
 
-- Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0200).
-- Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0200).
+- Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0185).
+- Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0185).
 - UI Gallery: expose the fold fixture span in `app_snapshot` and add a deterministic “Caret: in fold” fixture control for diag scripts.
-- Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0195).
+- Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0180).
 - Diagnostics: gate “no stale lines” scroll stability by asserting windowed row window changes repaint (scene fingerprint updates when `visible_start` changes).
-- Code editor: allow folds/inlays to remain visible under inline preedit when soft wrap is off (unwrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
-- Code editor: add an opt-in to allow folds/inlays to remain visible under inline preedit when soft wrap is on (wrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
+- Code editor: allow folds/inlays to remain visible under inline preedit when soft wrap is off (unwrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0188 staging).
+- Code editor: add an opt-in to allow folds/inlays to remain visible under inline preedit when soft wrap is on (wrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0188 staging).
 
 Recent changes (2026-02-08):
 
@@ -119,9 +119,9 @@ Recent changes (2026-02-01):
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
 It is intentionally non-authoritative; the normative contracts are:
 
-- `docs/adr/0200-code-editor-ecosystem-v1.md`
-- `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
-- `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
+- `docs/adr/0185-code-editor-ecosystem-v1.md`
+- `docs/adr/0179-text-navigation-and-word-boundaries-v1.md`
+- `docs/adr/0180-web-ime-and-text-input-bridge-v1.md`
 
 Non-normative upstream reference anchors (for concept mapping only; do not copy implementations):
 
@@ -141,11 +141,11 @@ It also depends on existing locked contracts:
   `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
 - IME model: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0071-text-input-multiline-composition-contract.md`
 - Text editing commands: `docs/adr/0044-text-editing-state-and-commands.md`
-- Cache roots + dirty views: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
-- Prepaint and multi-stream reuse direction: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
-- Windowed virtual surfaces and retained hosts: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`, `docs/adr/0192-retained-windowed-surface-hosts.md`
+- Cache roots + dirty views: `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
+- Prepaint and multi-stream reuse direction: `docs/adr/0167-prepaint-interaction-stream-and-range-reuse.md`
+- Windowed virtual surfaces and retained hosts: `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`, `docs/adr/0177-retained-windowed-surface-hosts.md`
 - Virtualization baseline: `docs/adr/0042-virtualization-and-large-lists.md`
-- Semantics/a11y baseline: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`, `docs/adr/0085-virtualized-accessibility-and-collection-semantics.md`
+- Semantics/a11y baseline: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`, `docs/adr/0084-virtualized-accessibility-and-collection-semantics.md`
 
 ---
 
@@ -167,7 +167,7 @@ We are **not** building “the editor app”; we are building reusable ecosystem
 
 - Collaboration/CRDT/OT.
 - Full VSCode-class feature parity.
-- Cross-element text selection (still out of baseline; see ADR 0152).
+- Cross-element text selection (still out of baseline; see ADR 0137).
 
 ---
 
@@ -218,8 +218,8 @@ editor-grade workflows, while keeping the UX surface intentionally small.
 - **Source-mode editing** only (no WYSIWYG): Markdown is edited as plain text using `fret-code-editor`.
 - **Syntax highlighting**: Markdown + fenced code blocks (best-effort; incremental visible-window strategy).
 - **Soft wrap**: stable caret/selection/hit-test mapping under wrap.
-- **IME correctness**: native + web bridge seams remain stable (ADR 0195), including cursor-area feedback.
-- **Selection/navigation**: word boundaries, double/triple click, and baseline commands (ADR 0194).
+- **IME correctness**: native + web bridge seams remain stable (ADR 0180), including cursor-area feedback.
+- **Selection/navigation**: word boundaries, double/triple click, and baseline commands (ADR 0179).
 - **Interaction control**: surfaces can be configured as:
   - editable,
   - read-only (select/copy/nav, but no mutations),
@@ -272,7 +272,7 @@ Evidence:
 Exit criteria:
 
 - Soft-wrap can be toggled without destabilizing caret/selection/buffer revision.
-- Word boundaries and double-click selection match ADR 0194 baselines in source mode.
+- Word boundaries and double-click selection match ADR 0179 baselines in source mode.
 - Selection remains stable across wrap boundaries while editing (not only on toggles).
 
 Diagnostics gates (baseline set; add more as needed):
@@ -285,7 +285,7 @@ Diagnostics gates (baseline set; add more as needed):
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`
-- Fold/inlay decoration sanity (ADR 0200; present under wrap; suppressed under inline preedit):
+- Fold/inlay decoration sanity (ADR 0185; present under wrap; suppressed under inline preedit):
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json` (captures A/B/C for toggle-stability)
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`
@@ -303,7 +303,7 @@ Exit criteria:
   - inline preedit renders without breaking buffer↔display mapping,
   - cursor-area feedback is best-effort correct for editor-grade surfaces.
 - Web/WASM IME:
-  - the runner-owned bridge remains attachable to the focused editor region (ADR 0195),
+  - the runner-owned bridge remains attachable to the focused editor region (ADR 0180),
   - we have at least one non-flaky diagnostics baseline that detects “IME not attached” regressions.
 
 Notes:
@@ -314,7 +314,7 @@ Diagnostics gates (baseline set; add more as needed):
 
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`
-- Web/WASM attach smoke (ADR 0195):
+- Web/WASM attach smoke (ADR 0180):
   - `tools/diag-scripts/ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json` (run via DevTools WS transport)
   - Gate: `--check-ui-gallery-web-ime-bridge-enabled`
 
@@ -333,14 +333,14 @@ Exit criteria:
 1) **No CSS runtime dependency**
    - Fret remains a non-DOM UI runtime: layout and styling are `LayoutStyle` + theme tokens (ADR 0066).
    - On wasm, a **hidden DOM textarea** may require setting inline styles to function reliably for IME.
-     This is a runner implementation detail, not a framework contract (ADR 0195).
+     This is a runner implementation detail, not a framework contract (ADR 0180).
 
 2) **Windowed surface first**
-   - The editor UI should be a “windowed virtual surface” (ADR 0190): bounded work per frame based on
+   - The editor UI should be a “windowed virtual surface” (ADR 0175): bounded work per frame based on
      viewport + overscan, not document length.
 
 3) **Line-local text blobs**
-   - No monolithic `TextBlobId` for an entire document. Prepare and cache text per visible row (ADR 0200).
+   - No monolithic `TextBlobId` for an entire document. Prepare and cache text per visible row (ADR 0185).
 
 4) **Theme-only updates should be paint-only**
    - Syntax highlighting should be expressed as semantic tokens and materialized as paint-only spans for visible rows.
@@ -352,7 +352,7 @@ Exit criteria:
 
 ## Target Crate Layout (v1 direction)
 
-See ADR 0200 for the normative split. This workstream assumes:
+See ADR 0185 for the normative split. This workstream assumes:
 
 - `ecosystem/fret-code-editor-buffer`: document model + edits + selection + undo hooks
 - `ecosystem/fret-code-editor-view`: display mapping + invalidation + syntax token projection
@@ -376,8 +376,8 @@ The editor depends on the runtime’s direction toward:
 
 Evidence and dependencies:
 
-- ADR 0182 (Proposed) defines multi-stream recording and reuse.
-- ADR 0190/0192 describe the windowing model and the retained host direction.
+- ADR 0167 (Proposed) defines multi-stream recording and reuse.
+- ADR 0160/0177 describe the windowing model and the retained host direction.
 
 Workstream implication:
 
@@ -393,12 +393,12 @@ We need a stable seam for “word boundary mode”:
 - override: identifier boundaries for code editor surfaces
 - triple-click selects a logical line, including the trailing newline when present
 
-This must be window-scoped and explainable (ADR 0194).
+This must be window-scoped and explainable (ADR 0179).
 
 ### C) Web IME bridge
 
 On wasm/mobile, reliable IME typically requires a focused DOM input element.
-The bridge must remain runner-owned and preserve Fret’s event model (ADR 0195).
+The bridge must remain runner-owned and preserve Fret’s event model (ADR 0180).
 
 ---
 
@@ -410,7 +410,7 @@ Each milestone has “exit criteria” that should be demonstrably true (tests, 
 
 Exit criteria:
 
-- ADR 0200/0194/0195 reviewed and accepted or revised with explicit decisions.
+- ADR 0170/0179/0180 reviewed and accepted or revised with explicit decisions.
 - This workstream document reflects the accepted decisions and links to evidence anchors.
 
 ### M1 — Web IME bridge spike (wasm baseline)
@@ -497,7 +497,7 @@ Implemented (evidence):
 Exit criteria:
 
 - A v1 text buffer structure is selected (rope / piece table / hybrid) with stated tradeoffs.
-- Edit ops remain UTF-8 byte indexed and transaction hooks remain compatible with ADR 0136.
+- Edit ops remain UTF-8 byte indexed and transaction hooks remain compatible with ADR 0127.
 - Document identity (URI-like) is locked for multi-document workflows (workspace shells).
 
 ### M5 — Incremental highlighting (visible-window materialization)
@@ -520,7 +520,7 @@ Exit criteria:
 Exit criteria:
 
 - Bundle-friendly counters exist for windowed surfaces and editor caches (hits/misses/churn/pressure).
-- Diagnostics snapshots expose window telemetry for windowed surfaces (ADR 0190 alignment).
+- Diagnostics snapshots expose window telemetry for windowed surfaces (ADR 0175 alignment).
 
 ### M8 — Display map growth (wrap/fold/inlay) (optional for v1)
 
@@ -541,7 +541,7 @@ Current policy note (v1 + current v2 direction):
 Exit criteria:
 
 - If the editor requires composable per-row subtrees (embedded widgets, rich gutters),
-  adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+  adopt the retained host direction (ADR 0177) so window boundary crossings do not force parent rerenders.
 
 ---
 
@@ -556,17 +556,17 @@ Legend:
 
 ### 0) Contracts (ADRs)
 
-- [x] Review ADR 0200 and confirm crate split and v1 baseline (windowed surface first).
-  - See: ADR 0200 “M0 Review Checklist (Non-Normative)”.
-- [x] Review ADR 0194 and confirm the preferred seam:
+- [x] Review ADR 0185 and confirm crate split and v1 baseline (windowed surface first).
+  - See: ADR 0185 “M0 Review Checklist (Non-Normative)”.
+- [x] Review ADR 0179 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
-  - See: ADR 0194 “M0 Review Checklist (Non-Normative)”.
-- [x] Review ADR 0195 and confirm web strategy:
+  - See: ADR 0179 “M0 Review Checklist (Non-Normative)”.
+- [x] Review ADR 0180 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation rules,
   - proxy mode (no full document mirroring).
 
-### 1) Web runner IME bridge (ADR 0195)
+### 1) Web runner IME bridge (ADR 0180)
 
 - [x] Define DOM element strategy: per-window textarea creation, attach layer, z-order and isolation (mounted into a per-canvas overlay layer).
 - [x] Define focus lifecycle and mapping to `Effect::ImeAllow`.
@@ -589,7 +589,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`)
 
-### 2) Word boundaries seam (ADR 0194)
+### 2) Word boundaries seam (ADR 0179)
 
 - [x] Add/standardize `TextBoundaryMode` definition (in `fret-runtime` input context).
 - [x] Add window-scoped snapshot for the mode (`InputContext`).
@@ -617,7 +617,7 @@ Evidence anchors:
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
-### 3) Windowed editor surface (ADR 0190/0200)
+### 3) Windowed editor surface (ADR 0160/0185)
 
 - [x] Choose v1 surface implementation strategy:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
@@ -658,7 +658,7 @@ Evidence anchors:
 - `ecosystem/fret-code-editor/src/lib.rs` (`caret_rect_for_selection` preedit cursor offset)
 - `ecosystem/fret-code-editor/src/lib.rs` (`paint_row`, `materialize_preedit_rich_text` underline)
 
-### 4) Document model (buffer) and undo hooks (ADR 0200 / ADR 0136)
+### 4) Document model (buffer) and undo hooks (ADR 0185 / ADR 0127)
 
 - [x] Select v1 text buffer structure:
   - rope (`ropey`) while preserving the UTF-8 byte-index contract.
@@ -678,7 +678,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/driver.rs` (`code_editor_syntax_rust` model)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` syntax toggle)
 
-### 5) Syntax and highlighting (ADR 0200)
+### 5) Syntax and highlighting (ADR 0185)
 
 - [x] Define semantic token schema (independent of theme colors).
 - [x] Define incremental update strategy (best-effort; visible-window prioritized).
@@ -703,7 +703,7 @@ Evidence anchors:
 - [x] Add bundle-friendly counters:
   - Done: visible window + overscan (windowed surfaces), editor-local cache hits/misses (row text + syntax), and renderer-level churn counters.
   - Known gaps: tighten “text blob churn + glyph atlas pressure” attribution (likely from renderer/canvas caches).
-- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0175).
 
 ### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
 
@@ -712,13 +712,13 @@ Evidence anchors:
   - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
 - [~] Fold regions + placeholders without breaking caret/selection.
   - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Done (staged): inline IME preedit can be composed with folds under a single view-owned mapping surface (ADR 0203).
+  - Done (staged): inline IME preedit can be composed with folds under a single view-owned mapping surface (ADR 0188).
     - Status: the composed preedit path is an opt-in; paint + mapping + a11y export follow the composed path when enabled (default remains v1).
 - [~] Inlays (injected display fragments) without mutating the underlying buffer.
   - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Done (staged): inline IME preedit can be composed with inlays under a single view-owned mapping surface (ADR 0203).
+  - Done (staged): inline IME preedit can be composed with inlays under a single view-owned mapping surface (ADR 0188).
     - Status: the composed preedit path is an opt-in; paint + mapping + a11y export follow the composed path when enabled (default remains v1).
-- [~] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
+- [~] v2+ (ADR 0188): fragment-based DisplayMap composition (fold + inlay + inline preedit).
   - Implemented (staged): inline preedit can be modeled as a view-layer fragment source (opt-in composed path).
   - Implemented (staged): semantics export (a11y) consumes the same composed mapping when the composed preedit path is enabled.
   - Done: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence under the composed mapping surface.
@@ -730,7 +730,7 @@ Evidence anchors:
 
 - [x] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
   - v1/v2 decision: **no** — keep the code editor paint-driven (stable tree) unless we need row-level composability.
-- [ ] If “yes”, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+- [ ] If “yes”, adopt the retained host direction (ADR 0177) so window boundary crossings do not force parent rerenders.
   - If adopted: prioritize fixed/known-height first; variable-height row measurement is deferred.
 
 ---
@@ -745,7 +745,7 @@ Evidence anchors:
    - Word boundaries and selection rules must be centralized; otherwise each editor-like component will diverge.
 
 3) **Prepaint and retained host implementation gaps**
-   - If ADR 0182/0192 remain unimplemented for too long, editor window changes may cause cache-root rerenders.
+   - If ADR 0152/0177 remain unimplemented for too long, editor window changes may cause cache-root rerenders.
    - Mitigation: start with paint-driven windowed surfaces (stable tree) and adopt retained hosts only when needed.
 
 ---

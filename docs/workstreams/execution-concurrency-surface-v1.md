@@ -1,6 +1,6 @@
 # Execution & Concurrency Surface v1 (Implementation Plan)
 
-This document is a workstream note that expands `docs/adr/0199-execution-and-concurrency-surface-v1.md`
+This document is a workstream note that expands `docs/adr/0184-execution-and-concurrency-surface-v1.md`
 into a concrete implementation/migration plan. It is **not** a stable contract; the ADR is.
 
 ## Why this exists
@@ -28,7 +28,7 @@ Status legend:
 
 ### Phase 0 (docs only)
 
-- `[x]` ADR: lock the surface and semantics (`docs/adr/0199-execution-and-concurrency-surface-v1.md`)
+- `[x]` ADR: lock the surface and semantics (`docs/adr/0184-execution-and-concurrency-surface-v1.md`)
 - `[x]` Portability keys: add `exec.*` to the capabilities matrix (`docs/adr/0054-platform-capabilities-and-portability-matrix.md`)
 - `[x]` Runtime matrix: add an execution/wake/timers portability line (`docs/runtime-contract-matrix.md`)
 - `[x]` Docs: update `docs/crate-usage-guide.md` ("Background work" recommended surface)
@@ -60,7 +60,7 @@ Status legend:
 
 ### Phase 4 (acceptance)
 
-- `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
+- `[x]` Meet ADR 0175 acceptance criteria and flip status to `Accepted`
 - `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
 - `[x]` Guardrails: add CI check that rejects raw `std::thread::{spawn,sleep}` and bespoke channels/timer crates in ecosystem/apps (`tools/check_execution_surface.py`)
 
@@ -201,8 +201,8 @@ Before implementing a mobile runner, ensure:
 
 Once the surface exists, update docs to avoid duplicated or contradictory guidance:
 
-- `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`: replace ad-hoc "mpsc + timer" guidance with the shared surface as the default, keep the pattern as an explanation.
-- `docs/adr/0113-ecosystem-integration-contracts.md`: point ecosystem authors to the dispatcher/inbox surface and document the portability traps to avoid.
+- `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`: replace ad-hoc "mpsc + timer" guidance with the shared surface as the default, keep the pattern as an explanation.
+- `docs/adr/0111-ecosystem-integration-contracts.md`: point ecosystem authors to the dispatcher/inbox surface and document the portability traps to avoid.
 - `docs/crate-usage-guide.md`: add a "Background work" section describing the recommended crates and patterns.
 - `docs/effects-authoring.md`: clarify where timers live (`Effect::SetTimer`) and how they relate to `dispatch_after`.
 - `docs/runtime-contract-matrix.md`: add a row for execution/wake/timers semantics by platform (native/wasm/mobile).

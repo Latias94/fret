@@ -1,6 +1,6 @@
 //! Blackboard (symbols) overlay (UI-only).
 //!
-//! This is a window-space overlay hosted outside the canvas render transform (ADR 0135).
+//! This is a window-space overlay hosted outside the canvas render transform (ADR 0126).
 
 use std::collections::BTreeMap;
 

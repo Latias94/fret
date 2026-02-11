@@ -1,15 +1,15 @@
 use crate::scale::canvas_units_from_screen_px;
 use fret_core::{Point, Px, Rect, Transform2D};
 
-/// Default zoom base used by canvas wheel zoom curves (ADR 0159).
+/// Default zoom base used by canvas wheel zoom curves (ADR 0144).
 pub const DEFAULT_WHEEL_ZOOM_BASE: f32 = 1.18;
 
-/// Default wheel delta step used by canvas wheel zoom curves (ADR 0159).
+/// Default wheel delta step used by canvas wheel zoom curves (ADR 0144).
 pub const DEFAULT_WHEEL_ZOOM_STEP: f32 = 120.0;
 
 /// Computes the wheel zoom factor for a given vertical wheel delta (screen px).
 ///
-/// This matches ADR 0159's deterministic exponential zoom curve:
+/// This matches ADR 0144's deterministic exponential zoom curve:
 /// `base.powf((-delta_y / step) * speed)`.
 pub fn wheel_zoom_factor(delta_y_screen_px: f32, base: f32, step: f32, speed: f32) -> Option<f32> {
     if !delta_y_screen_px.is_finite() || delta_y_screen_px.abs() <= 1.0e-9 {

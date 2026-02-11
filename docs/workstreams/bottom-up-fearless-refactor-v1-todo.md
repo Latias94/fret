@@ -413,7 +413,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/input/mod.rs`
 
 - [x] BU-FR-core-025 Extract viewport input types and mapping helpers into dedicated submodules.
-  - Goal: keep `input/mod.rs` focused on portable event vocabulary, while isolating viewport-tooling glue (ADR 0147).
+  - Goal: keep `input/mod.rs` focused on portable event vocabulary, while isolating viewport-tooling glue (ADR 0132).
   - Evidence:
     - `crates/fret-core/src/input/viewport.rs`
     - `crates/fret-core/src/input/viewport_input_event_tests.rs`

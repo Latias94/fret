@@ -328,7 +328,7 @@ impl<'a> CanvasPainter<'a> {
     ///
     /// - `key` must be stable across frames for the *same* logical text instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
-    ///   explicit policy decision of the caller (ADR 0156).
+    ///   explicit policy decision of the caller (ADR 0141).
     #[allow(clippy::too_many_arguments)]
     pub fn text(
         &mut self,
@@ -526,7 +526,7 @@ impl<'a> CanvasPainter<'a> {
     ///
     /// - `key` must be stable across frames for the *same* logical path instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
-    ///   explicit policy decision of the caller (ADR 0156).
+    ///   explicit policy decision of the caller (ADR 0141).
     #[allow(clippy::too_many_arguments)]
     pub fn path(
         &mut self,

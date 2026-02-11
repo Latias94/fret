@@ -2230,7 +2230,7 @@ fn preview_ui_kit_list_torture(
         |cx| {
             vec![
                 cx.text(
-                    "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0192).",
+                    "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177).",
                 ),
                 cx.text("Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
             ]
@@ -4032,7 +4032,7 @@ fn preview_markdown_editor_source(
     );
     // Best-effort: only takes effect when `fret-code-editor` is built with `syntax` features.
     handle.set_language(Some("markdown"));
-    // Markdown source editing uses Unicode word boundaries (ADR 0194).
+    // Markdown source editing uses Unicode word boundaries (ADR 0179).
     handle.set_text_boundary_mode(fret_runtime::TextBoundaryMode::UnicodeWord);
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -5306,7 +5306,7 @@ fn preview_web_ime_harness(
             .gap(Space::N2),
         |cx| {
             vec![
-                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0195)."),
+                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0180)."),
                 cx.text("Try: CJK IME preedit → commit; ensure no double insert on compositionend + input."),
                 cx.text("Click inside the region to focus it (IME should enable)."),
             ]
@@ -6852,7 +6852,7 @@ fn preview_windowed_rows_surface_interactive_torture(
             .gap(Space::N2),
         |cx| {
             vec![
-                cx.text("Goal: demonstrate paint-only hover/selection chrome on a prepaint-windowed row surface (ADR 0190 + ADR 0181)."),
+                cx.text("Goal: demonstrate paint-only hover/selection chrome on a prepaint-windowed row surface (ADR 0175 + ADR 0166)."),
                 cx.text("Pattern: stable tree (Scroll + PointerRegion + Canvas), row hit-testing in pointer hooks, paint-only visuals in Canvas."),
             ]
         },
@@ -7156,10 +7156,13 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .children([
-                icon(cx, "lucide.git-branch", outline_fg.clone()),
-                content_text(cx, "New Branch", outline_fg.clone()),
+                icon(cx, "lucide.git-branch", outline_fg.clone())
+                    .test_id("ui-gallery-button-with-icon-icon"),
+                content_text(cx, "New Branch", outline_fg.clone())
+                    .test_id("ui-gallery-button-with-icon-label"),
             ])
-            .into_element(cx);
+            .into_element(cx)
+            .test_id("ui-gallery-button-with-icon");
         section(cx, "With Icon", body)
     };
 
@@ -14157,7 +14160,7 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
     vec![
         cx.text(
-            "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
+            "Material 3 Select: token-driven trigger + listbox overlay + ADR 0220 style overrides.",
         ),
         stack::vstack(
             cx,
@@ -14633,7 +14636,7 @@ fn preview_material3_text_field(
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Override").into_element(cx),
             shadcn::CardDescription::new(
-                "ADR 1159: partial per-state overrides via TextFieldStyle.",
+                "ADR 0220: partial per-state overrides via TextFieldStyle.",
             )
             .into_element(cx),
         ])
@@ -15463,7 +15466,7 @@ fn preview_material3_menu(
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Override").into_element(cx),
             shadcn::CardDescription::new(
-                "ADR 1159: MenuStyle overrides (container + item colors).",
+                "ADR 0220: MenuStyle overrides (container + item colors).",
             )
             .into_element(cx),
         ])
@@ -15834,9 +15837,12 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = {
         let card = shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Login to your account").into_element(cx),
+                shadcn::CardTitle::new("Login to your account")
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-demo-title"),
                 shadcn::CardDescription::new("Enter your email below to login to your account")
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-demo-description"),
                 shadcn::CardAction::new(vec![
                     shadcn::Button::new("Sign Up")
                         .variant(shadcn::ButtonVariant::Link)
@@ -15912,7 +15918,8 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .into_element(cx),
         ])
         .refine_layout(max_w_sm.clone())
-        .into_element(cx);
+        .into_element(cx)
+        .test_id("ui-gallery-card-demo");
 
         centered(cx, card)
     };

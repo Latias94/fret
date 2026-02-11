@@ -19,7 +19,7 @@ This report focuses on what to optimize next (and what not to spend time on).
 
 ### Update (post-scroll refactor)
 
-After introducing a children-only scroll translation path and fine-grained scroll-handle invalidation (ADR 1156),
+After introducing a children-only scroll translation path and fine-grained scroll-handle invalidation (ADR 0217),
 scroll offset changes no longer force layout-engine solves. The remaining worst frames in the scripted harness are
 still dominated by initial-mount layout/measure work (not by translation-only scrolling).
 
@@ -114,7 +114,7 @@ The next step for “developer experience” is to add a small CI check that run
 
 Unless cleanup directly reduces the hot path (layout/measure), it is unlikely to improve the stutter.
 
-Broad refactors also risk breaking the diagnostics/trace contracts that make this issue debuggable (ADR 0036 / ADR 1155).
+Broad refactors also risk breaking the diagnostics/trace contracts that make this issue debuggable (ADR 0036 / ADR 0216).
 
 Recommendation: defer cleanup work until after the `Scroll` measure hotspot is understood and either fixed or
 bounded by a clear contract.

@@ -559,6 +559,15 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    BoundsMaxSize {
+        target: UiSelectorV1,
+        #[serde(default)]
+        max_w_px: f32,
+        #[serde(default)]
+        max_h_px: f32,
+        #[serde(default)]
+        eps_px: f32,
+    },
     BoundsNonOverlapping {
         a: UiSelectorV1,
         b: UiSelectorV1,
@@ -1042,7 +1051,7 @@ pub enum UiOverlayPlacementTraceEntryV1 {
     },
 }
 
-/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).
+/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0180).
 ///
 /// This is intended for diagnostics evidence and is not a normative contract surface.
 #[derive(Debug, Clone, Serialize, Deserialize)]

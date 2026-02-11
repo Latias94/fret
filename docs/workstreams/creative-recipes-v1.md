@@ -12,15 +12,15 @@ Primary goals:
 
 Key ADRs:
 
-- Recipes/catalog authoring surface: `docs/adr/1184-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`
-- Paint primitives (gradients): `docs/adr/1172-paint-primitives-brushes-and-gradients-v1.md`
-- Controlled materials registry (Tier B): `docs/adr/1174-controlled-materials-registry-and-procedural-paints-v1.md`
-- Masks (alpha masks): `docs/adr/1178-mask-layers-and-alpha-masks-v1.md`
-- Compositing groups / blend modes: `docs/adr/1190-compositing-groups-and-blend-modes-v1.md`
-- Frame clock + reduced motion: `docs/adr/1179-frame-clock-and-reduced-motion-gates-v1.md`
-- Pointer motion snapshots: `docs/adr/1182-pointer-motion-snapshots-and-move-coalescing-v1.md`
-- Procedural determinism: `docs/adr/1183-procedural-material-determinism-seeds-and-time-inputs-v1.md`
-- Effect steps (threshold/matrix): `docs/adr/1175-effect-steps-color-matrix-and-alpha-threshold-v1.md`
+- Recipes/catalog authoring surface: `docs/adr/0245-ecosystem-visual-recipes-and-creative-authoring-surface-v1.md`
+- Paint primitives (gradients): `docs/adr/0233-paint-primitives-brushes-and-gradients-v1.md`
+- Controlled materials registry (Tier B): `docs/adr/0235-controlled-materials-registry-and-procedural-paints-v1.md`
+- Masks (alpha masks): `docs/adr/0239-mask-layers-and-alpha-masks-v1.md`
+- Compositing groups / blend modes: `docs/adr/0247-compositing-groups-and-blend-modes-v1.md`
+- Frame clock + reduced motion: `docs/adr/0240-frame-clock-and-reduced-motion-gates-v1.md`
+- Pointer motion snapshots: `docs/adr/0243-pointer-motion-snapshots-and-move-coalescing-v1.md`
+- Procedural determinism: `docs/adr/0244-procedural-material-determinism-seeds-and-time-inputs-v1.md`
+- Effect steps (threshold/matrix): `docs/adr/0236-effect-steps-color-matrix-and-alpha-threshold-v1.md`
 
 ## Target parity (initial)
 

@@ -11,7 +11,7 @@ use super::{
 /// Trait-based runner driver integration.
 ///
 /// Prefer `FnDriver` when you want a stable, function-pointer based “hot anchor” surface for dev
-/// hotpatch workflows (see ADR 0107). This trait remains supported for compatibility and for
+/// hotpatch workflows (see ADR 0105). This trait remains supported for compatibility and for
 /// drivers that benefit from trait-based struct organization.
 ///
 /// TODO: Once `FnDriver` covers all required hooks and in-tree call sites have migrated, remove

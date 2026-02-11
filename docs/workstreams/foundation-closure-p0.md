@@ -53,7 +53,7 @@ Primary references:
 
 - Roadmap: `docs/layout-engine-refactor-roadmap.md`
 - Inventory: `docs/layout-engine-v2-migration-inventory.md`
-- ADR gate: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+- ADR gate: `docs/adr/0114-window-scoped-layout-engine-and-viewport-roots.md`
 
 Exit criteria (summary):
 
@@ -100,10 +100,10 @@ Primary references:
 - Workstream: `docs/workstreams/gpui-parity-refactor.md`
 - TODO tracker: `docs/workstreams/gpui-parity-refactor-todo.md`
 - Contract gates:
-  - `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
-  - `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
-  - `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
-  - `docs/adr/0192-retained-windowed-surface-hosts.md`
+  - `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`
+  - `docs/adr/0167-prepaint-interaction-stream-and-range-reuse.md`
+  - `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`
+  - `docs/adr/0177-retained-windowed-surface-hosts.md`
 
 Exit criteria (summary):
 
@@ -123,7 +123,7 @@ Goal: span-based text authoring surfaces are usable by ecosystem crates (markdow
 Primary references:
 
 - Workstream: `docs/workstreams/text-system-v2-parley.md`
-- Contract gate: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
+- Contract gate: `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
 - Text editing contracts: `docs/adr/0044-*`, `docs/adr/0045-*`, `docs/adr/0046-*`, `docs/adr/0071-*`
 
 Exit criteria (summary):
@@ -154,7 +154,7 @@ Exit criteria (summary):
 - “re-dock last tab closes empty floating window” is implemented and regression-tested.
 - “close floating window merges content back” is implemented and regression-tested.
 - “hovered window selection / set_outer_position / z-level” differences are represented as capability quality signals
-  (prefer amending ADR 0054 / ADR 0084 instead of adding a new ADR).
+  (prefer amending ADR 0054 / ADR 0083 instead of adding a new ADR).
 
 Validation anchors:
 

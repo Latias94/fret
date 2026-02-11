@@ -139,7 +139,7 @@ For `kind=placed_rect` (non-solver placement):
 
 - `outer` / `anchor` / `placed` (+ optional `side`)
 
-Web IME trace entry fields (wasm only, ADR 0195; debug-only, redactable):
+Web IME trace entry fields (wasm only, ADR 0180; debug-only, redactable):
 
 - `step_index`
 - `note` (phase marker)

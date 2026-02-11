@@ -429,7 +429,7 @@ fn seed_syntax_colors(colors: &mut HashMap<String, String>) {
         }
     }
 
-    // These keys are consumed by `fret-code-view` for tree-sitter highlight tags (ADR 0100).
+    // These keys are consumed by `fret-code-view` for tree-sitter highlight tags (ADR 0099).
     // We derive a small palette from the base shadcn `chart-*` tokens.
     insert_if_missing(
         colors,

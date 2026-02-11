@@ -19,7 +19,7 @@ through a UI adapter (`fret-chart`). This ADR defines the contract between them.
 - ADR 0128: introduces `delinea` and establishes “headless engine + UI adapter”.
 - ADR 0129: transform pipeline and dataZoom ordering.
 - ADR 0080: vector path contract (portable scene primitives).
-- ADR 0097 / ADR 0099: plot widgets (different API; some math/LOD ideas may be shared later).
+- ADR 0096 / ADR 0098: plot widgets (different API; some math/LOD ideas may be shared later).
 
 ## Decision
 
@@ -68,7 +68,7 @@ The engine does not own theme resolution. Instead, it emits:
 - semantic style roles (e.g. `AxisGridLine`, `AxisLabel`, `SeriesStroke`, `SeriesFill`, `Crosshair`)
 - minimal per-series parameters (e.g. “palette index” or “series color hint”)
 
-The adapter resolves these roles using the active Fret theme token registry (ADR 0102 / ADR 0050).
+The adapter resolves these roles using the active Fret theme token registry (ADR 0101 / ADR 0050).
 
 ### 4) Path semantics required for charts are explicit follow-ups, not hidden assumptions
 
@@ -104,7 +104,7 @@ P1:
 
 ## References
 
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
+- ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0080: `docs/adr/0080-vector-path-contract.md`
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`

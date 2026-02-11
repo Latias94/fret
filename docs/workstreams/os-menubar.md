@@ -3,7 +3,7 @@
 This is a living implementation tracker for native OS menubar integration and user-customizable
 menu bars. It complements (but does not replace) ADRs:
 
-- ADR 0183 defines the integration seam: `Effect::SetMenuBar` (`docs/adr/0183-os-menubar-effect-setmenubar.md`).
+- ADR 0168 defines the integration seam: `Effect::SetMenuBar` (`docs/adr/0168-os-menubar-effect-setmenubar.md`).
 - ADR 0023 defines the data-only menu model and how it relates to commands/keymap.
 
 This tracker is organized as MVP milestones with acceptance criteria and evidence anchors. The goal
@@ -63,16 +63,16 @@ Implemented (Windows-first baseline):
 
 Known gaps:
 
-- Linux OS menubar integration is deferred (ADR 0184; in-window fallback by default).
+- Linux OS menubar integration is deferred (ADR 0169; in-window fallback by default).
 - Richer menu semantics are not standardized yet (checked/radio/native roles).
-- macOS standard menu roles/system menus are only partially standardized (track in ADR 0185).
+- macOS standard menu roles/system menus are only partially standardized (track in ADR 0170).
   - Current:
     - `MenuRole` hooks exist (Window/App/Help), Services system menu is supported, and standard edit
       selectors can be hinted via `OsAction` (Cut/Copy/Paste/SelectAll/Undo/Redo).
     - A minimal App menu baseline can be authored as commands (About/Preferences/Services/Hide/Hide Others/Show All/Quit),
       and the golden path (`fret-bootstrap`) handles `app.about`/`app.quit`/`app.hide*` by emitting platform effects.
   - Remaining: finalize macOS App menu conventions (exact wording + ordering, and what stays command-driven vs runner-native).
-  - Preferences remains app-owned (ADR 0187); golden-path apps can route it to an in-app settings UI.
+  - Preferences remains app-owned (ADR 0172); golden-path apps can route it to an in-app settings UI.
 
 ## MVP Milestones
 
@@ -112,7 +112,7 @@ Deliverables:
 - [x] Patch ops can target non-command items via selectors (e.g. submenu by title).
 - [x] Hot reload via config watcher (polling-based for now).
 - [x] CLI template generation for quick onboarding (`fretboard config menubar`).
-- [x] `menu_bar_version: 2` supports `MenuRole` and `SystemMenuType` (ADR 0185).
+- [x] `menu_bar_version: 2` supports `MenuRole` and `SystemMenuType` (ADR 0170).
 
 Acceptance:
 
@@ -227,7 +227,7 @@ Deliverables:
 
 - [x] Map `MenuBar` to a global `NSMenu` menubar (macOS is global; per-window is best-effort).
 - [x] Map `MenuItem::Separator`, command items, and submenus.
-- [x] System submenu support (macOS Services) via `MenuItem::SystemMenu` (ADR 0185).
+- [x] System submenu support (macOS Services) via `MenuItem::SystemMenu` (ADR 0170).
 - [x] Action dispatch must go through effects, not direct callbacks.
 - [x] Shortcut display uses MVP 2 policy.
 - [x] Enable/disable gating uses live `InputContext` snapshot where possible.
@@ -235,12 +235,12 @@ Deliverables:
 - [x] Standard menu hooks use `MenuRole` (no title-string hacks for Window).
 - [x] Minimal App menu baseline can be authored as commands (About/Preferences/Services/Hide/Hide Others/Show All/Quit).
   - Quit is implemented via `Effect::QuitApp` (see ADR 0001).
-  - About can be implemented via `Effect::ShowAboutPanel` on macOS (ADR 0186).
+  - About can be implemented via `Effect::ShowAboutPanel` on macOS (ADR 0171).
 
 Acceptance:
 
 - [x] Switching active window does not require rebuilding the entire menubar every frame.
-- [ ] Standard menus (App role expectations / default items) are handled (ADR 0185).
+- [ ] Standard menus (App role expectations / default items) are handled (ADR 0170).
   - Current: the commands/effects exist and can be injected by workspace shells, but the final macOS App menu
     conventions (ordering, titles, and what becomes runner-native) are still open.
 
@@ -257,8 +257,8 @@ Evidence anchors:
 - Quit effect: `crates/fret-runtime/src/effect.rs` (`Effect::QuitApp`).
 - About effect: `crates/fret-runtime/src/effect.rs` (`Effect::ShowAboutPanel`).
 - Golden-path default handling: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (handles `app.quit`/`app.hide*`).
-- ADR: `docs/adr/0186-macos-about-panel-effect.md`.
-- Preferences policy: `docs/adr/0187-preferences-command-policy.md`.
+- ADR: `docs/adr/0171-macos-about-panel-effect.md`.
+- Preferences policy: `docs/adr/0172-preferences-command-policy.md`.
 - Workspace baseline supports App menu: `ecosystem/fret-workspace/src/menu.rs` (`WorkspaceMenuCommands`).
 - Golden-path in-window default: `ecosystem/fret-kit/src/workspace_shell.rs` (`workspace_shell_model_default_menu`).
 - Undo/Redo availability seam example: `apps/fret-examples/src/gizmo3d_demo.rs` (`sync_window_command_availability`).
@@ -269,16 +269,16 @@ Goal: decide how to support Linux OS menubars without committing to a heavyweigh
 
 Deliverables:
 
-- [x] Document constraints and strategy: GTK/DBus menubar vs in-window fallback (ADR 0184).
+- [x] Document constraints and strategy: GTK/DBus menubar vs in-window fallback (ADR 0169).
 - [ ] Prototype a minimal path for at least one distro stack (or explicitly defer with rationale).
 
 Acceptance:
 
-- [x] Clear decision recorded with trade-offs and user impact (ADR 0184).
+- [x] Clear decision recorded with trade-offs and user impact (ADR 0169).
 
 Evidence anchors:
 
-- ADR 0184: `docs/adr/0184-linux-menubar-strategy.md`.
+- ADR 0169: `docs/adr/0169-linux-menubar-strategy.md`.
 - Current Linux behavior: `crates/fret-launch/src/runner/desktop/mod.rs` (non-Windows/macOS no-op for `Effect::SetMenuBar`).
 
 ## Recommended Next Steps (Post-MVP)

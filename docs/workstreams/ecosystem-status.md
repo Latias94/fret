@@ -63,7 +63,7 @@ Current ecosystem surfaces:
 - Typed UI → app routing for dynamic actions inside `view_cache(...)` subtrees: `fret-kit::mvu::KeyedMessageRouter<K, M>`
   (stable per key; persistent lookup table so cached subtrees can keep routing without relying on per-frame rebuild).
 - Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
-  adapted to ADR 0190 and `Dispatcher.exec_capabilities()`).
+  adapted to ADR 0175 and `Dispatcher.exec_capabilities()`).
 - Derived state (selectors/computed): `ecosystem/fret-selector` (memoized derived values with explicit
   dependency signatures + `use_selector` UI sugar).
   - Tracking: `docs/workstreams/state-management-v1.md`
@@ -91,7 +91,7 @@ What exists:
 - `DataGrid` default surface is canvas-backed (performance ceiling): `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
   (exported as `fret-ui-shadcn::DataGrid`).
 - `experimental::DataGridElement` prototype exists for rich per-cell UI: `ecosystem/fret-ui-shadcn/src/data_grid.rs`.
-- A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0101) and is now integrated into the shadcn
+- A TanStack-inspired headless engine exists in `fret-ui-kit` (ADR 0100) and is now integrated into the shadcn
   `DataTable` recipe, but still needs recipe-level widgets + validation for editor-grade ergonomics.
   - Note: the long-lived `fret-ui-kit` `table` feature gate has been removed; the table modules are now always available.
 
@@ -107,7 +107,7 @@ Recent work (workstream prototype surfaces):
 
 The following areas are the most “high leverage” gaps for editor-grade apps built on Fret:
 
-### 1) Headless Table/DataGrid (ADR 0101 alignment)
+### 1) Headless Table/DataGrid (ADR 0100 alignment)
 
 Gap:
 
@@ -167,7 +167,7 @@ Why it matters:
 
 ### Phase A — Tables/DataGrid (correctness + portability)
 
-- Align a shadcn `DataTable` recipe with the headless engine (ADR 0101):
+- Align a shadcn `DataTable` recipe with the headless engine (ADR 0100):
   - sorting, filtering, pagination, selection, visibility
   - stable `RowKey` and derived `CellId`
 - Keep the existing element-based `DataTable`/`experimental::DataGridElement` for "rich cell UI" use cases.

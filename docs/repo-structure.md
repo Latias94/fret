@@ -25,7 +25,7 @@ Notes:
 - `target/` is generated and should remain out of VCS.
 - `.fret/` is local state + debug artifacts by default, but project-scoped config files like
   `.fret/settings.json` / `.fret/keymap.json` / `.fret/menubar.json` / `.fret/layout.json` may be checked into VCS (ADR 0014).
-- Crate layer boundaries (core vs backends vs apps) are locked in `docs/adr/0093-crate-structure-core-backends-apps.md`.
+- Crate layer boundaries (core vs backends vs apps) are locked in `docs/adr/0092-crate-structure-core-backends-apps.md`.
 
 ## `crates/` (Core Framework)
 

@@ -414,7 +414,7 @@ Candidate changes:
   `MaxContent` cascades; recompute once the viewport stabilizes).
 - Adopt DOM/GPUI-like extent models for scroll (tracked separately), so “accurate extents” come from post-layout
   geometry rather than unbounded probes.
-- Move window derivation for virtual surfaces into prepaint (ADR 0190 alignment) to avoid cache-root rerender on scroll.
+- Move window derivation for virtual surfaces into prepaint (ADR 0175 alignment) to avoid cache-root rerender on scroll.
 
 ### 3.5 Paint/scene replay: reduce CPU rewrite work
 

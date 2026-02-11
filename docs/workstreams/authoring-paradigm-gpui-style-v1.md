@@ -7,7 +7,7 @@ that scale to editor-grade UI workloads (multi-window, docking, viewports, large
 
 Related ADR:
 
-- `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 
 ## Goals
 
@@ -95,7 +95,7 @@ These are the “hard-to-change” parts of the authoring story:
 
 ## Decision checklist (what to lock early)
 
-Keep this aligned with ADR 1162’s “Decision Gates”:
+Keep this aligned with ADR 0223’s “Decision Gates”:
 
 - Query: key conventions, default policy, error model, async adapters, instrumentation.
 - Selector: deps ergonomics/rails, shared computed models, diagnostics.

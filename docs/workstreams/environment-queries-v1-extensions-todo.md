@@ -6,7 +6,7 @@ date: 2026-02-10
 
 # Environment Queries (v1) — Preference Extensions — TODO
 
-- [x] Land ADR 1185 and add a task-jump entry in `docs/adr/README.md`.
+- [x] Land ADR 0246 and add a task-jump entry in `docs/adr/README.md`.
 
 ## Runtime mechanism
 

@@ -21,14 +21,14 @@ remain out of scope.
 Related context:
 
 - ECharts has explicit scale types (`interval`, `ordinal`, `time`, `log`) in `src/scale/*`.
-- Our ImPlot-like retained plot surface (`fret-plot`) has its own scale contract (ADR 0099),
+- Our ImPlot-like retained plot surface (`fret-plot`) has its own scale contract (ADR 0098),
   but `delinea` needs an engine-level contract tied to dataset-driven charts.
 
 ## Relationship to Other ADRs
 
 - ADR 0128: `delinea` headless chart engine.
 - ADR 0129: transform pipeline + dataZoom semantics.
-- ADR 0097 / ADR 0099: ImPlot-like plot widgets (different goals and API surface).
+- ADR 0096 / ADR 0098: ImPlot-like plot widgets (different goals and API surface).
 
 ## Decision
 
@@ -130,6 +130,6 @@ P1 follow-ups:
 
 - ECharts scales: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Interval.ts`,
   `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Ordinal.ts`
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ADR 0099: `docs/adr/0099-plot-architecture-and-performance.md`
+- ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
+- ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0098: `docs/adr/0098-plot-architecture-and-performance.md`

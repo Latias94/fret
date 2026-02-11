@@ -10,7 +10,7 @@ ECharts-class features.
 
 - **Pixel-bounded**: emitted geometry is bounded by plot pixel width, not dataset length.
 - **Monotonic X**: input X values are non-decreasing in raw row order.
-- **Raw index**: the dataset row index, preserved through transforms as `data_indices` (ADR 1140).
+- **Raw index**: the dataset row index, preserved through transforms as `data_indices` (ADR 0202).
 
 ## Current v1 strategies
 

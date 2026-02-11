@@ -16,7 +16,7 @@ Active tracker highlights:
 
 - Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity-todo.md`).
-- Fonts bootstrap + invalidation contract: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`.
+- Fonts bootstrap + invalidation contract: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`.
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 - Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2-todo.md`).
 - Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0-todo.md`).
@@ -25,7 +25,7 @@ For the “foundation-first, component-validated” execution loop (Plan C), see
 
 Subsystem roadmaps (living docs, not ADRs):
 
-- Node graph: `docs/node-graph-roadmap.md` (tracked TODOs for `ecosystem/fret-node`; contracts in ADR 0135).
+- Node graph: `docs/node-graph-roadmap.md` (tracked TODOs for `ecosystem/fret-node`; contracts in ADR 0126).
 - Layout engine: `docs/layout-engine-refactor-roadmap.md`.
 - Renderer: `docs/renderer-refactor-roadmap.md`.
 - OS menubar: `docs/workstreams/os-menubar.md`.
@@ -108,10 +108,10 @@ These items are intentionally scheduled early because they define “hard-to-cha
   - Implemented as MVP 46 (prototype; see `docs/archive/mvp/active-plan.md`).
 - P0: Renderer must preserve `Scene.ops` ordering across primitive kinds (ADR 0009).
 - P0: Multi-root overlays (menus, drag previews, popups, modals) must be first-class (ADR 0011).
-- P0: Lock anchored overlay geometry under `render_transform` (ADR 0083) so popovers/tooltips track what the user sees.
+- P0: Lock anchored overlay geometry under `render_transform` (ADR 0082) so popovers/tooltips track what the user sees.
   - Migrate component anchors to use `visual_bounds_for_element` (not layout-only bounds).
   - Keep a runtime-level regression test in `fret-ui`, plus a small component-level unit test guarding anchor selection (visual vs layout) to prevent drift.
-  - References: `docs/adr/0064-overlay-placement-contract.md`, `docs/adr/0083-render-transform-hit-testing.md`.
+  - References: `docs/adr/0064-overlay-placement-contract.md`, `docs/adr/0082-render-transform-hit-testing.md`.
 - P0: Keyboard/IME split: physical keys for shortcuts, text input for editing (ADR 0012).
 - P0: Canonical physical key representation for shortcuts + keymap persistence (ADR 0018).
 - P0: Shortcut arbitration + AltGr semantics + pending bindings (avoid keymap/API breaking changes) (ADR 0043).
@@ -332,7 +332,7 @@ Notes:
 
 - P1: Basic text for inspector/property panels (layout + glyph atlas). (MVP done in demo; see `docs/archive/mvp-archive.md`)
 - P0: Text system boundary (`TextBlobId` + metrics contract). (done; see ADR 0006)
-- P2: Parley-based text system v2 (attributed spans + wrapper-owned layout) (ADR 0157). (in progress)
+- P2: Parley-based text system v2 (attributed spans + wrapper-owned layout) (ADR 0142). (in progress)
 - P2: Shaped-run caching + incremental atlas uploads for large documents.
 - P1: IME plumbing (winit `Ime` events + `set_ime_cursor_area` feedback path). (prototype implemented; see ADR 0012)
 - P2: IME composition UI (inline preedit rendering in text widgets). (MVP done for single-line)

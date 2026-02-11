@@ -5,7 +5,7 @@
 //! - It does not assume a time source (vsync/RAF, profiling, etc.).
 //! - It only provides a simple "work units per frame" accounting mechanism.
 //!
-//! Motivation and guidance: `docs/adr/0178-canvas-viewport-transform-hit-testing-and-spatial-index-v1.md`.
+//! Motivation and guidance: `docs/adr/0163-canvas-viewport-transform-hit-testing-and-spatial-index-v1.md`.
 
 /// A pair of work budget limits, usually used to degrade background work while the user is
 /// interacting with the view.

@@ -1541,7 +1541,7 @@ where
     )
 }
 
-/// Retained-host virtualized table helper (virt-003 / ADR 0192).
+/// Retained-host virtualized table helper (virt-003 / ADR 0177).
 ///
 /// This is an opt-in surface intended for perf/correctness harnesses. v0 is intentionally minimal:
 /// - fixed-height or measured body rows (controlled by `props.row_measure_mode`)
