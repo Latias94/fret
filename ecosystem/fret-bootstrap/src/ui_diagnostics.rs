@@ -11592,6 +11592,24 @@ fn eval_predicate(
             };
             node.flags.checked.is_none()
         }
+        UiPredicateV1::ActiveItemIs { container, item } => {
+            let Some(item_node) = select_semantics_node(snapshot, window, element_runtime, item)
+            else {
+                return false;
+            };
+
+            if snapshot.focus == Some(item_node.id) {
+                return true;
+            }
+
+            let Some(container_node) =
+                select_semantics_node(snapshot, window, element_runtime, container)
+            else {
+                return false;
+            };
+
+            container_node.active_descendant == Some(item_node.id)
+        }
         UiPredicateV1::BarrierRoots {
             barrier_root,
             focus_barrier_root,
@@ -13058,6 +13076,96 @@ mod tests {
         assert!(
             eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected node to satisfy the min-size gate"
+        );
+    }
+
+    #[test]
+    fn active_item_is_predicate_matches_focus_or_active_descendant() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let mut root = semantics_node_with_test_id(
+            1,
+            None,
+            SemanticsRole::ListBox,
+            rect(0.0, 0.0, 100.0, 100.0),
+            "listbox",
+            "listbox",
+        );
+        let mut item_a = semantics_node_with_test_id(
+            2,
+            Some(1),
+            SemanticsRole::Option,
+            rect(0.0, 0.0, 100.0, 20.0),
+            "a",
+            "a",
+        );
+        let item_b = semantics_node_with_test_id(
+            3,
+            Some(1),
+            SemanticsRole::Option,
+            rect(0.0, 20.0, 100.0, 20.0),
+            "b",
+            "b",
+        );
+
+        // Model A: roving focus (focused item is active).
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(2)),
+            captured: None,
+            nodes: vec![root.clone(), item_a.clone(), item_b.clone()],
+        };
+
+        let pred = UiPredicateV1::ActiveItemIs {
+            container: UiSelectorV1::TestId {
+                id: "listbox".to_string(),
+            },
+            item: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected roving focus to satisfy active_item_is"
+        );
+
+        // Model B: composite focus + active_descendant.
+        root.active_descendant = Some(node_id(3));
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(1)),
+            captured: None,
+            nodes: vec![root, item_a, item_b],
+        };
+
+        let pred = UiPredicateV1::ActiveItemIs {
+            container: UiSelectorV1::TestId {
+                id: "listbox".to_string(),
+            },
+            item: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected active_descendant to satisfy active_item_is"
         );
     }
 

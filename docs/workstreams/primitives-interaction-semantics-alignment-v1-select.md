@@ -33,6 +33,7 @@ Scripted repros / bundles (timeline-style):
 - `tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json`
 - `tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json`
 - `tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json`
+- `tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json`
 - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json`
 - `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json`
 

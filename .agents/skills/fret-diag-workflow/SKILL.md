@@ -187,6 +187,7 @@ Concrete shadcn `Select` scripts (UI Gallery suite):
   - `tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json` (ArrowDown + Enter commit)
   - `tools/diag-scripts/ui-gallery-select-typeahead-commit-banana.json` (typeahead + Enter commit)
   - `tools/diag-scripts/ui-gallery-select-disabled-item-no-commit.json` (disabled option does not commit)
+  - `tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json` (assert roving skips a disabled option via `active_item_is`)
   - `tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json` (outside-press dismiss + click-through policy)
   - `tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json` (Escape dismiss + focus restore)
   - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (wheel scroll stability)

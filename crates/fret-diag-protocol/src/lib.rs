@@ -532,6 +532,19 @@ pub enum UiPredicateV1 {
     CheckedIsNone {
         target: UiSelectorV1,
     },
+    /// True when the current active item is the specified `item`.
+    ///
+    /// This supports both common semantics models:
+    ///
+    /// - Composite widgets that retain focus on a container and express the highlighted row via
+    ///   `active_descendant` (DOM-style `aria-activedescendant`).
+    /// - Widgets that use roving focus (the focused node itself is the active item).
+    ActiveItemIs {
+        /// Container node (e.g. listbox). Used when the widget uses `active_descendant`.
+        container: UiSelectorV1,
+        /// The expected active item (highlighted option / row).
+        item: UiSelectorV1,
+    },
     BarrierRoots {
         #[serde(default)]
         barrier_root: UiOptionalRootStateV1,

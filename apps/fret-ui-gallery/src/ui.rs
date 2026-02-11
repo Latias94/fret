@@ -17532,7 +17532,8 @@ fn preview_select(
                 shadcn::SelectItem::new("banana", "Banana")
                     .test_id("ui-gallery-select-item-banana"),
                 shadcn::SelectItem::new("orange", "Orange")
-                    .test_id("ui-gallery-select-item-orange"),
+                    .test_id("ui-gallery-select-item-orange")
+                    .disabled(true),
             ]
             .into_iter()
             .chain((1..=40).map(|i| {
