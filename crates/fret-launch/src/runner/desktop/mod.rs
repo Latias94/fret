@@ -61,6 +61,7 @@ mod ios_keyboard;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod renderdoc_capture;
 #[cfg(windows)]
 mod windows_menu;
@@ -69,7 +70,26 @@ use super::streaming_upload::StreamingUploadQueue;
 use diag_bundle_screenshots::DiagBundleScreenshotCapture;
 use dispatcher::DesktopDispatcher;
 use no_services::NoUiServices;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use renderdoc_capture::RenderDocCapture;
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+struct RenderDocCapture;
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+impl RenderDocCapture {
+    fn try_init() -> Option<Self> {
+        None
+    }
+
+    fn request_capture(&mut self) {}
+
+    fn begin_capture_if_requested(&mut self) -> bool {
+        false
+    }
+
+    fn end_capture(&mut self) {}
+}
 
 #[cfg(windows)]
 static WINDOWS_IME_MSG_HOOK_ENABLED: AtomicBool = AtomicBool::new(true);

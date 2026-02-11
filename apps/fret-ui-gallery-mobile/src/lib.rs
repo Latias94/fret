@@ -4,7 +4,7 @@
 use winit::platform::android::{EventLoopBuilderExtAndroid as _, activity::AndroidApp};
 
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn android_main(app: AndroidApp) {
     let mut builder = winit::event_loop::EventLoop::builder();
     builder.with_android_app(app);
@@ -26,7 +26,7 @@ pub fn android_main(app: AndroidApp) {
 ///
 /// Note: iOS apps must call into Rust from the main thread.
 #[cfg(target_os = "ios")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn fret_ui_gallery_ios_main() {
     if let Err(e) = fret_ui_gallery::run() {
         eprintln!("fret-ui-gallery failed: {e:?}");
