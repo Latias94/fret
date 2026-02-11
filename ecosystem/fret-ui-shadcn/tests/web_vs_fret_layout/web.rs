@@ -3,11 +3,8 @@ use super::*;
 #[path = "../support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 pub(crate) use web_golden_shadcn::{
-    WebGolden, WebGoldenTheme, WebNode, WebRect, WebScrollMetrics, WebViewport, class_contains,
-    class_has_all_tokens, class_has_token, find_all, find_first, read_web_golden,
-    read_web_golden_open, read_web_golden_open_fallback, repo_root, web_golden_open_path,
-    web_golden_path, web_golden_path_file, web_golden_path_open_fallback, web_theme,
-    web_theme_named,
+    WebGoldenTheme, WebNode, WebRect, WebViewport, class_has_all_tokens, class_has_token, find_all,
+    find_first, read_web_golden, web_theme,
 };
 
 pub(crate) fn find_first_in_theme<'a>(
