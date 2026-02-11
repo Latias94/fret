@@ -61,6 +61,17 @@ Start with “portable, low-flake” gates:
   - while composing, press keys that normally trigger global shortcuts,
   - assert the trace shows `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
 
+In-repo examples:
+
+- Word boundary (double click):
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
+- Line boundary (triple click):
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
+
+Run the suite (native):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-code-editor --launch -- cargo run -p fret-ui-gallery --release`
+
 IME-specific behavior may remain runner-dependent; treat missing IME evidence as capability-gated
 (`diag.text_ime_trace`) rather than as an implicit timeout.
 

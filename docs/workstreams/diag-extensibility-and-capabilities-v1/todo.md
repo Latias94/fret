@@ -89,13 +89,13 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 
-- [ ] Define the minimum redaction-friendly evidence surface for focused text inputs:
+- [x] Define the minimum redaction-friendly evidence surface for focused text inputs:
   - [x] selection range (UTF-16),
   - [x] caret/candidate rect (best-effort `ime_cursor_area`),
   - [x] IME composition state summary (`is_composing` + `marked_utf16`).
 - [ ] Add at least one stable script gate for:
-  - [ ] word boundary (double click),
-  - [ ] line boundary (triple click),
+  - [x] word boundary (double click),
+  - [x] line boundary (triple click),
   - [ ] “composition not stolen by shortcuts” (requires trace + reason codes).
 
 ## Determinism (flake triage)
