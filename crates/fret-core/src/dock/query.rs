@@ -64,12 +64,15 @@ impl DockGraph {
         window: AppWindowId,
         panel: &PanelKey,
     ) -> Option<(DockNodeId, usize)> {
-        let root = self.window_root(window)?;
-        self.find_panel_in_subtree(root, panel).or_else(|| {
-            self.window_floatings.get(&window).and_then(|list| {
-                list.iter()
-                    .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
-            })
+        if let Some(root) = self.window_root(window)
+            && let Some(found) = self.find_panel_in_subtree(root, panel)
+        {
+            return Some(found);
+        }
+
+        self.window_floatings.get(&window).and_then(|list| {
+            list.iter()
+                .find_map(|w| self.find_panel_in_subtree(w.floating, panel))
         })
     }
 
@@ -93,8 +96,16 @@ impl DockGraph {
     }
 
     pub fn first_tabs_in_window(&self, window: AppWindowId) -> Option<DockNodeId> {
-        let root = self.window_root(window)?;
-        self.first_tabs_in_subtree(root)
+        if let Some(root) = self.window_root(window)
+            && let Some(tabs) = self.first_tabs_in_subtree(root)
+        {
+            return Some(tabs);
+        }
+
+        self.window_floatings.get(&window).and_then(|list| {
+            list.iter()
+                .find_map(|w| self.first_tabs_in_subtree(w.floating))
+        })
     }
 
     pub(super) fn collect_panels_in_subtree(&self, node: DockNodeId) -> Vec<PanelKey> {

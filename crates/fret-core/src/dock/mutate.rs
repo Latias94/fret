@@ -1,6 +1,171 @@
 use super::*;
 
 impl DockGraph {
+    /// Simplify and canonicalize the docking forest for a window.
+    ///
+    /// Canonical form (v1):
+    ///
+    /// - `Tabs` nodes are non-empty (empty tabs are pruned; roots may be removed).
+    /// - `Split` nodes have `children.len() == fractions.len()`.
+    /// - `Split` fractions are finite, non-negative, and normalized (sum ~= 1.0).
+    /// - Single-child splits are pruned.
+    /// - Nested same-axis splits are flattened (bounded-depth property).
+    /// - `Floating` nodes keep their container identity, but their `child` is simplified.
+    fn simplify_window_forest(&mut self, window: AppWindowId) {
+        if let Some(root) = self.window_root(window) {
+            match self.simplify_subtree(root) {
+                Some(next_root) => self.set_window_root(window, next_root),
+                None => {
+                    let _ = self.remove_window_root(window);
+                }
+            }
+        }
+
+        let Some(mut floatings) = self.window_floatings.remove(&window) else {
+            return;
+        };
+
+        floatings.retain_mut(|w| match self.simplify_subtree(w.floating) {
+            Some(next_root) => {
+                w.floating = next_root;
+                true
+            }
+            None => false,
+        });
+
+        if !floatings.is_empty() {
+            self.window_floatings.insert(window, floatings);
+        }
+    }
+
+    fn simplify_subtree(&mut self, node: DockNodeId) -> Option<DockNodeId> {
+        let n = self.nodes.get(node)?.clone();
+        match n {
+            DockNode::Tabs { tabs, mut active } => {
+                if tabs.is_empty() {
+                    return None;
+                }
+                if active >= tabs.len() {
+                    active = tabs.len().saturating_sub(1);
+                }
+                if let Some(DockNode::Tabs {
+                    tabs: list,
+                    active: cur,
+                }) = self.nodes.get_mut(node)
+                {
+                    *list = tabs;
+                    *cur = active;
+                }
+                Some(node)
+            }
+            DockNode::Floating { child } => {
+                let child = self.simplify_subtree(child)?;
+                if let Some(DockNode::Floating { child: cur }) = self.nodes.get_mut(node) {
+                    *cur = child;
+                }
+                Some(node)
+            }
+            DockNode::Split {
+                axis,
+                children,
+                fractions,
+            } => {
+                let mut next_children: Vec<DockNodeId> = Vec::new();
+                let mut next_fractions: Vec<f32> = Vec::new();
+
+                // Repair mismatched lengths conservatively (treat missing fractions as 1.0 shares).
+                for (i, child) in children.into_iter().enumerate() {
+                    let Some(child) = self.simplify_subtree(child) else {
+                        continue;
+                    };
+                    let f = fractions.get(i).copied().unwrap_or(1.0);
+                    next_children.push(child);
+                    next_fractions.push(f);
+                }
+
+                if next_children.is_empty() {
+                    return None;
+                }
+                if next_children.len() == 1 {
+                    return Some(next_children[0]);
+                }
+
+                self.flatten_same_axis_splits(axis, &mut next_children, &mut next_fractions);
+
+                if next_children.is_empty() {
+                    return None;
+                }
+                if next_children.len() == 1 {
+                    return Some(next_children[0]);
+                }
+
+                normalize_shares(&mut next_fractions);
+                debug_assert_eq!(next_children.len(), next_fractions.len());
+
+                if let Some(DockNode::Split {
+                    children: cur_children,
+                    fractions: cur_fractions,
+                    ..
+                }) = self.nodes.get_mut(node)
+                {
+                    *cur_children = next_children;
+                    *cur_fractions = next_fractions;
+                }
+
+                Some(node)
+            }
+        }
+    }
+
+    fn flatten_same_axis_splits(
+        &mut self,
+        axis: Axis,
+        children: &mut Vec<DockNodeId>,
+        fractions: &mut Vec<f32>,
+    ) {
+        let mut changed = true;
+        while changed {
+            changed = false;
+
+            let mut out_children: Vec<DockNodeId> = Vec::with_capacity(children.len());
+            let mut out_fractions: Vec<f32> = Vec::with_capacity(fractions.len());
+
+            for (child, parent_share) in children.iter().copied().zip(fractions.iter().copied()) {
+                let Some(DockNode::Split {
+                    axis: child_axis,
+                    children: grand_children,
+                    fractions: grand_fractions,
+                }) = self.nodes.get(child)
+                else {
+                    out_children.push(child);
+                    out_fractions.push(parent_share);
+                    continue;
+                };
+
+                if *child_axis != axis {
+                    out_children.push(child);
+                    out_fractions.push(parent_share);
+                    continue;
+                }
+
+                // Flatten nested same-axis split by distributing the parent share across the grand-children.
+                changed = true;
+
+                let mut grand_shares = grand_fractions.clone();
+                normalize_shares(&mut grand_shares);
+                debug_assert_eq!(grand_children.len(), grand_shares.len());
+
+                for (&gc, &gs) in grand_children.iter().zip(grand_shares.iter()) {
+                    out_children.push(gc);
+                    out_fractions.push(parent_share * gs);
+                }
+            }
+
+            *children = out_children;
+            *fractions = out_fractions;
+        }
+    }
+
     pub fn move_panel(
         &mut self,
         window: AppWindowId,
@@ -59,8 +224,10 @@ impl DockGraph {
             }
 
             let ok = self.insert_panel_into_tabs_at(target_tabs, panel, index);
-            self.collapse_empty_tabs_upwards(source_window, source_tabs);
-            self.remove_empty_floating_windows(source_window);
+            self.simplify_window_forest(source_window);
+            if target_window != source_window {
+                self.simplify_window_forest(target_window);
+            }
             return ok;
         }
 
@@ -88,8 +255,10 @@ impl DockGraph {
         });
 
         self.replace_node_in_window_tree(target_window, target_tabs, split);
-        self.collapse_empty_tabs_upwards(source_window, source_tabs);
-        self.remove_empty_floating_windows(source_window);
+        self.simplify_window_forest(source_window);
+        if target_window != source_window {
+            self.simplify_window_forest(target_window);
+        }
         true
     }
 
@@ -144,7 +313,7 @@ impl DockGraph {
 
         if zone == DropZone::Center {
             let ok = self.insert_panels_into_tabs_at(target_tabs, &panels, insert_index, active);
-            self.remove_empty_floating_windows(target_window);
+            self.simplify_window_forest(target_window);
             return ok;
         }
 
@@ -172,7 +341,7 @@ impl DockGraph {
         });
 
         self.replace_node_in_window_tree(target_window, target_tabs, split);
-        self.remove_empty_floating_windows(target_window);
+        self.simplify_window_forest(target_window);
         true
     }
 
@@ -183,8 +352,7 @@ impl DockGraph {
         if !self.remove_panel_from_tabs(tabs, index) {
             return false;
         }
-        self.collapse_empty_tabs_upwards(window, tabs);
-        self.remove_empty_floating_windows(window);
+        self.simplify_window_forest(window);
         true
     }
 
@@ -207,8 +375,8 @@ impl DockGraph {
             active: 0,
         });
         self.set_window_root(new_window, tabs);
-        self.collapse_empty_tabs_upwards(source_window, source_tabs);
-        self.remove_empty_floating_windows(source_window);
+        self.simplify_window_forest(source_window);
+        self.simplify_window_forest(new_window);
         true
     }
 
@@ -235,8 +403,8 @@ impl DockGraph {
         self.floating_windows_mut(target_window)
             .push(DockFloatingWindow { floating, rect });
 
-        self.collapse_empty_tabs_upwards(source_window, source_tabs);
-        self.remove_empty_floating_windows(source_window);
+        self.simplify_window_forest(source_window);
+        self.simplify_window_forest(target_window);
         true
     }
 
@@ -267,8 +435,7 @@ impl DockGraph {
         if self.window_root(source_window) == Some(source_tabs) {
             let _ = self.remove_window_root(source_window);
         }
-        self.collapse_empty_tabs_upwards(source_window, source_tabs);
-        self.remove_empty_floating_windows(source_window);
+        self.simplify_window_forest(source_window);
 
         let tabs = self.insert_node(DockNode::Tabs {
             tabs: panels,
@@ -277,7 +444,7 @@ impl DockGraph {
         let floating = self.insert_node(DockNode::Floating { child: tabs });
         self.floating_windows_mut(target_window)
             .push(DockFloatingWindow { floating, rect });
-        self.remove_empty_floating_windows(target_window);
+        self.simplify_window_forest(target_window);
         true
     }
 
@@ -342,6 +509,7 @@ impl DockGraph {
         {
             list.remove(index);
         }
+        self.simplify_window_forest(window);
         true
     }
 
@@ -586,53 +754,14 @@ impl DockGraph {
     }
 
     fn collapse_empty_tabs_upwards(&mut self, window: AppWindowId, start_tabs: DockNodeId) {
-        let Some(root) = self.root_for_node_in_window_forest(window, start_tabs) else {
+        let Some(_root) = self.root_for_node_in_window_forest(window, start_tabs) else {
             return;
         };
-        let mut current = start_tabs;
-        loop {
-            let Some(parent) = self.find_parent_in_subtree(root, current) else {
-                break;
-            };
 
-            let only_child = match self.nodes.get(parent) {
-                Some(DockNode::Split { children, .. }) => {
-                    if children.len() != 2 {
-                        break;
-                    }
-                    if children[0] == current {
-                        children[1]
-                    } else {
-                        children[0]
-                    }
-                }
-                Some(DockNode::Floating { child }) => *child,
-                _ => break,
-            };
-
-            match self.nodes.get(current) {
-                Some(DockNode::Tabs { tabs, .. }) if tabs.is_empty() => {}
-                _ => break,
-            }
-
-            if parent == root {
-                if self.window_root(window) == Some(root) {
-                    self.set_window_root(window, only_child);
-                } else if let Some(list) = self.window_floatings.get_mut(&window) {
-                    for w in list {
-                        if w.floating == root {
-                            w.floating = only_child;
-                            break;
-                        }
-                    }
-                } else if let Some(DockNode::Floating { child }) = self.nodes.get_mut(root) {
-                    *child = only_child;
-                }
-                break;
-            }
-            self.replace_node_in_window_tree(window, parent, only_child);
-            current = parent;
-        }
+        // Historical helper: this used to assume binary splits. Keep the API, but delegate to the
+        // canonical simplifier (which is N-ary safe).
+        let _ = start_tabs;
+        self.simplify_window_forest(window);
     }
 
     fn root_for_node_in_window_forest(
@@ -672,12 +801,37 @@ impl DockGraph {
     }
 
     fn remove_empty_floating_windows(&mut self, window: AppWindowId) {
-        let Some(mut list) = self.window_floatings.remove(&window) else {
-            return;
-        };
-        list.retain(|w| !self.collect_panels_in_subtree(w.floating).is_empty());
-        if !list.is_empty() {
-            self.window_floatings.insert(window, list);
+        // Kept for compatibility with older call sites; the canonical simplifier already prunes
+        // empty floatings.
+        self.simplify_window_forest(window);
+    }
+}
+
+fn normalize_shares(shares: &mut Vec<f32>) {
+    for f in shares.iter_mut() {
+        if !f.is_finite() {
+            *f = 0.0;
         }
+        if *f < 0.0 {
+            *f = 0.0;
+        }
+    }
+
+    let sum: f32 = shares.iter().sum();
+    if !sum.is_finite() || sum <= f32::EPSILON {
+        let n = shares.len().max(1);
+        *shares = vec![1.0 / n as f32; n];
+        return;
+    }
+
+    for f in shares.iter_mut() {
+        *f /= sum;
+    }
+
+    // Clamp drift on the last element to keep sum stable.
+    let len = shares.len();
+    if len >= 1 {
+        let rest: f32 = shares.iter().take(len.saturating_sub(1)).sum();
+        shares[len - 1] = (1.0 - rest).clamp(0.0, 1.0);
     }
 }

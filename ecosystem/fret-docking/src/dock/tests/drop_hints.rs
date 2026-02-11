@@ -393,36 +393,27 @@ fn dock_drop_outer_left_emits_move_panel_and_wraps_window_root() {
             panic!("expected window root split");
         };
         assert_eq!(*axis, fret_core::Axis::Horizontal);
-        assert_eq!(children.len(), 2);
 
-        let left = children[0];
-        let right = children[1];
-        let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(left) else {
-            panic!("expected left child tabs");
-        };
-        assert!(tabs.contains(&PanelKey::new("core.right")));
+        // Core now canonicalizes same-axis nested splits (flatten), so "wrap the existing root"
+        // becomes "insert a new sibling into the same-axis split container".
+        assert_eq!(children.len(), 3);
 
-        // The previous root split should become the right child.
-        assert_eq!(right, root_split);
-        fn collect_panels(graph: &DockGraph, node: DockNodeId, out: &mut Vec<PanelKey>) {
-            let Some(node) = graph.node(node) else {
-                return;
+        let mut found_right = false;
+        let mut found_left = false;
+        let mut found_right2 = false;
+
+        for &child in children {
+            let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(child) else {
+                panic!("expected split children to be tabs nodes");
             };
-            match node {
-                DockNode::Tabs { tabs, .. } => out.extend(tabs.iter().cloned()),
-                DockNode::Split { children, .. } => {
-                    for &child in children {
-                        collect_panels(graph, child, out);
-                    }
-                }
-                DockNode::Floating { child } => collect_panels(graph, *child, out),
-            }
+            found_right |= tabs.contains(&PanelKey::new("core.right"));
+            found_left |= tabs.contains(&PanelKey::new("core.left"));
+            found_right2 |= tabs.contains(&PanelKey::new("core.right2"));
         }
 
-        let mut subtree_panels = Vec::new();
-        collect_panels(&dock.graph, right, &mut subtree_panels);
-        assert!(subtree_panels.contains(&PanelKey::new("core.left")));
-        assert!(subtree_panels.contains(&PanelKey::new("core.right2")));
+        assert!(found_right, "expected moved panel to be present");
+        assert!(found_left, "expected left panel to remain present");
+        assert!(found_right2, "expected right2 panel to remain present");
     });
 }
 #[test]

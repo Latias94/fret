@@ -104,6 +104,11 @@ fn float_tabs_in_window_creates_floating_container_with_tabs() {
         g.collect_panels_in_subtree(floatings[0].floating),
         vec![panel_a, panel_b, panel_c]
     );
+    assert!(
+        g.find_panel_in_window(w, &PanelKey::new("test.b"))
+            .is_some(),
+        "expected panel lookup to work even when the window has no root"
+    );
 }
 
 #[test]
@@ -319,4 +324,58 @@ fn close_panel_before_active_preserves_active_panel() {
         Some((tabs, 0)),
         "expected the previously-active panel to remain selected"
     );
+}
+
+#[test]
+fn close_panel_prunes_empty_tabs_in_nary_split() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs_a = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    let tabs_b = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let tabs_c = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c.clone()],
+        active: 0,
+    });
+
+    let root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![tabs_a, tabs_b, tabs_c],
+        fractions: vec![0.2, 0.3, 0.5],
+    });
+    g.set_window_root(w, root);
+
+    assert!(g.apply_op(&DockOp::ClosePanel {
+        window: w,
+        panel: panel_b.clone(),
+    }));
+
+    let root = g.window_root(w).expect("window root exists");
+    let DockNode::Split {
+        children,
+        fractions,
+        ..
+    } = g.node(root).expect("split root")
+    else {
+        panic!("expected split root after pruning");
+    };
+
+    assert_eq!(children.len(), 2, "expected empty tabs node to be pruned");
+    assert_eq!(fractions.len(), 2, "expected fractions to stay aligned");
+
+    let sum: f32 = fractions.iter().copied().sum();
+    assert!((sum - 1.0).abs() < 1e-4, "expected normalized fractions");
+
+    assert!(g.find_panel_in_window(w, &panel_a).is_some());
+    assert!(g.find_panel_in_window(w, &panel_c).is_some());
+    assert!(g.find_panel_in_window(w, &panel_b).is_none());
 }
