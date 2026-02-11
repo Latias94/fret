@@ -296,6 +296,8 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
+            | ElementInstance::HitTestGate(_)
+            | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
@@ -520,6 +522,8 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
+            | ElementInstance::HitTestGate(_)
+            | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
@@ -886,6 +890,12 @@ fn passthrough_wrapper_child<H: UiHost>(
     let instance = element_record_for_node(app, window, node).map(|r| r.instance)?;
     match instance {
         ElementInstance::InteractivityGate(gate) if gate.present => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
+        ElementInstance::HitTestGate(_) => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
+        ElementInstance::FocusTraversalGate(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
         ElementInstance::Pressable(_) => Some((child, ParentLayoutKind::PassthroughOverlayStretch)),

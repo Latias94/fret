@@ -16,6 +16,7 @@ fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
 fret-authoring = { version = "0.1.0", path = "../fret-authoring", optional = true }
 fret-dnd = { version = "0.1.0", path = "../fret-dnd", optional = true }
+fret-interaction = { version = "0.1.0", path = "../fret-interaction", optional = true, features = ["runtime"] }
 fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
 fret-viewport-tooling = { version = "0.1.0", path = "../fret-viewport-tooling" }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true, features = ["ui"] }
@@ -30,7 +31,7 @@ smallvec.workspace = true
 default = []
 
 # Optional integration helpers for immediate-mode authoring frontends (`fret-imui` via `UiWriter`).
-imui = ["dep:fret-authoring"]
+imui = ["dep:fret-authoring", "dep:fret-interaction"]
 
 # Optional state adapter naming convention (v1):
 # - `state-selector`: selector-based derived-state adapters

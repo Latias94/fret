@@ -6,10 +6,9 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{
-    AppWindowId, ColorScheme, ContrastPreference, Edges, EffectChain, EffectMode, ForcedColorsMode,
-    NodeId, PointerType, Px, Rect,
-};
+use fret_core::input::PointerType;
+use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
+use fret_core::{AppWindowId, Color, Edges, EffectChain, EffectMode, NodeId, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -25,21 +24,21 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutQueryRegionProps,
-    LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
-    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
-    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, TextAreaProps,
-    TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions, VirtualListProps,
-    VirtualListState, VisualTransformProps,
+    FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
+    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, OpacityProps, PointerRegionProps,
+    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
+    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
+    SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
+    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
+use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
-use crate::{SvgSource, Theme, ThemeSnapshot, UiHost};
+use crate::{SvgSource, Theme, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
-use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 
 pub struct ElementContext<'a, H: UiHost> {
     pub app: &'a mut H,
@@ -99,44 +98,6 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         runtime.prepare_window_for_frame(window, frame_id);
 
         let window_state = runtime.for_window_mut(window);
-        let metrics = app.global::<WindowMetricsService>();
-        let scale_factor = metrics
-            .and_then(|svc| svc.scale_factor(window))
-            .unwrap_or(1.0);
-        window_state.record_committed_viewport_bounds(bounds);
-        window_state.record_committed_scale_factor(scale_factor);
-        if let Some(metrics) = metrics {
-            if metrics.prefers_reduced_motion_is_known(window) {
-                window_state
-                    .set_committed_prefers_reduced_motion(metrics.prefers_reduced_motion(window));
-            }
-            if metrics.text_scale_factor_is_known(window) {
-                window_state.set_committed_text_scale_factor(metrics.text_scale_factor(window));
-            }
-            if metrics.prefers_reduced_transparency_is_known(window) {
-                window_state.set_committed_prefers_reduced_transparency(
-                    metrics.prefers_reduced_transparency(window),
-                );
-            }
-            if metrics.accent_color_is_known(window) {
-                window_state.set_committed_accent_color(metrics.accent_color(window));
-            }
-            if metrics.color_scheme_is_known(window) {
-                window_state.set_committed_color_scheme(metrics.color_scheme(window));
-            }
-            if metrics.contrast_preference_is_known(window) {
-                window_state.set_committed_contrast_preference(metrics.contrast_preference(window));
-            }
-            if metrics.forced_colors_mode_is_known(window) {
-                window_state.set_committed_forced_colors_mode(metrics.forced_colors_mode(window));
-            }
-            if metrics.safe_area_insets_is_known(window) {
-                window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
-            }
-            if metrics.occlusion_insets_is_known(window) {
-                window_state.record_committed_occlusion_insets(metrics.occlusion_insets(window));
-            }
-        }
 
         Self {
             app,
@@ -279,7 +240,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
     /// element, if available.
     ///
-    /// This is intended for anchored overlay policies that must track render transforms (ADR 0082)
+    /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
     /// without mixing layout transforms into the layout solver.
     pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
         self.window_state.last_visual_bounds(element)
@@ -393,24 +354,6 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let caller = callsite_hash(loc);
         let key_hash = stable_hash(&name);
         self.enter_with_callsite(loc, caller, Some(key_hash), Some(name), f)
-    }
-
-    /// Runs `f` and then restores the element ID allocator scope to its previous state.
-    ///
-    /// This is intended for "probe" passes that need to build elements to inspect their shape
-    /// (e.g. focus-within detection) without perturbing subsequent `GlobalElementId` derivation
-    /// via callsite counters.
-    ///
-    /// This does **not** roll back side effects that `f` may cause on the window state (e.g.
-    /// element state allocation, model observations, or queued effects). Callers should keep `f`
-    /// side-effect free when possible.
-    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-        let saved_stack = self.stack.clone();
-        let saved_counters = self.callsite_counters.clone();
-        let out = f(self);
-        self.stack = saved_stack;
-        self.callsite_counters = saved_counters;
-        out
     }
 
     pub fn with_state<S: Any, R>(
@@ -528,6 +471,25 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         list.push((global, invalidation));
     }
 
+    fn observe_environment_query(&mut self, key: EnvironmentQueryKey, invalidation: Invalidation) {
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
+        let list = self
+            .window_state
+            .observed_environment_next
+            .entry(id)
+            .or_default();
+        if list
+            .iter()
+            .any(|(k, inv)| *k == key && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((key, invalidation));
+    }
+
     pub fn observe_layout_query_region(
         &mut self,
         region: GlobalElementId,
@@ -551,27 +513,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         list.push((region, invalidation));
     }
 
-    pub(crate) fn observe_environment_query(
+    pub fn layout_query_bounds(
         &mut self,
-        key: EnvironmentQueryKey,
+        region: GlobalElementId,
         invalidation: Invalidation,
-    ) {
-        let id = self
-            .window_state
-            .current_view_cache_root()
-            .unwrap_or_else(|| self.root_id());
-        let list = self
-            .window_state
-            .observed_environment_next
-            .entry(id)
-            .or_default();
-        if list
-            .iter()
-            .any(|(k, inv)| *k == key && *inv == invalidation)
-        {
-            return;
-        }
-        list.push((key, invalidation));
+    ) -> Option<Rect> {
+        self.observe_layout_query_region(region, invalidation);
+        self.last_bounds_for_element(region)
     }
 
     pub fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> Rect {
@@ -621,10 +569,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.committed_prefers_reduced_transparency()
     }
 
-    pub fn environment_accent_color(
-        &mut self,
-        invalidation: Invalidation,
-    ) -> Option<fret_core::Color> {
+    pub fn environment_accent_color(&mut self, invalidation: Invalidation) -> Option<Color> {
         self.observe_environment_query(EnvironmentQueryKey::AccentColor, invalidation);
         self.window_state.committed_accent_color()
     }
@@ -684,22 +629,61 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         }
     }
 
-    pub fn layout_query_bounds(
+    pub fn diagnostics_record_overlay_placement_anchored_panel(
         &mut self,
-        region: GlobalElementId,
-        invalidation: Invalidation,
-    ) -> Option<Rect> {
-        self.observe_layout_query_region(region, invalidation);
-        self.last_bounds_for_element(region)
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        trace: AnchoredPanelLayoutTrace,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_anchored_panel(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            trace,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (overlay_root_name, anchor_element, content_element, trace);
+    }
+
+    pub fn diagnostics_record_overlay_placement_placed_rect(
+        &mut self,
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        outer: Rect,
+        anchor: Rect,
+        placed: Rect,
+        side: Option<Side>,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_placed_rect(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (
+            overlay_root_name,
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
     }
 
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
-    }
-
-    pub fn theme_snapshot(&mut self) -> ThemeSnapshot {
-        self.theme().snapshot()
     }
 
     #[track_caller]
@@ -840,66 +824,6 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
-    /// Records a debug trace for an anchored overlay placement decision.
-    ///
-    /// This is a diagnostics-only hook intended for `fretboard diag` evidence. It is a no-op when
-    /// the `diagnostics` feature is disabled.
-    pub fn diagnostics_record_overlay_placement_anchored_panel(
-        &mut self,
-        overlay_root_name: Option<&str>,
-        anchor_element: Option<GlobalElementId>,
-        content_element: Option<GlobalElementId>,
-        trace: AnchoredPanelLayoutTrace,
-    ) {
-        #[cfg(feature = "diagnostics")]
-        self.window_state.record_overlay_placement_anchored_panel(
-            self.frame_id,
-            overlay_root_name.map(Arc::<str>::from),
-            anchor_element,
-            content_element,
-            trace,
-        );
-        #[cfg(not(feature = "diagnostics"))]
-        let _ = (overlay_root_name, anchor_element, content_element, trace);
-    }
-
-    /// Records a placed-rect overlay decision (for overlays not solved via the anchored-panel solver).
-    ///
-    /// This is a diagnostics-only hook intended for `fretboard diag` evidence. It is a no-op when
-    /// the `diagnostics` feature is disabled.
-    pub fn diagnostics_record_overlay_placement_placed_rect(
-        &mut self,
-        overlay_root_name: Option<&str>,
-        anchor_element: Option<GlobalElementId>,
-        content_element: Option<GlobalElementId>,
-        outer: Rect,
-        anchor: Rect,
-        placed: Rect,
-        side: Option<Side>,
-    ) {
-        #[cfg(feature = "diagnostics")]
-        self.window_state.record_overlay_placement_placed_rect(
-            self.frame_id,
-            overlay_root_name.map(Arc::<str>::from),
-            anchor_element,
-            content_element,
-            outer,
-            anchor,
-            placed,
-            side,
-        );
-        #[cfg(not(feature = "diagnostics"))]
-        let _ = (
-            overlay_root_name,
-            anchor_element,
-            content_element,
-            outer,
-            anchor,
-            placed,
-            side,
-        );
-    }
-
     #[track_caller]
     pub fn container<I>(
         &mut self,
@@ -1002,15 +926,27 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .and_then(|svc| svc.scale_factor(cx.window))
                 .unwrap_or(1.0);
 
-            let rendered_query_fingerprint =
-                cx.window_state.layout_query_deps_fingerprint_rendered(id);
-            let rendered_env_fingerprint =
-                cx.window_state.environment_deps_fingerprint_rendered(id);
-            let base_key = (theme_revision, scale_factor.to_bits(), props.cache_key);
+            // View-cache keys must incorporate any "external" dependencies that can affect the
+            // cached subtree without triggering a normal invalidation walk (e.g. environment
+            // queries, layout queries).
+            //
+            // When reusing, depend on the previously-recorded deps for this cache root. When
+            // re-rendering, the key is refreshed from `*_next` after the closure runs.
+            let scale_bits = scale_factor.to_bits();
+            let deps_key_rendered = if should_reuse {
+                (
+                    cx.window_state.environment_deps_fingerprint_rendered(id),
+                    cx.window_state.layout_query_deps_fingerprint_rendered(id),
+                )
+            } else {
+                (0, 0)
+            };
             let key = stable_hash(&(
-                base_key,
-                rendered_query_fingerprint,
-                rendered_env_fingerprint,
+                theme_revision,
+                scale_bits,
+                props.cache_key,
+                deps_key_rendered.0,
+                deps_key_rendered.1,
             ));
 
             let key_matches = if should_reuse {
@@ -1033,9 +969,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx.window_state
                     .touch_observed_globals_for_element_if_recorded(id);
                 cx.window_state
-                    .touch_observed_layout_queries_for_element_if_recorded(id);
-                cx.window_state
                     .touch_observed_environment_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_layout_queries_for_element_if_recorded(id);
                 Vec::new()
             } else {
                 cx.window_state.begin_view_cache_scope(id);
@@ -1043,13 +979,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 let children = cx.collect_children(built);
                 cx.window_state.end_view_cache_scope(id);
 
-                let next_query_fingerprint = cx.window_state.layout_query_deps_fingerprint_next(id);
-                let next_env_fingerprint = cx.window_state.environment_deps_fingerprint_next(id);
-                let key = stable_hash(&(base_key, next_query_fingerprint, next_env_fingerprint));
+                let deps_key_next = (
+                    cx.window_state.environment_deps_fingerprint_next(id),
+                    cx.window_state.layout_query_deps_fingerprint_next(id),
+                );
+                let key = stable_hash(&(
+                    theme_revision,
+                    scale_bits,
+                    props.cache_key,
+                    deps_key_next.0,
+                    deps_key_next.1,
+                ));
                 cx.window_state.set_view_cache_key(id, key);
                 children
             };
             cx.new_any_element(id, ElementKind::ViewCache(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn focus_scope_with_id<I>(
+        &mut self,
+        props: crate::element::FocusScopeProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx, id);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
 
@@ -1084,23 +1045,6 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         I: IntoIterator<Item = AnyElement>,
     {
         self.layout_query_region_with_id(props, |cx, _id| f(cx))
-    }
-
-    #[track_caller]
-    pub fn focus_scope_with_id<I>(
-        &mut self,
-        props: crate::element::FocusScopeProps,
-        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
-    ) -> AnyElement
-    where
-        I: IntoIterator<Item = AnyElement>,
-    {
-        self.scope(|cx| {
-            let id = cx.root_id();
-            let built = f(cx, id);
-            let children = cx.collect_children(built);
-            cx.new_any_element(id, ElementKind::FocusScope(props), children)
-        })
     }
 
     /// Creates a `Semantics` layout wrapper around the subtree and passes its element id.
@@ -1352,6 +1296,72 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn hit_test_gate<I>(&mut self, hit_test: bool, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.hit_test_gate_props(
+            HitTestGateProps {
+                hit_test,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn hit_test_gate_props<I>(
+        &mut self,
+        props: HitTestGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::HitTestGate(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn focus_traversal_gate<I>(
+        &mut self,
+        traverse: bool,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.focus_traversal_gate_props(
+            FocusTraversalGateProps {
+                traverse,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn focus_traversal_gate_props<I>(
+        &mut self,
+        props: FocusTraversalGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::FocusTraversalGate(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn pressable<I>(
         &mut self,
         props: PressableProps,
@@ -1363,6 +1373,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1371,6 +1384,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1392,6 +1407,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1400,6 +1418,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1421,6 +1441,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1430,6 +1453,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -3180,7 +3205,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         )
     }
 
-    /// Retained-host VirtualList helper (ADR 0177).
+    /// Retained-host VirtualList helper (ADR 0192).
     ///
     /// This is an opt-in surface that stores `'static` row callbacks in element-local state so
     /// the runtime can attach/detach row subtrees when a cache root reuses without rerendering.
@@ -3470,60 +3495,5 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             },
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::test_host::TestHost;
-    use fret_core::{Point, Size};
-
-    #[test]
-    fn element_context_commits_window_insets_from_window_metrics_service() {
-        let mut app = TestHost::new();
-        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
-        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0)));
-
-        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
-            svc.set_prefers_reduced_motion(window, Some(true));
-            svc.set_color_scheme(window, Some(fret_core::ColorScheme::Dark));
-            svc.set_contrast_preference(window, Some(fret_core::ContrastPreference::More));
-            svc.set_forced_colors_mode(window, Some(fret_core::ForcedColorsMode::Active));
-            svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
-            svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
-            svc.set_scale_factor(window, 2.0);
-        });
-
-        let mut runtime = ElementRuntime::default();
-        {
-            let _cx =
-                ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "test");
-        }
-
-        let state = runtime.for_window_mut(window);
-        assert_eq!(state.committed_prefers_reduced_motion(), Some(true));
-        assert_eq!(
-            state.committed_color_scheme(),
-            Some(fret_core::ColorScheme::Dark)
-        );
-        assert_eq!(
-            state.committed_contrast_preference(),
-            Some(fret_core::ContrastPreference::More)
-        );
-        assert_eq!(
-            state.committed_forced_colors_mode(),
-            Some(fret_core::ForcedColorsMode::Active)
-        );
-        assert_eq!(
-            state.committed_safe_area_insets(),
-            Some(Edges::symmetric(Px(8.0), Px(4.0)))
-        );
-        assert_eq!(
-            state.committed_occlusion_insets(),
-            Some(Edges::all(Px(16.0)))
-        );
-        assert_eq!(state.committed_scale_factor(), 2.0);
     }
 }
