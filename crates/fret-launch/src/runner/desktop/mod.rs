@@ -5393,6 +5393,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
     }
 
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        let Some(state) = self.windows.get(window) else {
+            return;
+        };
+        let _ = bring_window_to_front(state.window.as_ref(), None);
+        state.window.request_redraw();
+    }
+
     fn process_pending_front_requests(&mut self, now: Instant) -> bool {
         if self.windows_pending_front.is_empty() {
             return false;

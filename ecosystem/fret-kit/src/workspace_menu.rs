@@ -19,6 +19,7 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;

@@ -287,6 +287,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Run `f` while preserving the current callsite counters snapshot.
+    ///
+    /// This is useful when you need to build a "probe" subtree (e.g. to inspect focus) without
+    /// consuming callsite slots that would otherwise change derived element identities.
+    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let snapshot = self.callsite_counters.clone();
+        let out = f(self);
+        self.callsite_counters = snapshot;
+        out
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this after mutating state/models to schedule a repaint.
