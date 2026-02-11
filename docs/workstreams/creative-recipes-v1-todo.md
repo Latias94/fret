@@ -9,9 +9,9 @@ See:
 
 ## P0 — Foundation (ecosystem)
 
-- [ ] Define `ResolveCtx` + `ResolvedWithFallback<T>` + `DegradationReason` in `ecosystem/fret-ui-kit`.
-- [ ] Add a minimal diagnostics seam for `RecipeDegraded { label, reason }` (best-effort).
-- [ ] Migrate existing recipes (glass/pixelate) to the shared resolve/fallback/report shape without
+- [x] Define `ResolveCtx` + `ResolvedWithFallback<T>` + `DegradationReason` in `ecosystem/fret-ui-kit`.
+- [x] Add a minimal diagnostics seam for `RecipeDegraded { label, reason }` (best-effort).
+- [x] Migrate existing recipes (glass/pixelate) to the shared resolve/fallback/report shape without
       changing their public wrapper signatures.
 - [ ] Create a `VisualCatalog`/`MaterialCatalog` skeleton API and decide where it is stored (app model vs service).
 
@@ -25,17 +25,17 @@ See:
   - [x] Implement baseline kinds: `DotGrid`, `Grid`, `Checkerboard`, `Stripe`, `Noise`, `Beam`,
         `Sparkle`, `ConicSweep`.
   - [x] Add deterministic sanitization + seed/time rules (ADR 0244).
-- [ ] Masks v1 (ADR 0239):
-  - [ ] Add `PushMask/PopMask` ops and gradient mask evaluation.
-  - [ ] Add conformance tests for edge coverage and effect/clip interaction.
-- [ ] Composite groups v1 (ADR 0241):
-  - [ ] Add `PushCompositeGroup/PopCompositeGroup` and blend mode support.
-  - [ ] Wire budgets + deterministic degradation.
+- [x] Masks v1 (ADR 0239):
+  - [x] Add `PushMask/PopMask` ops and gradient mask evaluation.
+  - [x] Add conformance tests for edge coverage and effect/clip interaction.
+- [x] Composite groups v1 (ADR 0247):
+  - [x] Add `PushCompositeGroup/PopCompositeGroup` and blend mode support.
+  - [x] Wire budgets + deterministic degradation.
 
 ## P0 — Motion/pointer seams (UI runtime)
 
-- [ ] Frame clock snapshot read (ADR 0240) exposed to widget contexts (non-reactive).
-- [ ] Pointer motion snapshot + local mapping helper surface (ADR 0243 / ADR 0238).
+- [x] Frame clock snapshot read (ADR 0240) exposed to widget contexts (non-reactive).
+- [x] Pointer motion snapshot + local mapping helper surface (ADR 0243 / ADR 0238).
 
 ## P1 — Recipes and demos
 
@@ -58,8 +58,39 @@ This is the recommended first step for ADR 0242: sampled materials bind a render
 texture selected at registration time (no per-instance `ImageId` yet).
 
 - [ ] Define `BindingShape::ParamsPlusCatalogTexture` in the renderer material registry and
-      capability-gate it (ADR 0122).
+      capability-gate it (ADR 0124).
 - [ ] Add a small catalog texture set (blue-noise/dither) and wire upload + lifetime to the renderer.
 - [ ] Implement at least one sampled baseline material kind (e.g. a higher quality noise/dither
       overlay) that uses the catalog texture in the shader.
 - [ ] Add a conformance test for sampled material rendering and deterministic fallbacks.
+
+## P1 — `fret-ui-magic` (Phase 0)
+
+Land a MagicUI-aligned ecosystem crate that composes the existing kernel primitives via
+`fret-ui-kit` recipes. The goal is fast “creative baseline” parity with stable fallbacks and
+diagnostics, not perfect CSS parity.
+
+- [ ] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
+- [ ] Implement 3–5 seed components (Phase 0):
+  - [ ] `Lens`
+  - [ ] `MagicCard`
+  - [ ] `BorderBeam`
+  - [ ] `Marquee`
+  - [ ] `Dock`
+- [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component.
+- [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
+
+## P1 — External texture imports (v1)
+
+This closes the loop for “real import and run” beyond `ImageId` uploads: platform decoders and/or
+external systems produce GPU textures and the runner imports them without leaking backend handles
+to `fret-ui` (ADR 0234).
+
+- [ ] Land a “contract-path demo” that imports a renderer-owned `wgpu::TextureView` via
+      `ImportedViewportRenderTarget` and shows it in the UI as a `ViewportSurface`:
+  - [ ] resize + fit + lifecycle
+  - [ ] diag bundle evidence (snapshot + screenshot)
+  - [ ] perf baseline for steady-state updates
+- [ ] Add capability gating for a first real backend path:
+  - [ ] web: `VideoFrame`/WebCodecs (if available), or a copy-based fallback
+  - [ ] native: a decode path (software or hardware) with a clear copy/zero-copy policy

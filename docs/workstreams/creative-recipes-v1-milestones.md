@@ -13,6 +13,14 @@ See:
 - Keep existing public helpers (e.g. glass/pixelate wrappers) stable; migrate internals only.
 - Add a minimal diagnostics sink seam for “recipe degraded” events (best-effort).
 
+Status: Landed (partial; catalog skeleton pending)
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/recipes/resolve.rs`
+- `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+- `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
+
 ## M1 — Paint v1 (gradients)
 
 - Land `Paint` and gradient evaluation (ADR 0233) and wire it to `SceneOp::Quad` (and optionally `Path`).
@@ -47,15 +55,39 @@ Evidence:
 - Land `PushMask/PopMask` (ADR 0239) with gradient-only sources.
 - Add conformance tests for coverage correctness and clip/effect interaction boundaries.
 
+Status: Landed
+
+Evidence:
+
+- `crates/fret-core/src/scene/mask.rs`
+- `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushMask/PopMask`)
+- `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
+
 ## M4 — Compositing groups v1 (blend modes)
 
-- Land `PushCompositeGroup/PopCompositeGroup` (ADR 0241) with a small blend vocabulary.
-- Budget intermediates and deterministic degradation (ADR 0118).
+- Land `PushCompositeGroup/PopCompositeGroup` (ADR 0247) with a small blend vocabulary.
+- Budget intermediates and deterministic degradation.
+
+Status: Landed
+
+Evidence:
+
+- `crates/fret-core/src/scene/composite.rs`
+- `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushCompositeGroup/PopCompositeGroup`)
+- `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
 
 ## M5 — Motion + pointer snapshots
 
 - Land frame clock reads (non-reactive) and pointer motion snapshot seam (ADR 0240 / ADR 0243).
 - Add a reduced-motion policy helper in `fret-ui-kit` and verify fallback behavior.
+
+Status: Landed (reduced-motion helper pending)
+
+Evidence:
+
+- `crates/fret-core/src/window.rs` (`WindowFrameClockService`)
+- `crates/fret-ui/src/pointer_motion.rs`
+- `crates/fret-ui/src/widget.rs` (widget-facing read helpers)
 
 ## M6 — Effect steps extension
 
@@ -70,3 +102,14 @@ catalog texture selected at registration time (no per-instance `ImageId` yet).
 - Land `BindingShape::ParamsPlusCatalogTexture` in the renderer registry and capability-gate it.
 - Ship at least one baked catalog texture (blue-noise/dither) and a sampled baseline material.
 - Add a conformance test for sampled materials and deterministic fallback behavior.
+
+## M8 — `fret-ui-magic` (Phase 0)
+
+- Land `ecosystem/fret-ui-magic` as a MagicUI-aligned wrapper crate.
+- Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
+- Add UI gallery entries and `fretboard diag` scripts for each seed component.
+
+## M9 — External texture imports (v1)
+
+- Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
+- Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
