@@ -441,6 +441,9 @@ pub(crate) struct TextFontFaceUsage {
     pub(crate) font_data_id: u64,
     pub(crate) face_index: u32,
     pub(crate) variation_key: u64,
+    pub(crate) synthesis_embolden: bool,
+    /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
+    pub(crate) synthesis_skew_degrees: i8,
     pub(crate) glyphs: u32,
     pub(crate) missing_glyphs: u32,
 }
@@ -570,6 +573,9 @@ struct FontFaceKey {
     font_data_id: u64,
     face_index: u32,
     variation_key: u64,
+    synthesis_embolden: bool,
+    /// Faux italic/oblique skew in degrees (fontique synthesis), applied at rasterization time.
+    synthesis_skew_degrees: i8,
 }
 
 fn variation_key_from_normalized_coords(coords: &[i16]) -> u64 {
@@ -2501,13 +2507,28 @@ impl TextSystem {
             subpixel_bin_as_float(key.x_bin),
             subpixel_bin_as_float(key.y_bin),
         );
-        let Some(image) = parley::swash::scale::Render::new(&[
+        let mut render = parley::swash::scale::Render::new(&[
             parley::swash::scale::Source::ColorOutline(0),
             parley::swash::scale::Source::ColorBitmap(parley::swash::scale::StrikeWith::BestFit),
             parley::swash::scale::Source::Outline,
-        ])
-        .offset(offset_px)
-        .render(&mut scaler, glyph_id) else {
+        ]);
+        render.offset(offset_px);
+
+        if key.font.synthesis_embolden {
+            // `fontique::Synthesis::embolden` is boolean; pick a conservative strength in px.
+            // This is renderer-internal and should only affect raster output + cache identity.
+            let strength = (font_size / 48.0).clamp(0.25, 1.0);
+            render.embolden(strength);
+        }
+
+        if key.font.synthesis_skew_degrees != 0 {
+            let angle =
+                parley::swash::zeno::Angle::from_degrees(key.font.synthesis_skew_degrees as f32);
+            let t = parley::swash::zeno::Transform::skew(angle, parley::swash::zeno::Angle::ZERO);
+            render.transform(Some(t));
+        }
+
+        let Some(image) = render.render(&mut scaler, glyph_id) else {
             return;
         };
         if image.placement.width == 0 || image.placement.height == 0 {
@@ -2794,10 +2815,19 @@ impl TextSystem {
                                     .or_insert_with(|| g.font.clone());
                                 let variation_key =
                                     variation_key_from_normalized_coords(&g.normalized_coords);
+                                let synthesis_embolden = g.synthesis.embolden();
+                                let synthesis_skew_degrees = g
+                                    .synthesis
+                                    .skew()
+                                    .unwrap_or(0.0)
+                                    .clamp(i8::MIN as f32, i8::MAX as f32)
+                                    as i8;
                                 let face_key = FontFaceKey {
                                     font_data_id,
                                     face_index,
                                     variation_key,
+                                    synthesis_embolden,
+                                    synthesis_skew_degrees,
                                 };
                                 if !g.normalized_coords.is_empty() {
                                     self.font_instance_coords_by_face
@@ -3092,10 +3122,19 @@ impl TextSystem {
                                     .or_insert_with(|| g.font.clone());
                                 let variation_key =
                                     variation_key_from_normalized_coords(&g.normalized_coords);
+                                let synthesis_embolden = g.synthesis.embolden();
+                                let synthesis_skew_degrees = g
+                                    .synthesis
+                                    .skew()
+                                    .unwrap_or(0.0)
+                                    .clamp(i8::MIN as f32, i8::MAX as f32)
+                                    as i8;
                                 let face_key = FontFaceKey {
                                     font_data_id,
                                     face_index,
                                     variation_key,
+                                    synthesis_embolden,
+                                    synthesis_skew_degrees,
                                 };
                                 if !g.normalized_coords.is_empty() {
                                     self.font_instance_coords_by_face
@@ -3306,6 +3345,8 @@ impl TextSystem {
                         font_data_id: face.font_data_id,
                         face_index: face.face_index,
                         variation_key: face.variation_key,
+                        synthesis_embolden: face.synthesis_embolden,
+                        synthesis_skew_degrees: face.synthesis_skew_degrees,
                         glyphs,
                         missing_glyphs: missing,
                     });
@@ -3316,6 +3357,8 @@ impl TextSystem {
                         .then_with(|| a.font_data_id.cmp(&b.font_data_id))
                         .then_with(|| a.face_index.cmp(&b.face_index))
                         .then_with(|| a.variation_key.cmp(&b.variation_key))
+                        .then_with(|| a.synthesis_embolden.cmp(&b.synthesis_embolden))
+                        .then_with(|| a.synthesis_skew_degrees.cmp(&b.synthesis_skew_degrees))
                 });
 
                 Arc::new(TextShape {
@@ -6630,6 +6673,107 @@ mod tests {
         assert_ne!(
             bytes_light, bytes_heavy,
             "expected raster output to differ across variable font weights"
+        );
+    }
+
+    #[test]
+    fn synthesis_skew_participates_in_face_key_and_raster_output() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::cjk_lite_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected cjk-lite fonts to load");
+
+        let family = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family)),
+            "expected {family} to be present after loading test font"
+        );
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let style_normal = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(96.0),
+            slant: fret_core::TextSlant::Normal,
+            ..Default::default()
+        };
+        let style_italic = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(96.0),
+            slant: fret_core::TextSlant::Italic,
+            ..Default::default()
+        };
+
+        let (blob_normal, _) = text.prepare("你", &style_normal, constraints);
+        let key_normal = {
+            let blob = text.blob(blob_normal).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        let (blob_italic, _) = text.prepare("你", &style_italic, constraints);
+        let key_italic = {
+            let blob = text.blob(blob_italic).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        assert_eq!(
+            key_normal.font.font_data_id, key_italic.font.font_data_id,
+            "expected both styles to use the same font data blob"
+        );
+        assert_eq!(
+            key_normal.font.face_index, key_italic.font.face_index,
+            "expected both styles to use the same face index"
+        );
+        assert_eq!(
+            key_normal.font.variation_key, key_italic.font.variation_key,
+            "expected both styles to use the same variation coordinates"
+        );
+        assert_eq!(
+            key_normal.font.synthesis_skew_degrees, 0,
+            "expected the base style to require no faux skew"
+        );
+        assert_ne!(
+            key_italic.font.synthesis_skew_degrees, 0,
+            "expected italic request to trigger a faux skew when no italic face is available"
+        );
+
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+        let epoch = 1;
+
+        text.ensure_glyph_in_atlas(key_normal, epoch);
+        let bytes_normal = pending_upload_bytes_for_key(&text, key_normal);
+
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+
+        text.ensure_glyph_in_atlas(key_italic, epoch);
+        let bytes_italic = pending_upload_bytes_for_key(&text, key_italic);
+
+        assert_ne!(
+            bytes_normal, bytes_italic,
+            "expected raster output to differ when faux skew is applied"
         );
     }
 
