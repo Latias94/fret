@@ -38,6 +38,21 @@ pub struct EventCx<'a, H: UiHost> {
     pub layer_root: Option<NodeId>,
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
+    /// Window scale factor recorded by the UI tree on the most recent layout pass.
+    ///
+    /// This is best-effort: events may arrive before the first layout, in which case the value
+    /// defaults to `1.0`.
+    pub scale_factor: f32,
+    /// The incoming pointer position in window-local logical pixels (before any transform-aware
+    /// mapping performed by the UI runtime).
+    ///
+    /// When an event does not carry a pointer position, this is `None`.
+    pub event_window_position: Option<Point>,
+    /// The incoming wheel delta in window-local logical pixels (before any transform-aware
+    /// mapping performed by the UI runtime).
+    ///
+    /// When the current event is not a wheel event, this is `None`.
+    pub event_window_wheel_delta: Option<Point>,
     pub input_ctx: InputContext,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
@@ -56,6 +71,57 @@ pub struct EventCx<'a, H: UiHost> {
 impl<'a, H: UiHost> EventCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
+    }
+
+    /// Returns the pointer position in the current widget's local coordinate space (origin at
+    /// `(0, 0)`), derived from the mapped event position.
+    ///
+    /// Notes:
+    /// - The UI runtime maps pointer event positions into each widget's untransformed layout
+    ///   space (ADR 0238), so `event.position` is in the same space as `self.bounds`.
+    /// - This helper is purely derived and does not introduce state.
+    pub fn pointer_position_local(&self, event: &Event) -> Option<Point> {
+        let pos = Self::pointer_position_mapped(event)?;
+        Some(Point::new(
+            fret_core::Px(pos.x.0 - self.bounds.origin.x.0),
+            fret_core::Px(pos.y.0 - self.bounds.origin.y.0),
+        ))
+    }
+
+    /// Returns the pointer position in window-local logical pixels (pre-mapping).
+    pub fn pointer_position_window(&self, event: &Event) -> Option<Point> {
+        Self::pointer_position_mapped(event).and(self.event_window_position)
+    }
+
+    /// Returns the wheel delta in the current widget's local coordinate space (origin at
+    /// `(0, 0)`), derived from the mapped event delta.
+    pub fn pointer_delta_local(&self, event: &Event) -> Option<Point> {
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        }
+    }
+
+    /// Returns the wheel delta in window-local logical pixels (pre-mapping).
+    pub fn pointer_delta_window(&self, event: &Event) -> Option<Point> {
+        self.pointer_delta_local(event)
+            .and(self.event_window_wheel_delta)
+    }
+
+    fn pointer_position_mapped(event: &Event) -> Option<Point> {
+        match event {
+            Event::Pointer(e) => match e {
+                fret_core::PointerEvent::Move { position, .. }
+                | fret_core::PointerEvent::Down { position, .. }
+                | fret_core::PointerEvent::Up { position, .. }
+                | fret_core::PointerEvent::Wheel { position, .. }
+                | fret_core::PointerEvent::PinchGesture { position, .. } => Some(*position),
+            },
+            Event::PointerCancel(e) => e.position,
+            Event::ExternalDrag(e) => Some(e.position),
+            Event::InternalDrag(e) => Some(e.position),
+            _ => None,
+        }
     }
 
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {

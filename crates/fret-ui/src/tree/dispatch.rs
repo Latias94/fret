@@ -717,6 +717,11 @@ impl<H: UiHost> UiTree<H> {
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
         let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let event_window_position = event_position(event);
+        let event_window_wheel_delta = match event {
+            Event::Pointer(PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        };
 
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
@@ -742,6 +747,9 @@ impl<H: UiHost> UiTree<H> {
                         layer_root: tree.node_root(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
+                        scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                        event_window_position,
+                        event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
@@ -887,6 +895,9 @@ impl<H: UiHost> UiTree<H> {
                     layer_root: tree.node_root(node_id),
                     window: tree.window,
                     pointer_id: pointer_id_for_capture,
+                    scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                    event_window_position,
+                    event_window_wheel_delta,
                     input_ctx: input_ctx.clone(),
                     prevented_default_actions: &mut prevented_default_actions,
                     children,
@@ -1343,6 +1354,11 @@ impl<H: UiHost> UiTree<H> {
         let mut wheel_stop_node: Option<NodeId> = None;
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
         let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let event_window_position = event_position(event);
+        let event_window_wheel_delta = match event {
+            Event::Pointer(PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        };
         let mut focus_requested = false;
         let mut defer_escape_overlay_dismiss = false;
 
@@ -1857,6 +1873,9 @@ impl<H: UiHost> UiTree<H> {
                             layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
+                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                            event_window_position,
+                            event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
@@ -1991,6 +2010,9 @@ impl<H: UiHost> UiTree<H> {
                             layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
+                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                            event_window_position,
+                            event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
@@ -2140,6 +2162,9 @@ impl<H: UiHost> UiTree<H> {
                             layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
+                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                            event_window_position,
+                            event_window_wheel_delta,
                             input_ctx: capture_ctx.clone(),
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
@@ -2264,6 +2289,9 @@ impl<H: UiHost> UiTree<H> {
                             layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
+                            scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                            event_window_position,
+                            event_window_wheel_delta,
                             input_ctx: bubble_ctx.clone(),
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
@@ -2415,6 +2443,9 @@ impl<H: UiHost> UiTree<H> {
                         layer_root: tree.node_root(node_id),
                         window: tree.window,
                         pointer_id: event_pointer_id_for_capture,
+                        scale_factor: tree.last_layout_scale_factor.unwrap_or(1.0),
+                        event_window_position,
+                        event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
