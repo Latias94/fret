@@ -2,6 +2,7 @@ mod registry;
 
 use std::ops::Range;
 
+pub use registry::HIGHLIGHT_NAMES;
 pub use registry::supported_languages;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

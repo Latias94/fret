@@ -10,6 +10,9 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/docking-nary-split-graph-v1.md`
+- `docs/workstreams/docking-nary-split-graph-v1-todo.md`
+- `docs/workstreams/docking-nary-split-graph-v1-milestones.md`
 - `docs/workstreams/workspace-crate-boundaries-v1.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
