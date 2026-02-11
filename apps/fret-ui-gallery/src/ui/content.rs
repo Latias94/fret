@@ -269,26 +269,15 @@ pub(crate) fn content_view(
     let content = content_inner.test_id("ui-gallery-content-scroll");
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        let safe_area =
-            fret_ui_kit::declarative::safe_area_insets_or_zero(cx, fret_ui::Invalidation::Layout);
-        let occlusion =
-            fret_ui_kit::declarative::occlusion_insets_or_zero(cx, fret_ui::Invalidation::Layout);
         let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
         let chrome = ChromeRefinement {
-            padding: Some(fret_ui_kit::PaddingRefinement {
-                top: Some(fret_ui_kit::MetricRef::Px(Px(
-                    base_padding.0 + safe_area.top.0
-                ))),
-                right: Some(fret_ui_kit::MetricRef::Px(Px(
-                    base_padding.0 + safe_area.right.0
-                ))),
-                bottom: Some(fret_ui_kit::MetricRef::Px(Px(base_padding.0
-                    + safe_area.bottom.0
-                    + occlusion.bottom.0))),
-                left: Some(fret_ui_kit::MetricRef::Px(Px(
-                    base_padding.0 + safe_area.left.0
-                ))),
-            }),
+            padding: Some(
+                fret_ui_kit::declarative::window_insets_padding_refinement_or_zero(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    base_padding,
+                ),
+            ),
             background: Some(ColorRef::Color(theme.color_required("background"))),
             ..ChromeRefinement::default()
         };
