@@ -732,6 +732,7 @@ fn page_preview(
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
         PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
+        PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
         PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
         PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
@@ -20770,6 +20771,165 @@ fn preview_ai_tool_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
                 cx.text("Click the header to toggle details; examples below show status mapping."),
                 gate_tool,
                 examples,
+            ]
+        },
+    )]
+}
+
+fn preview_ai_web_preview_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_icons::IconId;
+    use fret_ui::Invalidation;
+    use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct DemoState {
+        url: Option<Model<String>>,
+        commits: Option<Model<u32>>,
+    }
+
+    let needs_init = cx.with_state(DemoState::default, |st| {
+        st.url.is_none() || st.commits.is_none()
+    });
+    if needs_init {
+        let url = cx
+            .app
+            .models_mut()
+            .insert(String::from("https://example.com"));
+        let commits = cx.app.models_mut().insert(0_u32);
+        cx.with_state(DemoState::default, move |st| {
+            st.url = Some(url.clone());
+            st.commits = Some(commits.clone());
+        });
+    }
+
+    let (url, commits) = cx.with_state(DemoState::default, |st| {
+        (
+            st.url.clone().expect("url model must be initialized"),
+            st.commits
+                .clone()
+                .expect("commits model must be initialized"),
+        )
+    });
+
+    let on_url_change: ui_ai::OnWebPreviewUrlChange = {
+        let commits = commits.clone();
+        Arc::new(
+            move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  _url: Arc<str>| {
+                let _ = host
+                    .models_mut()
+                    .update(&commits, |v| *v = v.saturating_add(1));
+                host.request_redraw(action_cx.window);
+            },
+        )
+    };
+
+    let demo = ui_ai::WebPreview::new()
+        .url_model(url.clone())
+        .on_url_change(on_url_change)
+        .test_id_root("ui-ai-web-preview-demo-root")
+        .into_element_with_children(cx, move |cx, _controller| {
+            let back = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+                cx,
+                IconId::new_static("lucide.arrow-left"),
+            )])
+            .tooltip("Back")
+            .disabled(true)
+            .test_id("ui-ai-web-preview-demo-nav-back")
+            .into_element(cx);
+
+            let forward = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+                cx,
+                IconId::new_static("lucide.arrow-right"),
+            )])
+            .tooltip("Forward")
+            .disabled(true)
+            .test_id("ui-ai-web-preview-demo-nav-forward")
+            .into_element(cx);
+
+            let reload = ui_ai::WebPreviewNavigationButton::new([shadcn::icon::icon(
+                cx,
+                IconId::new_static("lucide.rotate-cw"),
+            )])
+            .tooltip("Reload")
+            .test_id("ui-ai-web-preview-demo-nav-reload")
+            .into_element(cx);
+
+            let url_input = ui_ai::WebPreviewUrl::new()
+                .placeholder("Enter URL…")
+                .test_id("ui-ai-web-preview-demo-url")
+                .into_element(cx);
+
+            let nav = ui_ai::WebPreviewNavigation::new([back, forward, reload, url_input])
+                .test_id("ui-ai-web-preview-demo-nav")
+                .into_element(cx);
+
+            let body = ui_ai::WebPreviewBody::new()
+                .test_id("ui-ai-web-preview-demo-body")
+                .into_element(cx);
+
+            let logs: Arc<[ui_ai::WebPreviewConsoleLog]> = Arc::from(vec![
+                ui_ai::WebPreviewConsoleLog::new(ui_ai::WebPreviewConsoleLogLevel::Log, "ready")
+                    .timestamp("12:00:00"),
+                ui_ai::WebPreviewConsoleLog::new(
+                    ui_ai::WebPreviewConsoleLogLevel::Warn,
+                    "slow network",
+                )
+                .timestamp("12:00:02"),
+                ui_ai::WebPreviewConsoleLog::new(
+                    ui_ai::WebPreviewConsoleLogLevel::Error,
+                    "failed to load resource",
+                )
+                .timestamp("12:00:04"),
+            ]);
+
+            let console = ui_ai::WebPreviewConsole::new()
+                .logs(logs)
+                .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
+                .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
+                .into_element(cx);
+
+            let commits_now = cx
+                .get_model_copied(&commits, Invalidation::Layout)
+                .unwrap_or(0);
+            let marker = cx.text(format!("commits={commits_now}")).attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id(if commits_now > 0 {
+                        "ui-ai-web-preview-demo-committed-true"
+                    } else {
+                        "ui-ai-web-preview-demo-committed-false"
+                    }),
+            );
+
+            vec![nav, body, console, marker]
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("WebPreview (AI Elements)"),
+                cx.text("URL input + console chrome demo (webview backend is host-owned)."),
+                cx.semantics(
+                    SemanticsProps {
+                        role: fret_core::SemanticsRole::Group,
+                        test_id: Some(Arc::<str>::from("ui-ai-web-preview-demo-page")),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![demo],
+                ),
             ]
         },
     )]

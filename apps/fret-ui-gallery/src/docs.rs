@@ -1084,6 +1084,30 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_WEB_PREVIEW_DEMO: &str = r#"
+## AI web preview (demo)
+
+This page is a small demo for the AI Elements-aligned `WebPreview` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- URL draft input + Enter-to-commit behavior (`Input::on_submit`),
+- basic navigation chrome composition (icon buttons + separators),
+- console disclosure surface + stable `test_id` anchors for `fretboard diag` gates.
+
+Note: this demo renders **chrome only** (no embedded webview yet). The actual webview backend is
+expected to be host/platform-owned and gated behind optional features.
+"#;
+
+pub(crate) const USAGE_AI_WEB_PREVIEW_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    WebPreview, WebPreviewBody, WebPreviewConsole, WebPreviewConsoleLog, WebPreviewConsoleLogLevel,
+    WebPreviewController, WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewUrl,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_MODEL_SELECTOR_DEMO: &str = r#"
 ## AI model selector (demo)
 
