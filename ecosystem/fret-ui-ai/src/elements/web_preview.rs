@@ -24,7 +24,7 @@ use fret_ui_shadcn::{
 #[cfg(feature = "webview")]
 use fret_webview::{
     WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_push_request,
-    webview_register_surface, webview_runtime_state,
+    webview_register_surface_tracked, webview_runtime_state,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -641,6 +641,7 @@ impl WebPreviewNavigationButton {
 
         #[cfg(feature = "webview")]
         let backend_action = self.backend_action;
+        #[cfg(feature = "webview")]
         let user_on_activate = self.on_activate;
 
         #[cfg(not(feature = "webview"))]
@@ -905,7 +906,7 @@ impl WebPreviewBody {
         };
         #[cfg(feature = "webview")]
         if let Some(backend) = controller.backend.as_ref() {
-            webview_register_surface(
+            webview_register_surface_tracked(
                 cx.app,
                 WebViewSurfaceRegistration::new(backend.id, cx.window, test_id.clone())
                     .visible(true),

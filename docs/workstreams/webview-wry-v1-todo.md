@@ -32,11 +32,15 @@ Tracking format:
 - [~] WEBVIEW-WRY1-host-002 Implement lifecycle: create/destroy per app window.
   - Done: switching `WebPreview` backend IDs destroys the previous instance.
   - Done: window close path destroys all hosted instances and clears surface registrations (best-effort).
-  - TODO: unmount-driven destroy is not solved in v1 retained authoring (needs an explicit lifecycle hook or host-side GC policy).
+  - TODO: unmount-driven destroy is handled via surface-driven GC (below).
 - [x] WEBVIEW-WRY1-host-003 Route navigation intents to backend (load/go_back/go_forward/reload).
 - [x] WEBVIEW-WRY1-host-004 Emit navigation state events back into a model/UI-consumable place.
   - Implemented: backend emits `WebViewEvent::NavigationStateChanged` + `UrlChanged` + `TitleChanged`.
   - Host derives `WebViewRuntimeState` and UI polls it via `webview_runtime_state(...)`.
+- [x] WEBVIEW-WRY1-host-005 Implement surface-driven GC for unmounted surfaces.
+  - Track `last_registered_frame` for each registered surface.
+  - Sweep by window and enqueue `Destroy` after a small grace window.
+  - Ensure this does not require semantics snapshots to be enabled.
 
 ## M2 — `WebPreview` end-to-end (feature-gated)
 

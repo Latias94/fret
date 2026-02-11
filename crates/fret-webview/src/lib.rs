@@ -16,7 +16,7 @@ use std::{
 };
 
 use fret_core::{AppWindowId, Rect, SemanticsSnapshot};
-use fret_runtime::GlobalsHost;
+use fret_runtime::{GlobalsHost, TimeHost};
 
 /// Stable identifier for a hosted webview instance.
 ///
@@ -194,14 +194,101 @@ impl WebViewHost {
         self.requests = head;
     }
 
+    pub fn drop_requests_for_ids(&mut self, ids: &[WebViewId]) -> usize {
+        use std::collections::HashSet;
+
+        let ids: HashSet<WebViewId> = ids.iter().copied().collect();
+        let before = self.requests.len();
+        self.requests.retain(|req| match req {
+            WebViewRequest::Create { id, .. } => !ids.contains(id),
+            WebViewRequest::Destroy { id } => !ids.contains(id),
+            WebViewRequest::SetPlacement { id, .. } => !ids.contains(id),
+            WebViewRequest::LoadUrl { id, .. } => !ids.contains(id),
+            WebViewRequest::GoBack { id } => !ids.contains(id),
+            WebViewRequest::GoForward { id } => !ids.contains(id),
+            WebViewRequest::Reload { id } => !ids.contains(id),
+        });
+        before.saturating_sub(self.requests.len())
+    }
+
+    pub fn drop_requests_for_window_close(
+        &mut self,
+        window: AppWindowId,
+        ids: &[WebViewId],
+    ) -> usize {
+        use std::collections::HashSet;
+
+        let ids: HashSet<WebViewId> = ids.iter().copied().collect();
+        let before = self.requests.len();
+        self.requests.retain(|req| match req {
+            WebViewRequest::Create { id, window: w, .. } => *w != window && !ids.contains(id),
+            WebViewRequest::Destroy { id } => !ids.contains(id),
+            WebViewRequest::SetPlacement { id, .. } => !ids.contains(id),
+            WebViewRequest::LoadUrl { id, .. } => !ids.contains(id),
+            WebViewRequest::GoBack { id } => !ids.contains(id),
+            WebViewRequest::GoForward { id } => !ids.contains(id),
+            WebViewRequest::Reload { id } => !ids.contains(id),
+        });
+        before.saturating_sub(self.requests.len())
+    }
+
     pub fn register_surface(&mut self, surface: WebViewSurfaceRegistration) {
         self.surfaces.insert(surface.id, surface);
+    }
+
+    pub fn remove_surfaces_for_window(
+        &mut self,
+        window: AppWindowId,
+    ) -> Vec<WebViewSurfaceRegistration> {
+        let ids = self
+            .surfaces
+            .iter()
+            .filter_map(|(id, s)| (s.window == window).then_some(*id))
+            .collect::<Vec<_>>();
+
+        let mut removed = Vec::new();
+        for id in ids {
+            if let Some(s) = self.surfaces.remove(&id) {
+                removed.push(s);
+            }
+            self.runtime.remove(&id);
+        }
+        removed
+    }
+
+    pub fn gc_stale_surfaces(
+        &mut self,
+        window: AppWindowId,
+        now_frame: u64,
+        grace_frames: u64,
+    ) -> Vec<WebViewId> {
+        let stale = self
+            .surfaces
+            .values()
+            .filter(|s| {
+                s.window == window
+                    && now_frame.saturating_sub(s.last_registered_frame) > grace_frames
+            })
+            .map(|s| s.id)
+            .collect::<Vec<_>>();
+
+        if !stale.is_empty() {
+            let _ = self.drop_requests_for_ids(&stale);
+        }
+
+        for id in &stale {
+            self.surfaces.remove(id);
+            self.runtime.remove(id);
+            self.requests.push_back(WebViewRequest::Destroy { id: *id });
+        }
+
+        stale
     }
 
     fn apply_event_to_runtime(&mut self, event: &WebViewEvent) {
         match event {
             WebViewEvent::Created { id } => {
-                self.runtime.entry(*id).or_default();
+                self.runtime.insert(*id, WebViewRuntimeState::default());
             }
             WebViewEvent::Destroyed { id } => {
                 self.runtime.remove(id);
@@ -260,6 +347,7 @@ pub struct WebViewSurfaceRegistration {
     pub window: AppWindowId,
     pub surface_test_id: Arc<str>,
     pub visible: bool,
+    pub last_registered_frame: u64,
 }
 
 impl WebViewSurfaceRegistration {
@@ -269,6 +357,7 @@ impl WebViewSurfaceRegistration {
             window,
             surface_test_id: surface_test_id.into(),
             visible: true,
+            last_registered_frame: 0,
         }
     }
 
@@ -338,6 +427,44 @@ pub fn webview_runtime_state(
 
 pub fn webview_register_surface(host: &mut impl GlobalsHost, surface: WebViewSurfaceRegistration) {
     with_webview_host_mut(host, |st| st.register_surface(surface));
+}
+
+pub fn webview_register_surface_tracked(
+    host: &mut (impl GlobalsHost + TimeHost),
+    mut surface: WebViewSurfaceRegistration,
+) {
+    surface.last_registered_frame = host.frame_id().0;
+    with_webview_host_mut(host, |st| st.register_surface(surface));
+}
+
+pub fn webview_remove_surfaces_for_window(
+    host: &mut impl GlobalsHost,
+    window: AppWindowId,
+) -> Vec<WebViewSurfaceRegistration> {
+    with_webview_host_mut(host, |st| st.remove_surfaces_for_window(window))
+}
+
+pub fn webview_drop_requests_for_ids(host: &mut impl GlobalsHost, ids: &[WebViewId]) -> usize {
+    with_webview_host_mut(host, |st| st.drop_requests_for_ids(ids))
+}
+
+pub fn webview_drop_requests_for_window_close(
+    host: &mut impl GlobalsHost,
+    window: AppWindowId,
+    ids: &[WebViewId],
+) -> usize {
+    with_webview_host_mut(host, |st| st.drop_requests_for_window_close(window, ids))
+}
+
+pub fn webview_gc_stale_surfaces(
+    host: &mut impl GlobalsHost,
+    window: AppWindowId,
+    now_frame: u64,
+    grace_frames: u64,
+) -> Vec<WebViewId> {
+    with_webview_host_mut(host, |st| {
+        st.gc_stale_surfaces(window, now_frame, grace_frames)
+    })
 }
 
 pub fn webview_has_surfaces_for_window(host: &impl GlobalsHost, window: AppWindowId) -> bool {
@@ -493,5 +620,88 @@ mod tests {
         assert_eq!(st.url.as_deref(), Some("https://example.com"));
         assert_eq!(st.title.as_deref(), Some("Example Domain"));
         assert!(st.navigation.is_loading);
+    }
+
+    #[test]
+    fn gc_stale_surfaces_drops_requests_only_for_stale_ids() {
+        let window = AppWindowId::default();
+        let id_stale = WebViewId(1);
+        let id_live = WebViewId(2);
+
+        let mut host = WebViewHost::default();
+
+        let mut stale = WebViewSurfaceRegistration::new(id_stale, window, "surface-stale");
+        stale.last_registered_frame = 0;
+        host.register_surface(stale);
+
+        let mut live = WebViewSurfaceRegistration::new(id_live, window, "surface-live");
+        live.last_registered_frame = 10;
+        host.register_surface(live);
+
+        host.push_request(WebViewRequest::Create {
+            id: id_stale,
+            window,
+            initial_url: Arc::<str>::from("https://example.com"),
+        });
+        host.push_request(WebViewRequest::Create {
+            id: id_live,
+            window,
+            initial_url: Arc::<str>::from("https://example.org"),
+        });
+
+        let stale_ids = host.gc_stale_surfaces(window, 10, 2);
+        assert_eq!(stale_ids, vec![id_stale]);
+
+        let requests = host.drain_requests();
+        assert_eq!(
+            requests,
+            vec![
+                WebViewRequest::Create {
+                    id: id_live,
+                    window,
+                    initial_url: Arc::<str>::from("https://example.org"),
+                },
+                WebViewRequest::Destroy { id: id_stale },
+            ]
+        );
+    }
+
+    #[test]
+    fn drop_requests_for_window_close_drops_creates_for_window() {
+        let window_a = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(slotmap::KeyData::from_ffi(2));
+        let id_a1 = WebViewId(1);
+        let id_a2 = WebViewId(2);
+        let id_b = WebViewId(3);
+
+        let mut host = WebViewHost::default();
+        host.push_request(WebViewRequest::Create {
+            id: id_a1,
+            window: window_a,
+            initial_url: Arc::<str>::from("https://a1"),
+        });
+        host.push_request(WebViewRequest::Create {
+            id: id_a2,
+            window: window_a,
+            initial_url: Arc::<str>::from("https://a2"),
+        });
+        host.push_request(WebViewRequest::Create {
+            id: id_b,
+            window: window_b,
+            initial_url: Arc::<str>::from("https://b"),
+        });
+
+        let dropped = host.drop_requests_for_window_close(window_a, &[id_a1]);
+        assert_eq!(dropped, 2);
+
+        let remaining = host.drain_requests();
+        assert_eq!(
+            remaining,
+            vec![WebViewRequest::Create {
+                id: id_b,
+                window: window_b,
+                initial_url: Arc::<str>::from("https://b"),
+            }]
+        );
     }
 }

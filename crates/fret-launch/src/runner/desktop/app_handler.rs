@@ -960,6 +960,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         // from the semantics snapshot.
                         //
                         // We only compute a snapshot when a surface is registered for this window.
+                        let _stale = fret_webview::webview_gc_stale_surfaces(
+                            &mut self.app,
+                            app_window,
+                            self.frame_id.0,
+                            2,
+                        );
                         let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
                             if fret_webview::webview_has_surfaces_for_window(&self.app, app_window)
                             {

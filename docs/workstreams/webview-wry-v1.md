@@ -148,6 +148,31 @@ See TODO tracker: `docs/workstreams/webview-wry-v1-todo.md`.
   we pin the demo height explicitly; in real apps prefer placing `WebPreview` in a flex container
   that provides height (docking panel, split, viewport).
 
+## Lifecycle + GC policy (v1)
+
+Problem: a native child WebView can outlive its UI surface in a retained tree (page change, tab
+close, panel unmount). If we do not destroy it, it may:
+
+- continue to occlude GPU-rendered UI,
+- keep capturing input,
+- leak OS/webview resources.
+
+v1 policy: **surface-driven GC** owned by the runner/host.
+
+- UI/policy code registers a `WebViewSurfaceRegistration` **every frame** while mounted.
+- The host stores `last_registered_frame` for each surface.
+- Runner periodically sweeps per window:
+  - if `now_frame - last_registered_frame > grace_frames`, enqueue `Destroy { id }` and clear the
+    surface/runtime state.
+
+Notes:
+
+- This does not require explicit “unmount hooks” in `fret-ui` and works for any retained authoring
+  style as long as the surface registers each frame.
+- Callers should prefer the tracked helper that records `frame_id` on register:
+  - `webview_register_surface_tracked(...)` (records `last_registered_frame` from `TimeHost::frame_id()`).
+- Runner/host uses `webview_gc_stale_surfaces(...)` to enqueue `Destroy` for stale registrations.
+
 ## Known gaps (v1)
 
 - `can_go_back/can_go_forward` is derived from a backend-side best-effort history tracker and may

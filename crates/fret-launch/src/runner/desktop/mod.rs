@@ -3032,19 +3032,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(feature = "webview-wry")]
         {
             let events = self.webviews_wry.destroy_all_for_window(window);
+            let mut ids = Vec::new();
+            for ev in &events {
+                if let fret_webview::WebViewEvent::Destroyed { id } = ev {
+                    ids.push(*id);
+                }
+            }
+
             if !events.is_empty() {
                 fret_webview::webview_push_events(&mut self.app, events);
             }
 
-            // Best-effort cleanup for any registered surfaces (even if no backend instance was
-            // created yet).
-            let surfaces = fret_webview::webview_surfaces_for_window(&self.app, window);
-            if !surfaces.is_empty() {
-                fret_webview::webview_push_events(
+            // Clear any registered surfaces (even if no backend instance was created yet).
+            let removed = fret_webview::webview_remove_surfaces_for_window(&mut self.app, window);
+            ids.extend(removed.into_iter().map(|s| s.id));
+            ids.sort_by_key(|id| id.0);
+            ids.dedup();
+
+            // Drop any queued requests for this window/ids to avoid requeue loops (e.g. a `Create`
+            // request for a closed window).
+            if !ids.is_empty() {
+                let _ = fret_webview::webview_drop_requests_for_window_close(
                     &mut self.app,
-                    surfaces
-                        .into_iter()
-                        .map(|s| fret_webview::WebViewEvent::Destroyed { id: s.id }),
+                    window,
+                    &ids,
                 );
             }
         }
