@@ -19,6 +19,6 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn" }
 fret-icons = { path = "../fret-icons" }
-fret-markdown = { path = "../fret-markdown" }
+fret-markdown = { path = "../fret-markdown", default-features = false }
 serde_json.workspace = true
 serde.workspace = true
