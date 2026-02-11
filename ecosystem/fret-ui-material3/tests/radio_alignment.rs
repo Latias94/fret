@@ -736,6 +736,16 @@ fn pointer_move(pointer_id: PointerId, position: Point) -> Event {
     })
 }
 
+fn pointer_move_touch(pointer_id: PointerId, position: Point) -> Event {
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: MouseButtons::default(),
+        modifiers: Modifiers::default(),
+        pointer_type: PointerType::Touch,
+    })
+}
+
 fn pointer_up(pointer_id: PointerId, position: Point) -> Event {
     Event::Pointer(PointerEvent::Up {
         pointer_id,
@@ -5131,6 +5141,100 @@ fn rich_tooltip_opens_and_closes_on_hover_smoke() {
         }
     }
     assert!(closed, "expected rich tooltip to close after unhover");
+}
+
+#[test]
+fn tooltip_does_not_open_on_touch_move() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with_elements(cx, |cx| {
+                    let trigger = Button::new("Trigger")
+                        .test_id("tooltip-trigger")
+                        .into_element(cx);
+                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tooltip)]
+                })
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("tooltip-trigger") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected tooltip-trigger in semantics snapshot");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected tooltip-trigger bounds");
+    let hover_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move_touch(PointerId(1), hover_at),
+    );
+
+    for _ in 0..6 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        assert!(
+            !stack
+                .stack
+                .iter()
+                .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible),
+            "expected tooltip to remain closed when primary pointer is touch"
+        );
+    }
 }
 
 #[test]
