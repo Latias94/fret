@@ -20835,7 +20835,14 @@ fn preview_ai_web_preview_demo(
     let mut demo = ui_ai::WebPreview::new()
         .url_model(url.clone())
         .on_url_change(on_url_change)
-        .test_id_root("ui-ai-web-preview-demo-root");
+        .test_id_root("ui-ai-web-preview-demo-root")
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .min_h_0()
+                .h_px(Px(560.0)),
+        );
 
     #[cfg(feature = "webview-wry")]
     {
