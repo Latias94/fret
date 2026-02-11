@@ -287,6 +287,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Run `f` while discarding any callsite-counter mutations.
+    ///
+    /// This is useful for "probe" passes that need to build a subtree (e.g. to inspect focus) but
+    /// must not perturb the element-id derivation of the main render pass.
+    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let snapshot = self.callsite_counters.clone();
+        let out = f(self);
+        self.callsite_counters = snapshot;
+        debug_assert_eq!(self.callsite_counters.len(), self.stack.len());
+        out
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this after mutating state/models to schedule a repaint.
