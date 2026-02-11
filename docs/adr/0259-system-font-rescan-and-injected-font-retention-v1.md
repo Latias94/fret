@@ -75,6 +75,15 @@ This retention cache is:
 
 If a font blob is evicted, it may not survive a subsequent system rescan.
 
+### 4) Deterministic baseline knob (disable system fonts)
+
+To make scripted diagnostics and CI-friendly conformance checks reproducible across machines, Fret supports a
+debug-only “no system fonts” mode on native:
+
+- Set `FRET_TEXT_SYSTEM_FONTS=0` (or `false`/`no`/`off`) to disable system font discovery.
+- The renderer then behaves like wasm/bundled-only builds: only injected/bundled fonts participate in selection and
+  fallback.
+
 ## Consequences
 
 - System font rescans do not have to block the UI thread on desktop (default).

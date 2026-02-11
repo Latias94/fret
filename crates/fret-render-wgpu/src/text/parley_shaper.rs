@@ -16,6 +16,14 @@ use std::sync::Arc;
 
 use super::FontCatalogEntryMetadata;
 
+fn env_disables_system_fonts() -> bool {
+    let Ok(raw) = std::env::var("FRET_TEXT_SYSTEM_FONTS") else {
+        return false;
+    };
+    let v = raw.trim().to_ascii_lowercase();
+    matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
+
 fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
     let ascent = ascent.max(0.0);
     let descent_mag = if descent.is_sign_negative() {
@@ -127,7 +135,11 @@ impl Default for ParleyShaper {
 
 impl ParleyShaper {
     pub fn new() -> Self {
-        Self::default()
+        let mut out = Self::default();
+        if env_disables_system_fonts() {
+            out.disable_system_fonts();
+        }
+        out
     }
 
     #[cfg(test)]
@@ -213,17 +225,22 @@ impl ParleyShaper {
         &self.common_fallback_stack_suffix
     }
 
-    #[cfg(test)]
-    #[allow(dead_code)]
-    pub fn new_without_system_fonts() -> Self {
-        let mut out = Self::default();
-        out.fcx.collection =
+    fn disable_system_fonts(&mut self) {
+        self.fcx.collection =
             parley::fontique::Collection::new(parley::fontique::CollectionOptions {
                 shared: false,
                 system_fonts: false,
             });
-        out.fcx.source_cache = parley::fontique::SourceCache::default();
-        out.system_fonts_enabled = false;
+        self.fcx.source_cache = parley::fontique::SourceCache::default();
+        self.system_fonts_enabled = false;
+        self.invalidate_catalog_caches();
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub fn new_without_system_fonts() -> Self {
+        let mut out = Self::default();
+        out.disable_system_fonts();
         out
     }
 
