@@ -11202,9 +11202,29 @@ fn record_hit_test_trace_for_selector(
             .and_then(|r| r.layer_id);
         (Some("focus_barrier"), focus_barrier_root, layer_id)
     } else if arbitration.pointer_capture_active {
-        (Some("pointer_capture"), None, pointer_capture_layer_id)
+        let blocking_root = pointer_capture_layer_id.and_then(|layer_id| {
+            scope_roots
+                .iter()
+                .find(|r| r.kind == "layer_root" && r.layer_id == Some(layer_id))
+                .map(|r| r.root)
+        });
+        (
+            Some("pointer_capture"),
+            blocking_root,
+            pointer_capture_layer_id,
+        )
     } else if pointer_occlusion != "none" {
-        (Some("pointer_occlusion"), None, pointer_occlusion_layer_id)
+        let blocking_root = pointer_occlusion_layer_id.and_then(|layer_id| {
+            scope_roots
+                .iter()
+                .find(|r| r.kind == "layer_root" && r.layer_id == Some(layer_id))
+                .map(|r| r.root)
+        });
+        (
+            Some("pointer_occlusion"),
+            blocking_root,
+            pointer_occlusion_layer_id,
+        )
     } else if hit_node_id.is_none() {
         (Some("no_hit"), None, None)
     } else {
