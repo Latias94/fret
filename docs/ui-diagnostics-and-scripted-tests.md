@@ -183,6 +183,11 @@ Script tooling (no app required):
 - Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
   - `cargo run -p fretboard -- diag script lint .\\script.json`
 
+Repeat-run triage (flake hunting):
+
+- Run the same script N times and write `repeat.summary.json` under `--dir`:
+  - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`

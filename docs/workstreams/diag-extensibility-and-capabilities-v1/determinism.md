@@ -25,6 +25,15 @@ Bundles SHOULD include a deterministic fingerprint of inputs that commonly cause
 
 This is not for blame; it is for explainability and reproducibility.
 
+Current bundle surface (implemented):
+
+- `bundle.json.env`:
+  - `runner_kind` (`native`/`web`),
+  - target triple summary (`target_os`/`target_family`/`target_arch`),
+  - diagnostics flags (semantics, redaction, screenshots, WS transport),
+  - declared `diag.*` capabilities,
+  - `scale_factors_seen` (last-known per-window scale factors).
+
 ## Repeat-run triage
 
 Add a workflow that runs the same script N times and classifies differences:
@@ -38,6 +47,15 @@ Outputs:
 
 - `repeat.summary.json` (machine-readable),
 - links/paths to the worst-case bundles for inspection.
+
+Command (native, filesystem-trigger transport):
+
+- `cargo run -p fretboard -- diag repeat <script.json> --repeat <n> [--launch -- <cmd...>]`
+
+Behavior:
+
+- writes `repeat.summary.json` under `--dir` (default: `target/fret-diag/`),
+- exits with code 1 if any run fails or if successful runs diverge from the baseline bundle.
 
 ## Flake mitigation knobs (runner/tooling)
 

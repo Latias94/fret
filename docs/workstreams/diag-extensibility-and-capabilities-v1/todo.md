@@ -102,11 +102,11 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
 
-- [ ] Define and capture an environment fingerprint in bundles (versions, DPI, font fallback summary, flags).
-- [ ] Add a repeat-run triage workflow:
-  - [ ] run a script N times,
-  - [ ] classify diffs (semantics/layout/routing/perf),
-  - [ ] emit `repeat.summary.json`.
+- [x] Define and capture an environment fingerprint in bundles (runner kind, target triple, flags, scale factors, capabilities).
+- [x] Add a repeat-run triage workflow:
+  - [x] run a script N times,
+  - [x] classify diffs (semantics/layout/perf; routing classification TBD),
+  - [x] emit `repeat.summary.json`.
 
 ## Component conformance (self-drawn UI pain points)
 

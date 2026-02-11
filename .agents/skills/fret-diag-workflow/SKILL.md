@@ -57,6 +57,8 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Note: `fretboard diag suite ...` runs lint for every captured bundle by default (use `--no-lint` to disable).
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
+8. For flaky regressions, run repeat-run triage.
+   - `fretboard diag repeat <script.json> --repeat 7 --launch -- <cmd...>`
 
 ## Capabilities & fail-fast gating
 

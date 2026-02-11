@@ -120,8 +120,8 @@ Definition of done:
 
 ### M7: Determinism + shrink (flake triage)
 
-- [ ] Add environment fingerprint to bundles.
-- [ ] Add repeat-run triage summary (`repeat.summary.json`).
+- [x] Add environment fingerprint to bundles.
+- [x] Add repeat-run triage summary (`repeat.summary.json`).
 - [ ] Add `diag script shrink` (delta debugging) as an opt-in workflow.
 
 Definition of done:
