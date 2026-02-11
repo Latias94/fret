@@ -28,11 +28,11 @@ use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
+use fret_workspace::WorkspaceFrame;
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
 };
-use fret_workspace::{WorkspaceFrame, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -48,6 +48,7 @@ use crate::harness::{
 use crate::spec::*;
 use crate::ui;
 
+mod chrome;
 mod debug_hud;
 mod inspector;
 mod menubar;
@@ -2535,66 +2536,19 @@ impl UiGalleryDriver {
                         })
                     };
 
-                    let tab_strip = cx.keyed("ui_gallery.tab_strip", |cx| {
-                        if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
-                            return cx.text("Tabs (disabled)");
-                        }
-
-                        let selected = cx
-                            .get_model_cloned(&selected_page, Invalidation::Layout)
-                            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                        let workspace_tab_ids = cx
-                            .get_model_cloned(&workspace_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-                        let workspace_dirty_ids = cx
-                            .get_model_cloned(&workspace_dirty_tabs, Invalidation::Layout)
-                            .unwrap_or_default();
-
-                        WorkspaceTabStrip::new(selected.clone())
-                            .tabs(workspace_tab_ids.iter().map(|tab_id| {
-                                let (title, _origin, _docs, _usage) =
-                                    crate::spec::page_meta(tab_id.as_ref());
-                                let dirty = workspace_dirty_ids
-                                    .iter()
-                                    .any(|d| d.as_ref() == tab_id.as_ref());
-                                WorkspaceTab::new(
-                                    tab_id.clone(),
-                                    title,
-                                    page_spec(tab_id.as_ref())
-                                        .map(|spec| CommandId::from(spec.command))
-                                        .unwrap_or_else(|| {
-                                            CommandId::new(format!(
-                                                "ui_gallery.nav.select.{}",
-                                                tab_id.as_ref()
-                                            ))
-                                        }),
-                                )
-                                .close_command(CommandId::new(format!(
-                                    "{}{}",
-                                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
-                                    tab_id.as_ref()
-                                )))
-                                .dirty(dirty)
-                            }))
-                            .into_element(cx)
-                    });
+                    let tab_strip = chrome::tab_strip_view(
+                        cx,
+                        (bisect & BISECT_DISABLE_TAB_STRIP) != 0,
+                        &selected_page,
+                        &workspace_tabs,
+                        &workspace_dirty_tabs,
+                    );
 
                     let menubar_handle = std::cell::RefCell::new(None);
                     let in_window_menu_bar =
                         menubar::build_in_window_menu_bar(cx, &menu_bar_seq, &menubar_handle);
 
-                    let top_bar = WorkspaceTopBar::new()
-                        .left(in_window_menu_bar)
-                        .center(vec![tab_strip])
-                        .right(vec![
-                            shadcn::Button::new("Command palette")
-                                .test_id("ui-gallery-command-palette")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_click(fret_app::core_commands::COMMAND_PALETTE)
-                                .into_element(cx),
-                        ])
-                        .into_element(cx);
+                    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
 
                     let status_bar = status_bar::status_bar_view(
                         cx,
