@@ -32,6 +32,8 @@ pub use svg::{
 pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetDescriptor, RenderTargetRegistry};
 pub use text::FontCatalogEntryMetadata;
+pub use text::SystemFontRescanResult;
+pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
 
 fn parse_wgpu_backends(raw: &str) -> Option<wgpu::Backends> {

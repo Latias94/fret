@@ -1,5 +1,6 @@
 use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
+use crate::{SystemFontRescanResult, SystemFontRescanSeed};
 
 impl Renderer {
     pub fn begin_text_diagnostics_frame(&mut self) {
@@ -358,6 +359,14 @@ impl Renderer {
     /// Returns the number of newly loaded faces.
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         self.text_system.add_fonts(fonts)
+    }
+
+    pub fn system_font_rescan_seed(&self) -> Option<SystemFontRescanSeed> {
+        self.text_system.system_font_rescan_seed()
+    }
+
+    pub fn apply_system_font_rescan_result(&mut self, result: SystemFontRescanResult) -> bool {
+        self.text_system.apply_system_font_rescan_result(result)
     }
 
     pub fn rescan_system_fonts(&mut self) -> bool {

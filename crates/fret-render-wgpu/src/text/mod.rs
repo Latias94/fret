@@ -33,6 +33,35 @@ pub struct FontCatalogEntryMetadata {
     pub is_monospace_candidate: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct SystemFontRescanSeed {
+    pub(crate) registered_font_blobs: Vec<parley::fontique::Blob<u8>>,
+}
+
+pub struct SystemFontRescanResult {
+    pub(crate) collection: parley::fontique::Collection,
+    pub(crate) all_font_names: Vec<String>,
+    pub(crate) all_font_catalog_entries: Vec<FontCatalogEntryMetadata>,
+}
+
+impl std::fmt::Debug for SystemFontRescanResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SystemFontRescanResult")
+            .field("all_font_names_len", &self.all_font_names.len())
+            .field(
+                "all_font_catalog_entries_len",
+                &self.all_font_catalog_entries.len(),
+            )
+            .finish_non_exhaustive()
+    }
+}
+
+impl SystemFontRescanSeed {
+    pub fn run(self) -> SystemFontRescanResult {
+        parley_shaper::run_system_font_rescan(self)
+    }
+}
+
 fn released_blob_cache_entries() -> usize {
     static ENTRIES: OnceLock<usize> = OnceLock::new();
     *ENTRIES.get_or_init(|| {
@@ -1991,7 +2020,20 @@ impl TextSystem {
     /// blobs and atlas entries, ensuring shaping/rasterization results cannot be reused across the
     /// rescan boundary.
     pub fn rescan_system_fonts(&mut self) -> bool {
-        let changed = self.parley_shaper.rescan_system_fonts();
+        let Some(seed) = self.system_font_rescan_seed() else {
+            return false;
+        };
+
+        let result = seed.run();
+        self.apply_system_font_rescan_result(result)
+    }
+
+    pub fn system_font_rescan_seed(&self) -> Option<SystemFontRescanSeed> {
+        self.parley_shaper.system_font_rescan_seed()
+    }
+
+    pub fn apply_system_font_rescan_result(&mut self, result: SystemFontRescanResult) -> bool {
+        let changed = self.parley_shaper.apply_system_font_rescan_result(result);
         if !changed {
             return false;
         }

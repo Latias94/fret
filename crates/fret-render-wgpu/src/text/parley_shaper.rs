@@ -65,10 +65,45 @@ pub(crate) struct ParleyShaper {
     default_locale: Option<String>,
     common_fallback_stack_suffix: String,
     system_fonts_enabled: bool,
-    registered_font_blobs: Vec<parley::fontique::Blob<u8>>,
+    registered_font_blobs: Vec<RegisteredFontBlob>,
+    registered_font_blobs_total_bytes: usize,
     family_id_cache_lower: HashMap<String, FamilyId>,
     all_font_names_cache: Option<Vec<String>>,
     all_font_catalog_entries_cache: Option<Vec<FontCatalogEntryMetadata>>,
+}
+
+#[derive(Debug, Clone)]
+struct RegisteredFontBlob {
+    hash: u64,
+    len: usize,
+    blob: parley::fontique::Blob<u8>,
+}
+
+fn registered_font_blobs_max_count() -> usize {
+    // Keep enough space for apps that load multiple font families (UI, mono, icons, etc) while
+    // preventing unbounded growth when hot-reloading or repeatedly injecting fonts.
+    std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(256)
+        .min(4096)
+}
+
+fn registered_font_blobs_max_bytes() -> usize {
+    // Safety valve for memory-backed font injection. This is a soft cap: we evict the oldest
+    // entries until we are within budget.
+    std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(256 * 1024 * 1024)
+        .min(2 * 1024 * 1024 * 1024)
+}
+
+fn hash_bytes(bytes: &[u8]) -> u64 {
+    use std::hash::Hasher as _;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    hasher.write(bytes);
+    hasher.finish()
 }
 
 impl Default for ParleyShaper {
@@ -81,6 +116,7 @@ impl Default for ParleyShaper {
             common_fallback_stack_suffix: String::new(),
             system_fonts_enabled: true,
             registered_font_blobs: Vec::new(),
+            registered_font_blobs_total_bytes: 0,
             family_id_cache_lower: HashMap::new(),
             all_font_names_cache: None,
             all_font_catalog_entries_cache: None,
@@ -93,10 +129,62 @@ impl ParleyShaper {
         Self::default()
     }
 
+    #[cfg(test)]
+    fn record_registered_font_blob_bytes_for_tests(&mut self, bytes: Vec<u8>) {
+        let blob = parley::fontique::Blob::<u8>::from(bytes);
+        self.record_registered_font_blob(blob);
+    }
+
+    #[cfg(test)]
+    fn registered_font_blob_lengths_for_tests(&self) -> Vec<usize> {
+        self.registered_font_blobs.iter().map(|b| b.len).collect()
+    }
+
+    #[cfg(test)]
+    fn registered_font_blob_total_bytes_for_tests(&self) -> usize {
+        self.registered_font_blobs_total_bytes
+    }
+
     fn invalidate_catalog_caches(&mut self) {
         self.family_id_cache_lower.clear();
         self.all_font_names_cache = None;
         self.all_font_catalog_entries_cache = None;
+    }
+
+    fn record_registered_font_blob(&mut self, blob: parley::fontique::Blob<u8>) {
+        let bytes = blob.as_ref();
+        let len = bytes.len();
+        let hash = hash_bytes(bytes);
+
+        if let Some(ix) = self
+            .registered_font_blobs
+            .iter()
+            .position(|v| v.hash == hash && v.len == len && v.blob.as_ref() == bytes)
+        {
+            // LRU: keep the most recently injected fonts near the back.
+            let entry = self.registered_font_blobs.remove(ix);
+            self.registered_font_blobs.push(entry);
+            return;
+        }
+
+        self.registered_font_blobs_total_bytes =
+            self.registered_font_blobs_total_bytes.saturating_add(len);
+        self.registered_font_blobs
+            .push(RegisteredFontBlob { hash, len, blob });
+
+        let max_count = registered_font_blobs_max_count();
+        let max_bytes = registered_font_blobs_max_bytes();
+        while self.registered_font_blobs.len() > max_count
+            || self.registered_font_blobs_total_bytes > max_bytes
+        {
+            let Some(evicted) = self.registered_font_blobs.first() else {
+                break;
+            };
+            self.registered_font_blobs_total_bytes = self
+                .registered_font_blobs_total_bytes
+                .saturating_sub(evicted.len);
+            let _ = self.registered_font_blobs.remove(0);
+        }
     }
 
     pub fn system_fonts_enabled(&self) -> bool {
@@ -290,7 +378,7 @@ impl ParleyShaper {
         let mut added = 0usize;
         for data in fonts {
             let blob = parley::fontique::Blob::<u8>::from(data);
-            self.registered_font_blobs.push(blob.clone());
+            self.record_registered_font_blob(blob.clone());
             let families = self.fcx.collection.register_fonts(blob, None);
             added = added.saturating_add(families.iter().map(|(_, fonts)| fonts.len()).sum());
         }
@@ -300,24 +388,32 @@ impl ParleyShaper {
         added
     }
 
-    pub fn rescan_system_fonts(&mut self) -> bool {
+    pub fn system_font_rescan_seed(&self) -> Option<super::SystemFontRescanSeed> {
+        if !self.system_fonts_enabled {
+            return None;
+        }
+
+        Some(super::SystemFontRescanSeed {
+            registered_font_blobs: self
+                .registered_font_blobs
+                .iter()
+                .map(|b| b.blob.clone())
+                .collect(),
+        })
+    }
+
+    pub fn apply_system_font_rescan_result(
+        &mut self,
+        result: super::SystemFontRescanResult,
+    ) -> bool {
         if !self.system_fonts_enabled {
             return false;
         }
 
-        let source_cache = std::mem::take(&mut self.fcx.source_cache);
-        self.fcx.collection =
-            parley::fontique::Collection::new(parley::fontique::CollectionOptions {
-                shared: false,
-                system_fonts: true,
-            });
-        self.fcx.source_cache = source_cache;
-
-        for blob in self.registered_font_blobs.iter().cloned() {
-            let _ = self.fcx.collection.register_fonts(blob, None);
-        }
-
+        self.fcx.collection = result.collection;
         self.invalidate_catalog_caches();
+        self.all_font_names_cache = Some(result.all_font_names);
+        self.all_font_catalog_entries_cache = Some(result.all_font_catalog_entries);
         true
     }
 
@@ -661,10 +757,40 @@ fn shaping_properties_for_span(
     (!out.is_empty()).then_some(out)
 }
 
+pub(super) fn run_system_font_rescan(
+    seed: super::SystemFontRescanSeed,
+) -> super::SystemFontRescanResult {
+    let mut shaper = ParleyShaper::new();
+    shaper.fcx.collection =
+        parley::fontique::Collection::new(parley::fontique::CollectionOptions {
+            shared: false,
+            system_fonts: true,
+        });
+    shaper.fcx.source_cache = parley::fontique::SourceCache::default();
+
+    for blob in seed.registered_font_blobs.into_iter() {
+        let _ = shaper.fcx.collection.register_fonts(blob, None);
+    }
+
+    let all_font_names = shaper.all_font_names();
+    let all_font_catalog_entries = shaper.all_font_catalog_entries();
+    super::SystemFontRescanResult {
+        collection: shaper.fcx.collection,
+        all_font_names,
+        all_font_catalog_entries,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fret_core::Px;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     #[test]
     fn font_catalog_caches_invalidate_after_add_fonts() {
@@ -713,9 +839,69 @@ mod tests {
     }
 
     #[test]
+    fn registered_font_blobs_dedup_and_lru_eviction_by_count() {
+        let _guard = env_lock().lock().unwrap();
+        let prev_max_count = std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT").ok();
+        let prev_max_bytes = std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES").ok();
+        unsafe {
+            std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT", "2");
+            std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES", "1048576");
+        }
+
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.record_registered_font_blob_bytes_for_tests(vec![1u8; 1]); // A
+        shaper.record_registered_font_blob_bytes_for_tests(vec![2u8; 2]); // B
+        shaper.record_registered_font_blob_bytes_for_tests(vec![1u8; 1]); // A again (touch)
+        shaper.record_registered_font_blob_bytes_for_tests(vec![3u8; 3]); // C -> evict B
+
+        assert_eq!(shaper.registered_font_blob_lengths_for_tests(), vec![1, 3]);
+        assert_eq!(shaper.registered_font_blob_total_bytes_for_tests(), 4);
+
+        unsafe {
+            match prev_max_count {
+                Some(v) => std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT", v),
+                None => std::env::remove_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT"),
+            }
+            match prev_max_bytes {
+                Some(v) => std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES", v),
+                None => std::env::remove_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES"),
+            }
+        }
+    }
+
+    #[test]
+    fn registered_font_blobs_eviction_by_bytes_budget() {
+        let _guard = env_lock().lock().unwrap();
+        let prev_max_count = std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT").ok();
+        let prev_max_bytes = std::env::var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES").ok();
+        unsafe {
+            std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT", "4096");
+            std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES", "3");
+        }
+
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.record_registered_font_blob_bytes_for_tests(vec![1u8; 2]);
+        shaper.record_registered_font_blob_bytes_for_tests(vec![2u8; 2]);
+
+        assert_eq!(shaper.registered_font_blob_lengths_for_tests(), vec![2]);
+        assert_eq!(shaper.registered_font_blob_total_bytes_for_tests(), 2);
+
+        unsafe {
+            match prev_max_count {
+                Some(v) => std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT", v),
+                None => std::env::remove_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_COUNT"),
+            }
+            match prev_max_bytes {
+                Some(v) => std::env::set_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES", v),
+                None => std::env::remove_var("FRET_TEXT_REGISTERED_FONT_BLOBS_MAX_BYTES"),
+            }
+        }
+    }
+
+    #[test]
     fn rescan_is_noop_when_system_fonts_disabled() {
         let mut shaper = ParleyShaper::new_without_system_fonts();
-        assert!(!shaper.rescan_system_fonts());
+        assert!(shaper.system_font_rescan_seed().is_none());
     }
 
     #[test]
