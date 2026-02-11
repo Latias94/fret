@@ -1638,6 +1638,7 @@ version = "0.1.0"
 dependencies = [
  "fret-diag-protocol",
  "fret-diag-ws",
+ "glob",
  "image",
  "serde_json",
  "sysinfo",

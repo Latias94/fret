@@ -37,6 +37,9 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
      - `fretboard diag script normalize <script.json> --write`
      - `fretboard diag script validate <script.json>`
      - `fretboard diag script lint <script.json>`
+     - You can also lint/validate by directory or glob (the CLI expands patterns):
+       - `fretboard diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+       - `fretboard diag script validate tools/diag-scripts`
 3. Ensure diagnostics are enabled in the running app.
    - Minimum: `FRET_DIAG=1`
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.

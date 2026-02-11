@@ -1,5 +1,6 @@
 #![recursion_limit = "512"]
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::time::{Duration, Instant};
@@ -1887,45 +1888,73 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     if script_tool_check && script_tool_write {
                         return Err("--check cannot be combined with --write".to_string());
                     }
-                    let Some(src) = rest.get(1).cloned() else {
+                    if script_tool_check_out.is_some() {
+                        return Err(
+                            "--check-out is not supported with `diag script normalize`".to_string()
+                        );
+                    }
+
+                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+                    if inputs.is_empty() {
                         return Err("missing script path (try: fretboard diag script normalize ./script.json)".to_string());
-                    };
-                    if rest.len() != 2 {
-                        return Err(format!("unexpected arguments: {}", rest[2..].join(" ")));
+                    }
+                    if inputs.len() != 1 && !script_tool_check && !script_tool_write {
+                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
                     }
 
-                    let src = resolve_path(&workspace_root, PathBuf::from(src));
-                    let NormalizedScript {
-                        normalized,
-                        changed,
-                    } = normalize_script_from_path(&src)?;
+                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+                    if scripts.len() != 1 && !script_tool_check && !script_tool_write {
+                        return Err("normalize expects exactly one script unless --check or --write is used".to_string());
+                    }
 
-                    if script_tool_check {
-                        if changed {
-                            eprintln!("not normalized: {}", src.display());
-                            std::process::exit(1);
+                    let mut any_changed = false;
+                    for src in scripts {
+                        let NormalizedScript {
+                            normalized,
+                            changed,
+                        } = normalize_script_from_path(&src)?;
+
+                        if script_tool_check {
+                            if changed {
+                                any_changed = true;
+                                eprintln!("not normalized: {}", src.display());
+                            } else {
+                                println!("{}", src.display());
+                            }
+                            continue;
                         }
-                        println!("{}", src.display());
-                        return Ok(());
+
+                        if script_tool_write {
+                            if changed {
+                                any_changed = true;
+                                std::fs::write(&src, normalized.as_bytes())
+                                    .map_err(|e| e.to_string())?;
+                            }
+                            println!("{}", src.display());
+                            continue;
+                        }
+
+                        print!("{normalized}");
                     }
 
-                    if script_tool_write {
-                        std::fs::write(&src, normalized.as_bytes()).map_err(|e| e.to_string())?;
-                        println!("{}", src.display());
-                        return Ok(());
+                    if script_tool_check && any_changed {
+                        std::process::exit(1);
                     }
-
-                    print!("{normalized}");
                     Ok(())
                 }
                 "validate" => {
-                    let scripts: Vec<PathBuf> = rest[1..]
-                        .iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect();
-                    if scripts.is_empty() {
+                    if script_tool_check || script_tool_write {
+                        return Err(
+                            "--check/--write are not supported with `diag script validate`"
+                                .to_string(),
+                        );
+                    }
+
+                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+                    if inputs.is_empty() {
                         return Err("missing script path (try: fretboard diag script validate ./script.json)".to_string());
                     }
+                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
 
                     let ScriptSchemaReport {
                         payload,
@@ -1954,16 +1983,20 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Ok(())
                 }
                 "lint" => {
-                    let scripts: Vec<PathBuf> = rest[1..]
-                        .iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect();
-                    if scripts.is_empty() {
+                    if script_tool_check || script_tool_write {
+                        return Err(
+                            "--check/--write are not supported with `diag script lint`".to_string()
+                        );
+                    }
+
+                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+                    if inputs.is_empty() {
                         return Err(
                             "missing script path (try: fretboard diag script lint ./script.json)"
                                 .to_string(),
                         );
                     }
+                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
 
                     let ScriptLintReport {
                         payload,
@@ -8584,6 +8617,71 @@ fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
     } else {
         workspace_root.join(path)
     }
+}
+
+fn normalize_host_path_separators(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        return PathBuf::from(path.to_string_lossy().replace('/', "\\"));
+    }
+    #[cfg(not(windows))]
+    {
+        path
+    }
+}
+
+fn expand_script_inputs(workspace_root: &Path, inputs: &[String]) -> Result<Vec<PathBuf>, String> {
+    let mut set: BTreeSet<PathBuf> = BTreeSet::new();
+
+    for input in inputs {
+        let resolved = resolve_path(workspace_root, PathBuf::from(input));
+
+        // Directory input: treat as recursive `**/*.json` to support suite-like workflows.
+        if resolved.is_dir() {
+            let mut pattern = resolved.to_string_lossy().to_string();
+            pattern = pattern.replace('\\', "/");
+            if !pattern.ends_with('/') {
+                pattern.push('/');
+            }
+            pattern.push_str("**/*.json");
+
+            let mut any = false;
+            for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
+                let path = entry.map_err(|e| e.to_string())?;
+                set.insert(normalize_host_path_separators(path));
+                any = true;
+            }
+            if !any {
+                return Err(format!(
+                    "script input matched no files: {input} ({pattern})"
+                ));
+            }
+            continue;
+        }
+
+        // Wildcard input: expand via glob. (PowerShell doesn't always expand globs for child args.)
+        if input.contains('*') || input.contains('?') || input.contains('[') {
+            let mut pattern = resolved.to_string_lossy().to_string();
+            pattern = pattern.replace('\\', "/");
+
+            let mut any = false;
+            for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
+                let path = entry.map_err(|e| e.to_string())?;
+                set.insert(normalize_host_path_separators(path));
+                any = true;
+            }
+            if !any {
+                return Err(format!(
+                    "script input matched no files: {input} ({pattern})"
+                ));
+            }
+            continue;
+        }
+
+        set.insert(resolved);
+    }
+
+    Ok(set.into_iter().collect())
 }
 
 fn resolve_bundle_json_path(path: &Path) -> PathBuf {

@@ -16,6 +16,7 @@ zip.workspace = true
 image.workspace = true
 windows-sys.workspace = true
 sysinfo.workspace = true
+glob = "0.3"
 
 fret-diag-protocol = { path = "../fret-diag-protocol" }
 fret-diag-ws = { path = "../fret-diag-ws", default-features = false, features = ["client-native"] }

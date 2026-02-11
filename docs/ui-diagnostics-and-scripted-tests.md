@@ -175,6 +175,9 @@ Script tooling (no app required):
 - Normalize formatting (stable diffs):
   - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
   - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
+  - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
+  - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
 - Validate schema/parse (writes `check.script_schema.json` under `--dir`, or `--check-out`):
   - `cargo run -p fretboard -- diag script validate .\\script.json`
 - Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
