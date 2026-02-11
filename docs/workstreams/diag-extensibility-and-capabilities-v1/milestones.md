@@ -122,7 +122,7 @@ Definition of done:
 
 - [x] Add environment fingerprint to bundles.
 - [x] Add repeat-run triage summary (`repeat.summary.json`).
-- [ ] Add `diag script shrink` (delta debugging) as an opt-in workflow.
+- [x] Add `diag script shrink` (delta debugging) as an opt-in workflow.
 
 Definition of done:
 

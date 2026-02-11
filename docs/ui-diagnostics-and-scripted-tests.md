@@ -188,6 +188,15 @@ Repeat-run triage (flake hunting):
 - Run the same script N times and write `repeat.summary.json` under `--dir`:
   - `cargo run -p fretboard -- diag repeat .\\script.json --repeat 7 --launch -- cargo run -p fret-ui-gallery --release`
 
+Script shrinking (automated minimal repro):
+
+- Reduce a *failing* script to a smaller script that still reproduces the same failure signal.
+  - By default, shrink matches `reason_code` when available (otherwise `reason`). Use `--shrink-any-fail` to accept any failure.
+  - Requires either an already-running app, or `--reuse-launch --launch -- <cmd...>`.
+  - Writes a minimized script to `--shrink-out` (default: `target/fret-diag/shrink/script.min.json`) and a summary to `target/fret-diag/shrink/shrink.summary.json`.
+  - Example:
+    - `cargo run -p fretboard -- diag script shrink .\\script.json --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`

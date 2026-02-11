@@ -82,8 +82,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 - [ ] Add CI-friendly “generate + check” workflow:
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
-- [ ] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
-  - [ ] emit `repro.min.json` + summary.
+- [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
+  - [x] emit `target/fret-diag/shrink/script.min.json` + `target/fret-diag/shrink/shrink.summary.json` (or `--shrink-out`).
 
 ## Text & IME (self-drawn UI pain point)
 
@@ -107,6 +107,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/determinism.md`
   - [x] run a script N times,
   - [x] classify diffs (semantics/layout/perf; routing classification TBD),
   - [x] emit `repeat.summary.json`.
+  - [x] include actionable highlights (lint counts + stage/reason-code aggregates + worst perf).
 
 ## Component conformance (self-drawn UI pain points)
 

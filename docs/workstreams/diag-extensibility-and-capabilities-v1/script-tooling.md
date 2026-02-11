@@ -84,15 +84,29 @@ Exit code:
 Given:
 
 - a failing script,
-- a deterministic runner invocation (`diag run --launch ...` or devtools-ws transport),
+- a deterministic runner invocation (filesystem transport; `diag run --launch ...`),
 
 Perform a bounded search to produce a smaller script that still reproduces the failure.
 
+Command:
+
+- `fretboard diag script shrink <script.json> [--shrink-out <path>] [--shrink-any-fail] [--shrink-match-reason-code <code>] [--shrink-match-reason <reason>] [--shrink-min-steps <n>] [--shrink-max-iters <n>] [--reuse-launch] [--launch -- <cmd...>]`
+
+Behavior:
+
+- Runs the script once to record the baseline failure signal.
+- Minimizes by removing contiguous step chunks while the failure signal still matches.
+- Default match rule:
+  - prefer `reason_code` when present,
+  - otherwise match `reason`,
+  - use `--shrink-any-fail` to accept any failure (stage=`failed`) regardless of reason.
+- Requires either an already-running app, or `--reuse-launch --launch -- <cmd...>` (to avoid restarting the app on every attempt).
+
 Outputs:
 
-- `repro.min.json`,
-- a summary of removals (step indices),
-- last failing bundle + trace, if available.
+- `target/fret-diag/shrink/script.min.json` (default) or `--shrink-out <path>`,
+- `target/fret-diag/shrink/shrink.summary.json` (summary: baseline, final, removed step indices, search stats),
+- the app may also auto-dump bundles/traces into `--dir` (depending on script + runtime settings).
 
 Constraints:
 

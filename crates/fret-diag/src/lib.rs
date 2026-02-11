@@ -18,6 +18,7 @@ mod gates;
 mod lint;
 mod perf_seed_policy;
 mod script_tooling;
+mod shrink;
 mod stats;
 pub mod transport;
 mod util;
@@ -166,6 +167,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut script_tool_write: bool = false;
     let mut script_tool_check: bool = false;
     let mut script_tool_check_out: Option<PathBuf> = None;
+    let mut shrink_out: Option<PathBuf> = None;
+    let mut shrink_any_fail: bool = false;
+    let mut shrink_match_reason_code: Option<String> = None;
+    let mut shrink_match_reason: Option<String> = None;
+    let mut shrink_min_steps: u64 = 1;
+    let mut shrink_max_iters: u64 = 200;
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
@@ -407,6 +414,54 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --check-out".to_string());
                 };
                 script_tool_check_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--shrink-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --shrink-out".to_string());
+                };
+                shrink_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--shrink-any-fail" => {
+                shrink_any_fail = true;
+                i += 1;
+            }
+            "--shrink-match-reason-code" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --shrink-match-reason-code".to_string());
+                };
+                shrink_match_reason_code = Some(v);
+                i += 1;
+            }
+            "--shrink-match-reason" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --shrink-match-reason".to_string());
+                };
+                shrink_match_reason = Some(v);
+                i += 1;
+            }
+            "--shrink-min-steps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --shrink-min-steps".to_string());
+                };
+                shrink_min_steps = v.parse::<u64>().map_err(|_| {
+                    "invalid value for --shrink-min-steps (expected u64)".to_string()
+                })?;
+                i += 1;
+            }
+            "--shrink-max-iters" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --shrink-max-iters".to_string());
+                };
+                shrink_max_iters = v.parse::<u64>().map_err(|_| {
+                    "invalid value for --shrink-max-iters (expected u64)".to_string()
+                })?;
                 i += 1;
             }
             "--devtools-ws-url" => {
@@ -1568,6 +1623,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "suite" && !suite_script_inputs.is_empty() {
         return Err("--glob/--script-dir are only supported with `diag suite`".to_string());
     }
+    if sub != "script"
+        && (shrink_out.is_some()
+            || shrink_any_fail
+            || shrink_match_reason_code.is_some()
+            || shrink_match_reason.is_some()
+            || shrink_min_steps != 1
+            || shrink_max_iters != 200)
+    {
+        return Err("--shrink-* flags are only supported with `diag script shrink`".to_string());
+    }
 
     let workspace_root = crate::cli::workspace_root()?;
 
@@ -1903,6 +1968,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err("missing script subcommand or script path (try: fretboard diag script ./script.json | fretboard diag script normalize ./script.json)".to_string());
             };
 
+            let shrink_flags_used = shrink_out.is_some()
+                || shrink_any_fail
+                || shrink_match_reason_code.is_some()
+                || shrink_match_reason.is_some()
+                || shrink_min_steps != 1
+                || shrink_max_iters != 200;
+            if shrink_flags_used && op != "shrink" {
+                return Err(
+                    "--shrink-* flags are only supported with `diag script shrink`".to_string(),
+                );
+            }
+
             match op {
                 "normalize" => {
                     if script_tool_check && script_tool_write {
@@ -2041,6 +2118,342 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                     if error_scripts > 0 {
                         std::process::exit(1);
+                    }
+                    Ok(())
+                }
+                "shrink" => {
+                    if script_tool_check || script_tool_write || script_tool_check_out.is_some() {
+                        return Err("--check/--write/--check-out are not supported with `diag script shrink`".to_string());
+                    }
+                    let inputs: Vec<String> = rest[1..].iter().cloned().collect();
+                    if inputs.is_empty() {
+                        return Err(
+                            "missing script path (try: fretboard diag script shrink ./script.json)"
+                                .to_string(),
+                        );
+                    }
+                    if inputs.len() != 1 {
+                        return Err(format!("unexpected arguments: {}", inputs[1..].join(" ")));
+                    }
+                    if launch.is_some() && !reuse_launch {
+                        return Err("`diag script shrink` requires --reuse-launch when using --launch (to avoid restarting for every attempt)".to_string());
+                    }
+
+                    #[derive(Debug, Clone)]
+                    enum ActionScript {
+                        V1(fret_diag_protocol::UiActionScriptV1),
+                        V2(fret_diag_protocol::UiActionScriptV2),
+                    }
+
+                    impl ActionScript {
+                        fn steps_len(&self) -> usize {
+                            match self {
+                                Self::V1(s) => s.steps.len(),
+                                Self::V2(s) => s.steps.len(),
+                            }
+                        }
+
+                        fn keep_steps(&self, keep: &[usize]) -> Self {
+                            match self {
+                                Self::V1(s) => {
+                                    let steps = keep
+                                        .iter()
+                                        .filter_map(|&i| s.steps.get(i).cloned())
+                                        .collect();
+                                    Self::V1(fret_diag_protocol::UiActionScriptV1 {
+                                        schema_version: 1,
+                                        meta: s.meta.clone(),
+                                        steps,
+                                    })
+                                }
+                                Self::V2(s) => {
+                                    let steps = keep
+                                        .iter()
+                                        .filter_map(|&i| s.steps.get(i).cloned())
+                                        .collect();
+                                    Self::V2(fret_diag_protocol::UiActionScriptV2 {
+                                        schema_version: 2,
+                                        meta: s.meta.clone(),
+                                        steps,
+                                    })
+                                }
+                            }
+                        }
+
+                        fn to_pretty_json(&self) -> Result<String, String> {
+                            let mut value = match self {
+                                Self::V1(s) => {
+                                    serde_json::to_value(s).map_err(|e| e.to_string())?
+                                }
+                                Self::V2(s) => {
+                                    serde_json::to_value(s).map_err(|e| e.to_string())?
+                                }
+                            };
+                            script_tooling::canonicalize_json_value(&mut value);
+                            let mut s =
+                                serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
+                            s.push('\n');
+                            Ok(s)
+                        }
+                    }
+
+                    fn read_action_script(path: &Path) -> Result<ActionScript, String> {
+                        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+                        let value: serde_json::Value =
+                            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+                        let schema_version = value
+                            .get("schema_version")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            .min(u32::MAX as u64)
+                            as u32;
+                        match schema_version {
+                            1 => Ok(ActionScript::V1(
+                                serde_json::from_value(value).map_err(|e| e.to_string())?,
+                            )),
+                            2 => Ok(ActionScript::V2(
+                                serde_json::from_value(value).map_err(|e| e.to_string())?,
+                            )),
+                            _ => Err(format!(
+                                "unknown script schema_version (expected 1 or 2): {}",
+                                schema_version
+                            )),
+                        }
+                    }
+
+                    fn matches_failure(
+                        s: &ScriptResultSummary,
+                        any_fail: bool,
+                        reason_code: Option<&str>,
+                        reason: Option<&str>,
+                    ) -> bool {
+                        if s.stage.as_deref() != Some("failed") {
+                            return false;
+                        }
+                        if any_fail {
+                            return true;
+                        }
+                        if let Some(code) = reason_code {
+                            return s.reason_code.as_deref() == Some(code);
+                        }
+                        if let Some(r) = reason {
+                            return s.reason.as_deref() == Some(r);
+                        }
+                        true
+                    }
+
+                    let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+                    if scripts.len() != 1 {
+                        return Err("shrink expects exactly one script input".to_string());
+                    }
+                    let src = scripts.into_iter().next().unwrap();
+
+                    let shrink_dir = resolved_out_dir.join("shrink");
+                    std::fs::create_dir_all(&shrink_dir).map_err(|e| e.to_string())?;
+
+                    let out_path = shrink_out
+                        .clone()
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| shrink_dir.join("script.min.json"));
+                    let summary_path = shrink_dir.join("shrink.summary.json");
+                    let candidate_path = shrink_dir.join("script.candidate.json");
+
+                    let script = read_action_script(&src)?;
+                    let total_steps = script.steps_len();
+                    if total_steps == 0 && shrink_min_steps > 0 {
+                        return Err("script has no steps; nothing to shrink".to_string());
+                    }
+
+                    let wants_screenshots = script_requests_screenshots(&src);
+                    let shrink_launch_env = launch_env.clone();
+                    let mut child = maybe_launch_demo(
+                        &launch,
+                        &shrink_launch_env,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_ready_path,
+                        &resolved_exit_path,
+                        wants_screenshots,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+
+                    let baseline = run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+
+                    if baseline.stage.as_deref() != Some("failed") {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        return Err(format!(
+                            "baseline script did not fail (stage={:?}); shrink expects a failing script",
+                            baseline.stage
+                        ));
+                    }
+
+                    let desired_reason_code = shrink_match_reason_code
+                        .as_deref()
+                        .or(baseline.reason_code.as_deref());
+                    let desired_reason = shrink_match_reason
+                        .as_deref()
+                        .or(baseline.reason.as_deref());
+
+                    let mut attempts_total: u64 = 0;
+                    let mut attempts_errors: u64 = 0;
+                    let mut last_error: Option<String> = None;
+
+                    let min_steps = usize::try_from(shrink_min_steps)
+                        .unwrap_or(usize::MAX)
+                        .min(total_steps);
+                    let (keep, reductions, iters) = shrink::ddmin_keep_indices(
+                        total_steps,
+                        min_steps,
+                        shrink_max_iters,
+                        |keep| {
+                            attempts_total += 1;
+                            let candidate = script.keep_steps(keep);
+                            let pretty = match candidate.to_pretty_json() {
+                                Ok(s) => s,
+                                Err(err) => {
+                                    attempts_errors += 1;
+                                    last_error = Some(err);
+                                    return false;
+                                }
+                            };
+                            if let Err(err) = std::fs::write(&candidate_path, pretty.as_bytes()) {
+                                attempts_errors += 1;
+                                last_error = Some(err.to_string());
+                                return false;
+                            }
+
+                            match run_script_and_wait(
+                                &candidate_path,
+                                &resolved_script_path,
+                                &resolved_script_trigger_path,
+                                &resolved_script_result_path,
+                                &resolved_script_result_trigger_path,
+                                timeout_ms,
+                                poll_ms,
+                            ) {
+                                Ok(s) => matches_failure(
+                                    &s,
+                                    shrink_any_fail,
+                                    desired_reason_code,
+                                    desired_reason,
+                                ),
+                                Err(err) => {
+                                    attempts_errors += 1;
+                                    last_error = Some(err);
+                                    false
+                                }
+                            }
+                        },
+                    );
+
+                    let minimized = script.keep_steps(&keep);
+                    let minimized_pretty = minimized.to_pretty_json()?;
+                    std::fs::write(&out_path, minimized_pretty.as_bytes())
+                        .map_err(|e| e.to_string())?;
+
+                    let final_result = run_script_and_wait(
+                        &out_path,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+
+                    let ok = matches_failure(
+                        &final_result,
+                        shrink_any_fail,
+                        desired_reason_code,
+                        desired_reason,
+                    );
+                    if !ok {
+                        return Err(format!(
+                            "minimized script does not reproduce baseline failure (stage={:?} reason_code={:?} reason={:?})",
+                            final_result.stage, final_result.reason_code, final_result.reason
+                        ));
+                    }
+
+                    let keep_set: std::collections::BTreeSet<usize> =
+                        keep.iter().copied().collect();
+                    let removed: Vec<usize> =
+                        (0..total_steps).filter(|i| !keep_set.contains(i)).collect();
+                    let reductions_json: Vec<serde_json::Value> = reductions
+                        .into_iter()
+                        .map(|r| {
+                            serde_json::json!({
+                                "granularity": r.granularity,
+                                "kept_len": r.kept_len,
+                                "removed": r.removed,
+                            })
+                        })
+                        .collect();
+
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "status": "passed",
+                        "script": src.display().to_string(),
+                        "out": out_path.display().to_string(),
+                        "params": {
+                            "min_steps": shrink_min_steps,
+                            "max_iters": shrink_max_iters,
+                            "any_fail": shrink_any_fail,
+                            "match_reason_code": desired_reason_code,
+                            "match_reason": desired_reason,
+                        },
+                        "baseline": {
+                            "run_id": baseline.run_id,
+                            "stage": baseline.stage,
+                            "step_index": baseline.step_index,
+                            "reason_code": baseline.reason_code,
+                            "reason": baseline.reason,
+                            "last_bundle_dir": baseline.last_bundle_dir,
+                        },
+                        "final": {
+                            "run_id": final_result.run_id,
+                            "stage": final_result.stage,
+                            "step_index": final_result.step_index,
+                            "reason_code": final_result.reason_code,
+                            "reason": final_result.reason,
+                            "last_bundle_dir": final_result.last_bundle_dir,
+                        },
+                        "steps": {
+                            "original": total_steps,
+                            "kept": keep.len(),
+                            "removed": removed.len(),
+                            "removed_indices": removed,
+                        },
+                        "search": {
+                            "iters": iters,
+                            "attempts_total": attempts_total,
+                            "attempts_errors": attempts_errors,
+                            "last_error": last_error,
+                            "reductions": reductions_json,
+                        },
+                    });
+
+                    if let Some(parent) = summary_path.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    }
+                    let pretty =
+                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+                    std::fs::write(&summary_path, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+                    if stats_json {
+                        println!("{pretty}");
+                    } else {
+                        println!("{}", out_path.display());
                     }
                     Ok(())
                 }
@@ -2680,6 +3093,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let mut failed_runs: u64 = 0;
             let mut differing_runs: u64 = 0;
+            let mut first_failed_run: Option<usize> = None;
+            let mut first_differing_run: Option<usize> = None;
+            let mut worst_perf: Option<(usize, u64, u64)> = None; // (index, total_us, frame_id)
+            let mut stage_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut reason_code_counts: std::collections::BTreeMap<String, u64> =
+                std::collections::BTreeMap::new();
+            let mut lint_error_runs: Vec<usize> = Vec::new();
+            let mut lint_counts_by_code: std::collections::BTreeMap<String, (u64, u64)> =
+                std::collections::BTreeMap::new();
 
             for run_index in 0..repeat {
                 if !reuse_process {
@@ -2752,6 +3175,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                         if stage == "failed" {
                             failed_runs += 1;
+                            if first_failed_run.is_none() {
+                                first_failed_run = Some(run_index);
+                            }
+                        }
+                        *stage_counts.entry(stage.clone()).or_default() += 1;
+                        if let Some(code) = s.reason_code.as_deref().filter(|v| !v.is_empty()) {
+                            *reason_code_counts.entry(code.to_string()).or_default() += 1;
                         }
 
                         let mut perf: Option<serde_json::Value> = None;
@@ -2763,6 +3193,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 BundleStatsOptions { warmup_frames },
                             ) {
                                 if let Some(top) = report.top.first() {
+                                    let total_us = top.total_time_us;
+                                    match &worst_perf {
+                                        Some((_idx, best_total, _frame))
+                                            if *best_total >= total_us => {}
+                                        _ => {
+                                            worst_perf = Some((run_index, total_us, top.frame_id));
+                                        }
+                                    }
                                     perf = Some(serde_json::json!({
                                         "top_total_time_us": top.total_time_us,
                                         "top_layout_time_us": top.layout_time_us,
@@ -2770,6 +3208,59 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                         "frame_id": top.frame_id,
                                     }));
                                 }
+                            }
+                        }
+
+                        let mut lint: Option<serde_json::Value> = None;
+                        if let Some(bundle_json) = bundle_json.as_ref() {
+                            if let Ok(report) = lint_bundle_from_path(
+                                bundle_json,
+                                warmup_frames,
+                                LintOptions {
+                                    all_test_ids_bounds: lint_all_test_ids_bounds,
+                                    eps_px: lint_eps_px,
+                                },
+                            ) {
+                                let warning_issues = report
+                                    .payload
+                                    .get("warning_issues")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0);
+                                let counts_by_code = report.payload.get("counts_by_code").cloned();
+                                if report.error_issues > 0 {
+                                    lint_error_runs.push(run_index);
+                                }
+                                if let Some(serde_json::Value::Array(entries)) =
+                                    counts_by_code.as_ref()
+                                {
+                                    for entry in entries {
+                                        let Some(code) = entry.get("code").and_then(|v| v.as_str())
+                                        else {
+                                            continue;
+                                        };
+                                        let errors = entry
+                                            .get("errors")
+                                            .and_then(|v| v.as_u64())
+                                            .unwrap_or(0);
+                                        let warnings = entry
+                                            .get("warnings")
+                                            .and_then(|v| v.as_u64())
+                                            .unwrap_or(0);
+                                        if errors == 0 && warnings == 0 {
+                                            continue;
+                                        }
+                                        let entry = lint_counts_by_code
+                                            .entry(code.to_string())
+                                            .or_insert((0, 0));
+                                        entry.0 = entry.0.saturating_add(errors);
+                                        entry.1 = entry.1.saturating_add(warnings);
+                                    }
+                                }
+                                lint = Some(serde_json::json!({
+                                    "error_issues": report.error_issues,
+                                    "warning_issues": warning_issues,
+                                    "counts_by_code": counts_by_code,
+                                }));
                             }
                         }
 
@@ -2815,6 +3306,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                                 if !report.ok {
                                     differing_runs += 1;
+                                    if first_differing_run.is_none() {
+                                        first_differing_run = Some(run_index);
+                                    }
                                 }
 
                                 compare_to_baseline = Some(serde_json::json!({
@@ -2837,11 +3331,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             "last_bundle_dir": s.last_bundle_dir,
                             "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
                             "perf": perf,
+                            "lint": lint,
                             "compare_to_baseline": compare_to_baseline,
                         })
                     }
                     Err(err) => {
                         failed_runs += 1;
+                        if first_failed_run.is_none() {
+                            first_failed_run = Some(run_index);
+                        }
+                        *stage_counts.entry("error".to_string()).or_default() += 1;
                         serde_json::json!({
                             "index": run_index,
                             "stage": "error",
@@ -2860,12 +3359,40 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             } else {
                 "failed"
             };
+
+            let lint_counts_by_code_json: std::collections::BTreeMap<String, serde_json::Value> =
+                lint_counts_by_code
+                    .into_iter()
+                    .map(|(code, (errors, warnings))| {
+                        (
+                            code,
+                            serde_json::json!({
+                                "errors": errors,
+                                "warnings": warnings,
+                            }),
+                        )
+                    })
+                    .collect();
+            let highlights = serde_json::json!({
+                "stage_counts": stage_counts,
+                "reason_code_counts": reason_code_counts,
+                "first_failed_run": first_failed_run,
+                "first_differing_run": first_differing_run,
+                "worst_perf": worst_perf.map(|(idx, total_us, frame_id)| serde_json::json!({
+                    "run": idx,
+                    "top_total_time_us": total_us,
+                    "frame_id": frame_id,
+                })),
+                "lint_error_runs": lint_error_runs,
+                "lint_counts_by_code": lint_counts_by_code_json,
+            });
             let payload = serde_json::json!({
                 "schema_version": 1,
                 "status": status,
                 "script": src.display().to_string(),
                 "repeat": repeat,
                 "baseline_run": baseline_run,
+                "highlights": highlights,
                 "options": {
                     "warmup_frames": warmup_frames,
                     "compare_eps_px": compare_eps_px,

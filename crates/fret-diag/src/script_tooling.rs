@@ -316,7 +316,7 @@ fn push_cap(caps: &mut Vec<String>, cap: &str) {
     caps.push(cap.to_string());
 }
 
-fn canonicalize_json_value(value: &mut Value) {
+pub(crate) fn canonicalize_json_value(value: &mut Value) {
     match value {
         Value::Object(map) => {
             let mut old = std::mem::take(map);

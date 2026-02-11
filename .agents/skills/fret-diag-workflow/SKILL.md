@@ -21,7 +21,7 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 - Native (recommended): run a script and launch the app:
   - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
 
-- Web/WASM: see `.agents/skills/fret-diag-workflow/references/web-runner.md`.
+- Web/WASM: see `references/web-runner.md`.
 
 ## Workflow
 
@@ -59,6 +59,8 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 8. For flaky regressions, run repeat-run triage.
    - `fretboard diag repeat <script.json> --repeat 7 --launch -- <cmd...>`
+9. For “too big” failing scripts, shrink to a minimal repro (requires `--reuse-launch` when using `--launch`).
+   - `fretboard diag script shrink <script.json> --reuse-launch --launch -- <cmd...>`
 
 ## Capabilities & fail-fast gating
 
@@ -77,11 +79,11 @@ Where capabilities come from:
 
 ## Evidence-first debugging (what to read)
 
-Evidence and triage checklist: `.agents/skills/fret-diag-workflow/references/evidence-triage.md`.
+Evidence and triage checklist: `references/evidence-triage.md`.
 
 ## Component conformance playbook (example: shadcn `Select`)
 
-Select conformance playbook: `.agents/skills/fret-diag-workflow/references/select-conformance.md`.
+Select conformance playbook: `references/select-conformance.md`.
 
 ## Evidence anchors
 
@@ -111,8 +113,8 @@ Where the code lives:
 
 ## Further reading (skill-local references)
 
-- Web/WASM transport: `.agents/skills/fret-diag-workflow/references/web-runner.md`
-- Evidence triage checklist: `.agents/skills/fret-diag-workflow/references/evidence-triage.md`
-- Select conformance playbook: `.agents/skills/fret-diag-workflow/references/select-conformance.md`
-- Layout sweep playbook: `.agents/skills/fret-diag-workflow/references/layout-sweep.md`
-- Perf handoff: `.agents/skills/fret-diag-workflow/references/perf-handoff.md`
+- Web/WASM transport: `references/web-runner.md`
+- Evidence triage checklist: `references/evidence-triage.md`
+- Select conformance playbook: `references/select-conformance.md`
+- Layout sweep playbook: `references/layout-sweep.md`
+- Perf handoff: `references/perf-handoff.md`

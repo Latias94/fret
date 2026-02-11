@@ -46,6 +46,7 @@ Add a workflow that runs the same script N times and classifies differences:
 Outputs:
 
 - `repeat.summary.json` (machine-readable),
+- `repeat.summary.json.highlights` aggregates stage/reason-code counts, lint totals, and worst perf run pointers,
 - links/paths to the worst-case bundles for inspection.
 
 Command (native, filesystem-trigger transport):
