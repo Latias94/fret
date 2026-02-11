@@ -147,6 +147,7 @@ Notes:
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).
 - `WebPreview` chrome v0 is ported with a UI Gallery demo + diag gate:
   - `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`
+  - Optional native embedding is available behind `wry` (see `docs/workstreams/webview-wry-v1.md`).
 Remaining work (current focus):
 
 - Tighten parity for `Commit` / `StackTrace` / `TestResults` (layout/styling + copy + extension hooks).

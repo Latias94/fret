@@ -84,7 +84,7 @@ an interactive chat demo:
 - `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
 - `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
 - `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
-- `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Currently chrome-only (no embedded webview backend yet).
+- `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Feature-gated native embedding exists via `wry` (see `docs/workstreams/webview-wry-v1.md`); chrome-only remains the default when the backend is not enabled.
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
 - `StackTrace`: AI Elements-aligned stack trace disclosure surface (copy + parsed frames).
@@ -693,7 +693,7 @@ Legend:
 | `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
 | `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
 | `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
-| `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Prototype | Chrome-only port exists (`WebPreview*`); UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded webview backend remains host-owned (plan: optional `wry`-backed feature). |
+| `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Prototype | Chrome port exists (`WebPreview*`) and can be paired with a host-owned embedded backend (feature-gated `wry`). UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Backend narrative/TODO: `docs/workstreams/webview-wry-v1.md`. |
 | `sandbox.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sandbox.rs` | Defer | Depends on execution sandbox and policies. |
 | `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Done | Test results surfaces + suite disclosure + UI Gallery demo + diag gate. |
 | `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`. |

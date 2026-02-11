@@ -138,3 +138,19 @@ Risk notes:
   - optionally surface console messages.
 
 See TODO tracker: `docs/workstreams/webview-wry-v1-todo.md`.
+
+## Implementation notes (current)
+
+- Navigation state + URL/title are emitted by the backend and stored as `WebViewRuntimeState` in the
+  app-global `WebViewHost` (`crates/fret-webview`).
+- `WebPreview` uses runtime state to auto-disable Back/Forward buttons when a backend is enabled.
+- Layout note: the embedded native child WebView needs a non-zero height constraint. In UI Gallery
+  we pin the demo height explicitly; in real apps prefer placing `WebPreview` in a flex container
+  that provides height (docking panel, split, viewport).
+
+## Known gaps (v1)
+
+- `can_go_back/can_go_forward` is derived from a backend-side best-effort history tracker and may
+  diverge from the underlying engine in edge cases (redirect chains, cross-origin swaps).
+- Console capture is not wired by default yet; we have the contract surface (`WebViewEvent`) but
+  still need to decide on the storage policy (cap, filtering) and a UI surface for the log list.

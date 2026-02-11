@@ -24,7 +24,7 @@ use fret_ui_shadcn::{
 #[cfg(feature = "webview")]
 use fret_webview::{
     WebViewId, WebViewRequest, WebViewSurfaceRegistration, webview_push_request,
-    webview_register_surface,
+    webview_register_surface, webview_runtime_state,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -273,8 +273,8 @@ impl WebPreview {
                 };
 
                 let controller = WebPreviewController {
-                    url: url_model,
-                    url_draft,
+                    url: url_model.clone(),
+                    url_draft: url_draft.clone(),
                     console_open,
                     disabled,
                     on_url_change: on_url_change.clone(),
@@ -285,62 +285,128 @@ impl WebPreview {
                 };
 
                 #[cfg(feature = "webview")]
-                if let Some(backend) = backend.clone() {
+                {
                     #[derive(Default)]
                     struct BackendInit {
                         created: bool,
                         last_loaded_url: String,
+                        last_backend_id: Option<WebViewId>,
                     }
 
-                    let needs_create = cx.with_state(BackendInit::default, |st| !st.created);
-                    if needs_create {
-                        let url_now_string = url_now.clone();
-                        let url_now: Arc<str> = Arc::from(url_now_string.clone());
-                        webview_push_request(
-                            cx.app,
-                            WebViewRequest::Create {
-                                id: backend.id,
-                                window: cx.window,
-                                initial_url: url_now,
-                            },
-                        );
-                        cx.with_state(BackendInit::default, |st| {
-                            st.created = true;
-                            st.last_loaded_url = url_now_string;
-                        });
-                    } else {
-                        let needs_load =
-                            cx.with_state(BackendInit::default, |st| st.last_loaded_url != url_now);
-                        if needs_load {
-                            let next: Arc<str> = Arc::from(url_now.clone());
-                            webview_push_request(
-                                cx.app,
-                                WebViewRequest::LoadUrl {
-                                    id: backend.id,
-                                    url: next,
-                                },
-                            );
-                            cx.with_state(BackendInit::default, |st| st.last_loaded_url = url_now);
+                    let current_backend = backend.clone();
+                    let prev_backend_id =
+                        cx.with_state(BackendInit::default, |st| st.last_backend_id);
+
+                    match current_backend {
+                        None => {
+                            if let Some(prev) = prev_backend_id {
+                                webview_push_request(cx.app, WebViewRequest::Destroy { id: prev });
+                            }
+                            cx.with_state(BackendInit::default, |st| *st = BackendInit::default());
                         }
-                    }
+                        Some(backend) => {
+                            if prev_backend_id.is_some_and(|prev| prev != backend.id) {
+                                if let Some(prev) = prev_backend_id {
+                                    webview_push_request(
+                                        cx.app,
+                                        WebViewRequest::Destroy { id: prev },
+                                    );
+                                }
+                                cx.with_state(BackendInit::default, |st| {
+                                    st.created = false;
+                                    st.last_loaded_url.clear();
+                                    st.last_backend_id = Some(backend.id);
+                                });
+                            } else {
+                                cx.with_state(BackendInit::default, |st| {
+                                    st.last_backend_id = Some(backend.id);
+                                });
+                            }
 
-                    let intent = cx
-                        .get_model_cloned(&nav_intent, Invalidation::Paint)
-                        .unwrap_or(None);
-                    if let Some(intent) = intent {
-                        let request = match intent {
-                            WebPreviewBackendAction::GoBack => {
-                                WebViewRequest::GoBack { id: backend.id }
+                            let needs_create =
+                                cx.with_state(BackendInit::default, |st| !st.created);
+                            if needs_create {
+                                let url_now_string = url_now.clone();
+                                let url_now: Arc<str> = Arc::from(url_now_string.clone());
+                                webview_push_request(
+                                    cx.app,
+                                    WebViewRequest::Create {
+                                        id: backend.id,
+                                        window: cx.window,
+                                        initial_url: url_now,
+                                    },
+                                );
+                                cx.with_state(BackendInit::default, |st| {
+                                    st.created = true;
+                                    st.last_loaded_url = url_now_string;
+                                });
+                            } else {
+                                let needs_load = cx.with_state(BackendInit::default, |st| {
+                                    st.last_loaded_url != url_now
+                                });
+                                if needs_load {
+                                    let next: Arc<str> = Arc::from(url_now.clone());
+                                    webview_push_request(
+                                        cx.app,
+                                        WebViewRequest::LoadUrl {
+                                            id: backend.id,
+                                            url: next,
+                                        },
+                                    );
+                                    cx.with_state(BackendInit::default, |st| {
+                                        st.last_loaded_url = url_now;
+                                    });
+                                }
                             }
-                            WebPreviewBackendAction::GoForward => {
-                                WebViewRequest::GoForward { id: backend.id }
+
+                            let intent = cx
+                                .get_model_cloned(&nav_intent, Invalidation::Paint)
+                                .unwrap_or(None);
+                            if let Some(intent) = intent {
+                                let request = match intent {
+                                    WebPreviewBackendAction::GoBack => {
+                                        WebViewRequest::GoBack { id: backend.id }
+                                    }
+                                    WebPreviewBackendAction::GoForward => {
+                                        WebViewRequest::GoForward { id: backend.id }
+                                    }
+                                    WebPreviewBackendAction::Reload => {
+                                        WebViewRequest::Reload { id: backend.id }
+                                    }
+                                };
+                                webview_push_request(cx.app, request);
+                                let _ = cx.app.models_mut().update(&nav_intent, |v| *v = None);
                             }
-                            WebPreviewBackendAction::Reload => {
-                                WebViewRequest::Reload { id: backend.id }
+
+                            // If the backend navigates (e.g. clicking a link), reflect the actual URL into
+                            // the address bar *only when the user is not editing the draft*.
+                            if let Some(runtime) = webview_runtime_state(cx.app, backend.id)
+                                && let Some(runtime_url) = runtime.url.as_deref()
+                            {
+                                let url_model_now = cx
+                                    .get_model_cloned(&url_model, Invalidation::Paint)
+                                    .unwrap_or_default();
+                                let draft_now = cx
+                                    .get_model_cloned(&url_draft, Invalidation::Paint)
+                                    .unwrap_or_default();
+
+                                let is_editing = draft_now != url_model_now;
+                                if !is_editing && url_model_now != runtime_url {
+                                    let next = runtime_url.to_string();
+                                    let _ = cx
+                                        .app
+                                        .models_mut()
+                                        .update(&url_model, |v| *v = next.clone());
+                                    let _ = cx
+                                        .app
+                                        .models_mut()
+                                        .update(&url_draft, |v| *v = next.clone());
+                                    cx.with_state(BackendInit::default, |st| {
+                                        st.last_loaded_url = next;
+                                    });
+                                }
                             }
-                        };
-                        webview_push_request(cx.app, request);
-                        let _ = cx.app.models_mut().update(&nav_intent, |v| *v = None);
+                        }
                     }
                 }
 
@@ -536,11 +602,36 @@ impl WebPreviewNavigationButton {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        #[cfg(feature = "webview")]
+        let derived_disabled = match (self.backend_action, use_web_preview_controller(cx)) {
+            (Some(action), Some(controller)) => {
+                if let Some(backend) = controller.backend.as_ref() {
+                    let runtime = webview_runtime_state(cx.app, backend.id);
+                    match action {
+                        WebPreviewBackendAction::GoBack => {
+                            runtime.map(|st| !st.navigation.can_go_back).unwrap_or(true)
+                        }
+                        WebPreviewBackendAction::GoForward => runtime
+                            .map(|st| !st.navigation.can_go_forward)
+                            .unwrap_or(true),
+                        WebPreviewBackendAction::Reload => {
+                            runtime.map(|st| st.navigation.is_loading).unwrap_or(false)
+                        }
+                    }
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        };
+        #[cfg(not(feature = "webview"))]
+        let derived_disabled = false;
+
         let mut button = Button::new("")
             .children(self.children)
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Sm)
-            .disabled(self.disabled)
+            .disabled(self.disabled || derived_disabled)
             .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
             .refine_style(
                 ChromeRefinement::default()

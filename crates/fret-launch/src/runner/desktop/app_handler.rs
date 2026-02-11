@@ -979,16 +979,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             if !surfaces.is_empty() {
                                 let placements = surfaces
                                     .into_iter()
-                                    .filter_map(|s| {
+                                    .map(|s| {
                                         let placement = fret_webview::placement_for_test_id(
                                             snapshot,
                                             s.surface_test_id.as_ref(),
                                             s.visible,
-                                        )?;
-                                        Some(fret_webview::WebViewRequest::SetPlacement {
+                                        )
+                                        .unwrap_or_else(|| fret_webview::WebViewPlacement {
+                                            window: app_window,
+                                            bounds: fret_core::Rect::default(),
+                                            visible: false,
+                                        });
+                                        fret_webview::WebViewRequest::SetPlacement {
                                             id: s.id,
                                             placement,
-                                        })
+                                        }
                                     })
                                     .collect::<Vec<_>>();
                                 fret_webview::webview_push_requests(&mut self.app, placements);
@@ -1008,6 +1013,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     unhandled,
                                 );
                             }
+                        }
+
+                        let events = self.webviews_wry.drain_events_for_window(app_window);
+                        if !events.is_empty() {
+                            fret_webview::webview_push_events(&mut self.app, events);
+                            self.app.request_redraw(app_window);
                         }
                     }
 

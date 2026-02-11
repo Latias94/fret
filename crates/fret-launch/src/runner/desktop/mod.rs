@@ -3029,6 +3029,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.internal_drag_pointer_id = None;
         }
 
+        #[cfg(feature = "webview-wry")]
+        {
+            let events = self.webviews_wry.destroy_all_for_window(window);
+            if !events.is_empty() {
+                fret_webview::webview_push_events(&mut self.app, events);
+            }
+
+            // Best-effort cleanup for any registered surfaces (even if no backend instance was
+            // created yet).
+            let surfaces = fret_webview::webview_surfaces_for_window(&self.app, window);
+            if !surfaces.is_empty() {
+                fret_webview::webview_push_events(
+                    &mut self.app,
+                    surfaces
+                        .into_iter()
+                        .map(|s| fret_webview::WebViewEvent::Destroyed { id: s.id }),
+                );
+            }
+        }
+
         {
             use fret_runtime::DragHost as _;
             use std::collections::HashSet;

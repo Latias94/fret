@@ -29,6 +29,7 @@ pub fn build_webview_as_child(
     window: &(impl HasWindowHandle + ?Sized),
     initial_url: Option<Arc<str>>,
     enable_devtools: bool,
+    configure: impl FnOnce(WebViewBuilder) -> WebViewBuilder,
 ) -> Result<wry::WebView, BuildAsChildError> {
     let handle = window
         .window_handle()
@@ -40,6 +41,7 @@ pub fn build_webview_as_child(
     if let Some(url) = initial_url {
         builder = builder.with_url(url.as_ref());
     }
+    builder = configure(builder);
     builder
         .build_as_child(&handle)
         .map_err(BuildAsChildError::Wry)

@@ -127,6 +127,18 @@ pub enum WebViewEvent {
     },
 }
 
+/// Runtime-observable state for a hosted WebView instance.
+///
+/// This is derived from backend-emitted [`WebViewEvent`]s and is intended to be polled by
+/// UI/policy code (e.g. to disable navigation buttons).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct WebViewRuntimeState {
+    pub url: Option<Arc<str>>,
+    pub title: Option<Arc<str>>,
+    pub navigation: WebViewNavigationState,
+    pub last_error: Option<Arc<str>>,
+}
+
 /// App-global host state used to bridge UI/policy code and runner-owned WebView backends.
 ///
 /// This is a pragmatic v1 integration surface:
@@ -139,7 +151,9 @@ pub enum WebViewEvent {
 #[derive(Debug, Default)]
 pub struct WebViewHost {
     requests: VecDeque<WebViewRequest>,
+    events: VecDeque<WebViewEvent>,
     surfaces: HashMap<WebViewId, WebViewSurfaceRegistration>,
+    runtime: HashMap<WebViewId, WebViewRuntimeState>,
 }
 
 impl WebViewHost {
@@ -155,6 +169,25 @@ impl WebViewHost {
         self.requests.drain(..).collect()
     }
 
+    pub fn push_event(&mut self, event: WebViewEvent) {
+        self.apply_event_to_runtime(&event);
+        self.events.push_back(event);
+    }
+
+    pub fn push_events(&mut self, events: impl IntoIterator<Item = WebViewEvent>) {
+        for ev in events {
+            self.push_event(ev);
+        }
+    }
+
+    pub fn drain_events(&mut self) -> Vec<WebViewEvent> {
+        self.events.drain(..).collect()
+    }
+
+    pub fn runtime_state(&self, id: WebViewId) -> Option<&WebViewRuntimeState> {
+        self.runtime.get(&id)
+    }
+
     pub fn requeue_requests_front(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
         let mut head: VecDeque<WebViewRequest> = requests.into_iter().collect();
         head.append(&mut self.requests);
@@ -163,6 +196,44 @@ impl WebViewHost {
 
     pub fn register_surface(&mut self, surface: WebViewSurfaceRegistration) {
         self.surfaces.insert(surface.id, surface);
+    }
+
+    fn apply_event_to_runtime(&mut self, event: &WebViewEvent) {
+        match event {
+            WebViewEvent::Created { id } => {
+                self.runtime.entry(*id).or_default();
+            }
+            WebViewEvent::Destroyed { id } => {
+                self.runtime.remove(id);
+                self.surfaces.remove(id);
+            }
+            WebViewEvent::UrlChanged { id, url } => {
+                self.runtime
+                    .entry(*id)
+                    .or_default()
+                    .url
+                    .replace(url.clone());
+            }
+            WebViewEvent::TitleChanged { id, title } => {
+                self.runtime
+                    .entry(*id)
+                    .or_default()
+                    .title
+                    .replace(title.clone());
+            }
+            WebViewEvent::NavigationStateChanged { id, state } => {
+                self.runtime.entry(*id).or_default().navigation = *state;
+            }
+            WebViewEvent::ConsoleMessage { .. } => {}
+            WebViewEvent::LoadFailed { id, error } => {
+                self.runtime
+                    .entry(*id)
+                    .or_default()
+                    .last_error
+                    .replace(error.clone());
+                self.runtime.entry(*id).or_default().navigation.is_loading = false;
+            }
+        }
     }
 
     pub fn surface(&self, id: WebViewId) -> Option<&WebViewSurfaceRegistration> {
@@ -241,6 +312,28 @@ pub fn webview_requeue_requests_front(
     requests: impl IntoIterator<Item = WebViewRequest>,
 ) {
     with_webview_host_mut(host, |st| st.requeue_requests_front(requests));
+}
+
+pub fn webview_push_event(host: &mut impl GlobalsHost, event: WebViewEvent) {
+    with_webview_host_mut(host, |st| st.push_event(event));
+}
+
+pub fn webview_push_events(
+    host: &mut impl GlobalsHost,
+    events: impl IntoIterator<Item = WebViewEvent>,
+) {
+    with_webview_host_mut(host, |st| st.push_events(events));
+}
+
+pub fn webview_drain_events(host: &mut impl GlobalsHost) -> Vec<WebViewEvent> {
+    with_webview_host_mut(host, |st| st.drain_events())
+}
+
+pub fn webview_runtime_state(
+    host: &impl GlobalsHost,
+    id: WebViewId,
+) -> Option<WebViewRuntimeState> {
+    with_webview_host(host, |st| st.and_then(|st| st.runtime_state(id).cloned()))
 }
 
 pub fn webview_register_surface(host: &mut impl GlobalsHost, surface: WebViewSurfaceRegistration) {
@@ -371,5 +464,34 @@ mod tests {
         let picked = best_bounds_for_test_id(&snapshot, "webview-surface").expect("must pick");
         assert_eq!(picked.size.width, Px(10.0));
         assert_eq!(picked.size.height, Px(10.0));
+    }
+
+    #[test]
+    fn push_event_updates_runtime_state() {
+        let mut host = WebViewHost::default();
+        let id = WebViewId(1);
+
+        host.push_event(WebViewEvent::Created { id });
+        host.push_event(WebViewEvent::UrlChanged {
+            id,
+            url: Arc::<str>::from("https://example.com"),
+        });
+        host.push_event(WebViewEvent::TitleChanged {
+            id,
+            title: Arc::<str>::from("Example Domain"),
+        });
+        host.push_event(WebViewEvent::NavigationStateChanged {
+            id,
+            state: WebViewNavigationState {
+                can_go_back: false,
+                can_go_forward: false,
+                is_loading: true,
+            },
+        });
+
+        let st = host.runtime_state(id).expect("runtime state must exist");
+        assert_eq!(st.url.as_deref(), Some("https://example.com"));
+        assert_eq!(st.title.as_deref(), Some("Example Domain"));
+        assert!(st.navigation.is_loading);
     }
 }

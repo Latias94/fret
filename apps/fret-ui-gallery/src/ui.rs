@@ -20859,7 +20859,7 @@ fn preview_ai_web_preview_demo(
             IconId::new_static("lucide.arrow-left"),
         )])
         .tooltip("Back")
-        .disabled(true);
+        .disabled(false);
         #[cfg(feature = "webview-wry")]
         let back = back.backend_action(ui_ai::WebPreviewBackendAction::GoBack);
         let back = back
@@ -20871,7 +20871,7 @@ fn preview_ai_web_preview_demo(
             IconId::new_static("lucide.arrow-right"),
         )])
         .tooltip("Forward")
-        .disabled(true);
+        .disabled(false);
         #[cfg(feature = "webview-wry")]
         let forward = forward.backend_action(ui_ai::WebPreviewBackendAction::GoForward);
         let forward = forward
@@ -20936,7 +20936,63 @@ fn preview_ai_web_preview_demo(
                 }),
         );
 
-        vec![nav, body, console, marker]
+        #[cfg(feature = "webview-wry")]
+        let runtime_markers = {
+            let runtime = fret_webview::webview_runtime_state(cx.app, fret_webview::WebViewId(1));
+
+            let loading = runtime
+                .as_ref()
+                .map(|st| st.navigation.is_loading)
+                .unwrap_or(true);
+            let can_back = runtime
+                .as_ref()
+                .map(|st| st.navigation.can_go_back)
+                .unwrap_or(false);
+            let can_forward = runtime
+                .as_ref()
+                .map(|st| st.navigation.can_go_forward)
+                .unwrap_or(false);
+
+            let loading_marker = cx.text(format!("loading={loading}")).attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id(if loading {
+                        "ui-ai-web-preview-demo-loading-true"
+                    } else {
+                        "ui-ai-web-preview-demo-loading-false"
+                    }),
+            );
+
+            let back_marker = cx.text(format!("can_back={can_back}")).attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id(if can_back {
+                        "ui-ai-web-preview-demo-can-back-true"
+                    } else {
+                        "ui-ai-web-preview-demo-can-back-false"
+                    }),
+            );
+
+            let forward_marker = cx
+                .text(format!("can_forward={can_forward}"))
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Generic)
+                        .test_id(if can_forward {
+                            "ui-ai-web-preview-demo-can-forward-true"
+                        } else {
+                            "ui-ai-web-preview-demo-can-forward-false"
+                        }),
+                );
+
+            vec![loading_marker, back_marker, forward_marker]
+        };
+        #[cfg(not(feature = "webview-wry"))]
+        let runtime_markers: Vec<AnyElement> = Vec::new();
+
+        let mut out = vec![nav, body, console, marker];
+        out.extend(runtime_markers);
+        out
     });
 
     vec![stack::vstack(

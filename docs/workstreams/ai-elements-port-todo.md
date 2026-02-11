@@ -77,7 +77,7 @@ Status legend:
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
-| `web-preview` | Prototype | `fret-ui-ai` | Chrome-only port exists (`WebPreview*`); UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry`. |
+| `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`). |
 | `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 | `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 | `package-info` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
@@ -344,6 +344,8 @@ Keep this list in sync with the pinned upstream commit recorded in
 ### WebPreview backend (optional, feature-gated)
 
 - [x] AIEL-MVP0-webpreview-001 Port `WebPreview` chrome-only surfaces + UI Gallery demo + diag gate.
+- [~] AIEL-MVP0-webpreview-002 Close the v1 backend loop (navigation state + URL reflection) and document limitations.
+  - Source of truth: `docs/workstreams/webview-wry-v1.md` + TODO tracker.
 - [x] AIEL-MVP0-webpreview-002 Define WebView integration plan and crate boundaries (contract + wry backend).
   - Workstream: `docs/workstreams/webview-wry-v1.md`
   - TODOs: `docs/workstreams/webview-wry-v1-todo.md`
