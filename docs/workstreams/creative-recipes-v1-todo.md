@@ -15,6 +15,13 @@ See:
       changing their public wrapper signatures.
 - [ ] Create a `VisualCatalog`/`MaterialCatalog` skeleton API and decide where it is stored (app model vs service).
 
+Next (recommended order):
+
+1. `VisualCatalog`/`MaterialCatalog` skeleton (P0 ecosystem foundation)
+2. M7: sampled materials v2a (catalog textures; ADR 0242)
+3. M8: `ecosystem/fret-ui-magic` Phase 0
+4. M9: external texture imports (contract-path demo + capability-gated backend)
+
 ## P0 — Kernel primitives (scene + renderer)
 
 - [x] Paint v1 (ADR 0233):

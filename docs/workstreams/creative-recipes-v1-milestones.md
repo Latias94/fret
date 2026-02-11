@@ -21,6 +21,18 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
 - `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
 
+Remaining gate (to fully close M0):
+
+- Land a `VisualCatalog`/`MaterialCatalog` skeleton API (stable storage + resolve surface + diag seam).
+
+Status: Not started
+
+Evidence (planned):
+
+- `ecosystem/fret-ui-kit/src/recipes/catalog.rs` (or similar)
+- `ecosystem/fret-ui-kit/src/recipes/mod.rs`
+- `docs/workstreams/creative-recipes-v1-todo.md` (P0 foundation checklist)
+
 ## M1 — Paint v1 (gradients)
 
 - Land `Paint` and gradient evaluation (ADR 0233) and wire it to `SceneOp::Quad` (and optionally `Path`).
