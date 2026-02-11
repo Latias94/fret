@@ -76,9 +76,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
 
-- [ ] Add `diag script normalize` (pretty-print, stable diffs).
-- [ ] Add `diag script validate` (schema/parse, clear error paths, `check.script_schema.json`).
-- [ ] Add `diag script lint` (capability inference, discouraged patterns, `check.script_lint.json`).
+- [x] Add `diag script normalize` (pretty-print, stable diffs).
+- [x] Add `diag script validate` (schema/parse, clear error paths, `check.script_schema.json`).
+- [x] Add `diag script lint` (capability inference, discouraged patterns, `check.script_lint.json`).
 - [ ] Add CI-friendly “generate + check” workflow:
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).

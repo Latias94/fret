@@ -12,16 +12,26 @@ This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabili
 Goal: keep JSON scripts as the portable artifact, while providing tooling that makes scripts maintainable at scale
 (reviewable diffs, CI-friendly checks, and shrink/minimize workflows).
 
-## Commands to add (small, checkable deliverables)
+## Commands (implemented)
 
 ### 1) `diag script normalize`
 
 Parse a script JSON (v1/v2) and re-emit pretty JSON with stable formatting.
 
+Command:
+
+- `fretboard diag script normalize <script.json> [--write|--check]`
+
+Behavior:
+
+- Canonicalizes JSON key order recursively and emits `serde_json::to_string_pretty` output.
+- Normalized output always ends with `\n` (and treats `\r\n` and `\n` as equivalent on input).
+
 Outputs:
 
 - normalized JSON on stdout (optional),
 - or write-in-place with `--write`.
+- `--check` exits with code 1 when the file is not normalized.
 
 Why:
 
@@ -34,12 +44,20 @@ Validate:
 
 - JSON schema version is known,
 - step variants and fields parse,
-- unknown fields are either tolerated (for forward-compat rules) or flagged based on strictness mode.
+- unknown fields follow the protocol crate’s `serde` rules (strictness modes are TBD).
+
+Command:
+
+- `fretboard diag script validate <script.json>... [--check-out <path>] [--json]`
 
 Outputs:
 
-- `check.script_schema.json` evidence file for CI,
+- `check.script_schema.json` evidence file for CI (default: under `--dir`, typically `target/fret-diag/`),
 - clear human error messages (path + reason).
+
+Exit code:
+
+- exits with code 1 if any script fails to parse/validate.
 
 ### 3) `diag script lint`
 
@@ -49,9 +67,17 @@ Script-only lint (no app required):
 - can flag discouraged patterns (raw coordinate injection when semantics selector exists),
 - can flag missing metadata (optional, based on repo policy).
 
+Command:
+
+- `fretboard diag script lint <script.json>... [--check-out <path>] [--json]`
+
 Outputs:
 
 - `check.script_lint.json`.
+
+Exit code:
+
+- exits with code 1 if any script fails to parse/lint (tooling errors).
 
 ### 4) `diag script shrink` (delta debugging)
 

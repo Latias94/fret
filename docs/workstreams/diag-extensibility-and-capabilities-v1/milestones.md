@@ -45,9 +45,9 @@ Definition of done:
 
 - [x] Add a small, typed Rust script builder that produces Script v2.
 - [x] Add a minimal script generator tool that emits JSON from Rust templates.
-- [ ] Add `diag script normalize` (stable diffs).
-- [ ] Add `diag script validate` (clear failures + evidence file).
-- [ ] Add `diag script lint` (capability inference + basic hygiene).
+- [x] Add `diag script normalize` (stable diffs).
+- [x] Add `diag script validate` (clear failures + evidence file).
+- [x] Add `diag script lint` (capability inference + basic hygiene).
 
 Definition of done:
 

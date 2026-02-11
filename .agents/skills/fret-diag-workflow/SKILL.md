@@ -33,6 +33,10 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
      - `click_stable`: avoid stale coordinates when bounds jump.
      - `wait_bounds_stable`: wait for overlay/content bounds to settle (flip/shift/estimate→measured).
    - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
+   - Keep scripts reviewable and CI-friendly:
+     - `fretboard diag script normalize <script.json> --write`
+     - `fretboard diag script validate <script.json>`
+     - `fretboard diag script lint <script.json>`
 3. Ensure diagnostics are enabled in the running app.
    - Minimum: `FRET_DIAG=1`
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
@@ -105,4 +109,5 @@ Where the code lives:
 - Web/WASM transport: `.agents/skills/fret-diag-workflow/references/web-runner.md`
 - Evidence triage checklist: `.agents/skills/fret-diag-workflow/references/evidence-triage.md`
 - Select conformance playbook: `.agents/skills/fret-diag-workflow/references/select-conformance.md`
+- Layout sweep playbook: `.agents/skills/fret-diag-workflow/references/layout-sweep.md`
 - Perf handoff: `.agents/skills/fret-diag-workflow/references/perf-handoff.md`

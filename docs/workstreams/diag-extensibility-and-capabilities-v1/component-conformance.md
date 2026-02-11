@@ -95,7 +95,7 @@ Use `diag compare` for before/after regressions when the semantics contract is e
 When you need a placement/collision matrix (many cases):
 
 - prefer fixture-driven generation (JSON fixtures + thin harness) over dozens of hand-authored scripts,
-- keep scripts normalized and reviewable (`diag script normalize` once implemented).
+- keep scripts normalized and reviewable (`diag script normalize`).
 
 ## Layout and virtualization debugging tips (diag-first)
 

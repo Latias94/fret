@@ -170,6 +170,16 @@ cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --la
 
 Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
 
+Script tooling (no app required):
+
+- Normalize formatting (stable diffs):
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
+  - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- Validate schema/parse (writes `check.script_schema.json` under `--dir`, or `--check-out`):
+  - `cargo run -p fretboard -- diag script validate .\\script.json`
+- Lint scripts (capability inference + hygiene; writes `check.script_lint.json`):
+  - `cargo run -p fretboard -- diag script lint .\\script.json`
+
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
    - `cargo run -p fretboard -- diag script .\\script.json`
