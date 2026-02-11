@@ -10,6 +10,9 @@ pub(crate) use web_golden_shadcn::{
 #[path = "../support/web_tree.rs"]
 mod web_tree;
 
+#[path = "../support/web_query.rs"]
+mod web_query;
+
 pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
     pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
@@ -82,15 +85,11 @@ pub(crate) fn web_find_badge_spans_with_spinner<'a>(root: &'a WebNode) -> Vec<&'
 }
 
 pub(crate) fn web_find_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v == slot)
-    })
+    web_query::find_by_data_slot(root, slot)
 }
 
 pub(crate) fn web_find_all_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Vec<&'a WebNode> {
-    find_all(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v == slot)
-    })
+    web_query::find_all_by_data_slot(root, slot)
 }
 
 pub(crate) fn web_find_scroll_area_scrollbar<'a>(

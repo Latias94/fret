@@ -15,14 +15,14 @@ pub(super) fn find_portal_by_role<'a>(
     theme: &'a WebGoldenTheme,
     role: &str,
 ) -> Option<&'a WebNode> {
-    web_portals::portal_roots(theme).find(|n| n.attrs.get("role").is_some_and(|v| v == role))
+    web_portals::find_portal_by_role(theme, role)
 }
 
 pub(super) fn find_portal_by_slot<'a>(
     theme: &'a WebGoldenTheme,
     slot: &str,
 ) -> Option<&'a WebNode> {
-    web_portals::portal_roots(theme).find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
+    web_portals::find_portal_by_slot(theme, slot)
 }
 
 pub(super) fn find_by_data_slot_and_state<'a>(

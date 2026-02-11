@@ -19,6 +19,12 @@ pub(super) fn find_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Option<&'a
     })
 }
 
+pub(super) fn find_all_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Vec<&'a WebNode> {
+    find_all(root, &|n| {
+        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
+    })
+}
+
 pub(super) fn find_by_data_slot_and_state_and_text<'a>(
     root: &'a WebNode,
     slot: &str,
