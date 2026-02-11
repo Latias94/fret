@@ -7,8 +7,7 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, SemanticsRole,
-    TimerToken, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, RectPx, TimerToken, UiServices,
 };
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -20,15 +19,11 @@ use fret_runtime::{
     PlatformCapabilities, PlatformFilter, WindowCommandAvailabilityService,
     WindowCommandEnabledService,
 };
+use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
-use fret_ui::declarative;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{Invalidation, UiTree};
-use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_shadcn as shadcn;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
-use fret_workspace::WorkspaceFrame;
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
@@ -53,6 +48,7 @@ mod debug_hud;
 mod debug_stats;
 mod inspector;
 mod menubar;
+mod render_flow;
 mod router;
 mod settings_sheet;
 mod shell;
@@ -2130,200 +2126,9 @@ impl UiGalleryDriver {
         state: &mut UiGalleryWindowState,
         bounds: fret_core::Rect,
     ) {
-        OverlayController::begin_frame(app, window);
-        let bisect = ui_gallery_bisect_flags();
-
-        Self::sync_undo_availability(app, window, &state.undo_doc);
-
-        #[cfg(target_arch = "wasm32")]
-        Self::sync_page_router_from_external_history(app, window, state);
-
-        let availability = app
-            .global::<WindowCommandAvailabilityService>()
-            .and_then(|svc| svc.snapshot(window))
-            .copied()
-            .unwrap_or_default();
-        let _ = app.models_mut().update(&state.settings_edit_can_undo, |v| {
-            *v = availability.edit_can_undo
-        });
-        let _ = app.models_mut().update(&state.settings_edit_can_redo, |v| {
-            *v = availability.edit_can_redo
-        });
-
-        let cache_enabled = app
-            .models()
-            .get_copied(&state.view_cache_enabled)
-            .unwrap_or(false);
-        let cache_shell = app
-            .models()
-            .get_copied(&state.view_cache_cache_shell)
-            .unwrap_or(false);
-
-        if state.ui.view_cache_enabled() != cache_enabled {
-            state.ui.set_view_cache_enabled(cache_enabled);
-            if let Some(root) = state.root {
-                state.ui.invalidate(root, Invalidation::Layout);
-            }
-        }
-
-        let content_models = Arc::new(state.content_models());
-        let selected_page = state.selected_page.clone();
-        let workspace_tabs = state.workspace_tabs.clone();
-        let workspace_dirty_tabs = state.workspace_dirty_tabs.clone();
-        let nav_query = state.nav_query.clone();
-        let settings_open = state.settings_open.clone();
-        let settings_menu_bar_os = state.settings_menu_bar_os.clone();
-        let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
-        let settings_menu_bar_in_window = state.settings_menu_bar_in_window.clone();
-        let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
-        let settings_edit_can_undo = state.settings_edit_can_undo.clone();
-        let settings_edit_can_redo = state.settings_edit_can_redo.clone();
-        let menu_bar_seq = state.menu_bar_seq.clone();
-        let inspector_enabled = state.inspector_enabled.clone();
-        let inspector_last_pointer = state.inspector_last_pointer.clone();
-
-        let inspector_on = app.models().get_copied(&inspector_enabled).unwrap_or(false);
-        let debug_on = inspector_on
-            || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
-            || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
-        state.ui.set_debug_enabled(debug_on);
-        if debug_on {
-            app.request_redraw(window);
-        }
-
-        Self::sync_shadcn_theme(app, state);
-        let last_debug_stats = state.ui.debug_stats();
-
-        let debug_hud = debug_stats::compute_debug_hud_bundle(
-            app,
-            &state.ui,
-            window,
-            &mut state.debug_hud,
-            &inspector_enabled,
-            &inspector_last_pointer,
-            debug_on,
-        );
-        let show_debug_hud = debug_hud.show;
-        let debug_hud_lines = debug_hud.lines;
-        let inspector_status = debug_hud.inspector_status;
-
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("fret-ui-gallery", |cx| {
-                    if (bisect & BISECT_MINIMAL_ROOT) != 0 {
-                        return vec![cx.text("Hello, fret-ui-gallery")];
-                    }
-
-                    let theme = cx.theme().clone();
-
-                    let sidebar = shell::sidebar_view(
-                        cx,
-                        &theme,
-                        bisect,
-                        cache_shell,
-                        &nav_query,
-                        &selected_page,
-                        &workspace_tabs,
-                    );
-                    let content = shell::content_view(
-                        cx,
-                        &theme,
-                        bisect,
-                        cache_shell,
-                        &selected_page,
-                        content_models.as_ref(),
-                    );
-
-                    let tab_strip = chrome::tab_strip_view(
-                        cx,
-                        (bisect & BISECT_DISABLE_TAB_STRIP) != 0,
-                        &selected_page,
-                        &workspace_tabs,
-                        &workspace_dirty_tabs,
-                    );
-
-                    let menubar_handle = std::cell::RefCell::new(None);
-                    let in_window_menu_bar =
-                        menubar::build_in_window_menu_bar(cx, &menu_bar_seq, &menubar_handle);
-
-                    let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
-
-                    let status_bar = status_bar::status_bar_view(
-                        cx,
-                        content_models.as_ref(),
-                        inspector_status.as_ref(),
-                        last_debug_stats.layout_time.as_micros(),
-                        last_debug_stats.paint_time.as_micros(),
-                    );
-
-                    let mut center_layout = fret_ui::element::LayoutStyle::default();
-                    center_layout.size.width = fret_ui::element::Length::Fill;
-                    center_layout.size.height = fret_ui::element::Length::Fill;
-                    center_layout.flex.grow = 1.0;
-
-                    let center = cx.flex(
-                        fret_ui::element::FlexProps {
-                            layout: center_layout,
-                            direction: fret_core::Axis::Horizontal,
-                            ..Default::default()
-                        },
-                        |_cx| vec![sidebar, content],
-                    );
-
-                    let frame = WorkspaceFrame::new(center)
-                        .top(top_bar)
-                        .bottom(status_bar)
-                        .into_element(cx);
-
-                    let panel = frame.attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Panel)
-                            .label("fret-ui-gallery"),
-                    );
-                    menubar::attach_in_window_menubar_handlers(cx, panel.id, &menubar_handle);
-
-                    let mut content: Vec<AnyElement> = vec![
-                        panel,
-                        toaster::toaster_view(
-                            cx,
-                            content_models.as_ref(),
-                            (bisect & BISECT_DISABLE_TOASTER) != 0,
-                        ),
-                    ];
-
-                    settings_sheet::push_settings_sheet(
-                        cx,
-                        settings_open.clone(),
-                        settings_menu_bar_os.clone(),
-                        settings_menu_bar_os_open.clone(),
-                        settings_menu_bar_in_window.clone(),
-                        settings_menu_bar_in_window_open.clone(),
-                        settings_edit_can_undo.clone(),
-                        settings_edit_can_redo.clone(),
-                        &mut content,
-                    );
-
-                    debug_hud::maybe_push_debug_hud(
-                        cx,
-                        theme.clone(),
-                        show_debug_hud,
-                        debug_hud_lines.clone(),
-                        &mut content,
-                    );
-
-                    inspector::wrap_content_if_enabled(
-                        cx,
-                        &inspector_enabled,
-                        &inspector_last_pointer,
-                        content,
-                    )
-                });
-
-        state.ui.set_root(root);
-        if (bisect & BISECT_DISABLE_OVERLAY_CONTROLLER) == 0 {
-            OverlayController::render(&mut state.ui, app, services, window, bounds);
-        }
-        state.root = Some(root);
+        let frame = render_flow::begin_frame(app, window, state);
+        let root = render_flow::render_root(app, services, window, state, bounds, &frame);
+        render_flow::end_frame(app, services, window, state, bounds, &frame, root);
     }
 }
 
