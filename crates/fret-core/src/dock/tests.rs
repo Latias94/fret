@@ -379,3 +379,121 @@ fn close_panel_prunes_empty_tabs_in_nary_split() {
     assert!(g.find_panel_in_window(w, &panel_c).is_some());
     assert!(g.find_panel_in_window(w, &panel_b).is_none());
 }
+
+#[test]
+fn edge_dock_inserts_into_existing_same_axis_split_and_splits_share() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+    let panel_d = PanelKey::new("test.d");
+
+    let mut g = DockGraph::new();
+    let tabs_left = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    let tabs_right = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone(), panel_c.clone(), panel_d.clone()],
+        active: 0,
+    });
+    let root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![tabs_left, tabs_right],
+        fractions: vec![0.2, 0.8],
+    });
+    g.set_window_root(w, root);
+
+    assert!(g.apply_op(&DockOp::MovePanel {
+        source_window: w,
+        panel: panel_c.clone(),
+        target_window: w,
+        target_tabs: tabs_right,
+        zone: DropZone::Left,
+        insert_index: None,
+    }));
+
+    let root = g.window_root(w).expect("window root exists");
+    let DockNode::Split {
+        children,
+        fractions,
+        ..
+    } = g.node(root).expect("root must exist")
+    else {
+        unreachable!();
+    };
+
+    assert_eq!(children.len(), 3);
+    assert_eq!(fractions.len(), 3);
+    assert!((fractions[0] - 0.2).abs() < 1e-4);
+    assert!((fractions[1] - 0.4).abs() < 1e-4);
+    assert!((fractions[2] - 0.4).abs() < 1e-4);
+
+    assert!(g.find_panel_in_window(w, &panel_c).is_some());
+    assert!(g.find_panel_in_window(w, &panel_a).is_some());
+    assert!(g.find_panel_in_window(w, &panel_b).is_some());
+    assert!(g.find_panel_in_window(w, &panel_d).is_some());
+}
+
+#[test]
+fn repeated_edge_dock_keeps_same_axis_splits_flat() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+    let panel_d = PanelKey::new("test.d");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![
+            panel_a.clone(),
+            panel_b.clone(),
+            panel_c.clone(),
+            panel_d.clone(),
+        ],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    for panel in [panel_b.clone(), panel_c.clone(), panel_d.clone()] {
+        assert!(g.apply_op(&DockOp::MovePanel {
+            source_window: w,
+            panel,
+            target_window: w,
+            target_tabs: tabs,
+            zone: DropZone::Left,
+            insert_index: None,
+        }));
+    }
+
+    fn max_same_axis_depth(graph: &DockGraph, node: DockNodeId, axis: Axis) -> usize {
+        let Some(n) = graph.node(node) else {
+            return 0;
+        };
+        match n {
+            DockNode::Tabs { .. } => 0,
+            DockNode::Floating { child } => max_same_axis_depth(graph, *child, axis),
+            DockNode::Split {
+                axis: split_axis,
+                children,
+                ..
+            } => {
+                let child_max = children
+                    .iter()
+                    .copied()
+                    .map(|c| max_same_axis_depth(graph, c, axis))
+                    .max()
+                    .unwrap_or(0);
+                if *split_axis == axis {
+                    child_max + 1
+                } else {
+                    child_max
+                }
+            }
+        }
+    }
+
+    let root = g.window_root(w).expect("window root exists");
+    let depth = max_same_axis_depth(&g, root, Axis::Horizontal);
+    assert_eq!(depth, 1, "expected no nested same-axis splits");
+}

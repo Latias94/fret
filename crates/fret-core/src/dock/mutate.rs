@@ -242,6 +242,20 @@ impl DockGraph {
             active: 0,
         });
 
+        if self.insert_edge_child_prefer_same_axis_split(
+            target_window,
+            target_tabs,
+            axis,
+            zone,
+            new_tabs,
+        ) {
+            self.simplify_window_forest(source_window);
+            if target_window != source_window {
+                self.simplify_window_forest(target_window);
+            }
+            return true;
+        }
+
         let (first, second) = match zone {
             DropZone::Left | DropZone::Top => (new_tabs, target_tabs),
             DropZone::Right | DropZone::Bottom => (target_tabs, new_tabs),
@@ -327,6 +341,17 @@ impl DockGraph {
             tabs: panels,
             active,
         });
+
+        if self.insert_edge_child_prefer_same_axis_split(
+            target_window,
+            target_tabs,
+            axis,
+            zone,
+            new_tabs,
+        ) {
+            self.simplify_window_forest(target_window);
+            return true;
+        }
 
         let (first, second) = match zone {
             DropZone::Left | DropZone::Top => (new_tabs, target_tabs),
@@ -667,6 +692,157 @@ impl DockGraph {
         true
     }
 
+    fn insert_edge_child_prefer_same_axis_split(
+        &mut self,
+        window: AppWindowId,
+        target: DockNodeId,
+        axis: Axis,
+        zone: DropZone,
+        new_child: DockNodeId,
+    ) -> bool {
+        let Some(root) = self.root_for_node_in_window_forest(window, target) else {
+            return false;
+        };
+
+        // Outer docking can target a split root. If the target is already a same-axis split, we
+        // can insert directly at the boundary.
+        let target_split_len = match self.nodes.get(target) {
+            Some(DockNode::Split {
+                axis: split_axis,
+                children,
+                fractions,
+            }) if *split_axis == axis
+                && !children.is_empty()
+                && children.len() == fractions.len() =>
+            {
+                Some(children.len())
+            }
+            _ => None,
+        };
+        if let Some(len) = target_split_len {
+            let (anchor_index, insert_index) = match zone {
+                DropZone::Left | DropZone::Top => (0, 0),
+                DropZone::Right | DropZone::Bottom => {
+                    let last = len.saturating_sub(1);
+                    (last, last.saturating_add(1))
+                }
+                DropZone::Center => unreachable!(),
+            };
+            if let Some(DockNode::Split {
+                children,
+                fractions,
+                ..
+            }) = self.nodes.get_mut(target)
+            {
+                split_share_and_insert(children, fractions, anchor_index, insert_index, new_child);
+                return true;
+            }
+            return false;
+        }
+
+        let Some((split, anchor_index)) =
+            self.find_nearest_same_axis_split_and_anchor(root, target, axis)
+        else {
+            return false;
+        };
+
+        let Some(DockNode::Split {
+            axis: split_axis,
+            children,
+            fractions,
+        }) = self.nodes.get_mut(split)
+        else {
+            return false;
+        };
+        if *split_axis != axis || children.len() != fractions.len() || children.is_empty() {
+            return false;
+        }
+
+        let insert_index = match zone {
+            DropZone::Left | DropZone::Top => anchor_index,
+            DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
+            DropZone::Center => unreachable!(),
+        };
+
+        split_share_and_insert(children, fractions, anchor_index, insert_index, new_child);
+        true
+    }
+
+    fn find_nearest_same_axis_split_and_anchor(
+        &self,
+        root: DockNodeId,
+        target: DockNodeId,
+        axis: Axis,
+    ) -> Option<(DockNodeId, usize)> {
+        let mut path_rev: Vec<DockNodeId> = Vec::new();
+        if !self.build_path_rev(root, target, &mut path_rev) {
+            return None;
+        }
+        path_rev.reverse();
+        if path_rev.len() < 2 {
+            return None;
+        }
+
+        for i in (0..path_rev.len().saturating_sub(1)).rev() {
+            let ancestor = path_rev[i];
+            let child_on_path = path_rev[i + 1];
+
+            let Some(DockNode::Split {
+                axis: split_axis,
+                children,
+                fractions,
+            }) = self.nodes.get(ancestor)
+            else {
+                continue;
+            };
+            if *split_axis != axis || children.len() != fractions.len() || children.is_empty() {
+                continue;
+            }
+            let Some(ix) = children.iter().position(|c| *c == child_on_path) else {
+                continue;
+            };
+            return Some((ancestor, ix));
+        }
+
+        None
+    }
+
+    fn build_path_rev(
+        &self,
+        node: DockNodeId,
+        target: DockNodeId,
+        out: &mut Vec<DockNodeId>,
+    ) -> bool {
+        if node == target {
+            out.push(node);
+            return true;
+        }
+
+        let Some(n) = self.nodes.get(node) else {
+            return false;
+        };
+        match n {
+            DockNode::Tabs { .. } => false,
+            DockNode::Split { children, .. } => {
+                for &child in children {
+                    if self.build_path_rev(child, target, out) {
+                        out.push(node);
+                        return true;
+                    }
+                }
+                false
+            }
+            DockNode::Floating { child } => {
+                if self.build_path_rev(*child, target, out) {
+                    out.push(node);
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
     fn replace_node_in_window_tree(
         &mut self,
         window: AppWindowId,
@@ -834,4 +1010,28 @@ fn normalize_shares(shares: &mut Vec<f32>) {
         let rest: f32 = shares.iter().take(len.saturating_sub(1)).sum();
         shares[len - 1] = (1.0 - rest).clamp(0.0, 1.0);
     }
+}
+
+fn split_share_and_insert(
+    children: &mut Vec<DockNodeId>,
+    fractions: &mut Vec<f32>,
+    anchor_index: usize,
+    insert_index: usize,
+    new_child: DockNodeId,
+) {
+    debug_assert!(!children.is_empty());
+    debug_assert_eq!(children.len(), fractions.len());
+    debug_assert!(anchor_index < fractions.len());
+    debug_assert!(insert_index <= fractions.len());
+
+    // Default ratio for v1: split the anchor child share in half.
+    let k = 0.5_f32;
+
+    let old = fractions[anchor_index];
+    let keep = old * (1.0 - k);
+    let take = old * k;
+
+    fractions[anchor_index] = keep;
+    children.insert(insert_index, new_child);
+    fractions.insert(insert_index, take);
 }
