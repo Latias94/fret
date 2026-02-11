@@ -3969,6 +3969,27 @@ impl UiDiagnosticsService {
             .as_ref()
             .and_then(|provider| provider(app, window));
 
+        let frame_clock = app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| {
+                let snapshot = svc.snapshot(window)?;
+                let fixed_delta_ms = svc.fixed_delta(window).map(|d| {
+                    let ms = d.as_millis();
+                    ms.min(u64::MAX as u128) as u64
+                });
+                Some(UiFrameClockSnapshotV1 {
+                    now_monotonic_ms: {
+                        let ms = snapshot.now_monotonic.as_millis();
+                        ms.min(u64::MAX as u128) as u64
+                    },
+                    delta_ms: {
+                        let ms = snapshot.delta.as_millis();
+                        ms.min(u64::MAX as u128) as u64
+                    },
+                    fixed_delta_ms,
+                })
+            });
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -3981,6 +4002,7 @@ impl UiDiagnosticsService {
             scene_fingerprint: scene.fingerprint(),
             semantics_fingerprint,
             debug,
+            frame_clock,
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
@@ -4764,12 +4786,22 @@ impl UiDiagnosticsBundleV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiFrameClockSnapshotV1 {
+    pub now_monotonic_ms: u64,
+    pub delta_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_delta_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsSnapshotV1 {
     pub schema_version: u32,
     pub tick_id: u64,
     pub frame_id: u64,
     pub window: u64,
     pub timestamp_unix_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock: Option<UiFrameClockSnapshotV1>,
     pub scale_factor: f32,
     pub window_bounds: RectV1,
     pub scene_ops: u64,
@@ -12416,6 +12448,10 @@ fn rect_fully_contains(outer: Rect, inner: Rect) -> bool {
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
+        "shift" => Some(KeyCode::ShiftLeft),
+        "ctrl" | "control" => Some(KeyCode::ControlLeft),
+        "alt" | "option" => Some(KeyCode::AltLeft),
+        "meta" | "super" | "cmd" | "command" => Some(KeyCode::MetaLeft),
         "escape" | "esc" => Some(KeyCode::Escape),
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),

@@ -287,6 +287,32 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Runs `f` and then restores the current callsite counters to their previous state.
+    ///
+    /// This is useful when you need to "probe-render" a subtree (e.g. to compute derived
+    /// information like `focus_within`) without consuming callsite slots and disturbing
+    /// subsequent element identity in the real render pass.
+    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let depth = self.callsite_counters.len();
+        let saved = self
+            .callsite_counters
+            .last()
+            .cloned()
+            .expect("callsite counters exist");
+
+        let out = f(self);
+
+        debug_assert_eq!(
+            self.callsite_counters.len(),
+            depth,
+            "callsite counters stack depth must be balanced"
+        );
+        if let Some(last) = self.callsite_counters.last_mut() {
+            *last = saved;
+        }
+        out
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this after mutating state/models to schedule a repaint.

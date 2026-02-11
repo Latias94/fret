@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 use crate::{AppWindowId, Color, Edges, Event, Point, Rect, Size};
 
@@ -247,6 +248,48 @@ impl WindowMetricsService {
         self.forced_colors_mode.remove(&window);
         self.safe_area_insets.remove(&window);
         self.occlusion_insets.remove(&window);
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WindowFrameClockSnapshot {
+    pub now_monotonic: Duration,
+    pub delta: Duration,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct WindowFrameClockService {
+    snapshots: HashMap<AppWindowId, WindowFrameClockSnapshot>,
+    fixed_deltas: HashMap<AppWindowId, Duration>,
+}
+
+impl WindowFrameClockService {
+    pub fn snapshot(&self, window: AppWindowId) -> Option<WindowFrameClockSnapshot> {
+        self.snapshots.get(&window).copied()
+    }
+
+    pub fn fixed_delta(&self, window: AppWindowId) -> Option<Duration> {
+        self.fixed_deltas.get(&window).copied()
+    }
+
+    pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowFrameClockSnapshot) {
+        self.snapshots.insert(window, snapshot);
+    }
+
+    pub fn set_fixed_delta(&mut self, window: AppWindowId, delta: Option<Duration>) {
+        match delta {
+            Some(delta) => {
+                self.fixed_deltas.insert(window, delta);
+            }
+            None => {
+                self.fixed_deltas.remove(&window);
+            }
+        }
+    }
+
+    pub fn remove(&mut self, window: AppWindowId) {
+        self.snapshots.remove(&window);
+        self.fixed_deltas.remove(&window);
     }
 }
 

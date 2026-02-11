@@ -17,6 +17,7 @@ use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, Invalidation, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::dialog as dialog_prim;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;

@@ -5393,6 +5393,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
     }
 
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        #[cfg(target_os = "macos")]
+        {
+            self.enqueue_window_front(window, None, None, Instant::now());
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = window;
+        }
+    }
+
     fn process_pending_front_requests(&mut self, now: Instant) -> bool {
         if self.windows_pending_front.is_empty() {
             return false;
