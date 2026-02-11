@@ -29,6 +29,19 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
 - Full font feature UI (OpenType feature toggles per span) beyond an internal “plumbing is correct”.
 - Multi-backend support (e.g. DirectWrite/CoreText shaping backends) — this workstream prepares the seams.
 
+## Execution order (recommended)
+
+1) **M1 (Fallback composition + conformance)**:
+   - lock “requested + script/locale + curated overrides” composition rules,
+   - add deterministic conformance strings/tests (bundled/no-system-font environments),
+   - ensure tofu regressions remain debuggable via bundle traces + script gates.
+2) **M0 (Variable font completeness)**:
+   - decide and implement synthesis (embolden/skew) participation in raster output + cache keys (if required),
+   - expand variable-font fixtures beyond weight-only.
+3) **M2 (Catalog + caching)**:
+   - cache family resolution and catalog metadata refreshes at the renderer boundary,
+   - keep picker UX stable (dedup/sort/revision) while staying best-effort.
+
 ## Current implementation snapshot (Fret)
 
 ### Entry points
