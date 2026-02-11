@@ -15,6 +15,11 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
+#[path = "support/css_units.rs"]
+mod css_units;
+
+use css_units::parse_px;
+
 #[derive(Debug, Clone, Serialize)]
 struct WebButtonStyle {
     rect: WebRect,
@@ -48,12 +53,6 @@ struct ButtonReport {
 
 fn css_get(style: &BTreeMap<String, String>, key: &str) -> Option<String> {
     style.get(key).cloned()
-}
-
-fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
 }
 
 fn parse_f32(s: &str) -> Option<f32> {

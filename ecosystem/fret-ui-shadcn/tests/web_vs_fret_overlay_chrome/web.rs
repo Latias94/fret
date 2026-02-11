@@ -2,6 +2,9 @@
 mod web_golden_shadcn;
 pub(super) use web_golden_shadcn::*;
 
+#[path = "../support/css_units.rs"]
+mod css_units;
+
 #[path = "../support/web_query.rs"]
 mod web_query;
 
@@ -55,9 +58,7 @@ pub(super) fn find_by_data_slot_and_state_and_text<'a>(
 }
 
 pub(super) fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
+    css_units::parse_px(s)
 }
 
 pub(super) fn web_border_widths_px(node: &WebNode) -> Option<[f32; 4]> {
