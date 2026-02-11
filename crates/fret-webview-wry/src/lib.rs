@@ -19,6 +19,9 @@ use fret_webview::{WebViewEvent, WebViewId, WebViewRequest};
 #[cfg(feature = "wry")]
 pub mod wry_backend;
 
+#[cfg(feature = "wry")]
+pub mod wry_host;
+
 /// Minimal, backend-agnostic interface used by hosts to drive a WebView backend.
 ///
 /// A concrete `wry` implementation should live in this crate once the runner glue strategy is

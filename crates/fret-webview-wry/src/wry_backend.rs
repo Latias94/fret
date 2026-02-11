@@ -26,7 +26,7 @@ use fret_core::{Px, Rect as CoreRect};
 /// - This assumes the host provides a window type that implements `HasWindowHandle`.
 /// - URL loading policy is backend-owned; this helper only sets an initial URL if provided.
 pub fn build_webview_as_child(
-    window: &impl HasWindowHandle,
+    window: &(impl HasWindowHandle + ?Sized),
     initial_url: Option<Arc<str>>,
     enable_devtools: bool,
 ) -> Result<wry::WebView, BuildAsChildError> {

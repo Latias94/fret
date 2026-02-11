@@ -13,7 +13,8 @@ documentation.workspace = true
 default = []
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
+fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
 
 [dev-dependencies]
 slotmap.workspace = true
