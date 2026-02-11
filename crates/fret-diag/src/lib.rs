@@ -16,6 +16,7 @@ pub mod devtools;
 mod gates;
 mod lint;
 mod perf_seed_policy;
+mod script_tooling;
 mod stats;
 pub mod transport;
 mod util;
@@ -34,6 +35,10 @@ use gates::{
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
+use script_tooling::{
+    NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
+    normalize_script_from_path, validate_scripts,
+};
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path,
@@ -157,6 +162,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut suite_lint: bool = true;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
+    let mut script_tool_write: bool = false;
+    let mut script_tool_check: bool = false;
+    let mut script_tool_check_out: Option<PathBuf> = None;
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
@@ -381,6 +389,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --script-result-trigger-path".to_string());
                 };
                 script_result_trigger_path = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--write" => {
+                script_tool_write = true;
+                i += 1;
+            }
+            "--check" => {
+                script_tool_check = true;
+                i += 1;
+            }
+            "--check-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-out".to_string());
+                };
+                script_tool_check_out = Some(PathBuf::from(v));
                 i += 1;
             }
             "--devtools-ws-url" => {
@@ -1854,20 +1878,137 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if pack_after_run {
                 return Err("--pack is only supported with `diag run`".to_string());
             }
-            let Some(src) = rest.first().cloned() else {
-                return Err(
-                    "missing script path (try: fretboard diag script ./script.json)".to_string(),
-                );
+            let Some(op) = rest.first().map(|s| s.as_str()) else {
+                return Err("missing script subcommand or script path (try: fretboard diag script ./script.json | fretboard diag script normalize ./script.json)".to_string());
             };
-            if rest.len() != 1 {
-                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
-            }
 
-            let src = resolve_path(&workspace_root, PathBuf::from(src));
-            write_script(&src, &resolved_script_path)?;
-            touch(&resolved_script_trigger_path)?;
-            println!("{}", resolved_script_trigger_path.display());
-            Ok(())
+            match op {
+                "normalize" => {
+                    if script_tool_check && script_tool_write {
+                        return Err("--check cannot be combined with --write".to_string());
+                    }
+                    let Some(src) = rest.get(1).cloned() else {
+                        return Err("missing script path (try: fretboard diag script normalize ./script.json)".to_string());
+                    };
+                    if rest.len() != 2 {
+                        return Err(format!("unexpected arguments: {}", rest[2..].join(" ")));
+                    }
+
+                    let src = resolve_path(&workspace_root, PathBuf::from(src));
+                    let NormalizedScript {
+                        normalized,
+                        changed,
+                    } = normalize_script_from_path(&src)?;
+
+                    if script_tool_check {
+                        if changed {
+                            eprintln!("not normalized: {}", src.display());
+                            std::process::exit(1);
+                        }
+                        println!("{}", src.display());
+                        return Ok(());
+                    }
+
+                    if script_tool_write {
+                        std::fs::write(&src, normalized.as_bytes()).map_err(|e| e.to_string())?;
+                        println!("{}", src.display());
+                        return Ok(());
+                    }
+
+                    print!("{normalized}");
+                    Ok(())
+                }
+                "validate" => {
+                    let scripts: Vec<PathBuf> = rest[1..]
+                        .iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect();
+                    if scripts.is_empty() {
+                        return Err("missing script path (try: fretboard diag script validate ./script.json)".to_string());
+                    }
+
+                    let ScriptSchemaReport {
+                        payload,
+                        error_scripts,
+                    } = validate_scripts(&scripts);
+
+                    let out = script_tool_check_out
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| resolved_out_dir.join("check.script_schema.json"));
+                    if let Some(parent) = out.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    }
+                    let pretty =
+                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+                    if stats_json {
+                        println!("{pretty}");
+                    } else {
+                        println!("{}", out.display());
+                    }
+
+                    if error_scripts > 0 {
+                        std::process::exit(1);
+                    }
+                    Ok(())
+                }
+                "lint" => {
+                    let scripts: Vec<PathBuf> = rest[1..]
+                        .iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect();
+                    if scripts.is_empty() {
+                        return Err(
+                            "missing script path (try: fretboard diag script lint ./script.json)"
+                                .to_string(),
+                        );
+                    }
+
+                    let ScriptLintReport {
+                        payload,
+                        error_scripts,
+                    } = lint_scripts(&scripts);
+
+                    let out = script_tool_check_out
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| resolved_out_dir.join("check.script_lint.json"));
+                    if let Some(parent) = out.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    }
+                    let pretty =
+                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+                    if stats_json {
+                        println!("{pretty}");
+                    } else {
+                        println!("{}", out.display());
+                    }
+
+                    if error_scripts > 0 {
+                        std::process::exit(1);
+                    }
+                    Ok(())
+                }
+                _ => {
+                    let Some(src) = rest.first().cloned() else {
+                        return Err(
+                            "missing script path (try: fretboard diag script ./script.json)"
+                                .to_string(),
+                        );
+                    };
+                    if rest.len() != 1 {
+                        return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+                    }
+
+                    let src = resolve_path(&workspace_root, PathBuf::from(src));
+                    write_script(&src, &resolved_script_path)?;
+                    touch(&resolved_script_trigger_path)?;
+                    println!("{}", resolved_script_trigger_path.display());
+                    Ok(())
+                }
+            }
         }
         "run" => {
             let Some(src) = rest.first().cloned() else {
