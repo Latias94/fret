@@ -72,6 +72,13 @@ Runners should refresh the catalog only on:
 
 No periodic scanning is implied by this ADR.
 
+## Evidence: current refresh triggers (implementation)
+
+- Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
+- Desktop runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
+- Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`
+- Web runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
+
 ## Consequences
 
 - Settings pickers can treat `FontCatalogMetadata.revision` as “data changed”.
@@ -90,4 +97,3 @@ No periodic scanning is implied by this ADR.
 ## Workstream tracking
 
 See `docs/workstreams/font-catalog-refresh-policy-v1.md`.
-

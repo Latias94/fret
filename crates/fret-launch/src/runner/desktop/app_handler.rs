@@ -447,6 +447,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 is_monospace_candidate: e.is_monospace_candidate,
             })
             .collect::<Vec<_>>();
+        // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
         let _ = fret_runtime::apply_font_catalog_update_with_metadata(
             &mut self.app,
             entries,

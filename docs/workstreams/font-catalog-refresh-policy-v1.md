@@ -37,6 +37,13 @@ Goals:
 - Document when runners refresh the catalog (startup/adopt + `TextAddFonts`).
 - Ensure the UI gallery / diagnostics tooling does not accidentally depend on “refresh attempt count”.
 
+Evidence (current triggers):
+
+- Desktop runner (startup): `crates/fret-launch/src/runner/desktop/app_handler.rs`
+- Desktop runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/desktop/mod.rs`
+- Web runner (adopt gfx): `crates/fret-launch/src/runner/web/gfx_init.rs`
+- Web runner (`Effect::TextAddFonts`): `crates/fret-launch/src/runner/web/effects.rs`
+
 ### M2 (optional): explicit system font rescan surface (native-only)
 
 Candidate shape:
@@ -54,4 +61,3 @@ Open questions:
 - Font-system contract: `docs/adr/0257-font-selection-fallback-and-variable-font-instances-v1.md`
 - Audit: `docs/audits/font-system-parley-zed-xilem-2026-02.md`
 - Workstream: `docs/workstreams/font-system-v1.md`
-

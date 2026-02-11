@@ -20,6 +20,10 @@ The repository already has globals intended for this boundary:
 - `TextFontFamilyConfig` (user-configurable family candidates).
 - `TextFontStackKey` (stable key that participates in renderer text cache keys).
 
+Catalog refresh and revisioning semantics are tracked separately (to keep churn out of the font-stack contract):
+
+- ADR 0258: “font catalog refresh + revisioning” (runner/runtime boundary).
+
 Runner wiring must remain consistent (e.g. web runner and desktop runner should publish the same globals through the same helper),
 and Web/WASM needs a deterministic bootstrap story because system font discovery is not available.
 
