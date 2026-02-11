@@ -5,8 +5,8 @@ use crate::{
     TimerToken,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorInfo,
-    ImageId, Rect, RectPx, WindowAnchor,
+    AlphaMode, AppWindowId, CursorIcon, Edges, ExternalDropReadLimits, FileDialogOptions,
+    ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::{CommandId, MenuBar};
@@ -130,6 +130,20 @@ pub enum Effect {
     ImeSetCursorArea {
         window: AppWindowId,
         rect: Rect,
+    },
+    /// Override window insets in `WindowMetricsService` (safe area / occlusion).
+    ///
+    /// This is primarily used by diagnostics/scripted repros to simulate keyboard occlusion on
+    /// platforms where the real OS insets are not available in CI.
+    ///
+    /// Semantics:
+    /// - `None` means "no change".
+    /// - `Some(None)` clears the insets but still marks them as "known".
+    /// - `Some(Some(v))` sets the insets to `v`.
+    WindowMetricsSetInsets {
+        window: AppWindowId,
+        safe_area_insets: Option<Option<Edges>>,
+        occlusion_insets: Option<Option<Edges>>,
     },
     CursorSetIcon {
         window: AppWindowId,

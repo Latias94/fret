@@ -856,6 +856,35 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV2::SetWindowInsets {
+                safe_area_insets,
+                occlusion_insets,
+            } => {
+                let edges_from_insets = |insets: UiPaddingInsetsV1| fret_core::Edges {
+                    left: fret_core::Px(insets.left_px),
+                    top: fret_core::Px(insets.top_px),
+                    right: fret_core::Px(insets.right_px),
+                    bottom: fret_core::Px(insets.bottom_px),
+                };
+
+                let to_override = |ovr: fret_diag_protocol::UiInsetsOverrideV1| match ovr {
+                    fret_diag_protocol::UiInsetsOverrideV1::NoChange => None,
+                    fret_diag_protocol::UiInsetsOverrideV1::Clear => Some(None),
+                    fret_diag_protocol::UiInsetsOverrideV1::Set { insets_px } => {
+                        Some(Some(edges_from_insets(insets_px)))
+                    }
+                };
+
+                output.effects.push(Effect::WindowMetricsSetInsets {
+                    window,
+                    safe_area_insets: to_override(safe_area_insets),
+                    occlusion_insets: to_override(occlusion_insets),
+                });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -2322,6 +2351,7 @@ impl UiDiagnosticsService {
                         UiPredicateV1::BoundsWithinWindow {
                             target,
                             padding_px,
+                            padding_insets_px: None,
                             eps_px: 0.0,
                         }
                     } else {
@@ -2399,6 +2429,7 @@ impl UiDiagnosticsService {
                         UiPredicateV1::BoundsWithinWindow {
                             target: target.clone(),
                             padding_px,
+                            padding_insets_px,
                             eps_px: 0.0,
                         }
                     } else {
@@ -3481,6 +3512,7 @@ impl UiDiagnosticsService {
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
+        caps.push("diag.window_insets_override".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -4640,7 +4672,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
-        | UiActionStepV2::SetWindowInnerSize { .. } => false,
+        | UiActionStepV2::SetWindowInnerSize { .. }
+        | UiActionStepV2::SetWindowInsets { .. } => false,
     }
 }
 
@@ -11871,6 +11904,7 @@ fn eval_predicate(
         UiPredicateV1::BoundsWithinWindow {
             target,
             padding_px,
+            padding_insets_px,
             eps_px,
         } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
@@ -11879,12 +11913,17 @@ fn eval_predicate(
             };
             let bounds = node.bounds;
             let pad = padding_px.max(0.0);
+            let pad_insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(0.0));
             let eps = eps_px.max(0.0);
 
-            let window_left = window_bounds.origin.x.0 + pad;
-            let window_top = window_bounds.origin.y.0 + pad;
-            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0 - pad;
-            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0 - pad;
+            let window_left = window_bounds.origin.x.0 + pad + pad_insets.left_px.max(0.0);
+            let window_top = window_bounds.origin.y.0 + pad + pad_insets.top_px.max(0.0);
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0
+                - pad
+                - pad_insets.right_px.max(0.0);
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0
+                - pad
+                - pad_insets.bottom_px.max(0.0);
 
             let node_left = bounds.origin.x.0;
             let node_top = bounds.origin.y.0;
@@ -13238,6 +13277,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 0.0,
+            padding_insets_px: None,
             eps_px: 0.0,
         };
         assert!(eval_predicate(
@@ -13255,6 +13295,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 12.0,
+            padding_insets_px: None,
             eps_px: 0.0,
         };
         assert!(

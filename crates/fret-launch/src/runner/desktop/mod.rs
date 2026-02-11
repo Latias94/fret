@@ -4303,6 +4303,50 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             }
                         }
                     }
+                    Effect::WindowMetricsSetInsets {
+                        window,
+                        safe_area_insets,
+                        occlusion_insets,
+                    } => {
+                        let mut changed = false;
+                        self.app.with_global_mut(
+                            fret_core::WindowMetricsService::default,
+                            |svc, _app| {
+                                if let Some(value) = safe_area_insets {
+                                    let current = svc.safe_area_insets(window);
+                                    let current_known = svc.safe_area_insets_is_known(window);
+                                    let needs_set = if value.is_none() {
+                                        !current_known || current.is_some()
+                                    } else {
+                                        !current_known || current != value
+                                    };
+                                    if needs_set {
+                                        svc.set_safe_area_insets(window, value);
+                                        changed = true;
+                                    }
+                                }
+                                if let Some(value) = occlusion_insets {
+                                    let current = svc.occlusion_insets(window);
+                                    let current_known = svc.occlusion_insets_is_known(window);
+                                    let needs_set = if value.is_none() {
+                                        !current_known || current.is_some()
+                                    } else {
+                                        !current_known || current != value
+                                    };
+                                    if needs_set {
+                                        svc.set_occlusion_insets(window, value);
+                                        changed = true;
+                                    }
+                                }
+                            },
+                        );
+                        if changed {
+                            if let Some(state) = self.windows.get(window) {
+                                state.window.request_redraw();
+                                self.raf_windows.insert(window);
+                            }
+                        }
+                    }
                     Effect::CursorSetIcon { window, icon } => {
                         let Some(state) = self.windows.get_mut(window) else {
                             continue;

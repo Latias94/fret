@@ -168,6 +168,50 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
+                Effect::WindowMetricsSetInsets {
+                    window: target_window,
+                    safe_area_insets,
+                    occlusion_insets,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    let mut changed = false;
+                    self.app.with_global_mut(
+                        fret_core::WindowMetricsService::default,
+                        |svc, _app| {
+                            if let Some(value) = safe_area_insets {
+                                let current = svc.safe_area_insets(target_window);
+                                let current_known = svc.safe_area_insets_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_safe_area_insets(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                            if let Some(value) = occlusion_insets {
+                                let current = svc.occlusion_insets(target_window);
+                                let current_known = svc.occlusion_insets_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_occlusion_insets(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                        },
+                    );
+                    if changed {
+                        window.request_redraw();
+                    }
+                }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,
                     token,
