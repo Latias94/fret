@@ -1,5 +1,9 @@
-use fret_core::geometry::Rect;
-use fret_core::{Color, NodeId, PanelKey, RenderTargetId, Scene, ViewportFit, ViewportMapping};
+use fret_core::dock::DropZone;
+use fret_core::geometry::{Px, Rect, Size};
+use fret_core::{
+    AppWindowId, Color, DockNodeId, NodeId, PanelKey, RenderTargetId, Scene, ViewportFit,
+    ViewportMapping,
+};
 use fret_ui::UiHost;
 
 mod consts;
@@ -24,13 +28,56 @@ pub use panel_registry::{
     DockPanelRegistry, DockPanelRegistryService, render_and_bind_dock_panels,
     render_cached_panel_root,
 };
-pub use services::{DockPanelContentService, DockViewportOverlayHooksService};
+pub use services::{
+    DockPanelContentService, DockViewportOverlayHooksService, DockingPolicyService,
+};
 pub use space::DockSpace;
 
 pub struct DockPanel {
     pub title: String,
     pub color: Color,
     pub viewport: Option<ViewportPanel>,
+}
+
+/// Docking policy hooks for editor-grade constraints.
+///
+/// This trait is intentionally owned by the docking layer (not `fret-ui`). It is the primary
+/// extension point for "hard to change" editor constraints such as minimum sizes, no-drop zones,
+/// group locking, and "no tear-off" policies.
+pub trait DockingPolicy: Send + Sync + 'static {
+    /// Minimum content size for a panel when hosted inside docking tabs.
+    ///
+    /// This is used to clamp splitter drags so panels (especially viewports) do not collapse into
+    /// unusable sizes.
+    ///
+    /// The size is expressed in **logical px**.
+    fn panel_min_content_size(&self, _panel: &PanelKey, _info: Option<&DockPanel>) -> Option<Size> {
+        None
+    }
+
+    /// Whether a dock drop target is allowed.
+    ///
+    /// Docking UI resolves an explicit drop target (tab bar center insert, inner hint-pad, or
+    /// outer hint-pad) before committing a `DockOp`. This hook allows editors/apps to mask out
+    /// specific drop zones (e.g. disallow edge docking on certain groups, disable top/bottom
+    /// docking in a single-pane mode, etc.).
+    fn allow_dock_drop_target(
+        &self,
+        _window: AppWindowId,
+        _layout_root: DockNodeId,
+        _tabs: DockNodeId,
+        _zone: DropZone,
+        _outer: bool,
+    ) -> bool {
+        true
+    }
+}
+
+pub(crate) fn default_viewport_min_content_size() -> Size {
+    // Default editor feel: viewports should not collapse to tiny sizes during splitter drags.
+    //
+    // Apps can override this via `DockingPolicyService`.
+    Size::new(Px(240.0), Px(160.0))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

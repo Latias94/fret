@@ -155,6 +155,110 @@ fn dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect() {
         diag.candidates
     );
 }
+
+#[test]
+fn dock_drag_drop_zone_mask_can_disallow_left_hint_rect() {
+    struct DisallowLeft;
+
+    impl DockingPolicy for DisallowLeft {
+        fn allow_dock_drop_target(
+            &self,
+            _window: AppWindowId,
+            _layout_root: fret_core::DockNodeId,
+            _tabs: fret_core::DockNodeId,
+            zone: DropZone,
+            _outer: bool,
+        ) -> bool {
+            zone != DropZone::Left
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .with_global_mut(DockingPolicyService::default, |svc, _app| {
+            svc.set(Arc::new(DisallowLeft));
+        });
+
+    harness
+        .app
+        .set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+
+    harness.app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let left_rect = dock_hint_rects_with_font(dock_bounds, Px(13.0), false)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected inner left rect");
+    let position = Point::new(
+        Px(left_rect.origin.x.0 + left_rect.size.width.0 * 0.5),
+        Px(left_rect.origin.y.0 + left_rect.size.height.0 * 0.5),
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::InternalDrag(InternalDragEvent {
+            position,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    harness.layout();
+
+    let dock = harness
+        .app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_for_window(harness.window, harness.app.frame_id()))
+        .expect("expected docking interaction diagnostics to be published for the window/frame");
+    let diag = dock
+        .dock_drop_resolve
+        .as_ref()
+        .expect("expected drop target diagnostics to be published");
+    assert_eq!(
+        diag.source,
+        fret_runtime::DockDropResolveSource::InnerHintRect
+    );
+    assert!(
+        diag.resolved.is_none(),
+        "expected no resolved dock target due to policy mask, got: {:?}",
+        diag.resolved
+    );
+    assert!(
+        diag.candidates.iter().any(|c| {
+            c.kind == fret_runtime::DockDropCandidateRectKind::InnerHintRect
+                && c.zone == Some(DropZone::Left)
+                && c.rect == left_rect
+        }),
+        "expected diagnostics to include the inner left hint rect candidate, got: {:?}",
+        diag.candidates
+    );
+}
 #[test]
 fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding() {
     struct HitTestTransparent;

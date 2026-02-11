@@ -28,6 +28,7 @@ use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
 };
+use super::{DockingPolicy, DockingPolicyService, default_viewport_min_content_size};
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
@@ -217,6 +218,7 @@ struct PendingDockTabsDrag {
 #[derive(Debug, Clone)]
 struct DividerDragSession {
     handle: DividerDragState,
+    min_px: Vec<Px>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -295,6 +297,119 @@ impl DockSpace {
             last_active_tabs: None,
             hovered_float_zone: false,
         }
+    }
+
+    fn panel_min_content_size(
+        docking_policy: Option<&dyn DockingPolicy>,
+        dock: &DockManager,
+        panel: &PanelKey,
+    ) -> Option<Size> {
+        let info = dock.panel(panel);
+        if let Some(policy) = docking_policy {
+            return policy.panel_min_content_size(panel, info);
+        }
+
+        let is_viewport = info.is_some_and(|p| p.viewport.is_some());
+        is_viewport.then(default_viewport_min_content_size)
+    }
+
+    fn node_min_size(
+        docking_policy: Option<&dyn DockingPolicy>,
+        dock: &DockManager,
+        node: DockNodeId,
+        split_handle_gap: Px,
+    ) -> Size {
+        let Some(n) = dock.graph.node(node) else {
+            return Size::new(Px(0.0), Px(0.0));
+        };
+
+        match n {
+            DockNode::Tabs { tabs, .. } => {
+                let mut min_w: f32 = 0.0;
+                let mut min_h: f32 = 0.0;
+                for panel in tabs {
+                    let Some(size) = Self::panel_min_content_size(docking_policy, dock, panel)
+                    else {
+                        continue;
+                    };
+                    min_w = min_w.max(size.width.0);
+                    min_h = min_h.max(size.height.0);
+                }
+
+                // Tabs nodes always include the tab bar height.
+                min_h = min_h.max(0.0) + DOCK_TAB_H.0.max(0.0);
+                Size::new(Px(min_w.max(0.0)), Px(min_h.max(0.0)))
+            }
+            DockNode::Floating { child } => {
+                Self::node_min_size(docking_policy, dock, *child, split_handle_gap)
+            }
+            DockNode::Split { axis, children, .. } => {
+                if children.is_empty() {
+                    return Size::new(Px(0.0), Px(0.0));
+                }
+
+                match axis {
+                    fret_core::Axis::Horizontal => {
+                        let mut sum_w: f32 = 0.0;
+                        let mut min_h: f32 = 0.0;
+                        for child in children {
+                            let size =
+                                Self::node_min_size(docking_policy, dock, *child, split_handle_gap);
+                            sum_w += size.width.0.max(0.0);
+                            min_h = min_h.max(size.height.0.max(0.0));
+                        }
+                        sum_w +=
+                            split_handle_gap.0.max(0.0) * children.len().saturating_sub(1) as f32;
+                        Size::new(Px(sum_w.max(0.0)), Px(min_h.max(0.0)))
+                    }
+                    fret_core::Axis::Vertical => {
+                        let mut sum_h: f32 = 0.0;
+                        let mut min_w: f32 = 0.0;
+                        for child in children {
+                            let size =
+                                Self::node_min_size(docking_policy, dock, *child, split_handle_gap);
+                            sum_h += size.height.0.max(0.0);
+                            min_w = min_w.max(size.width.0.max(0.0));
+                        }
+                        sum_h +=
+                            split_handle_gap.0.max(0.0) * children.len().saturating_sub(1) as f32;
+                        Size::new(Px(min_w.max(0.0)), Px(sum_h.max(0.0)))
+                    }
+                }
+            }
+        }
+    }
+
+    fn split_child_min_px(
+        docking_policy: Option<&dyn DockingPolicy>,
+        dock: &DockManager,
+        split: DockNodeId,
+        axis: fret_core::Axis,
+        split_handle_gap: Px,
+    ) -> Vec<Px> {
+        let Some(DockNode::Split {
+            children,
+            fractions,
+            ..
+        }) = dock.graph.node(split)
+        else {
+            return Vec::new();
+        };
+        if children.is_empty() || children.len() != fractions.len() {
+            return Vec::new();
+        }
+
+        children
+            .iter()
+            .map(|child| {
+                let size = Self::node_min_size(docking_policy, dock, *child, split_handle_gap);
+                let min = match axis {
+                    fret_core::Axis::Horizontal => size.width.0,
+                    fret_core::Axis::Vertical => size.height.0,
+                };
+                Px(if min.is_finite() { min.max(0.0) } else { 0.0 })
+            })
+            .collect()
     }
 
     pub fn with_semantics_test_id(mut self, id: &'static str) -> Self {
@@ -1576,6 +1691,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             prev_hover: Option<DockDropTarget>,
             invert_docking: bool,
             window: fret_core::AppWindowId,
+            docking_policy: Option<&dyn DockingPolicy>,
             graph: &DockGraph,
             root: DockNodeId,
             dock_bounds: Rect,
@@ -1595,28 +1711,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     fret_runtime::DockDropResolveSource::InvertDocking,
                 );
             }
-            if let Some(prev_hover) = prev_hover {
-                return (
+            let (target, source) = if let Some(prev_hover) = prev_hover {
+                (
                     Some(prev_hover),
                     fret_runtime::DockDropResolveSource::LatchedPreviousHover,
-                );
+                )
+            } else {
+                compute_dock_drop_target(
+                    graph,
+                    window,
+                    root,
+                    dock_bounds,
+                    window_bounds,
+                    tab_scroll,
+                    tab_widths,
+                    hint_font_size_inner,
+                    hint_font_size_outer,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    position,
+                    candidates,
+                )
+            };
+
+            if let (Some(DockDropTarget::Dock(t)), Some(policy)) = (target.as_ref(), docking_policy)
+            {
+                if !policy.allow_dock_drop_target(window, t.root, t.tabs, t.zone, t.outer) {
+                    return (None, source);
+                }
             }
 
-            compute_dock_drop_target(
-                graph,
-                window,
-                root,
-                dock_bounds,
-                window_bounds,
-                tab_scroll,
-                tab_widths,
-                hint_font_size_inner,
-                hint_font_size_outer,
-                split_handle_gap,
-                split_handle_hit_thickness,
-                position,
-                candidates,
-            )
+            (target, source)
         }
 
         fn dock_drop_target_diagnostics(
@@ -2015,11 +2140,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
         }
 
         cx.app
-            .with_global_mut_untracked(DockManager::default, |dock, _app| {
+            .with_global_mut_untracked(DockManager::default, |dock, app| {
                 dock.register_dock_space_node(self.window, dock_space_node);
                 let Some(root) = dock.graph.window_root(self.window) else {
                     return;
                 };
+
+                let docking_policy = app
+                    .global::<DockingPolicyService>()
+                    .and_then(|svc| svc.policy());
 
                 match event {
                     fret_core::Event::Pointer(p) => match p {
@@ -2311,8 +2440,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             *position,
                                         )
                                 {
+                                    let min_px = Self::split_child_min_px(
+                                        docking_policy.as_deref(),
+                                        dock,
+                                        handle.split,
+                                        handle.axis,
+                                        split_handle_gap,
+                                    );
                                     self.divider_drag = Some(DividerDragSession {
                                         handle,
+                                        min_px,
                                     });
                                     request_pointer_capture = Some(Some(dock_space_node));
                                     request_cursor = Some(match handle.axis {
@@ -3083,7 +3220,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         divider.handle.handle_ix,
                                         split_handle_gap,
                                         split_handle_hit_thickness,
-                                        &[],
+                                        &divider.min_px,
                                         divider.handle.grab_offset,
                                         *position,
                                     ) {
@@ -3739,6 +3876,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                                None,
 	                                                invert_docking,
 	                                                self.window,
+	                                                docking_policy.as_deref(),
 	                                                &dock.graph,
 	                                                root,
 	                                                dock_bounds,
@@ -3872,6 +4010,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            prev_hover.clone(),
 	                                            invert_docking,
 	                                            self.window,
+	                                            docking_policy.as_deref(),
 	                                            &dock.graph,
 	                                            root,
 	                                            dock_bounds,
