@@ -94,6 +94,16 @@ Evidence:
 - Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
 
+Status: Implemented (pending merge)
+
+Evidence (planned):
+
+- `crates/fret-core/src/scene/mod.rs` (`EffectStep::ColorMatrix` / `EffectStep::AlphaThreshold`)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (effect chain planning)
+- `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (render plan execution)
+- `crates/fret-render-wgpu/tests/effect_color_matrix_conformance.rs`
+- `crates/fret-render-wgpu/tests/effect_alpha_threshold_conformance.rs`
+
 ## M7 — Sampled materials v2a (catalog textures)
 
 This milestone is the recommended first step for ADR 0242: sampled materials bind a renderer-owned
@@ -103,13 +113,39 @@ catalog texture selected at registration time (no per-instance `ImageId` yet).
 - Ship at least one baked catalog texture (blue-noise/dither) and a sampled baseline material.
 - Add a conformance test for sampled materials and deterministic fallback behavior.
 
+Status: Not started
+
+Evidence (planned):
+
+- `docs/adr/0242-sampled-materials-and-fixed-binding-shapes-v2.md`
+- `crates/fret-render-wgpu/src/renderer/services.rs` (`MaterialService` binding shapes)
+- `crates/fret-render-wgpu/src/renderer/resources.rs` (catalog texture upload/lifetime)
+- `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
+
 ## M8 — `fret-ui-magic` (Phase 0)
 
 - Land `ecosystem/fret-ui-magic` as a MagicUI-aligned wrapper crate.
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
 - Add UI gallery entries and `fretboard diag` scripts for each seed component.
 
+Status: Not started
+
+Evidence (planned):
+
+- `ecosystem/fret-ui-magic/` (crate surface + recipes)
+- `apps/fret-ui-gallery/` (entries)
+- `tools/diag-scripts/` (scripts)
+
 ## M9 — External texture imports (v1)
 
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
+
+Status: Not started
+
+Evidence (planned):
+
+- `docs/adr/0234-imported-render-targets-and-external-texture-imports-v1.md`
+- `crates/fret-render-wgpu/src/renderer/render_targets.rs` / `ImportedViewportRenderTarget`
+- `apps/fret-demo*` or `apps/fretboard` (contract-path demo)
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)

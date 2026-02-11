@@ -1,11 +1,13 @@
 use super::shaders::{
-    BLIT_SHADER, BLUR_H_MASK_SHADER, BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER,
-    COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER, COMPOSITE_PREMUL_MASK_SHADER,
-    COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER, PATH_SHADER,
-    TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
-    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, blur_h_masked_shader_source,
-    blur_v_masked_shader_source, clip_mask_shader_source, color_adjust_masked_shader_source,
-    quad_shader_source, upscale_nearest_masked_shader_source,
+    ALPHA_THRESHOLD_MASK_SHADER, ALPHA_THRESHOLD_SHADER, BLIT_SHADER, BLUR_H_MASK_SHADER,
+    BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER, COLOR_ADJUST_MASK_SHADER,
+    COLOR_ADJUST_SHADER, COLOR_MATRIX_MASK_SHADER, COLOR_MATRIX_SHADER,
+    COMPOSITE_PREMUL_MASK_SHADER, COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER,
+    PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
+    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, alpha_threshold_masked_shader_source,
+    blur_h_masked_shader_source, blur_v_masked_shader_source, clip_mask_shader_source,
+    color_adjust_masked_shader_source, color_matrix_masked_shader_source, quad_shader_source,
+    upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
@@ -32,6 +34,8 @@ fn shaders_parse_as_wgsl() {
     let clip_mask_src = clip_mask_shader_source();
     let upscale_masked_src = upscale_nearest_masked_shader_source();
     let color_adjust_masked_src = color_adjust_masked_shader_source();
+    let color_matrix_masked_src = color_matrix_masked_shader_source();
+    let alpha_threshold_masked_src = alpha_threshold_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
     for (name, src) in [
@@ -51,6 +55,15 @@ fn shaders_parse_as_wgsl() {
         ("color_adjust", COLOR_ADJUST_SHADER),
         ("color_adjust_masked", color_adjust_masked_src.as_str()),
         ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
+        ("color_matrix", COLOR_MATRIX_SHADER),
+        ("color_matrix_masked", color_matrix_masked_src.as_str()),
+        ("color_matrix_mask", COLOR_MATRIX_MASK_SHADER),
+        ("alpha_threshold", ALPHA_THRESHOLD_SHADER),
+        (
+            "alpha_threshold_masked",
+            alpha_threshold_masked_src.as_str(),
+        ),
+        ("alpha_threshold_mask", ALPHA_THRESHOLD_MASK_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
         ("clip_mask", clip_mask_src.as_str()),
@@ -73,6 +86,8 @@ fn shaders_validate_for_webgpu() {
     let clip_mask_src = clip_mask_shader_source();
     let upscale_masked_src = upscale_nearest_masked_shader_source();
     let color_adjust_masked_src = color_adjust_masked_shader_source();
+    let color_matrix_masked_src = color_matrix_masked_shader_source();
+    let alpha_threshold_masked_src = alpha_threshold_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
     for (name, src) in [
@@ -92,6 +107,15 @@ fn shaders_validate_for_webgpu() {
         ("color_adjust", COLOR_ADJUST_SHADER),
         ("color_adjust_masked", color_adjust_masked_src.as_str()),
         ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
+        ("color_matrix", COLOR_MATRIX_SHADER),
+        ("color_matrix_masked", color_matrix_masked_src.as_str()),
+        ("color_matrix_mask", COLOR_MATRIX_MASK_SHADER),
+        ("alpha_threshold", ALPHA_THRESHOLD_SHADER),
+        (
+            "alpha_threshold_masked",
+            alpha_threshold_masked_src.as_str(),
+        ),
+        ("alpha_threshold_mask", ALPHA_THRESHOLD_MASK_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
         ("clip_mask", clip_mask_src.as_str()),

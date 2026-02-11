@@ -49,7 +49,7 @@ See:
 
 ## P1 — Effect steps extension
 
-- [ ] Implement `ColorMatrix` + `AlphaThreshold` steps (ADR 0236).
+- [~] Implement `ColorMatrix` + `AlphaThreshold` steps (ADR 0236).
 - [ ] Add a “bloom-like” recipe example (threshold -> blur -> add) once blend groups exist.
 
 ## P1 — Sampled materials (v2a, catalog textures)

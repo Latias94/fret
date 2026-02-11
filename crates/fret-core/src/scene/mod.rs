@@ -80,12 +80,39 @@ pub enum EffectStep {
         brightness: f32,
         contrast: f32,
     },
+    ColorMatrix {
+        m: [f32; 20],
+    },
+    AlphaThreshold {
+        cutoff: f32,
+        soft: f32,
+    },
     Pixelate {
         scale: u32,
     },
     Dither {
         mode: DitherMode,
     },
+}
+
+impl EffectStep {
+    pub fn sanitize(self) -> Self {
+        match self {
+            EffectStep::ColorMatrix { mut m } => {
+                for v in &mut m {
+                    if !v.is_finite() {
+                        *v = 0.0;
+                    }
+                }
+                EffectStep::ColorMatrix { m }
+            }
+            EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
+                cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
+                soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },
+            },
+            other => other,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -118,6 +145,14 @@ impl EffectChain {
 
     pub fn iter(&self) -> impl Iterator<Item = EffectStep> + '_ {
         self.steps.iter().copied().flatten()
+    }
+
+    pub fn sanitize(self) -> Self {
+        let mut out = self;
+        for step in &mut out.steps {
+            *step = step.map(EffectStep::sanitize);
+        }
+        out
     }
 }
 
@@ -179,6 +214,17 @@ impl SceneRecording {
                     corner_radii,
                 }
             }
+            SceneOp::PushEffect {
+                bounds,
+                mode,
+                chain,
+                quality,
+            } => SceneOp::PushEffect {
+                bounds,
+                mode,
+                chain: chain.sanitize(),
+                quality,
+            },
             other => other,
         };
 

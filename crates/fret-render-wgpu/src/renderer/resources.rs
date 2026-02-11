@@ -277,6 +277,20 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let color_matrix_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret color-matrix params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let alpha_threshold_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret alpha-threshold params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -354,6 +368,20 @@ impl Renderer {
             color_adjust_bind_group_layout: None,
             color_adjust_mask_bind_group_layout: None,
             color_adjust_param_buffer,
+            color_matrix_pipeline_format: None,
+            color_matrix_pipeline: None,
+            color_matrix_masked_pipeline: None,
+            color_matrix_mask_pipeline: None,
+            color_matrix_bind_group_layout: None,
+            color_matrix_mask_bind_group_layout: None,
+            color_matrix_param_buffer,
+            alpha_threshold_pipeline_format: None,
+            alpha_threshold_pipeline: None,
+            alpha_threshold_masked_pipeline: None,
+            alpha_threshold_mask_pipeline: None,
+            alpha_threshold_bind_group_layout: None,
+            alpha_threshold_mask_bind_group_layout: None,
+            alpha_threshold_param_buffer,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,

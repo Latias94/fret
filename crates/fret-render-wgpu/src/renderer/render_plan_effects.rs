@@ -1,8 +1,9 @@
 use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
-    BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass, FullscreenBlitPass, MaskRef, PlanTarget,
-    RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
+    AlphaThresholdPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass, ColorMatrixPass,
+    FullscreenBlitPass, MaskRef, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass,
+    ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -172,6 +173,53 @@ pub(super) fn apply_chain_in_place(
                     saturation,
                     brightness,
                     contrast,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
+            fret_core::EffectStep::ColorMatrix { m } => {
+                if !color_adjust_enabled(
+                    ctx.viewport_size,
+                    ctx.format,
+                    ctx.intermediate_budget_bytes,
+                ) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+                append_color_matrix_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    m,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
+            fret_core::EffectStep::AlphaThreshold { cutoff, soft } => {
+                if !color_adjust_enabled(
+                    ctx.viewport_size,
+                    ctx.format,
+                    ctx.intermediate_budget_bytes,
+                ) {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+                append_alpha_threshold_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    cutoff,
+                    soft,
                     ctx.clear,
                     mask_uniform_index,
                     mask,
@@ -525,6 +573,137 @@ fn append_color_adjust_in_place_single_scratch(
         saturation,
         brightness,
         contrast,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+#[allow(dead_code)]
+fn append_color_matrix_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    matrix: [f32; 20],
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::ColorMatrix(ColorMatrixPass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(scissor),
+            mask_uniform_index,
+            mask,
+            matrix,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::ColorMatrix(ColorMatrixPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        matrix,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+#[allow(dead_code)]
+fn append_alpha_threshold_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    cutoff: f32,
+    soft: f32,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::AlphaThreshold(AlphaThresholdPass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(scissor),
+            mask_uniform_index,
+            mask,
+            cutoff,
+            soft,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::AlphaThreshold(AlphaThresholdPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        cutoff,
+        soft,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {

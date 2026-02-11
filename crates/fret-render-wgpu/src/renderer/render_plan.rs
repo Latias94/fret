@@ -58,6 +58,8 @@ pub(super) enum RenderPlanPass {
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
     ColorAdjust(ColorAdjustPass),
+    ColorMatrix(ColorMatrixPass),
+    AlphaThreshold(AlphaThresholdPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -101,6 +103,33 @@ pub(super) struct ColorAdjustPass {
     pub(super) saturation: f32,
     pub(super) brightness: f32,
     pub(super) contrast: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ColorMatrixPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) matrix: [f32; 20],
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct AlphaThresholdPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) cutoff: f32,
+    pub(super) soft: f32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -209,6 +238,12 @@ impl RenderPlan {
                     .is_some()
                 }
                 fret_core::EffectStep::ColorAdjust { .. } => {
+                    effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+                }
+                fret_core::EffectStep::ColorMatrix { .. } => {
+                    effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+                }
+                fret_core::EffectStep::AlphaThreshold { .. } => {
                     effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
                 }
                 fret_core::EffectStep::Pixelate { scale } => effects::pixelate_enabled(
@@ -1127,6 +1162,20 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::ColorAdjust(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::ColorMatrix(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::AlphaThreshold(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {
