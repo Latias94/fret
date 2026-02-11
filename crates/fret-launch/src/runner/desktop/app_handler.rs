@@ -289,6 +289,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.app.with_global_mut(
+            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
+            |store, _app| {
+                store.record_can_create_surfaces();
+            },
+        );
+
         if self.context.is_some() {
             let Some(context) = self.context.as_ref() else {
                 return;
@@ -475,6 +482,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        self.app.with_global_mut(
+            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
+            |store, _app| {
+                store.record_destroy_surfaces();
+            },
+        );
+
         for (_app_window, state) in self.windows.iter_mut() {
             state.surface = None;
             state.pending_surface_resize = None;

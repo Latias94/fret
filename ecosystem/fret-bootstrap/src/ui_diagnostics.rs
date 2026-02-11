@@ -6292,6 +6292,12 @@ pub struct UiTreeDebugSnapshotV1 {
     /// frequently needed when diagnosing virtual keyboard avoidance and IME candidate placement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text_input: Option<UiWindowTextInputSnapshotV1>,
+    /// Runner surface lifecycle state, sourced from `RunnerSurfaceLifecycleDiagnosticsStore`.
+    ///
+    /// This is intended for Android/iOS bring-up to verify that background/foreground transitions
+    /// are dropping and recreating surfaces as expected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_surface_lifecycle: Option<UiRunnerSurfaceLifecycleSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -6319,6 +6325,17 @@ pub struct UiWindowTextInputSnapshotV1 {
     pub marked_utf16: Option<(u32, u32)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_cursor_area: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRunnerSurfaceLifecycleSnapshotV1 {
+    pub can_create_surfaces_calls: u64,
+    pub destroy_surfaces_calls: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_can_create_surfaces_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_destroy_surfaces_unix_ms: Option<u64>,
+    pub surfaces_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -6502,6 +6519,17 @@ impl UiTreeDebugSnapshotV1 {
                 marked_utf16: snapshot.marked_utf16,
                 ime_cursor_area: snapshot.ime_cursor_area.map(RectV1::from),
             });
+
+        let runner_surface_lifecycle = app
+            .global::<fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore>()
+            .map(|store| store.snapshot())
+            .map(|snapshot| UiRunnerSurfaceLifecycleSnapshotV1 {
+                can_create_surfaces_calls: snapshot.can_create_surfaces_calls,
+                destroy_surfaces_calls: snapshot.destroy_surfaces_calls,
+                last_can_create_surfaces_unix_ms: snapshot.last_can_create_surfaces_unix_ms,
+                last_destroy_surfaces_unix_ms: snapshot.last_destroy_surfaces_unix_ms,
+                surfaces_available: snapshot.surfaces_available,
+            });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -6681,6 +6709,7 @@ impl UiTreeDebugSnapshotV1 {
             environment,
             window_insets,
             text_input,
+            runner_surface_lifecycle,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,

@@ -24,6 +24,7 @@ pub mod menu;
 pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
+pub mod runner_surface_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
 pub mod text_interaction_settings;
 pub mod time;
@@ -103,6 +104,9 @@ pub use model::{
 };
 pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
+pub use runner_surface_lifecycle_diagnostics::{
+    RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
+};
 pub use shortcut_routing_diagnostics::{
     ShortcutRoutingDecision, ShortcutRoutingOutcome, ShortcutRoutingPhase,
     WindowShortcutRoutingDiagnosticsStore,
