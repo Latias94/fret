@@ -92,6 +92,7 @@ Hit-test / routing trace entry fields:
 - `pointer_capture_active` / `pointer_capture_layer_id` / `pointer_capture_multiple_layers` (input arbitration snapshot; explains capture)
 - `blocking_reason` / `blocking_root` / `blocking_layer_id` (best-effort attribution for fast triage; prefer raw fields when debugging novel cases)
   - when available, `blocking_root` points to the responsible `layer_root` (in-run reference only)
+- `routing_explain` (best-effort human-readable hint for `blocking_reason`; not a contract)
 - `scope_roots` (layer roots + pointer occlusion hints; bounded, intended to explain “why input did not reach underlay”)
 - `note` (action kind / phase, e.g. `click`, `drag_pointer.start`, `scroll_into_view.wheel`)
 

@@ -11352,6 +11352,68 @@ fn build_hit_test_trace_entry_for_selector(
         (Some("miss"), None, None)
     };
 
+    let any_captured_node_id = ui.any_captured_node().map(|n| n.data().as_ffi());
+    let blocking_layer_hint = blocking_layer_id.and_then(|layer_id| {
+        scope_roots
+            .iter()
+            .find(|r| r.kind == "layer_root" && r.layer_id == Some(layer_id))
+            .map(|r| {
+                let mut parts: Vec<String> = Vec::new();
+                parts.push(format!("layer_root={}", r.root));
+                if let Some(v) = r.blocks_underlay_input {
+                    parts.push(format!("blocks_underlay_input={v}"));
+                }
+                if let Some(v) = r.hit_testable {
+                    parts.push(format!("hit_testable={v}"));
+                }
+                if let Some(v) = r.pointer_occlusion.as_deref() {
+                    parts.push(format!("pointer_occlusion={v}"));
+                }
+                parts.join(" ")
+            })
+    });
+
+    let routing_explain = if is_ok {
+        None
+    } else {
+        let intended = intended_test_id
+            .as_deref()
+            .map(|t| format!("test_id={t}"))
+            .or_else(|| intended_node_id.map(|id| format!("node_id={id}")))
+            .unwrap_or_else(|| "<none>".to_string());
+        let hit = hit_semantics_test_id
+            .as_deref()
+            .map(|t| format!("test_id={t}"))
+            .or_else(|| hit_node_id.map(|id| format!("node_id={id}")))
+            .unwrap_or_else(|| "<none>".to_string());
+
+        match blocking_reason {
+            Some("modal_barrier") => Some(format!(
+                "blocked by modal barrier (barrier_root={}) intended={intended} hit={hit}",
+                barrier_root.unwrap_or(0)
+            )),
+            Some("focus_barrier") => Some(format!(
+                "blocked by focus barrier (focus_barrier_root={}) intended={intended} hit={hit}",
+                focus_barrier_root.unwrap_or(0)
+            )),
+            Some("pointer_capture") => Some(format!(
+                "blocked by pointer capture (layer_id={}, captured_node_id={}) {} intended={intended} hit={hit}",
+                blocking_layer_id.unwrap_or(0),
+                any_captured_node_id.unwrap_or(0),
+                blocking_layer_hint.as_deref().unwrap_or(""),
+            )),
+            Some("pointer_occlusion") => Some(format!(
+                "blocked by pointer occlusion ({pointer_occlusion}) (layer_id={}, root={}) {} intended={intended} hit={hit}",
+                blocking_layer_id.unwrap_or(0),
+                blocking_root.unwrap_or(0),
+                blocking_layer_hint.as_deref().unwrap_or(""),
+            )),
+            Some("no_hit") => Some(format!("hit-test returned no node intended={intended}")),
+            Some("miss") => Some(format!("hit-test missed intended={intended} hit={hit}")),
+            _ => None,
+        }
+    };
+
     UiHitTestTraceEntryV1 {
         step_index,
         selector: selector.clone(),
@@ -11371,6 +11433,7 @@ fn build_hit_test_trace_entry_for_selector(
         blocking_reason: blocking_reason.map(|s| s.to_string()),
         blocking_root,
         blocking_layer_id,
+        routing_explain,
         barrier_root,
         focus_barrier_root,
         pointer_occlusion: Some(pointer_occlusion),

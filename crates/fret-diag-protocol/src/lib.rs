@@ -844,6 +844,11 @@ pub struct UiHitTestTraceEntryV1 {
     /// Best-effort layer id associated with `blocking_reason` (when applicable).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocking_layer_id: Option<u64>,
+    /// Best-effort human-readable explanation for `blocking_reason`.
+    ///
+    /// This is intended for fast triage and AI; treat it as a hint rather than a contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routing_explain: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub barrier_root: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
