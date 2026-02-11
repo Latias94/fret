@@ -100,9 +100,11 @@ The main text pipeline tracker remains: `docs/workstreams/text-system-v2-parley.
    - Initial conformance evidence (UI Gallery script + screenshots/bundles):
      - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json`
        - Includes `render_text_missing_glyphs_is` assertions (requires diagnostics bundles).
-   - Follow-up (recommended): add a script gate that asserts the bundle contains a non-empty
-     `render_text_font_trace.entries[*].families` list when tofu is observed (to make fallback regressions debuggable
-     without rerunning locally).
+   - Implemented: a script gate that asserts the bundle contains a non-empty
+     `render_text_font_trace.entries[*].families` list when tofu is observed, via:
+     - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::RenderTextFontTraceCapturedWhenMissingGlyphs`)
+     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation)
+     - `tools/diag-scripts/ui-gallery-text-bidi-font-fallback-screenshots.json` (assert step)
    - Deterministic bundled-only conformance (no system fonts):
      - `crates/fret-render-wgpu/src/text/mod.rs` (`mixed_script_fallback_uses_bundled_faces_when_system_fonts_are_absent`)
 
