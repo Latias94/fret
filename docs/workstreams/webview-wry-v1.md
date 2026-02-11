@@ -12,6 +12,22 @@ boundaries** or forcing heavy platform dependencies into UI/policy crates.
 
 Primary consumer (initial): `ecosystem/fret-ui-ai` (`WebPreview`).
 
+## Upstream reference notes (gpui-component)
+
+We keep a local reference checkout under `F:/SourceCodes/Rust/fret/repo-ref/gpui-component`.
+
+Relevant observations (as of the pinned snapshot in that folder):
+
+- Uses `wry` via package rename `lb-wry` (crate name stays `wry`), version `0.53.3`.
+- Embeds via `WebViewBuilder::build_as_child(&window_handle)` (requires a `raw_window_handle` window).
+- Updates bounds in the UI frame lifecycle by calling `webview.set_bounds(Rect { position, size })`
+  in **logical pixel** coordinates.
+- WebView is a native child view that draws **on top** of the GPU-rendered UI; any elements behind
+  the WebView bounds will be occluded.
+  - Their README recommends using a separate window or a popup layer for safety.
+- Windows note: their example sets `GPUI_DISABLE_DIRECT_COMPOSITION=true` to render WebView
+  reliably. We may need an equivalent note/flag depending on our swapchain/compositor path.
+
 ## Why a dedicated crate pair
 
 We want:

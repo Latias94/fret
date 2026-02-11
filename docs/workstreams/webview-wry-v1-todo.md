@@ -47,4 +47,6 @@ Tracking format:
 ## Blockers / risks
 
 - [ ] WEBVIEW-WRYX-risk-001 Clarify if `wry` is compatible with our native runner stack without forking windowing.
+  - gpui-component embeds as a native child view via `build_as_child` (raw-window-handle).
+  - We still need to validate that this works with our `winit` runner and swapchain/compositor setup.
 - [ ] WEBVIEW-WRYX-risk-002 Decide how we handle z-order + input capture for child WebViews inside docking panels.
