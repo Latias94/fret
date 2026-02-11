@@ -167,6 +167,8 @@ struct UiGalleryWindowState {
     settings_menu_bar_os_open: Model<bool>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window_open: Model<bool>,
+    settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
+    settings_text_common_fallback_injection_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
     undo_doc: DocumentId,
@@ -1024,6 +1026,16 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.in_window)));
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
+        let font_config = app
+            .global::<fret_core::TextFontFamilyConfig>()
+            .cloned()
+            .unwrap_or_else(|| settings.fonts.clone());
+        let settings_text_common_fallback_injection =
+            app.models_mut()
+                .insert(Some(Self::text_common_fallback_injection_key(
+                    font_config.common_fallback_injection,
+                )));
+        let settings_text_common_fallback_injection_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
         let undo_doc: DocumentId = "ui_gallery.window".into();
@@ -1211,6 +1223,8 @@ impl UiGalleryDriver {
             settings_menu_bar_os_open,
             settings_menu_bar_in_window,
             settings_menu_bar_in_window_open,
+            settings_text_common_fallback_injection,
+            settings_text_common_fallback_injection_open,
             settings_edit_can_undo,
             settings_edit_can_redo,
             undo_doc,
@@ -1952,6 +1966,28 @@ impl UiGalleryDriver {
         }
     }
 
+    fn text_common_fallback_injection_key(
+        mode: fret_core::TextCommonFallbackInjection,
+    ) -> Arc<str> {
+        match mode {
+            fret_core::TextCommonFallbackInjection::PlatformDefault => {
+                Arc::from("platform_default")
+            }
+            fret_core::TextCommonFallbackInjection::None => Arc::from("none"),
+            fret_core::TextCommonFallbackInjection::CommonFallback => Arc::from("common_fallback"),
+        }
+    }
+
+    fn text_common_fallback_injection_from_key(
+        key: Option<&str>,
+    ) -> fret_core::TextCommonFallbackInjection {
+        match key.unwrap_or("platform_default") {
+            "none" => fret_core::TextCommonFallbackInjection::None,
+            "common_fallback" => fret_core::TextCommonFallbackInjection::CommonFallback,
+            _ => fret_core::TextCommonFallbackInjection::PlatformDefault,
+        }
+    }
+
     fn apply_menu_bar_settings(
         app: &mut App,
         os: MenuBarIntegrationModeV1,
@@ -2036,21 +2072,42 @@ impl UiGalleryDriver {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn write_project_settings_menu_bar(
+    fn write_project_settings_json(
         os: MenuBarIntegrationModeV1,
         in_window: MenuBarIntegrationModeV1,
+        font_config: &fret_core::TextFontFamilyConfig,
     ) -> Result<(), std::io::Error> {
         let project_dir = std::path::Path::new(fret_app::PROJECT_CONFIG_DIR);
         std::fs::create_dir_all(project_dir)?;
         let path = project_dir.join(fret_app::SETTINGS_JSON);
 
-        let payload = serde_json::json!({
-            "settings_version": 1,
-            "menu_bar": {
+        let mut payload = if path.exists() {
+            match fret_app::settings::SettingsFileV1::load_json_value(&path) {
+                Ok(v) => v,
+                Err(_) => serde_json::Value::Object(Default::default()),
+            }
+        } else {
+            serde_json::Value::Object(Default::default())
+        };
+
+        if !payload.is_object() {
+            payload = serde_json::Value::Object(Default::default());
+        }
+
+        let Some(root) = payload.as_object_mut() else {
+            return Ok(());
+        };
+
+        root.insert("settings_version".to_string(), serde_json::Value::from(1));
+        root.insert(
+            "menu_bar".to_string(),
+            serde_json::json!({
                 "os": Self::menu_bar_mode_key(os).as_ref(),
                 "in_window": Self::menu_bar_mode_key(in_window).as_ref(),
-            }
-        });
+            }),
+        );
+        let fonts = serde_json::to_value(font_config).unwrap_or_else(|_| serde_json::json!({}));
+        root.insert("fonts".to_string(), fonts);
 
         let json = serde_json::to_string_pretty(&payload)
             .unwrap_or_else(|_| "{\"settings_version\":1}".to_string());
@@ -2174,6 +2231,10 @@ impl UiGalleryDriver {
         let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
         let settings_menu_bar_in_window = state.settings_menu_bar_in_window.clone();
         let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
+        let settings_text_common_fallback_injection =
+            state.settings_text_common_fallback_injection.clone();
+        let settings_text_common_fallback_injection_open =
+            state.settings_text_common_fallback_injection_open.clone();
         let settings_edit_can_undo = state.settings_edit_can_undo.clone();
         let settings_edit_can_redo = state.settings_edit_can_redo.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
@@ -2601,6 +2662,8 @@ impl UiGalleryDriver {
                         settings_menu_bar_os_open.clone(),
                         settings_menu_bar_in_window.clone(),
                         settings_menu_bar_in_window_open.clone(),
+                        settings_text_common_fallback_injection.clone(),
+                        settings_text_common_fallback_injection_open.clone(),
                         settings_edit_can_undo.clone(),
                         settings_edit_can_redo.clone(),
                         &mut content,
@@ -3555,6 +3618,18 @@ impl WinitAppDriver for UiGalleryDriver {
                         .update(&state.settings_menu_bar_in_window, |v| {
                             *v = Some(Self::menu_bar_mode_key(settings.menu_bar.in_window));
                         });
+                    let font_config = app
+                        .global::<fret_core::TextFontFamilyConfig>()
+                        .cloned()
+                        .unwrap_or_else(|| settings.fonts.clone());
+                    let _ = app.models_mut().update(
+                        &state.settings_text_common_fallback_injection,
+                        |v| {
+                            *v = Some(Self::text_common_fallback_injection_key(
+                                font_config.common_fallback_injection,
+                            ));
+                        },
+                    );
                 }
                 let _ = app
                     .models_mut()
@@ -3577,10 +3652,29 @@ impl WinitAppDriver for UiGalleryDriver {
                     .flatten()
                     .as_deref()
                     .map(str::to_string);
+                let injection = app
+                    .models()
+                    .get_cloned(&state.settings_text_common_fallback_injection)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+                let injection = Self::text_common_fallback_injection_from_key(injection.as_deref());
                 Self::apply_menu_bar_settings(app, os, in_window);
+                app.with_global_mut(SettingsFileV1::default, |settings, _app| {
+                    settings.fonts.common_fallback_injection = injection;
+                });
+                let prev_font_config = app
+                    .global::<fret_core::TextFontFamilyConfig>()
+                    .cloned()
+                    .unwrap_or_default();
+                if prev_font_config.common_fallback_injection != injection {
+                    let mut next = prev_font_config;
+                    next.common_fallback_injection = injection;
+                    app.set_global::<fret_core::TextFontFamilyConfig>(next);
+                }
                 Self::sync_menu_bar_after_state_change(app, window);
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
@@ -3616,16 +3710,36 @@ impl WinitAppDriver for UiGalleryDriver {
                         .flatten()
                         .as_deref()
                         .map(str::to_string);
+                    let injection = app
+                        .models()
+                        .get_cloned(&state.settings_text_common_fallback_injection)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
 
                     let os = Self::menu_bar_mode_from_key(os.as_deref());
                     let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+                    let injection =
+                        Self::text_common_fallback_injection_from_key(injection.as_deref());
 
-                    let result =
-                        Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
+                    let mut font_config = app
+                        .global::<fret_core::TextFontFamilyConfig>()
+                        .cloned()
+                        .unwrap_or_default();
+                    font_config.common_fallback_injection = injection;
+
+                    let result = Self::write_project_settings_json(os, in_window, &font_config)
+                        .and_then(|_| {
                             let paths = LayeredConfigPaths::for_project_root(".");
                             let (settings, _report) =
                                 load_layered_settings(&paths).map_err(std::io::Error::other)?;
                             fret_app::settings::apply_settings_globals(app, &settings);
+                            app.with_global_mut(
+                                fret_core::TextFontFamilyConfig::default,
+                                |cfg, _app| {
+                                    cfg.common_fallback_injection = injection;
+                                },
+                            );
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
                         });
