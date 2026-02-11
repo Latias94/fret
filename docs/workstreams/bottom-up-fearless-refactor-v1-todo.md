@@ -73,6 +73,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (shadcn web golden schema + helpers):
     - `ecosystem/fret-ui-shadcn/tests/support/web_golden_shadcn.rs`
     - `ecosystem/fret-ui-shadcn/tests/support/repo_root.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/assert.rs`
     - `ecosystem/fret-ui-shadcn/tests/support/web_find.rs`
     - `ecosystem/fret-ui-shadcn/tests/support/style_aware_services.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
