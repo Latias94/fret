@@ -54,6 +54,7 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 6. Package and share.
    - `fretboard diag pack --include-screenshots` (bundle + screenshots)
    - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
+   - `fretboard diag lint <bundle_dir|bundle.json> --json` (sanity checks: duplicate `test_id`, focused/active out-of-window, etc.)
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 

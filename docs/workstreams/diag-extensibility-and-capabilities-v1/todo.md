@@ -57,10 +57,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace
   - [x] text input snapshot evidence in `script.result.json` (via `evidence.focus_trace[].text_input_snapshot`),
   - [ ] focus change evidence with reasons beyond barrier inference,
   - [ ] predicate evaluation deltas (what changed, what did not).
-- [ ] Add `diag lint` mode for captured bundles:
-  - [ ] semantics lint (duplicate `test_id`, missing labels, inconsistent flags),
-  - [ ] layout lint (bounds outside window, overlap invariants, basic stability checks),
-  - [ ] emit `check.lint.json`.
+- [x] Add `diag lint` mode for captured bundles:
+  - [x] semantics lint (duplicate `test_id`, missing labels, dangling `active_descendant`),
+  - [x] layout lint (focused/active bounds outside window, empty bounds for focused/test-id nodes),
+  - [x] emit `check.lint.json` (exit 1 when error findings exist).
 
 ## Tooling tasks (authoring ergonomics)
 

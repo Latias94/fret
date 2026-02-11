@@ -14,6 +14,7 @@ mod cli;
 mod compare;
 pub mod devtools;
 mod gates;
+mod lint;
 mod perf_seed_policy;
 mod stats;
 pub mod transport;
@@ -31,6 +32,7 @@ use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
     check_redraw_hitches_max_total_ms, check_resource_footprint_thresholds,
 };
+use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
@@ -130,6 +132,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_include_screenshots: bool = false;
     let mut pack_after_run: bool = false;
     let mut triage_out: Option<PathBuf> = None;
+    let mut lint_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -149,6 +152,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
+    let mut lint_all_test_ids_bounds: bool = false;
+    let mut lint_eps_px: f32 = 0.5;
     let mut perf_repeat: u64 = 1;
     let mut reuse_launch: bool = false;
     let mut max_top_total_us: Option<u64> = None;
@@ -448,7 +453,22 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 let p = PathBuf::from(v);
                 pick_apply_out = Some(p.clone());
-                triage_out = Some(p);
+                triage_out = Some(p.clone());
+                lint_out = Some(p);
+                i += 1;
+            }
+            "--all-test-ids" => {
+                lint_all_test_ids_bounds = true;
+                i += 1;
+            }
+            "--lint-eps-px" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --lint-eps-px".to_string());
+                };
+                lint_eps_px = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --lint-eps-px".to_string())?;
                 i += 1;
             }
             "--inspect-path" => {
@@ -1770,6 +1790,54 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 println!("{pretty}");
             } else {
                 println!("{}", out.display());
+            }
+            Ok(())
+        }
+        "lint" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+
+            let report = lint_bundle_from_path(
+                &bundle_path,
+                warmup_frames,
+                LintOptions {
+                    all_test_ids_bounds: lint_all_test_ids_bounds,
+                    eps_px: lint_eps_px,
+                },
+            )?;
+
+            let out = lint_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| default_lint_out_path(&bundle_path));
+
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+            if stats_json {
+                println!("{pretty}");
+            } else {
+                println!("{}", out.display());
+            }
+
+            if report.error_issues > 0 {
+                std::process::exit(1);
             }
             Ok(())
         }
@@ -7474,6 +7542,11 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
 fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("triage.json")
+}
+
+fn default_lint_out_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("check.lint.json")
 }
 
 fn pack_bundle_dir_to_zip(
