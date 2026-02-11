@@ -278,16 +278,25 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             LayoutRefinement::default().w_full(),
         );
         cx.container(wrapper_props, |cx| {
-            vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_between(),
-                    |cx| vec![cx.text(label), cx.text(status)],
-                ),
-                collapsible,
-            ]
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
+                move |cx| {
+                    vec![
+                        stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full())
+                                .justify_between(),
+                            |cx| vec![cx.text(label), cx.text(status)],
+                        ),
+                        collapsible,
+                    ]
+                },
+            )]
         })
         .test_id(test_id_prefix)
     };
