@@ -284,6 +284,29 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state
         }
         SceneOp::PopEffect => mix_u64(state, 107),
+        SceneOp::PushCompositeGroup { desc } => {
+            let mut state = mix_u64(state, 110);
+            state = mix_rect(state, desc.bounds);
+            state = mix_u64(
+                state,
+                match desc.mode {
+                    BlendMode::Over => 1,
+                    BlendMode::Add => 2,
+                    BlendMode::Multiply => 3,
+                    BlendMode::Screen => 4,
+                },
+            );
+            mix_u64(
+                state,
+                match desc.quality {
+                    EffectQuality::Auto => 1,
+                    EffectQuality::Low => 2,
+                    EffectQuality::Medium => 3,
+                    EffectQuality::High => 4,
+                },
+            )
+        }
+        SceneOp::PopCompositeGroup => mix_u64(state, 111),
         SceneOp::Quad {
             order,
             rect,

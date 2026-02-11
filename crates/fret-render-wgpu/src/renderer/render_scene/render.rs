@@ -1267,7 +1267,7 @@ impl Renderer {
                     let Some(path_msaa_pipeline) = self.path_msaa_pipeline.as_ref() else {
                         continue;
                     };
-                    let Some(composite_pipeline) = self.composite_pipeline.as_ref() else {
+                    let Some(composite_pipeline) = self.composite_pipelines[0].as_ref() else {
                         continue;
                     };
 
@@ -2263,6 +2263,13 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
+                    let pipeline_ix = match pass.blend_mode {
+                        fret_core::BlendMode::Over => 0,
+                        fret_core::BlendMode::Add => 1,
+                        fret_core::BlendMode::Multiply => 2,
+                        fret_core::BlendMode::Screen => 3,
+                    };
+
                     let src_view = match pass.src {
                         PlanTarget::Output
                         | PlanTarget::Mask0
@@ -2337,9 +2344,9 @@ impl Renderer {
                         });
 
                         (
-                            self.composite_mask_pipeline
+                            self.composite_mask_pipelines[pipeline_ix]
                                 .as_ref()
-                                .expect("composite premul mask pipeline must exist"),
+                                .expect("composite mask pipeline must exist"),
                             bind_group,
                         )
                     } else {
@@ -2360,9 +2367,9 @@ impl Renderer {
                             ],
                         });
                         (
-                            self.composite_pipeline
+                            self.composite_pipelines[pipeline_ix]
                                 .as_ref()
-                                .expect("composite premul pipeline must exist"),
+                                .expect("composite pipeline must exist"),
                             bind_group,
                         )
                     };

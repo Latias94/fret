@@ -112,6 +112,63 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             );
         }
 
+        SceneOp::PushCompositeGroup { desc } => {
+            state.flush_quad_batch();
+
+            let scissor = effect_scissor(state, desc.bounds);
+            let uniform_index = state.push_effect_uniform_snapshot(
+                scissor,
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+            );
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::CompositeGroupPush {
+                    scissor,
+                    uniform_index,
+                    mode: desc.mode,
+                    quality: desc.quality,
+                },
+            });
+
+            // Inside an isolated compositing group, masks active at group entry are excluded from
+            // draw shaders and applied by the composite that closes the group.
+            state
+                .mask_scope_stack
+                .push((state.mask_scope_head, state.mask_scope_count));
+            state.mask_scope_head = state.mask_head;
+            state.mask_scope_count = state.mask_count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+        }
+        SceneOp::PopCompositeGroup => {
+            state.flush_quad_batch();
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::CompositeGroupPop,
+            });
+
+            let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
+            state.mask_scope_head = head;
+            state.mask_scope_count = count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+        }
+
         SceneOp::Quad {
             rect,
             background,

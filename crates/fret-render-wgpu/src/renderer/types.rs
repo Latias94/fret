@@ -551,6 +551,13 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    CompositeGroupPush {
+        scissor: ScissorRect,
+        uniform_index: u32,
+        mode: fret_core::BlendMode,
+        quality: fret_core::EffectQuality,
+    },
+    CompositeGroupPop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

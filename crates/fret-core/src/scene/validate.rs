@@ -8,6 +8,7 @@ pub enum SceneValidationErrorKind {
     ClipUnderflow,
     MaskUnderflow,
     EffectUnderflow,
+    CompositeGroupUnderflow,
     NonFiniteTransform,
     NonFiniteOpacity,
     NonFiniteOpData,
@@ -17,7 +18,9 @@ pub enum SceneValidationErrorKind {
     UnbalancedClipStack { remaining: usize },
     UnbalancedMaskStack { remaining: usize },
     UnbalancedEffectStack { remaining: usize },
+    UnbalancedCompositeGroupStack { remaining: usize },
     EffectMaskCrossing,
+    CompositeGroupMaskCrossing,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -158,6 +161,8 @@ impl SceneRecording {
         let mut mask_depth: usize = 0;
         let mut effect_depth: usize = 0;
         let mut effect_mask_depths: Vec<usize> = Vec::new();
+        let mut composite_group_depth: usize = 0;
+        let mut composite_group_mask_depths: Vec<usize> = Vec::new();
 
         for (index, &op) in self.ops.iter().enumerate() {
             match op {
@@ -324,6 +329,35 @@ impl SceneRecording {
                     }
                     effect_depth = effect_depth.saturating_sub(1);
                 }
+                SceneOp::PushCompositeGroup { desc } => {
+                    if !rect_is_finite(desc.bounds) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                    composite_group_mask_depths.push(mask_depth);
+                    composite_group_depth = composite_group_depth.saturating_add(1);
+                }
+                SceneOp::PopCompositeGroup => {
+                    if composite_group_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::CompositeGroupUnderflow,
+                        });
+                    }
+                    let expected = composite_group_mask_depths.pop().unwrap_or(mask_depth);
+                    if expected != mask_depth {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::CompositeGroupMaskCrossing,
+                        });
+                    }
+                    composite_group_depth = composite_group_depth.saturating_sub(1);
+                }
                 SceneOp::Quad {
                     rect,
                     background,
@@ -488,6 +522,15 @@ impl SceneRecording {
                 op: SceneOp::PopEffect,
                 kind: SceneValidationErrorKind::UnbalancedEffectStack {
                     remaining: effect_depth,
+                },
+            });
+        }
+        if composite_group_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopCompositeGroup,
+                kind: SceneValidationErrorKind::UnbalancedCompositeGroupStack {
+                    remaining: composite_group_depth,
                 },
             });
         }

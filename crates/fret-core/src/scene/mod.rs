@@ -6,6 +6,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
+mod composite;
 mod fingerprint;
 mod image_object_fit;
 mod mask;
@@ -13,6 +14,7 @@ mod paint;
 mod replay;
 mod validate;
 
+pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
 pub use mask::Mask;
@@ -254,6 +256,17 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_composite_group<T>(
+        &mut self,
+        desc: CompositeGroupDesc,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushCompositeGroup { desc });
+        let out = f(self);
+        self.push(SceneOp::PopCompositeGroup);
+        out
+    }
+
     pub fn ops(&self) -> &[SceneOp] {
         &self.ops
     }
@@ -334,6 +347,11 @@ pub enum SceneOp {
         quality: EffectQuality,
     },
     PopEffect,
+
+    PushCompositeGroup {
+        desc: CompositeGroupDesc,
+    },
+    PopCompositeGroup,
 
     Quad {
         order: DrawOrder,
