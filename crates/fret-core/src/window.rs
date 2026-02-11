@@ -269,12 +269,25 @@ pub struct WindowFrameClockService {
 }
 
 impl WindowFrameClockService {
-    fn fixed_delta_from_env() -> Option<Duration> {
+    /// Returns the process-wide fixed frame delta override (if any).
+    ///
+    /// This is cached (OnceLock) so it can be called from hot paths.
+    ///
+    /// Env var precedence:
+    /// - `FRET_DIAG_FIXED_FRAME_DELTA_MS` (preferred)
+    /// - `FRET_DIAG_FRAME_DELTA_MS` (legacy alias)
+    /// - `FRET_FRAME_CLOCK_FIXED_DELTA_MS` (generic)
+    pub fn fixed_delta_from_env() -> Option<Duration> {
         static FIXED: OnceLock<Option<Duration>> = OnceLock::new();
         *FIXED.get_or_init(|| {
             let value = std::env::var("FRET_DIAG_FIXED_FRAME_DELTA_MS")
                 .ok()
                 .filter(|v| !v.trim().is_empty())
+                .or_else(|| {
+                    std::env::var("FRET_DIAG_FRAME_DELTA_MS")
+                        .ok()
+                        .filter(|v| !v.trim().is_empty())
+                })
                 .or_else(|| {
                     std::env::var("FRET_FRAME_CLOCK_FIXED_DELTA_MS")
                         .ok()
@@ -291,6 +304,14 @@ impl WindowFrameClockService {
 
     pub fn fixed_delta(&self, window: AppWindowId) -> Option<Duration> {
         self.fixed_deltas.get(&window).copied()
+    }
+
+    /// Returns the effective fixed frame delta for `window`.
+    ///
+    /// This prefers an explicit per-window override set via `set_fixed_delta`, and falls back to
+    /// the process-wide env override (if any).
+    pub fn effective_fixed_delta(&self, window: AppWindowId) -> Option<Duration> {
+        self.fixed_delta(window).or_else(Self::fixed_delta_from_env)
     }
 
     pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowFrameClockSnapshot) {
@@ -327,11 +348,7 @@ impl WindowFrameClockService {
             return;
         }
 
-        let fixed_delta = self
-            .fixed_deltas
-            .get(&window)
-            .copied()
-            .or_else(Self::fixed_delta_from_env);
+        let fixed_delta = self.effective_fixed_delta(window);
         if let Some(fixed_delta) = fixed_delta {
             let had_prev = self.last_frame_id.contains_key(&window);
             let prev_now = self
@@ -346,7 +363,11 @@ impl WindowFrameClockService {
             };
             self.fixed_now_monotonic.insert(window, now_monotonic);
 
-            let delta = had_prev.then_some(fixed_delta).unwrap_or_default();
+            let delta = if had_prev {
+                fixed_delta
+            } else {
+                Duration::default()
+            };
             self.last_frame_id.insert(window, frame_id);
             self.snapshots.insert(
                 window,

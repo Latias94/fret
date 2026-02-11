@@ -196,15 +196,9 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
-        let frame_clock_fixed_delta_ms = std::env::var("FRET_DIAG_FIXED_FRAME_DELTA_MS")
-            .ok()
-            .filter(|v| !v.trim().is_empty())
-            .or_else(|| {
-                std::env::var("FRET_DIAG_FRAME_DELTA_MS")
-                    .ok()
-                    .filter(|v| !v.trim().is_empty())
-            })
-            .and_then(|v| v.trim().parse::<u64>().ok())
+        let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
+            .map(|d| d.as_millis())
+            .and_then(|ms| u64::try_from(ms).ok())
             .filter(|v| *v > 0);
 
         Self {
@@ -319,16 +313,6 @@ impl UiDiagnosticsService {
         provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     ) {
         self.app_snapshot_provider = provider;
-    }
-
-    pub(crate) fn apply_frame_clock_overrides(&mut self, app: &mut App, window: AppWindowId) {
-        let Some(delta_ms) = self.cfg.frame_clock_fixed_delta_ms else {
-            return;
-        };
-        let delta = fret_core::time::Duration::from_millis(delta_ms);
-        app.with_global_mut_untracked(fret_core::WindowFrameClockService::default, |svc, _host| {
-            svc.set_fixed_delta(window, Some(delta))
-        });
     }
 
     /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
@@ -3999,7 +3983,7 @@ impl UiDiagnosticsService {
             .global::<fret_core::WindowFrameClockService>()
             .and_then(|svc| {
                 let snapshot = svc.snapshot(window)?;
-                let fixed_delta_ms = svc.fixed_delta(window).map(|d| {
+                let fixed_delta_ms = svc.effective_fixed_delta(window).map(|d| {
                     let ms = d.as_millis();
                     ms.min(u64::MAX as u128) as u64
                 });
