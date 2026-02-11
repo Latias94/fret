@@ -13,7 +13,7 @@ use std::sync::Arc;
 use time::{Date, Month};
 
 mod css_color;
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

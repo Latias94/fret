@@ -1,4 +1,4 @@
-#[path = "../web_golden_shadcn.rs"]
+#[path = "../support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 pub(super) use web_golden_shadcn::*;
 

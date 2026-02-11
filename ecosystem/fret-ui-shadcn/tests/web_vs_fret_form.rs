@@ -3,7 +3,7 @@ use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as Cor
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::headless::form_state::{FormFieldId, FormState};
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

@@ -6,7 +6,7 @@ use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::tree::UiTree;
 use std::sync::Arc;
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

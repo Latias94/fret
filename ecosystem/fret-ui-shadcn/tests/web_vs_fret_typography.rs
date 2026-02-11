@@ -12,7 +12,7 @@ use fret_ui_kit::ColorRef;
 use fret_ui_kit::ui;
 use std::sync::Arc;
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

@@ -12,7 +12,7 @@ use std::sync::Arc;
 mod css_color;
 use css_color::{Rgba, color_to_rgba, parse_css_color};
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

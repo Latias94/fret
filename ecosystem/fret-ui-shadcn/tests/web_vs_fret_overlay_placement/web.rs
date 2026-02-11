@@ -1,6 +1,6 @@
 use super::*;
 
-#[path = "../web_golden_shadcn.rs"]
+#[path = "../support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 pub(crate) use web_golden_shadcn::*;
 

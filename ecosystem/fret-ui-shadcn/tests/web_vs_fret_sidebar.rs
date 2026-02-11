@@ -4,7 +4,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
 use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

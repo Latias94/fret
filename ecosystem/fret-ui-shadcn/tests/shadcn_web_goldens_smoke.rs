@@ -1,7 +1,7 @@
 use std::io::BufReader;
 use std::path::PathBuf;
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 

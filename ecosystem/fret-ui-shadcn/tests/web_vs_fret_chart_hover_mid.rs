@@ -7,7 +7,7 @@ use std::sync::Arc;
 mod chart_test_data;
 use chart_test_data::CHART_INTERACTIVE_DESKTOP;
 
-#[path = "web_golden_shadcn.rs"]
+#[path = "support/web_golden_shadcn.rs"]
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
