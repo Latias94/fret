@@ -1,6 +1,54 @@
 use super::*;
 
+#[derive(Debug, Default)]
+struct DockParentIndex {
+    root_for: HashMap<DockNodeId, DockNodeId>,
+    parent: HashMap<DockNodeId, DockNodeId>,
+    split_child_index: HashMap<DockNodeId, usize>,
+}
+
 impl DockGraph {
+    fn build_parent_index_for_window(&self, window: AppWindowId) -> DockParentIndex {
+        fn index_subtree(graph: &DockGraph, root: DockNodeId, index: &mut DockParentIndex) {
+            let mut stack: Vec<DockNodeId> = vec![root];
+            while let Some(node) = stack.pop() {
+                if index.root_for.contains_key(&node) {
+                    continue;
+                }
+                index.root_for.insert(node, root);
+
+                let Some(n) = graph.nodes.get(node) else {
+                    continue;
+                };
+                match n {
+                    DockNode::Tabs { .. } => {}
+                    DockNode::Floating { child } => {
+                        index.parent.insert(*child, node);
+                        stack.push(*child);
+                    }
+                    DockNode::Split { children, .. } => {
+                        for (i, child) in children.iter().copied().enumerate() {
+                            index.parent.insert(child, node);
+                            index.split_child_index.insert(child, i);
+                            stack.push(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut index = DockParentIndex::default();
+        if let Some(root) = self.window_root(window) {
+            index_subtree(self, root, &mut index);
+        }
+        if let Some(list) = self.window_floatings.get(&window) {
+            for w in list {
+                index_subtree(self, w.floating, &mut index);
+            }
+        }
+        index
+    }
+
     /// Decide whether an edge-dock into `target` will insert into an existing same-axis split, or
     /// wrap the target in a new split.
     ///
@@ -22,7 +70,15 @@ impl DockGraph {
             DropZone::Center => unreachable!(),
         };
 
-        let root = self.root_for_node_in_window_forest(window, target)?;
+        // Index parent links for the window's docking forest so we can answer:
+        // - is the target in the forest?
+        // - what is the nearest same-axis split ancestor?
+        //
+        // This avoids repeated subtree scans in edge-dock hot paths.
+        let index = self.build_parent_index_for_window(window);
+        if !index.root_for.contains_key(&target) {
+            return None;
+        }
 
         // Outer docking can target an existing split container. In that case we can insert at the
         // boundary without searching for an ancestor.
@@ -31,42 +87,60 @@ impl DockGraph {
             children,
             fractions,
         }) = self.nodes.get(target)
+            && *split_axis == axis
+            && !children.is_empty()
+            && children.len() == fractions.len()
         {
+            let len = children.len();
+            let (anchor_index, insert_index) = match zone {
+                DropZone::Left | DropZone::Top => (0, 0),
+                DropZone::Right | DropZone::Bottom => {
+                    let last = len.saturating_sub(1);
+                    (last, last.saturating_add(1))
+                }
+                DropZone::Center => unreachable!(),
+            };
+            return Some(EdgeDockDecision::InsertIntoSplit {
+                split: target,
+                anchor_index,
+                insert_index,
+            });
+        }
+
+        let mut cur = target;
+        while let Some(parent) = index.parent.get(&cur).copied() {
+            let Some(DockNode::Split {
+                axis: split_axis,
+                children,
+                fractions,
+            }) = self.nodes.get(parent)
+            else {
+                cur = parent;
+                continue;
+            };
+
             if *split_axis == axis && !children.is_empty() && children.len() == fractions.len() {
-                let len = children.len();
-                let (anchor_index, insert_index) = match zone {
-                    DropZone::Left | DropZone::Top => (0, 0),
-                    DropZone::Right | DropZone::Bottom => {
-                        let last = len.saturating_sub(1);
-                        (last, last.saturating_add(1))
-                    }
+                let Some(anchor_index) = index.split_child_index.get(&cur).copied() else {
+                    break;
+                };
+
+                let insert_index = match zone {
+                    DropZone::Left | DropZone::Top => anchor_index,
+                    DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
                     DropZone::Center => unreachable!(),
                 };
+
                 return Some(EdgeDockDecision::InsertIntoSplit {
-                    split: target,
+                    split: parent,
                     anchor_index,
                     insert_index,
                 });
             }
+
+            cur = parent;
         }
 
-        let Some((split, anchor_index)) =
-            self.find_nearest_same_axis_split_and_anchor(root, target, axis)
-        else {
-            return Some(EdgeDockDecision::WrapNewSplit);
-        };
-
-        let insert_index = match zone {
-            DropZone::Left | DropZone::Top => anchor_index,
-            DropZone::Right | DropZone::Bottom => anchor_index.saturating_add(1),
-            DropZone::Center => unreachable!(),
-        };
-
-        Some(EdgeDockDecision::InsertIntoSplit {
-            split,
-            anchor_index,
-            insert_index,
-        })
+        Some(EdgeDockDecision::WrapNewSplit)
     }
 
     pub fn compute_layout(
@@ -87,17 +161,36 @@ impl DockGraph {
                 children,
                 fractions,
             } => {
-                let count = children.len().min(fractions.len());
-                if count == 0 {
+                if children.is_empty() {
                     return;
                 }
 
-                let total: f32 = fractions.iter().take(count).sum();
-                let total = if total <= 0.0 { 1.0 } else { total };
+                // Layout should not silently truncate children if invariants are violated. If the
+                // split is non-canonical (mismatched lengths, non-finite values), repair the shares
+                // locally for deterministic layout.
+                let cleaned_share_at = |i: usize| -> f32 {
+                    let raw = fractions.get(i).copied().unwrap_or(1.0);
+                    if raw.is_finite() && raw > 0.0 {
+                        raw
+                    } else {
+                        0.0
+                    }
+                };
+
+                let mut total = 0.0;
+                for i in 0..children.len() {
+                    total += cleaned_share_at(i);
+                }
+                let uniform = 1.0 / children.len() as f32;
+                let inv_total = if total > 0.0 { 1.0 / total } else { 0.0 };
 
                 let mut cursor = 0.0;
-                for i in 0..count {
-                    let f = fractions[i] / total;
+                for i in 0..children.len() {
+                    let f = if total > 0.0 {
+                        cleaned_share_at(i) * inv_total
+                    } else {
+                        uniform
+                    };
                     let (child_rect, next_cursor) = match axis {
                         Axis::Horizontal => {
                             let w = bounds.size.width.0 * f;

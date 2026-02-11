@@ -10,6 +10,47 @@ fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
 }
 
 #[test]
+fn compute_layout_repairs_mismatched_fraction_lengths_without_truncating_children() {
+    use std::collections::HashMap;
+
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs0 = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a],
+        active: 0,
+    });
+    let tabs1 = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b],
+        active: 0,
+    });
+    let tabs2 = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c],
+        active: 0,
+    });
+
+    let split = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![tabs0, tabs1, tabs2],
+        // Non-canonical: missing one fraction entry. `compute_layout` should not silently truncate.
+        fractions: vec![2.0, 1.0],
+    });
+
+    let mut out: HashMap<DockNodeId, Rect> = HashMap::new();
+    g.compute_layout(split, rect(0.0, 0.0, 400.0, 100.0), &mut out);
+
+    assert!(out.contains_key(&tabs0));
+    assert!(out.contains_key(&tabs1));
+    assert!(out.contains_key(&tabs2));
+
+    assert_eq!(out.get(&tabs0).unwrap().size.width, Px(200.0));
+    assert_eq!(out.get(&tabs1).unwrap().size.width, Px(100.0));
+    assert_eq!(out.get(&tabs2).unwrap().size.width, Px(100.0));
+}
+
+#[test]
 fn float_panel_in_window_creates_floating_container() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
