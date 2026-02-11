@@ -253,8 +253,26 @@ impl fret_core::MaterialService for Renderer {
     ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
         // v1: all baseline material kinds are supported by the quad shader on wgpu backends.
         //
-        // Capability gating hooks can be added once we have a backend that cannot support a given
-        // kind under the fixed Tier B binding shape (ADR 0122).
+        // v2: sampled materials are capability-gated by a fixed, renderer-owned catalog texture
+        // binding shape (ADR 0242).
+        match desc.binding {
+            fret_core::MaterialBindingShape::ParamsOnly => {}
+            fret_core::MaterialBindingShape::ParamsPlusCatalogTexture { .. } => {
+                let f = self
+                    .adapter
+                    .get_texture_format_features(wgpu::TextureFormat::Rgba8Unorm);
+                let ok_usages = f
+                    .allowed_usages
+                    .contains(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
+                let ok_filterable = f
+                    .flags
+                    .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE);
+                if !(ok_usages && ok_filterable) {
+                    return Err(fret_core::MaterialRegistrationError::Unsupported);
+                }
+            }
+        }
+
         match self.materials_by_desc.entry(desc) {
             Entry::Occupied(e) => {
                 let id = *e.get();

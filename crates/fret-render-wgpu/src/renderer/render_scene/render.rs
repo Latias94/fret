@@ -48,6 +48,8 @@ impl Renderer {
             panic!("invalid scene: {e}");
         }
 
+        self.ensure_material_catalog_uploaded(queue);
+
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
@@ -159,6 +161,9 @@ impl Renderer {
             frame_perf.material_quad_ops = frame_perf
                 .material_quad_ops
                 .saturating_add(encoding.material_quad_ops);
+            frame_perf.material_sampled_quad_ops = frame_perf
+                .material_sampled_quad_ops
+                .saturating_add(encoding.material_sampled_quad_ops);
             frame_perf.material_distinct = frame_perf
                 .material_distinct
                 .saturating_add(encoding.material_distinct);
@@ -3357,6 +3362,10 @@ impl Renderer {
                 .perf
                 .material_quad_ops
                 .saturating_add(frame_perf.material_quad_ops);
+            self.perf.material_sampled_quad_ops = self
+                .perf
+                .material_sampled_quad_ops
+                .saturating_add(frame_perf.material_sampled_quad_ops);
             self.perf.material_distinct = self
                 .perf
                 .material_distinct
@@ -3439,6 +3448,7 @@ impl Renderer {
                 scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
                 scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
                 material_quad_ops: frame_perf.material_quad_ops,
+                material_sampled_quad_ops: frame_perf.material_sampled_quad_ops,
                 material_distinct: frame_perf.material_distinct,
                 material_unknown_ids: frame_perf.material_unknown_ids,
                 material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,

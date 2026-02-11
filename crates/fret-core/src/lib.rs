@@ -68,7 +68,10 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
-pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
+pub use materials::{
+    MaterialBindingShape, MaterialCatalogTextureKind, MaterialDescriptor, MaterialKind,
+    MaterialRegistrationError, MaterialService,
+};
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
 pub use scene::{

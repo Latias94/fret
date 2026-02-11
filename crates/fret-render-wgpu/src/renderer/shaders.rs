@@ -102,6 +102,9 @@ struct MaskStack {
 
 @group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
+@group(0) @binding(3) var material_catalog_texture: texture_2d_array<f32>;
+@group(0) @binding(4) var material_catalog_sampler: sampler;
+
 const MAX_STOPS: u32 = 8u;
 
 struct Paint {
@@ -475,10 +478,18 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
       if (p.tile_mode == 4u) {
         let scale = spacing;
         let cell = vec2<u32>(
-          u32(floor(pos.x / scale)),
-          u32(floor(pos.y / scale))
+          u32(floor(pos.x / scale + 0.5)),
+          u32(floor(pos.y / scale + 0.5))
         );
-        let r = mat_rand01(cell, seed);
+        var r = mat_rand01(cell, seed);
+        // v2 (ADR 0242): optionally sample a renderer-owned catalog texture (fixed binding shape).
+        if (p.stop_count == 1u) {
+          let xi = cell.x & 63u;
+          let yi = cell.y & 63u;
+          let uv = (vec2<f32>(f32(xi) + 0.5, f32(yi) + 0.5) / 64.0);
+          let layer = i32(p.color_space);
+          r = textureSample(material_catalog_texture, material_catalog_sampler, uv, layer).r;
+        }
         let intensity = clamp(p.params2.y, 0.0, 1.0);
         let cov = intensity * r;
         return base * (1.0 - cov) + fg * cov;

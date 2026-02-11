@@ -66,6 +66,9 @@ pub struct Renderer {
     mask_buffer: wgpu::Buffer,
     mask_capacity: usize,
 
+    material_catalog_texture: wgpu::Texture,
+    material_catalog_uploaded: bool,
+
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
 
