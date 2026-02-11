@@ -18,6 +18,8 @@ pub(crate) struct WebGoldenTheme {
     pub(crate) portals: Vec<WebNode>,
     #[serde(rename = "portalWrappers", default)]
     pub(crate) portal_wrappers: Vec<WebNode>,
+    #[serde(default)]
+    pub(crate) open: Option<WebOpenMeta>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default)]
@@ -35,6 +37,19 @@ pub(crate) struct WebRect {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Default)]
+pub(crate) struct WebPoint {
+    pub(crate) x: f32,
+    pub(crate) y: f32,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub(crate) struct WebOpenMeta {
+    pub(crate) action: String,
+    pub(crate) selector: String,
+    pub(crate) point: WebPoint,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
 pub(crate) struct WebScrollMetrics {
     #[serde(rename = "scrollWidth")]
     pub(crate) scroll_width: f32,
@@ -44,6 +59,10 @@ pub(crate) struct WebScrollMetrics {
     pub(crate) client_width: f32,
     #[serde(rename = "clientHeight")]
     pub(crate) client_height: f32,
+    #[serde(rename = "offsetWidth", default)]
+    pub(crate) offset_width: f32,
+    #[serde(rename = "offsetHeight", default)]
+    pub(crate) offset_height: f32,
     #[serde(rename = "scrollLeft")]
     pub(crate) scroll_left: f32,
     #[serde(rename = "scrollTop")]
@@ -85,13 +104,21 @@ pub(crate) fn repo_root() -> PathBuf {
         .expect("repo root")
 }
 
-pub(crate) fn web_golden_path(name: &str) -> PathBuf {
+pub(crate) fn web_golden_path_file(file_name: &str) -> PathBuf {
     repo_root()
         .join("goldens")
         .join("shadcn-web")
         .join("v4")
         .join("new-york-v4")
-        .join(format!("{name}.json"))
+        .join(file_name)
+}
+
+pub(crate) fn web_golden_path(name: &str) -> PathBuf {
+    web_golden_path_file(&format!("{name}.json"))
+}
+
+pub(crate) fn web_golden_open_path(name: &str) -> PathBuf {
+    web_golden_path_file(&format!("{name}.open.json"))
 }
 
 pub(crate) fn web_golden_path_open_fallback(name: &str) -> PathBuf {
@@ -115,6 +142,22 @@ pub(crate) fn read_web_golden(name: &str) -> WebGolden {
     serde_json::from_str(&text).unwrap_or_else(|err| {
         panic!(
             "failed to parse web golden: {}\nerror: {err}",
+            path.display()
+        )
+    })
+}
+
+pub(crate) fn read_web_golden_open(name: &str) -> WebGolden {
+    let path = web_golden_open_path(name);
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+        panic!(
+            "missing web open golden: {}\nerror: {err}\n\nGenerate it via (in-process server):\n  node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 {name} --modes=open --update\n\nOr (external server):\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts {name} --modes=open --update --baseUrl=http://localhost:4020\n\nDocs:\n  docs/shadcn-web-goldens.md",
+            path.display()
+        )
+    });
+    serde_json::from_str(&text).unwrap_or_else(|err| {
+        panic!(
+            "failed to parse web open golden: {}\nerror: {err}",
             path.display()
         )
     })
@@ -153,7 +196,7 @@ pub(crate) fn web_theme_named<'a>(golden: &'a WebGolden, name: &str) -> &'a WebG
 
 pub(crate) fn find_first<'a>(
     node: &'a WebNode,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Option<&'a WebNode> {
     if pred(node) {
         return Some(node);
@@ -168,7 +211,7 @@ pub(crate) fn find_first<'a>(
 
 pub(crate) fn find_all<'a>(
     node: &'a WebNode,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Vec<&'a WebNode> {
     let mut out = Vec::new();
     let mut stack = vec![node];
@@ -185,7 +228,7 @@ pub(crate) fn find_all<'a>(
 
 pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Option<&'a WebNode> {
     find_first(&theme.root, pred)
         .or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
@@ -199,7 +242,7 @@ pub(crate) fn find_first_in_theme<'a>(
 
 pub(crate) fn find_all_in_theme<'a>(
     theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Vec<&'a WebNode> {
     let mut out = find_all(&theme.root, pred);
     for portal in &theme.portals {

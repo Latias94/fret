@@ -194,7 +194,7 @@ pub(crate) fn assert_context_menu_panel_size_matches_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),

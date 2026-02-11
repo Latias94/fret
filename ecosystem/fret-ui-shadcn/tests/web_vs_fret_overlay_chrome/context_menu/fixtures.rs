@@ -127,8 +127,7 @@ fn bounds_for_web_theme_or(web_name: &str, theme: &WebThemeName) -> Rect {
     let web = read_web_golden_open(web_name);
     web.themes
         .get(theme.as_str())
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| default_bounds_for_web_name(web_name))
 }
 

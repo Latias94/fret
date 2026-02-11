@@ -206,7 +206,7 @@ pub(crate) fn assert_click_overlay_surface_colors_match_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),
@@ -570,7 +570,7 @@ pub(crate) fn assert_overlay_chrome_matches_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(web_w.max(640.0)), Px(web_h.max(480.0))),
@@ -727,8 +727,7 @@ pub(crate) fn assert_overlay_surface_colors_match(
     let bounds = web
         .themes
         .get(web_theme_name)
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
@@ -863,8 +862,7 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme(
     let bounds = web
         .themes
         .get(web_theme_name)
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
@@ -973,8 +971,7 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
     let bounds = web
         .themes
         .get(web_theme_name)
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
@@ -1078,7 +1075,7 @@ pub(crate) fn assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),
@@ -1159,8 +1156,7 @@ pub(crate) fn assert_overlay_shadow_insets_match(
     let bounds = web
         .themes
         .get(web_theme_name)
-        .and_then(|t| t.viewport)
-        .map(bounds_for_viewport)
+        .and_then(bounds_for_theme_viewport)
         .unwrap_or_else(|| {
             Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
@@ -1236,7 +1232,7 @@ pub(crate) fn assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),
@@ -1322,7 +1318,7 @@ pub(crate) fn assert_click_overlay_panel_size_matches_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),
@@ -1559,7 +1555,7 @@ pub(crate) fn assert_hover_overlay_surface_colors_match_by_portal_slot_theme(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),
@@ -1786,7 +1782,7 @@ pub(crate) fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
     let web_w = web_portal.rect.w;
     let web_h = web_portal.rect.h;
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),

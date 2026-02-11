@@ -130,8 +130,16 @@ enum Align {
 }
 
 fn bounds_for_web_theme(theme: &WebGoldenTheme) -> Rect {
-    let w = theme.viewport.map(|v| v.w).unwrap_or(1440.0);
-    let h = theme.viewport.map(|v| v.h).unwrap_or(900.0);
+    let w = if theme.viewport.w > 0.0 {
+        theme.viewport.w
+    } else {
+        1440.0
+    };
+    let h = if theme.viewport.h > 0.0 {
+        theme.viewport.h
+    } else {
+        900.0
+    };
     Rect::new(Point::new(Px(0.0), Px(0.0)), CoreSize::new(Px(w), Px(h)))
 }
 
@@ -2984,8 +2992,16 @@ fn assert_viewport_anchored_overlay_placement_matches(
 
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
-    let viewport_w = theme.viewport.map(|v| v.w).unwrap_or(1440.0);
-    let viewport_h = theme.viewport.map(|v| v.h).unwrap_or(900.0);
+    let viewport_w = if theme.viewport.w > 0.0 {
+        theme.viewport.w
+    } else {
+        1440.0
+    };
+    let viewport_h = if theme.viewport.h > 0.0 {
+        theme.viewport.h
+    } else {
+        900.0
+    };
 
     let web_portal_index = theme
         .portals

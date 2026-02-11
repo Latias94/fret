@@ -57,7 +57,7 @@ fn assert_navigation_menu_trigger_surface_colors_match(
         .get("color")
         .and_then(|v| parse_css_color(v));
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),

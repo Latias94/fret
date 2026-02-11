@@ -1,170 +1,25 @@
 use super::*;
 
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct WebGolden {
-    pub(crate) themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct WebGoldenTheme {
-    pub(crate) viewport: WebViewport,
-    pub(crate) root: WebNode,
-    #[serde(default)]
-    pub(crate) portals: Vec<WebNode>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub(crate) struct WebViewport {
-    pub(crate) w: f32,
-    pub(crate) h: f32,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub(crate) struct WebRect {
-    #[allow(dead_code)]
-    pub(crate) x: f32,
-    #[allow(dead_code)]
-    pub(crate) y: f32,
-    pub(crate) w: f32,
-    pub(crate) h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct WebNode {
-    pub(crate) tag: String,
-    #[serde(default)]
-    pub(crate) id: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "className")]
-    pub(crate) class_name: Option<String>,
-    #[serde(default)]
-    pub(crate) active: bool,
-    #[serde(default)]
-    #[serde(rename = "computedStyle")]
-    pub(crate) computed_style: BTreeMap<String, String>,
-    #[allow(dead_code)]
-    #[serde(default)]
-    pub(crate) attrs: BTreeMap<String, String>,
-    pub(crate) rect: WebRect,
-    #[serde(default)]
-    pub(crate) scroll: Option<WebScrollMetrics>,
-    #[serde(default)]
-    pub(crate) text: Option<String>,
-    #[serde(default)]
-    pub(crate) children: Vec<WebNode>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub(crate) struct WebScrollMetrics {
-    #[serde(rename = "scrollWidth")]
-    pub(crate) scroll_width: f32,
-    #[serde(rename = "scrollHeight")]
-    pub(crate) scroll_height: f32,
-    #[serde(rename = "clientWidth")]
-    pub(crate) client_width: f32,
-    #[serde(rename = "clientHeight")]
-    pub(crate) client_height: f32,
-    #[serde(rename = "offsetWidth")]
-    #[allow(dead_code)]
-    pub(crate) offset_width: f32,
-    #[serde(rename = "offsetHeight")]
-    #[allow(dead_code)]
-    pub(crate) offset_height: f32,
-    #[serde(rename = "scrollLeft")]
-    pub(crate) scroll_left: f32,
-    #[serde(rename = "scrollTop")]
-    pub(crate) scroll_top: f32,
-}
-
-pub(crate) fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-pub(crate) fn web_golden_path(name: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("shadcn-web")
-        .join("v4")
-        .join("new-york-v4")
-        .join(format!("{name}.json"))
-}
-
-pub(crate) fn read_web_golden(name: &str) -> WebGolden {
-    let path = web_golden_path(name);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing web golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 golden:extract {name} --update\n\nDocs:\n  goldens/README.md\n  docs/shadcn-web-goldens.md",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse web golden: {}\nerror: {err}",
-            path.display()
-        )
-    })
-}
-
-pub(crate) fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get("light")
-        .or_else(|| golden.themes.get("dark"))
-        .expect("missing theme in web golden")
-}
-
-pub(crate) fn find_first<'a>(
-    node: &'a WebNode,
-    pred: &impl Fn(&'a WebNode) -> bool,
-) -> Option<&'a WebNode> {
-    if pred(node) {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_first(child, pred) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-pub(crate) fn find_all<'a>(
-    node: &'a WebNode,
-    pred: &impl Fn(&'a WebNode) -> bool,
-) -> Vec<&'a WebNode> {
-    let mut out = Vec::new();
-    let mut stack = vec![node];
-    while let Some(n) = stack.pop() {
-        if pred(n) {
-            out.push(n);
-        }
-        for child in &n.children {
-            stack.push(child);
-        }
-    }
-    out
-}
+#[path = "../web_golden_shadcn.rs"]
+mod web_golden_shadcn;
+pub(crate) use web_golden_shadcn::{
+    WebGolden, WebGoldenTheme, WebNode, WebRect, WebScrollMetrics, WebViewport, class_contains,
+    class_has_all_tokens, class_has_token, find_all, find_first, read_web_golden,
+    read_web_golden_open, read_web_golden_open_fallback, repo_root, web_golden_open_path,
+    web_golden_path, web_golden_path_file, web_golden_path_open_fallback, web_theme,
+    web_theme_named,
+};
 
 pub(crate) fn find_first_in_theme<'a>(
     theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Option<&'a WebNode> {
-    find_first(&theme.root, pred).or_else(|| {
-        theme
-            .portals
-            .iter()
-            .find_map(|portal| find_first(portal, pred))
-    })
+    find_first(&theme.root, pred).or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
 }
 
 pub(crate) fn find_all_in_theme<'a>(
     theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
 ) -> Vec<&'a WebNode> {
     let mut out = find_all(&theme.root, pred);
     for portal in &theme.portals {
@@ -286,18 +141,6 @@ pub(crate) fn web_find_by_class_token_in_theme<'a>(
     token: &str,
 ) -> Option<&'a WebNode> {
     find_first_in_theme(theme, &|n| class_has_token(n, token))
-}
-
-pub(crate) fn class_has_token(node: &WebNode, token: &str) -> bool {
-    node.class_name
-        .as_deref()
-        .unwrap_or("")
-        .split_whitespace()
-        .any(|t| t == token)
-}
-
-pub(crate) fn class_has_all_tokens(node: &WebNode, tokens: &[&str]) -> bool {
-    tokens.iter().all(|t| class_has_token(node, t))
 }
 
 pub(crate) fn web_find_by_class_tokens<'a>(

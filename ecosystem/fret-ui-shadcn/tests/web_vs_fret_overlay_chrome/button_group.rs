@@ -109,7 +109,7 @@ fn assert_button_group_demo_dropdown_menu_destructive_item_idle_fg_matches_web(
         "button-group-demo {web_theme_name}: expected destructive item bg to be transparent, got={expected:?}"
     );
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(1440.0), Px(900.0)),
@@ -215,7 +215,7 @@ fn assert_button_group_demo_dropdown_menu_destructive_focused_item_chrome_matche
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_active_element_chrome(theme);
 
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(1440.0), Px(900.0)),
