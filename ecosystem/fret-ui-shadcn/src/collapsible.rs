@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps,
-    SemanticsDecoration, StackProps,
+    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, OpacityProps,
+    PressableProps, SemanticsDecoration, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -195,14 +195,20 @@ impl Collapsible {
                                 move |_cx| vec![content],
                             )];
 
-                            let wrapper_el = AnyElement::new(
-                                content_id,
+                            let wrapper_kind = if motion_for_wrapper.wants_measurement {
+                                ElementKind::InteractivityGate(InteractivityGateProps {
+                                    layout: wrapper_layout,
+                                    present: true,
+                                    interactive: false,
+                                })
+                            } else {
                                 ElementKind::Container(ContainerProps {
                                     layout: wrapper_layout,
                                     ..Default::default()
-                                }),
-                                children,
-                            );
+                                })
+                            };
+
+                            let wrapper_el = AnyElement::new(content_id, wrapper_kind, children);
 
                             (content_id, Some(wrapper_el))
                         })

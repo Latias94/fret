@@ -232,6 +232,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ])
             .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
             .into_element(cx)
+            .test_id(format!("{test_id_prefix}-content"))
         };
 
         let collapsible = match open {
@@ -338,6 +339,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                         ])
                         .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
                         .into_element(cx)
+                        .test_id("ui-gallery-collapsible-controlled-content")
                     },
                 ),
             ]
@@ -372,6 +374,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 ])
                 .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
                 .into_element(cx)
+                .test_id("ui-gallery-collapsible-basic-content")
             },
         )
         .test_id("ui-gallery-collapsible-basic");
@@ -428,6 +431,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     },
                 )])
                 .into_element(cx)
+                .test_id("ui-gallery-collapsible-settings-content")
             },
         )
         .test_id("ui-gallery-collapsible-settings");
