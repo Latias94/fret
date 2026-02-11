@@ -315,7 +315,7 @@ fn non_invertible_render_transform_is_ignored_for_paint_and_visual_bounds() {
     impl<H: UiHost> Widget<H> for NonInvertibleRoot {
         fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
             let t = Transform2D::translation(self.delta);
-            // A singular scale makes the transform non-invertible; ADR 0083 requires treating
+            // A singular scale makes the transform non-invertible; ADR 0082 requires treating
             // such transforms as `None` to keep paint/hit-testing consistent.
             let s = Transform2D::scale_uniform(0.0);
             Some(t * s)

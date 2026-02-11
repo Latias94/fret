@@ -42,7 +42,7 @@ pub struct WinitRunnerConfig {
     /// Soft upper bound for total GPU memory used by renderer-owned intermediate targets.
     ///
     /// This covers internal multi-pass steps such as MSAA resolves, effect intermediates, clip masks,
-    /// and post-processing substrates (ADR 0120).
+    /// and post-processing substrates (ADR 0118).
     pub renderer_intermediate_budget_bytes: u64,
     /// MSAA sample count used by the renderer's offscreen path pass.
     ///
@@ -57,9 +57,9 @@ pub struct WinitRunnerConfig {
     pub web_canvas_id: String,
 
     /// Soft upper bound on total CPU->GPU upload bytes per rendered frame (per window) for
-    /// streaming image updates (ADR 0123).
+    /// streaming image updates (ADR 0121).
     pub streaming_upload_budget_bytes_per_frame: u64,
-    /// Soft upper bound on pending streaming update bytes retained for a window (ADR 0123).
+    /// Soft upper bound on pending streaming update bytes retained for a window (ADR 0121).
     ///
     /// Note: this is a forward-looking knob. The initial streaming update MVP applies coalescing
     /// and per-frame budget at drain points but does not yet maintain a cross-frame pending queue.
@@ -67,11 +67,11 @@ pub struct WinitRunnerConfig {
     /// When enabled, the runner updates `fret_core::StreamingUploadPerfSnapshot` as an app global.
     pub streaming_perf_snapshot_enabled: bool,
     /// When enabled, the runner may emit `Event::{ImageUpdateApplied,ImageUpdateDropped}` for
-    /// streaming image updates (ADR 0126).
+    /// streaming image updates (ADR 0124).
     pub streaming_update_ack_enabled: bool,
 
     /// Enable experimental GPU-assisted NV12 conversion for streaming image updates when supported
-    /// by the selected backend/device (ADR 0124).
+    /// by the selected backend/device (ADR 0122).
     pub streaming_nv12_gpu_convert_enabled: bool,
 }
 

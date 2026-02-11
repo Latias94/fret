@@ -18,9 +18,9 @@ Tier A is the recommended choice for:
 - The runner provides an engine render hook:
   - `WinitAppDriver::record_engine_frame(...) -> EngineFrameUpdate` (ADR 0038).
 - Input is forwarded from UI to the app via:
-  - `Effect::ViewportInput(ViewportInputEvent)` (ADR 0007 / ADR 0098),
+  - `Effect::ViewportInput(ViewportInputEvent)` (ADR 0007 / ADR 0097),
   - `ViewportInputEvent` carries `target`, `cursor_px` (window logical px), `uv`, `target_px`, plus
-    button/modifiers and pointer identity (ADR 0147).
+    button/modifiers and pointer identity (ADR 0132).
 
 ## End-to-end shape (recommended)
 
@@ -106,7 +106,7 @@ as an explicit teardown signal for pointer capture (e.g. clear hot/active tool s
 Tier A options:
 
 1) **Streaming image updates (preferred for video decode)**:
-   - Use `Effect::ImageUpdateNv12/I420/Rgba8` to upload decoded frames (ADR 0121/0123/0126).
+   - Use `Effect::ImageUpdateNv12/I420/Rgba8` to upload decoded frames (ADR 0117/0121/0124).
    - UI composes the image like any other texture.
 
 2) **RenderTargetId (preferred for GPU postprocess / compositor-heavy video UIs)**:

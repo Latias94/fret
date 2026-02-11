@@ -12,12 +12,12 @@ Workstream entry:
 
 ADR anchor:
 
-- `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+- `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 
 ## Contract / docs
 
-- [x] Land ADR 1171 (Accepted).
-- [x] Add ADR 1171 to `docs/adr/README.md` task jump table near ADR 1170.
+- [x] Land ADR 0232 (Accepted).
+- [x] Add ADR 0232 to `docs/adr/README.md` task jump table near ADR 0231.
 - [x] Add a `docs/todo-tracker.md` entry for environment queries (viewport/device).
 
 ## Runtime mechanism (`crates/fret-ui`)

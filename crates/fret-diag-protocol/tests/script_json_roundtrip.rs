@@ -46,6 +46,20 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"

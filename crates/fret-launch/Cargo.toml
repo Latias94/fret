@@ -15,7 +15,7 @@ description = "Application launch glue that wires Fret app, platform, runner, an
 # Declaring it avoids `unexpected_cfgs` warnings under Rust's check-cfg.
 cargo-clippy = []
 # Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
-# into normal builds. See ADR 0107.
+# into normal builds. See ADR 0105.
 hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
 diag-screenshots = ["dep:serde_json", "dep:image"]
 wasm-emoji-fonts = ["fret-fonts/emoji"]

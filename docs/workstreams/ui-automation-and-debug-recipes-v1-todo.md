@@ -18,7 +18,7 @@ Conventions:
 
 ### M0: Workstream scaffolding (docs + gaps audit)
 
-- [x] Add/confirm an ADR for v1 recipes + automation surface (candidate: ADR 0196).
+- [x] Add/confirm an ADR for v1 recipes + automation surface (candidate: ADR 0181).
 - [x] Audit and reconcile screenshot capture paths:
   - `FRET_DIAG_SCREENSHOT=1` (bundle `frame.bmp`) vs
   - `FRET_DIAG_SCREENSHOTS=1` (PNG + manifest + request/result protocol).

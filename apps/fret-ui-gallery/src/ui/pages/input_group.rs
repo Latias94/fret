@@ -312,8 +312,13 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let text = {
         let content = shadcn::InputGroup::new(text_value)
             .a11y_label("Text example")
-            .leading([shadcn::InputGroupText::new("https://").into_element(cx)])
-            .trailing([shadcn::InputGroupText::new(".com").into_element(cx)])
+            .control_test_id("ui-gallery-input-group-text-control")
+            .leading([shadcn::InputGroupText::new("https://")
+                .into_element(cx)
+                .test_id("ui-gallery-input-group-text-leading")])
+            .trailing([shadcn::InputGroupText::new(".com")
+                .into_element(cx)
+                .test_id("ui-gallery-input-group-text-trailing")])
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-text")
             .into_element(cx);

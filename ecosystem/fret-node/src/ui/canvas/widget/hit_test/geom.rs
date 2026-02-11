@@ -2,7 +2,7 @@ use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     // NOTE: Node bounds and port anchors must come from derived geometry (`CanvasGeometry`),
-    // not ad-hoc layout guesses. See ADR 0135.
+    // not ad-hoc layout guesses. See ADR 0126.
 
     pub(in super::super) fn rect_contains_point(rect: Rect, pos: Point) -> bool {
         let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);

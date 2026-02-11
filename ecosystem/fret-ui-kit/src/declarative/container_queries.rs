@@ -113,7 +113,7 @@ fn container_width_at_least_apply_hysteresis(
 /// Marks a subtree as a container-query region.
 ///
 /// This is a mechanism-only wrapper: it is paint- and input-transparent, but records committed
-/// bounds that can be read via [`ElementContext::layout_query_bounds`] (ADR 1170).
+/// bounds that can be read via [`ElementContext::layout_query_bounds`] (ADR 0231).
 #[track_caller]
 pub fn container_query_region_with_id<H, I>(
     cx: &mut ElementContext<'_, H>,
@@ -148,7 +148,7 @@ where
 /// Contract notes:
 ///
 /// - Observations are frame-lagged (read last committed bounds only).
-/// - Width changes participate in invalidation via `layout_query_bounds` (ADR 1170 D4).
+/// - Width changes participate in invalidation via `layout_query_bounds` (ADR 0231 D4).
 /// - Hysteresis is applied to avoid oscillation when layout branches affect container size.
 ///
 /// Breakpoint table semantics:

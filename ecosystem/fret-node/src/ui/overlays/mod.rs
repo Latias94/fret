@@ -1,7 +1,7 @@
 //! Node-graph editor overlays (UI-only).
 //!
 //! Overlays are transient, screen-space affordances that should not be serialized into the graph
-//! asset. They are hosted outside the canvas render transform (ADR 0135) so they can use regular
+//! asset. They are hosted outside the canvas render transform (ADR 0126) so they can use regular
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
 mod blackboard;
 mod controls;

@@ -2388,7 +2388,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 // Contrast and gamma correction adapted from the Microsoft Terminal alpha correction work
-// (via Zed/GPUI). See ADR 0029/0109/0157.
+// (via Zed/GPUI). See ADR 0029/0107/0142.
 fn color_brightness(color: vec3<f32>) -> f32 {
   // REC. 601 luminance coefficients for perceived brightness.
   return dot(color, vec3<f32>(0.30, 0.59, 0.11));

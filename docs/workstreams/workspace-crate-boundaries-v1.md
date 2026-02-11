@@ -8,8 +8,8 @@ Tracking file:
 
 Primary references:
 
-- `docs/adr/0093-crate-structure-core-backends-apps.md`
-- `docs/adr/0091-platform-backends-native-web.md`
+- `docs/adr/0092-crate-structure-core-backends-apps.md`
+- `docs/adr/0090-platform-backends-native-web.md`
 - `docs/repo-structure.md`
 - `docs/dependency-policy.md`
 - `tools/check_layering.py`
@@ -37,7 +37,7 @@ In scope:
 
 - Reshape crates to keep contracts portable and implementations replaceable.
 - Make the web direction explicit: a dedicated web adapter (`fret-runner-web`) as the default wasm path.
-- Keep the public facade (`crates/fret`) coherent with ADR 0091/0093.
+- Keep the public facade (`crates/fret`) coherent with ADR 0089/0092.
 - Remove the layout engine feature fork if it is no longer a real decision point (reduce test matrix).
 
 Non-goals:

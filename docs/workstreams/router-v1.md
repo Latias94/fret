@@ -7,8 +7,8 @@ Related ADRs:
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md`
-- `docs/adr/0190-execution-and-concurrency-surface-v1.md`
-- `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- `docs/adr/0184-execution-and-concurrency-surface-v1.md`
+- `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 
 Related workstreams:
 

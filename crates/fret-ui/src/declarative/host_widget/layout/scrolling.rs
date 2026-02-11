@@ -606,7 +606,7 @@ impl ElementHostWidget {
                 });
         }
 
-        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0190):
+        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0175):
         // - retained hosts reconcile during prepaint,
         // - non-retained lists schedule a one-shot rerender during prepaint.
         //

@@ -1,9 +1,9 @@
 # Text System v2 (Parley) — Workstream Roadmap & TODO Tracker
 
-Status: Active (design proposed in ADR 0157; implementation in progress)
+Status: Active (design proposed in ADR 0142; implementation in progress)
 
 This document is a living, implementation-focused tracker. It is intentionally non-authoritative;
-the normative contract is `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
+the normative contract is `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
 
 ## Scope (v2)
 
@@ -20,7 +20,7 @@ Non-goals (v2):
 
 - Per-span font size / per-span line height (kept uniform per layout for now).
 - Full-document code-editor virtualization (separate higher-level layer).
-- Rich clipboard formats (tracked by ADR 0110/0152).
+- Rich clipboard formats (tracked by ADR 0106/0137).
 
 ## Milestones
 
@@ -321,13 +321,13 @@ Legend:
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey.text_quality_key`),
     test `crates/fret-render-wgpu/src/renderer/tests.rs` (`scene_encoding_cache_is_busted_by_text_quality_changes`).
 
-**B6 — Cache boundary refactor (ADR 0158)**
+**B6 — Cache boundary refactor (ADR 0143)**
 - [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
 - [x] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
 - [x] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
 - [x] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
 
-**B7 — Unified glyph key + subpixel policy (ADR 0160)**
+**B7 — Unified glyph key + subpixel policy (ADR 0145)**
 - [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
 - [x] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
 - [x] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
@@ -411,8 +411,8 @@ Legend:
 
 ## Progress Log (append-only)
 
-- 2026-01-13: ADR 0157 added (design locked), worktree created.
-- 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
+- 2026-01-13: ADR 0142 added (design locked), worktree created.
+- 2026-01-13: ADR 0143 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render-wgpu/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
@@ -424,7 +424,7 @@ Legend:
 - 2026-01-13: M1.7: evict unreferenced glyph atlas pages (commit `eac5619`).
 - 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
 - 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
-- 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
+- 2026-01-13: ADR 0145 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
 - 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
 - 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
 - 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).

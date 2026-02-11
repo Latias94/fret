@@ -15,7 +15,7 @@
 //!
 //! In those cases we must ignore the follow-up `input` once to avoid double-inserting text.
 //!
-//! Normative behavior is defined by ADR 0195: Web IME and Text Input Bridge (wasm, v1).
+//! Normative behavior is defined by ADR 0180: Web IME and Text Input Bridge (wasm, v1).
 
 use std::fmt;
 

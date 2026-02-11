@@ -589,7 +589,7 @@ impl SidebarProvider {
     /// Overrides whether the sidebar should use mobile/offcanvas behavior.
     ///
     /// When unset, `SidebarProvider` infers mobile mode from the committed per-window environment
-    /// snapshot (ADR 1171) using a Tailwind-aligned viewport breakpoint.
+    /// snapshot (ADR 0232) using a Tailwind-aligned viewport breakpoint.
     pub fn is_mobile(mut self, is_mobile: bool) -> Self {
         self.is_mobile_override = Some(is_mobile);
         self

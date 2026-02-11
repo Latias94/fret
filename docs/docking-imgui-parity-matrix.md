@@ -20,7 +20,7 @@ If you are looking for hard contracts, start here:
 - Cross-window drags: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - DPI + window semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
 - Docking arbitration: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- Capabilities + degradation: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`, `docs/adr/0084-multi-window-degradation-policy.md`
+- Capabilities + degradation: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`, `docs/adr/0083-multi-window-degradation-policy.md`
 
 Legend:
 

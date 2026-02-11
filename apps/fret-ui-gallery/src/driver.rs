@@ -3413,6 +3413,22 @@ impl UiGalleryDriver {
 }
 
 pub fn build_app() -> App {
+    fn ui_gallery_project_root() -> std::path::PathBuf {
+        let raw = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+            .and_then(|v| (!v.is_empty()).then_some(v));
+        let Some(raw) = raw else {
+            return std::path::PathBuf::from(".");
+        };
+
+        let trimmed = raw.to_string_lossy();
+        let trimmed = trimmed.trim();
+        if trimmed.is_empty() {
+            return std::path::PathBuf::from(".");
+        }
+
+        std::path::PathBuf::from(trimmed)
+    }
+
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(UiGalleryRecentItemsService::default());
@@ -3422,7 +3438,8 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
 
-    let config_paths = LayeredConfigPaths::for_project_root(".");
+    let project_root = ui_gallery_project_root();
+    let config_paths = LayeredConfigPaths::for_project_root(&project_root);
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
         fret_app::settings::apply_settings_globals(&mut app, &settings);
     }
@@ -3900,14 +3917,26 @@ mod stack_overflow_tests;
 pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
+    let project_root = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+        .and_then(|v| (!v.is_empty()).then_some(v))
+        .map(|v| {
+            let s = v.to_string_lossy();
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                std::path::PathBuf::from(".")
+            } else {
+                std::path::PathBuf::from(trimmed)
+            }
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
 
     fret_bootstrap::BootstrapBuilder::new(app, build_driver())
         .configure(move |c| {
             *c = config;
         })
         .with_default_diagnostics()
-        .with_default_config_files()?
-        .with_config_files_watcher(Duration::from_millis(500))
+        .with_default_config_files_for_root(&project_root)?
+        .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
@@ -3921,6 +3950,36 @@ pub fn run() -> anyhow::Result<()> {
 
 impl WinitAppDriver for UiGalleryDriver {
     type WindowState = UiGalleryWindowState;
+
+    fn gpu_ready(
+        &mut self,
+        app: &mut App,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+    ) {
+        let wants_bootstrap_fonts =
+            std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
+        if !wants_bootstrap_fonts {
+            return;
+        }
+
+        let fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        let _ = renderer.add_fonts(fonts);
+
+        let update = fret_runtime::apply_font_catalog_update(
+            app,
+            renderer.all_font_names(),
+            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+        );
+        let _ = renderer.set_text_font_families(&update.config);
+        app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
+        app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+            renderer.text_font_stack_key(),
+        ));
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)

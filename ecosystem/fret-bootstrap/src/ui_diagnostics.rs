@@ -5997,7 +5997,7 @@ pub struct UiTreeDebugSnapshotV1 {
     pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
     /// Viewport input forwarding events observed during the current frame.
     ///
-    /// This records `Effect::ViewportInput` deliveries (ADR 0147) so scripted diagnostics can
+    /// This records `Effect::ViewportInput` deliveries (ADR 0132) so scripted diagnostics can
     /// gate on “viewport tooling input was actually exercised” without scraping logs.
     #[serde(default)]
     pub viewport_input: Vec<UiViewportInputEventV1>,
@@ -6036,7 +6036,7 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
     #[serde(default)]
     pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
-    /// A committed per-window environment snapshot (ADR 1171), exported under `debug.environment`
+    /// A committed per-window environment snapshot (ADR 0232), exported under `debug.environment`
     /// for easy diagnostics consumption.
     ///
     /// This duplicates the committed fields also present under `debug.element_runtime.environment`

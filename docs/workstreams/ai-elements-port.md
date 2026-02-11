@@ -298,8 +298,7 @@ Convention (v0; subject to refinement):
 
 ### 5) Keep policy out of `crates/fret-ui`
 
-If implementing a feature tempts you to add a runtime public API, stop and justify it against ADR
-0066. The default is to:
+If implementing a feature tempts you to add a runtime public API, stop and justify it against ADR 0066. The default is to:
 
 - add headless state in `fret-ui-headless` / `fret-ui-kit`,
 - wire it from `fret-ui-shadcn` (generic recipe) or `fret-ui-ai` (AI-specific policy).
@@ -467,7 +466,7 @@ If a ported AI component needs something not listed here, the default path is:
 
 ## Regression gates (v1)
 
-This workstream should reuse the existing diagnostics + scripting infrastructure (ADR 0174). A
+This workstream should reuse the existing diagnostics + scripting infrastructure (ADR 0159). A
 minimum v1 gate set:
 
 1. Long transcript:

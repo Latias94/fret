@@ -8,7 +8,7 @@ use crate::clamp_to_char_boundary;
 /// - Offsets must be within the line text and on UTF-8 char boundaries.
 /// - Offsets must be sorted and unique.
 /// - This is a view-layer contract only (no policy): interaction and edit behavior are owned by
-///   the surface layer (ADR 0200).
+///   the surface layer (ADR 0185).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InlaySpan {
     pub byte: usize,

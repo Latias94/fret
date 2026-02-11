@@ -137,8 +137,8 @@ fn viewport_aspect_ratio_for_dimensions(width: Px, height: Px, fallback: f32) ->
 
 /// Viewport-driven responsive breakpoints, based on the committed per-window environment snapshot.
 ///
-/// This is intended for **device/viewport** decisions (ADR 1171). For panel-width responsiveness
-/// inside docking/panels, prefer container queries (ADR 1170).
+/// This is intended for **device/viewport** decisions (ADR 0232). For panel-width responsiveness
+/// inside docking/panels, prefer container queries (ADR 0231).
 #[track_caller]
 pub fn viewport_breakpoints<H, T: Copy>(
     cx: &mut ElementContext<'_, H>,
@@ -201,7 +201,7 @@ pub fn viewport_width_at_least<H: UiHost>(
 }
 
 /// Returns the viewport's aspect ratio (`width / height`) based on the committed per-window
-/// environment snapshot (ADR 1171).
+/// environment snapshot (ADR 0232).
 #[track_caller]
 pub fn viewport_aspect_ratio<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -219,7 +219,7 @@ pub fn viewport_aspect_ratio<H: UiHost>(
 }
 
 /// Returns a coarse "portrait/landscape/square" orientation derived from the committed viewport
-/// snapshot (ADR 1171).
+/// snapshot (ADR 0232).
 #[track_caller]
 pub fn viewport_orientation<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 ///
 /// This is intentionally **not** a `UiServices` capability:
 /// - the mechanism layer (`fret-ui`) must remain backend-agnostic, and
-/// - ADR 0126 explicitly discourages implicit layout dependence on intrinsic image size.
+/// - ADR 0124 explicitly discourages implicit layout dependence on intrinsic image size.
 ///
 /// Instead, apps/components that already know image dimensions (e.g. decoders, caches, streaming
 /// sources) can record them here to enable ergonomic recipes like "aspect-ratio wrappers".

@@ -12,7 +12,7 @@ Related docs:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/debugging-ui-with-inspector-and-scripts.md`
-- `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 
 ## What is already done (baseline)
 

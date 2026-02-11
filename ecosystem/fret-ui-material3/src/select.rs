@@ -4,7 +4,7 @@
 //! This intentionally focuses on:
 //! - token-driven trigger/container outcomes via `md.comp.{outlined,filled}-select.*`,
 //! - a minimal listbox overlay anchored to the trigger,
-//! - an ADR 1159-shaped `SelectStyle` override surface.
+//! - an ADR 0220-shaped `SelectStyle` override surface.
 
 use std::cell::Cell;
 use std::rc::Rc;

@@ -9,7 +9,7 @@ use crate::clamp_to_char_boundary;
 /// - Ranges must be within the line text and on UTF-8 char boundaries.
 /// - Ranges must be non-empty, sorted, and non-overlapping.
 /// - This is a view-layer contract only (no policy): selection/interaction rules are owned by the
-///   surface layer (ADR 0200).
+///   surface layer (ADR 0185).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FoldSpan {
     pub range: Range<usize>,

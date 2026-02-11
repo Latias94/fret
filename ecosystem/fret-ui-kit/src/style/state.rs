@@ -128,7 +128,7 @@ impl<T> WidgetStateProperty<T> {
     }
 }
 
-/// Applies ADR 1159 "nullable per-state override" semantics for a single slot.
+/// Applies ADR 0220 "nullable per-state override" semantics for a single slot.
 ///
 /// If the override is present and resolves to `Some(value)` for the current `states`, that value is
 /// returned. Otherwise the provided `default` is returned.
@@ -145,7 +145,7 @@ pub fn resolve_slot<T: Clone>(
     default
 }
 
-/// Merges ADR 1159 slot overrides with shallow, right-biased precedence.
+/// Merges ADR 0220 slot overrides with shallow, right-biased precedence.
 pub fn merge_slot<T>(dst: &mut Option<T>, src: Option<T>) {
     if src.is_some() {
         *dst = src;

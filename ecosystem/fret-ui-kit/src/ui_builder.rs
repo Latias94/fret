@@ -10,7 +10,7 @@ use fret_ui::{ElementContext, UiHost};
 
 /// Aggregated authoring patch applied by `UiBuilder`.
 ///
-/// This is an ecosystem-only authoring surface (see ADR 0175). It intentionally composes:
+/// This is an ecosystem-only authoring surface (see ADR 0160). It intentionally composes:
 /// - control chrome patches (`ChromeRefinement`)
 /// - layout-affecting patches (`LayoutRefinement`)
 #[derive(Debug, Clone, Default)]
@@ -29,7 +29,7 @@ impl UiPatch {
 
 /// A type that opts into the `ui()` builder surface by accepting a `UiPatch`.
 ///
-/// This is intentionally an ecosystem-only authoring surface (see ADR 0175).
+/// This is intentionally an ecosystem-only authoring surface (see ADR 0160).
 pub trait UiPatchTarget: Sized {
     fn apply_ui_patch(self, patch: UiPatch) -> Self;
 }

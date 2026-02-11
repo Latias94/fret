@@ -15,7 +15,7 @@ Provide Unity/Godot/Unreal-class transform gizmos for engine viewports:
 Locked boundary:
 
 - 3D gizmo geometry renders in the engine pass, not as UI `SceneOp` primitives:
-  `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`.
+  `docs/adr/0130-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`.
 
 ## Current State
 
@@ -28,13 +28,13 @@ Locked boundary:
   - plugin contract + manager (`GizmoPlugin`, `GizmoPluginManager`) and example plugins
 - End-to-end demo exists: `apps/fret-examples/src/gizmo3d_demo.rs`
   - engine-pass depth-tested rendering via viewport overlay hooks
-  - UI overlay HUD readouts above the viewport surface (ADR 0139 boundary)
+  - UI overlay HUD readouts above the viewport surface (ADR 0130 boundary)
 
 ## MVPs
 
 ### MVP 0 — Contracts + Scaffolding (DONE)
 
-- [x] Add ADR 0139 and link from ADR index.
+- [x] Add ADR 0130 and link from ADR index.
 - [x] Create `ecosystem/fret-gizmo` crate.
 - [x] Use `glam` internally for math.
 
@@ -115,7 +115,7 @@ Deliverables:
 - Define a stable public API surface:
   - `Gizmo::update(...)` (input + camera + targets -> phase/result)
   - `Gizmo::draw(...) -> GizmoDrawList3d` (engine-pass 3D draw lists; depth mode explicit)
-  - UI overlay (labels/HUD) remains an app/UI-layer concern rendered above the viewport surface (ADR 0139);
+  - UI overlay (labels/HUD) remains an app/UI-layer concern rendered above the viewport surface (ADR 0130);
     see `apps/fret-examples/src/gizmo3d_demo.rs` for an end-to-end reference.
 - Decide math types at API boundary:
   - internal `glam`; external: `mint` or Fret-owned lightweight structs
@@ -138,6 +138,6 @@ Deliverables:
 
 ## Non-goals (for early MVPs)
 
-- Full editor undo/redo integration (tracked by ADR 0136 direction).
+- Full editor undo/redo integration (tracked by ADR 0127 direction).
 - GPU-agnostic “draw list” in Fret UI for 3D geometry.
 - Editor plugin API for third-party tools (future).

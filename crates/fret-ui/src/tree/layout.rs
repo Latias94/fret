@@ -349,7 +349,7 @@ impl<H: UiHost> UiTree<H> {
                         &record.instance
                     && scroll_props.windowed_paint
                 {
-                    // Windowed paint surfaces (ADR 0190) depend on the scroll offset to determine
+                    // Windowed paint surfaces (ADR 0175) depend on the scroll offset to determine
                     // which content is painted into the scrollable space. When view-cache reuse is
                     // enabled, a scroll transform update alone is insufficient: the cached subtree
                     // must be allowed to rerender so its paint handlers can run for the new visible
@@ -444,13 +444,13 @@ impl<H: UiHost> UiTree<H> {
 
                         if retained_host {
                             // Retained-host virtual surfaces can update row membership without
-                            // rerendering the parent cache root (ADR 0192). Schedule a redraw so
+                            // rerendering the parent cache root (ADR 0177). Schedule a redraw so
                             // `render_root` can reconcile row subtrees in the next frame.
                             self.request_redraw_coalesced(app);
                         } else {
                             // Do not force a layout pass just to discover that the visible window
                             // is outside the previously rendered overscan window. Instead, treat
-                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0190):
+                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0175):
                             // mark the nearest view-cache root dirty and request a redraw so the
                             // next frame rerenders the virtual surface children.
                             self.mark_nearest_view_cache_root_needs_rerender(
@@ -655,7 +655,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        // Fast path (ADR 0190): if nothing requires layout this frame, skip the layout engine and
+        // Fast path (ADR 0175): if nothing requires layout this frame, skip the layout engine and
         // only run prepaint/semantics. This keeps scroll-only and cache-hit frames cheap while
         // still allowing prepaint-windowed surfaces to update their ephemeral outputs.
         if pass_kind == LayoutPassKind::Final

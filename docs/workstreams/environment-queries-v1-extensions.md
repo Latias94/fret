@@ -7,7 +7,7 @@ scope: text scale + reduced transparency + accent color keys (contract + runner 
 
 # Environment Queries (v1) — Preference Extensions
 
-This workstream extends ADR 1171’s environment snapshot with a small set of additional
+This workstream extends ADR 0232’s environment snapshot with a small set of additional
 general-purpose preference signals:
 
 - `text_scale_factor`
@@ -16,8 +16,8 @@ general-purpose preference signals:
 
 Contract source of truth:
 
-- ADR 1185: `docs/adr/1185-environment-queries-preference-extensions-v1.md`
-- Base mechanism: ADR 1171: `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+- ADR 0246: `docs/adr/0246-environment-queries-preference-extensions-v1.md`
+- Base mechanism: ADR 0232: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 
 ## Tracking
 

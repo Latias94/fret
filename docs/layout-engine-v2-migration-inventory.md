@@ -5,8 +5,8 @@ window-scoped layout engine (`layout-engine-v2`), with multi-viewport docking as
 
 It is **not** an ADR. Contracts live in:
 
-- `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
-- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+- `docs/adr/0113-available-space-and-non-reentrant-measurement.md`
+- `docs/adr/0114-window-scoped-layout-engine-and-viewport-roots.md`
 
 Related roadmap:
 
@@ -43,4 +43,4 @@ Run these periodically (and update this file with new hits):
 
 ## Notes (What We Intentionally Do Not Support)
 
-- No general-purpose "display: contents" or Radix `Slot/asChild` prop merging (see `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`).
+- No general-purpose "display: contents" or Radix `Slot/asChild` prop merging (see `docs/adr/0115-trigger-composition-and-no-slot-aschild.md`).

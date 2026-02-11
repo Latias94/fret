@@ -213,7 +213,7 @@ impl Combobox {
     /// Overrides the device-level viewport breakpoint used by [`Combobox::responsive`].
     ///
     /// This is intentionally **viewport-driven** (mobile vs desktop), not container-query-driven.
-    /// For panel-width responsiveness, prefer container queries (ADR 1170).
+    /// For panel-width responsiveness, prefer container queries (ADR 0231).
     pub fn responsive_device_md_breakpoint(mut self, breakpoint: Px) -> Self {
         self.responsive_device_md_breakpoint = breakpoint;
         self

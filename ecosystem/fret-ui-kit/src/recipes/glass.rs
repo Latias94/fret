@@ -233,7 +233,7 @@ pub fn glass_effect_chain(effect: ResolvedGlassEffect) -> EffectChain {
     EffectChain::from_steps(&steps)
 }
 
-/// Returns the glass effect chain, respecting reduced-transparency preferences (ADR 1185).
+/// Returns the glass effect chain, respecting reduced-transparency preferences (ADR 0246).
 ///
 /// When reduced transparency is preferred, this returns an empty chain (no blur or color-adjust).
 pub fn glass_effect_chain_for_environment(

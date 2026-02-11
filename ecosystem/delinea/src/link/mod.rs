@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum BrushXExportPolicy {
     /// Default: derive `brush_x_row_ranges_by_series` only for series whose axis pair matches the
-    /// brush selection (ADR 1145).
+    /// brush selection (ADR 0206).
     #[default]
     AxisPairOnly,
     /// Opt-in: also derive `brush_x_row_ranges_by_series` for any visible series whose `(dataset,

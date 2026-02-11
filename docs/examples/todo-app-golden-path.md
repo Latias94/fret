@@ -11,9 +11,9 @@ It is intentionally “golden path”: advanced apps may assemble crates manuall
 
 Related ADRs:
 
-- Golden-path driver/pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
-- Ecosystem bootstrap and tooling: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
-- Dev hotpatch safety: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+- Golden-path driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
+- Ecosystem bootstrap and tooling: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- Dev hotpatch safety: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - Resource handle boundary: `docs/adr/0004-resource-handles.md`
 
 ## Recommended dependencies (native)
@@ -76,7 +76,7 @@ fn main() -> anyhow::Result<()> {
 
 Notes:
 
-- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107).
+- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
 - `fret-kit::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
 
 ## App state (models)
@@ -275,11 +275,11 @@ For apps that need background work (I/O, indexing, etc), we recommend:
    - send pure data messages to UI thread,
    - UI thread applies updates to models and requests redraw.
 
-See ADR 0112 for rationale and constraints.
+See ADR 0110 for rationale and constraints.
 
 ## Hotpatch (Subsecond) integration
 
-When using hotpatch (ADR 0107):
+When using hotpatch (ADR 0105):
 
 - prefer `FnDriver` entry points (function pointers),
 - treat action hook registries and overlay registries as disposable,

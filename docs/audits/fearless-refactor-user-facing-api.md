@@ -22,7 +22,7 @@ what stability guarantees we can make while evolving the API surface.
 
 3) No silent contract collapse when embedding other UI.
 
-- Foreign UI mixing remains isolated surfaces only (see ADR 0189 and embedded viewport surfaces).
+- Foreign UI mixing remains isolated surfaces only (see ADR 0174 and embedded viewport surfaces).
 
 ## Current Golden Path (As Of Today)
 

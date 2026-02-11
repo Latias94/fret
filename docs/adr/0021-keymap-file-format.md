@@ -45,7 +45,7 @@ Key bindings are stored in a versioned file:
 Each binding stores the key as a **physical key code token**, not a character.
 
 The canonical representation is a string token that maps 1:1 to the framework’s physical key enum
-(`KeyCode`, aligned with `keyboard-types::Code` per ADR 0092), e.g.:
+(`KeyCode`, aligned with `keyboard-types::Code` per ADR 0091), e.g.:
 
 - `"KeyA"`, `"KeyP"`
 - `"Digit1"`

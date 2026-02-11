@@ -13,7 +13,7 @@ iterate on layout internals.
 - shadcn web goldens workflow: `docs/shadcn-web-goldens.md`
 - Goldens README: `goldens/README.md`
 - Overlay placement contract: `docs/adr/0064-overlay-placement-contract.md`
-- RenderTransform geometry queries: `docs/adr/0083-render-transform-hit-testing.md`
+- RenderTransform geometry queries: `docs/adr/0082-render-transform-hit-testing.md`
 
 ## Why geometry-first
 
@@ -179,7 +179,7 @@ Rationale: these tests encode external normalization rules (web schema, toleranc
      convention or a dedicated debug attribute) to match web nodes?
 2. **Which geometry to compare for overlays**
    - Overlay rects may be affected by `render_transform`. We should prefer visual bounds when
-     available (ADR 0083).
+     available (ADR 0082).
 3. **Text handling**
    - Decide a policy for text nodes (ignore / weak constraints / snapshot only).
 

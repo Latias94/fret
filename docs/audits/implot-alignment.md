@@ -35,7 +35,7 @@ token-driven theming and retained rendering/cache.
 | `PlotPieChart` | (none) | ❌ | Likely belongs to a charting layer, not a cartesian plot core. |
 | `PlotDigital` | (none) | ❌ | Could be modeled as a step/segment series; clarify UX + sampling. |
 | `PlotImage` | `PlotOverlays::images` (`PlotImage`) | ✅ | Renders `ImageId` as a data-aligned rect via `SceneOp::ImageRegion` (layers: below/above grid). |
-| `PlotText` | `PlotOverlays::text` (`PlotText`) | 🟡 | Implemented as a caller-owned overlay (ADR 0106). No rich text/callouts yet. |
+| `PlotText` | `PlotOverlays::text` (`PlotText`) | 🟡 | Implemented as a caller-owned overlay (ADR 0104). No rich text/callouts yet. |
 | `PlotHistogram2D` | `Histogram2DPlotCanvas` / `Histogram2DPlotModel` | ✅ | Implemented as a grid-backed plot (bins -> quads) with shared colormap + colorbar. |
 | `PlotDummy` | (none) | ❌ | Not needed; can be handled by layout/legend policies if required. |
 
@@ -48,7 +48,7 @@ token-driven theming and retained rendering/cache.
 | Box selection modifiers | ✅ | Matches ImPlot defaults (Alt/Shift expand-to-edge). |
 | Linked plots / shared cursor | 🟡 | We have linking infra + demos (e.g. `linked_cursor_demo`), but no first-class subplot grid yet. |
 | Legend interaction (hide, highlight, pin) | 🟡 | Implemented with retained caching; policy differs from ImPlot in details. |
-| Tags (`TagX` / `TagY`) | ✅ | Implemented via `PlotOverlays::{tags_x,tags_y}` (ADR 0106). |
+| Tags (`TagX` / `TagY`) | ✅ | Implemented via `PlotOverlays::{tags_x,tags_y}` (ADR 0104). |
 | Annotations | 🟡 | `PlotOverlays::text` exists; follow-ups include callouts, arrows, and editable anchors. |
 | Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Modifiers: `Shift` constrains inside-drags (point/rect) to X-only or Y-only; `Alt` snaps to nearest axis tick. |
 | Subplots (`BeginSubplots`) | ❌ | Likely a UI-kit/layout concern, not plot core; needs design. |

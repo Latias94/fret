@@ -7,7 +7,7 @@ demos, and ecosystem crates.
 
 Related docs:
 
-- ADR: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+- ADR: `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - Workstream: `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
 - State management workstream: `docs/workstreams/state-management-v1.md`
 
@@ -27,9 +27,9 @@ Exit criteria:
 Tasks:
 
 - `[x]` Draft ADR for the authoring paradigm and first-party state helpers.
-  - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+  - Evidence: `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - `[x]` Review + accept ADR (flip status to Accepted once locked).
-  - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
+  - Evidence: `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - `[x]` Add `fret-authoring` state adapters for authoring frontends:
   - `UiWriterQueryExt` (feature: `fret-authoring/query`)
   - `UiWriterSelectorExt` (feature: `fret-authoring/selector`)

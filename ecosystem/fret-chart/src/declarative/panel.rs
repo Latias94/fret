@@ -170,7 +170,7 @@ pub struct ChartCanvasPanelProps {
     pub engine: Option<Model<ChartEngine>>,
     pub spec: delinea::ChartSpec,
 
-    /// Optional formatter hook for axis-trigger tooltips (ADR 1148).
+    /// Optional formatter hook for axis-trigger tooltips (ADR 0209).
     ///
     /// When `None`, `DefaultTooltipFormatter` is used.
     pub tooltip_formatter: Option<Arc<dyn TooltipFormatter>>,

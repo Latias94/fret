@@ -123,7 +123,7 @@ M2 touchpoints (normative for v3 work):
   - The `configure(app, window)` callback is the app seam to:
     - ensure panels exist (`DockManager::ensure_panel`),
     - ensure graph window roots are set,
-    - update `ViewportPanel` targets/sizes for embedded engine viewports (ADR 0007 / ADR 0147).
+    - update `ViewportPanel` targets/sizes for embedded engine viewports (ADR 0007 / ADR 0132).
   - Evidence: `ecosystem/fret-docking/src/imui.rs` (`dock_space_with`, `DockSpaceImUiOptions`).
 - **Consume docking effects (runner/driver integration)**:
   - Docking UI emits `Effect::Dock(DockOp)` (ADR 0013). The runner/driver must consume it and apply
@@ -139,7 +139,7 @@ M2 touchpoints (normative for v3 work):
   - Dock drag sessions are window-scoped and must close/suspend non-modal dismissable overlays in
     the same window to avoid fighting outside-press logic (ADR 0072).
   - While a dock drag session is active, docking suppresses forwarding pointer-move/wheel to embedded
-    viewports in that window (ADR 0072; viewport forwarding ADR 0147).
+    viewports in that window (ADR 0072; viewport forwarding ADR 0132).
   - Evidence: `docs/adr/0072-docking-interaction-arbitration-matrix.md`,
     `docs/workstreams/docking-multiviewport-arbitration-v1.md`.
 - **Viewport overlay hooks (editor-owned policy)**:

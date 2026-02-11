@@ -17,7 +17,7 @@ Evidence anchors:
 
 - `crates/fret/src/lib.rs`
 - `crates/fret/Cargo.toml`
-- ADR 0111: `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`
+- ADR 0109: `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
 
 ## 2) Public contract surface
 
@@ -62,7 +62,7 @@ Evidence anchors:
   - Missing gate to add: `cargo check -p fret --features desktop` and `cargo check -p fret --features wasm --target wasm32-unknown-unknown` in CI.
 - “Golden path” confusion (users pick `fret` when they should pick `fret-kit`)
   - Failure mode: pressure to add policy defaults into this crate, bloating the facade.
-  - Existing gates: ADR 0111 documents intent.
+  - Existing gates: ADR 0109 documents intent.
   - Missing gate to add: keep `README`/docs pointers current; consider a short crate-level README excerpt in rustdoc.
 
 ## 6) Code quality findings (Rust best practices)

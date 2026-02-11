@@ -1,7 +1,7 @@
 use fret_core::Edges;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// Returns runner-committed viewport occlusion insets for the current window (ADR 1171).
+/// Returns runner-committed viewport occlusion insets for the current window (ADR 0232).
 ///
 /// These insets are intended for transient obstructions like virtual keyboards (IME) on mobile.
 /// When unavailable, returns `None`.

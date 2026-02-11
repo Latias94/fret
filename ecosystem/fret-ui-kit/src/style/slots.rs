@@ -1,12 +1,12 @@
 use super::{WidgetStateProperty, WidgetStates};
 
-/// ADR 1159 override slot shape.
+/// ADR 0220 override slot shape.
 ///
 /// - outer `Option`: whether a slot is overridden at all
 /// - inner `Option<T>`: per-state "no override" to fall back to defaults for that state
 pub type OverrideSlot<T> = Option<WidgetStateProperty<Option<T>>>;
 
-/// Resolves an ADR 1159-style override slot for a non-optional value.
+/// Resolves an ADR 0220-style override slot for a non-optional value.
 ///
 /// - `overrides`: `None` means "slot not overridden".
 /// - `overrides.resolve(states) == None` means "no override for this state; fall back to defaults".
@@ -25,7 +25,7 @@ pub fn resolve_override_slot<T: Clone>(
     }
 }
 
-/// Resolves an ADR 1159-style override slot for a computed default.
+/// Resolves an ADR 0220-style override slot for a computed default.
 ///
 /// Use this when defaults are already computed for the current `states`, rather than stored in a
 /// `WidgetStateProperty`.
@@ -41,7 +41,7 @@ pub fn resolve_override_slot_with<T, U>(
     }
 }
 
-/// Resolves an ADR 1159-style override slot for an optional value.
+/// Resolves an ADR 0220-style override slot for an optional value.
 ///
 /// This variant is useful when the default style itself can be absent (e.g. "no background").
 pub fn resolve_override_slot_opt<T: Clone>(
@@ -59,7 +59,7 @@ pub fn resolve_override_slot_opt<T: Clone>(
     }
 }
 
-/// Resolves an ADR 1159-style override slot for a computed optional default.
+/// Resolves an ADR 0220-style override slot for a computed optional default.
 pub fn resolve_override_slot_opt_with<T, U>(
     overrides: Option<&WidgetStateProperty<Option<T>>>,
     states: WidgetStates,
@@ -72,7 +72,7 @@ pub fn resolve_override_slot_opt_with<T, U>(
     }
 }
 
-/// Right-biased merge for an optional override slot (ADR 1159).
+/// Right-biased merge for an optional override slot (ADR 0220).
 pub fn merge_override_slot<T>(base: Option<T>, other: Option<T>) -> Option<T> {
     if other.is_some() { other } else { base }
 }

@@ -1,7 +1,7 @@
 use fret_core::PointerType;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// Returns the most recent committed primary pointer type for the window (ADR 1171).
+/// Returns the most recent committed primary pointer type for the window (ADR 0232).
 #[track_caller]
 pub fn primary_pointer_type<H: UiHost>(
     cx: &mut ElementContext<'_, H>,

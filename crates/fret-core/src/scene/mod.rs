@@ -24,7 +24,7 @@ pub use validate::{SceneValidationError, SceneValidationErrorKind};
 pub struct DrawOrder(pub u32);
 
 // `DrawOrder` is intentionally non-semantic for compositing. Scene operation order is authoritative.
-// See `docs/adr/0082-draworder-is-non-semantic.md`.
+// See `docs/adr/0081-draworder-is-non-semantic.md`.
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Color {
@@ -53,7 +53,7 @@ pub enum EffectMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectQuality {
-    /// Renderer-chosen quality within budgets (ADR 0120).
+    /// Renderer-chosen quality within budgets (ADR 0118).
     Auto,
     Low,
     Medium,
@@ -311,7 +311,7 @@ pub enum SceneOp {
     PopClip,
 
     PushEffect {
-        /// Computation bounds (not an implicit clip), see ADR 0119.
+        /// Computation bounds (not an implicit clip), see ADR 0117.
         bounds: Rect,
         mode: EffectMode,
         chain: EffectChain,

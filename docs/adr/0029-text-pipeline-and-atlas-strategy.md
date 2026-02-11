@@ -57,7 +57,7 @@ Adopt a GPUI-like abstraction (names TBD):
 Initial implementation strategy:
 
 - Historical note: this ADR originally proposed `cosmic-text` as the default cross-platform shaper.
-- Current direction: shaping/layout converges on Parley (ADR 0157) with wrapper-owned wrap/ellipsis. Backend/library choices that remain (font DB bridging, fallback heuristics) must not change the stable UI boundary (ADR 0006).
+- Current direction: shaping/layout converges on Parley (ADR 0142) with wrapper-owned wrap/ellipsis. Backend/library choices that remain (font DB bridging, fallback heuristics) must not change the stable UI boundary (ADR 0006).
 - Keep the interface compatible with future native backends (e.g. DirectWrite, CoreText) without changing `fret-core`.
 
 ### 3) Atlas strategy: separate monochrome vs polychrome

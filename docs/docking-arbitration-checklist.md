@@ -24,7 +24,7 @@ viewport tooling, to avoid late rewrites and accidental behavior drift.
 
 - Docking demo: `cargo run -p fret-demo --bin docking_demo`
 - Docking arbitration demo (combined harness): `cargo run -p fret-demo --bin docking_arbitration_demo`
-  - Single-window / no OS multi-window mode (validates ADR 0084 degradation): `FRET_SINGLE_WINDOW=1 cargo run -p fret-demo --bin docking_arbitration_demo`
+  - Single-window / no OS multi-window mode (validates ADR 0083 degradation): `FRET_SINGLE_WINDOW=1 cargo run -p fret-demo --bin docking_arbitration_demo`
 - Components overlays demo: `cargo run -p fret-demo --bin components_gallery`
 
 ### Docking arbitration demo: synth pointer mode

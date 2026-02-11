@@ -5,7 +5,7 @@ Status: Complete (v2 shipped; keep updated if new v2 gaps are discovered)
 This document tracks executable TODOs for the overlay/input arbitration v2 workstream.
 
 - Narrative progress: `docs/workstreams/overlay-input-arbitration-v2.md`
-- Cross-cutting contract gate (phases / prevent_default / availability): `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- Cross-cutting contract gate (phases / prevent_default / availability): `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - Related tracker: `docs/workstreams/input-dispatch-v2-todo.md`
 
 ## Tracking Format

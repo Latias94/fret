@@ -15,7 +15,7 @@ If you are new to the project, still start from `docs/README.md`.
 Current behavior:
 
 - The initial set of shadcn-aligned "responsive" variants that are container-query-driven upstream
-  now use Fret's **container query** mechanism (ADR 1170).
+  now use Fret's **container query** mechanism (ADR 0231).
 - Remaining viewport-width breakpoints in recipe code should be treated as **device-level**
   behavior (e.g. "mobile vs desktop"), not as a substitute for container queries.
 
@@ -26,8 +26,8 @@ Impact:
 
 Plan:
 
-- Keep new responsive additions on the container query path defined in ADR 1170:
-  - ADR: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+- Keep new responsive additions on the container query path defined in ADR 0231:
+  - ADR: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
   - Workstream: `docs/workstreams/container-queries-v1.md`
 
 ## Common Diagnostics

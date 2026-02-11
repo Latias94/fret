@@ -16,7 +16,7 @@
 Evidence anchors:
 
 - `ecosystem/fret-docking/src/lib.rs`
-- ADR 0075: `docs/adr/0075-docking-layering.md` (referenced by crate docs)
+- ADR 0075: `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md` (referenced by crate docs)
 
 ## 2) Public contract surface
 
@@ -99,4 +99,3 @@ Evidence anchors:
 ## 8) Open questions / decisions needed
 
 - What is the intended contract for tear-off/multi-window docking vs “viewport panels” (and where is that contract recorded—ADR vs workstream)?
-

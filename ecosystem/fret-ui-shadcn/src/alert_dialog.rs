@@ -526,7 +526,7 @@ impl AlertDialogFooter {
             move |cx, region_id| {
                 // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint). In editor-grade Fret
                 // layouts we prefer container queries so the footer tracks the dialog's committed
-                // width (ADR 1170).
+                // width (ADR 0231).
                 //
                 // Note: layout queries are frame-lagged; default to the desktop-friendly branch
                 // while the first committed width is not yet known.

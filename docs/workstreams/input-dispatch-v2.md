@@ -1,6 +1,6 @@
 # Input Dispatch v2 Workstream (Phases, Default Actions, and Action Availability)
 
-This document is a **workstream note** that complements ADR 1157 (`docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`).
+This document is a **workstream note** that complements ADR 0218 (`docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`).
 
 - TODO tracker (keep updated during implementation): `docs/workstreams/input-dispatch-v2-todo.md`
 It captures the concrete “editor-grade” ergonomics goals, cross-crate integration seams, and the remaining decision points

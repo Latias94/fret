@@ -9,13 +9,13 @@ scope: contract + mechanism + runner wiring + diagnostics evidence for new prefe
 
 ADR anchor:
 
-- `docs/adr/1185-environment-queries-preference-extensions-v1.md`
+- `docs/adr/0246-environment-queries-preference-extensions-v1.md`
 
 ## M0 — Contract locked
 
 Definition of done:
 
-- ADR 1185 is present and referenced from `docs/adr/README.md`.
+- ADR 0246 is present and referenced from `docs/adr/README.md`.
 
 ## M1 — Runtime mechanism + diagnostics
 

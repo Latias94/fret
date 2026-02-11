@@ -8,7 +8,7 @@ Related:
 - `docs/workstreams/state-management-v1.md`
 - `docs/workstreams/state-management-v1-extension-contract.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
-- `docs/adr/0051-model-observation-and-invalidation-contract.md`
+- `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
 - `docs/workstreams/imui-state-integration-v1.md`
 
@@ -40,7 +40,7 @@ It matches current kernel boundaries:
 
 - `fret-ui` is mechanism-only (`ADR 0066`), not policy-heavy app state orchestration.
 - invalidation contracts are explicit (`ADR 0051`), so behavior remains debuggable and predictable.
-- async/concurrency contracts are runner-boundary based (`ADR 0190`), making state helpers portable.
+- async/concurrency contracts are runner-boundary based (`ADR 0175`), making state helpers portable.
 
 It also keeps ecosystem extension-friendly:
 

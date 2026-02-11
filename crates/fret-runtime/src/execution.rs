@@ -17,7 +17,7 @@ pub type Runnable = Box<dyn FnOnce() + Send + 'static>;
 
 /// Portable execution surface provided by the runner.
 ///
-/// This is a semantic contract (ADR 0190). Implementations live in platform runners and must:
+/// This is a semantic contract (ADR 0175). Implementations live in platform runners and must:
 ///
 /// - Preserve the main-thread mutation invariant (UI/runtime state is main-thread only).
 /// - Keep the servicing thread/queue mapping stable for the lifetime of the process.
@@ -36,7 +36,7 @@ pub trait Dispatcher: Send + Sync + 'static {
     /// Schedule delayed work.
     ///
     /// Implementations must share the same timer substrate/time base as effect timers to avoid
-    /// split-brain scheduling (ADR 0190 / ADR 0034).
+    /// split-brain scheduling (ADR 0175 / ADR 0034).
     fn dispatch_after(&self, delay: Duration, task: Runnable);
 
     /// Request that the runner reaches the next driver boundary promptly.

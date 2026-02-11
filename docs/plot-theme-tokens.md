@@ -1,8 +1,7 @@
 # Plot Theme Tokens (`fret-plot`)
 
 `fret-plot` resolves most plot colors via theme tokens when the corresponding `LinePlotStyle` fields
-are `None`. This keeps plot styling consistent with the rest of the token-driven theme system (ADR
-0102) while keeping the plot style surface small and ergonomic.
+are `None`. This keeps plot styling consistent with the rest of the token-driven theme system (ADR 0101) while keeping the plot style surface small and ergonomic.
 
 ## Lookup Order
 

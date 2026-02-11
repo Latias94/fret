@@ -31,7 +31,7 @@ Rule: tooling MUST treat unknown capability strings as opaque (forward compatibl
 
 ## Initial `diag.*` vocabulary (v1)
 
-Minimum set (aligns with ADR 0204 intent, but namespaced):
+Minimum set (aligns with ADR 0189 intent, but namespaced):
 
 - `diag.script_v2`: Script schema v2 steps supported.
 - `diag.screenshot_png`: on-demand PNG screenshot requests supported (used by `capture_screenshot`).

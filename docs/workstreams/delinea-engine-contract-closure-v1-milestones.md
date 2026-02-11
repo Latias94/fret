@@ -64,9 +64,9 @@ Status: Done (2026-02-10).
 
 Linking follow-ups (now tracked as contracts-first):
 
-- ADR 1192: axisPointer/cursor link events (crosshair sync).
-- ADR 1193: domain window link events (sync zoom/pan).
-- ADR 1194: host-level link mapping policy (LinkAxisKey) for cross-spec linking.
+- ADR 0249: axisPointer/cursor link events (crosshair sync).
+- ADR 0250: domain window link events (sync zoom/pan).
+- ADR 0251: host-level link mapping policy (LinkAxisKey) for cross-spec linking.
 
 Implementation follow-ups:
 
@@ -87,9 +87,9 @@ Acceptance criteria:
 
 Contracts (v1 subset):
 
-- ADR 1195: transform lineage + raw-index identity.
-- ADR 1196: minimal dataset transform node set (filter + sort + derived dataset chaining).
-- ADR 1197: cache keys + invalidation boundaries for dataset transforms.
+- ADR 0252: transform lineage + raw-index identity.
+- ADR 0253: minimal dataset transform node set (filter + sort + derived dataset chaining).
+- ADR 0254: cache keys + invalidation boundaries for dataset transforms.
 
 Status: Done (2026-02-10) for the v1 subset (derived datasets with filter/sort transforms + stable raw-index identity).
 
@@ -108,8 +108,8 @@ Acceptance criteria:
 
 Contracts (v1 subset):
 
-- ADR 1198: mutation surface + data revisioning rules.
-- ADR 1199: cache invalidation + resume policy matrix.
+- ADR 0255: mutation surface + data revisioning rules.
+- ADR 0256: cache invalidation + resume policy matrix.
 
 Status: Done (2026-02-09).
 

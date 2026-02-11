@@ -73,9 +73,9 @@ Semantics:
   - monotonic-X datasets use a continuous `RowSelection::Range` when possible,
   - otherwise an indices-backed `RowSelection::Indices` may be built as an optimization carrier,
   - bounds/LOD/axisPointer sampling operate on the filtered view.
-- `FilterMode::WeakFilter`: v1-equivalent to `Filter` until multi-dimensional filtering is introduced (ADR 1150).
+- `FilterMode::WeakFilter`: v1-equivalent to `Filter` until multi-dimensional filtering is introduced (ADR 0211).
 - `FilterMode::Empty`: preserve the base row selection, but treat out-of-window samples as missing for mark emission
-  (e.g. line-family series break into segments). Bounds/axisPointer still respect the X window (ADR 1150).
+  (e.g. line-family series break into segments). Bounds/axisPointer still respect the X window (ADR 0211).
 - `FilterMode::None`: do not filter rows for the data window (only dataset row constraints apply), and bounds remain
   global. Marks/LOD are still emitted against the current mapping window (out-of-window samples are culled).
 

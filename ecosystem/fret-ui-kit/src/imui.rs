@@ -42,7 +42,7 @@ mod floating_window_on_area;
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
 ///
-/// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0175) into
+/// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0160) into
 /// immediate-mode frontends (`UiWriter`).
 pub trait UiKitIntoElement<H: UiHost> {
     fn into_any_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;

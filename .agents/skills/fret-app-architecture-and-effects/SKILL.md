@@ -21,7 +21,7 @@ If you are looking for **GPU post-processing** (“blur/glass/backdrop”), that
 ## Quick start
 
 - For a minimal app wiring example, start with `apps/fret-examples/src/todo_demo.rs`.
-- For “background work without blocking UI”, follow the Dispatcher + Inbox pattern (ADR 0190).
+- For “background work without blocking UI”, follow the Dispatcher + Inbox pattern (ADR 0160).
 - If this touches user-visible timing, prefer `Effect::SetTimer` / `Effect::RequestAnimationFrame` over ad-hoc timers.
 
 ## Workflow
@@ -79,7 +79,7 @@ Notes:
 - Prefer `app.request_redraw(window)` / `Effect::Redraw(window)` for one-shot redraws.
 - Prefer `Effect::RequestAnimationFrame(window)` for frame-driven progression.
 - Use `Effect::SetTimer` + `Event::Timer { token }` for UI-visible timing so it participates in the
-  runner’s deterministic flush points (ADR 0112 / ADR 0190).
+  runner’s deterministic flush points (ADR 0108 / ADR 0160).
 
 References:
 
@@ -88,7 +88,7 @@ References:
 
 ### 4) Background work: Dispatcher + Inbox (canonical pattern)
 
-Hard rule (ADR 0190):
+Hard rule (ADR 0160):
 
 - UI/runtime state (`App`, `ModelStore`) is **main-thread only**.
 - Background tasks must communicate results via **data-only messages**.
@@ -125,8 +125,8 @@ Keep the main skill lean and link out:
 
 ## References
 
-- ADR 0190 (Dispatcher + inbox + wake): `docs/adr/0190-execution-and-concurrency-surface-v1.md`
-- Golden path pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- ADR 0160 (Dispatcher + inbox + wake): `docs/adr/0184-execution-and-concurrency-surface-v1.md`
+- Golden path pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - Minimal todo app wiring: `apps/fret-examples/src/todo_demo.rs`
 - Background inbox pattern (manual drain): `apps/fret-examples/src/markdown_demo.rs`
 - Background inbox pattern (runner drain registry): `ecosystem/fret-markdown/src/mathjax_svg_support.rs`

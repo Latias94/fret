@@ -13,16 +13,16 @@ Status symbols:
 ## Scope
 
 - 2D plots only (`fret-plot`).
-- 3D is tracked separately (see ADR 0098 / Plot3D demos).
+- 3D is tracked separately (see ADR 0097 / Plot3D demos).
 
 ## Current architecture (Fret)
 
 - Input state: `PlotState` (caller-owned, optional)
 - Output state: `PlotOutput` (widget-written snapshot, optional)
-- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0106)
+- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0104)
 - Multi-plot linking: `LinkedPlotGroup`
 
-This contract is documented in ADR 0099.
+This contract is documented in ADR 0098.
 
 ## Interaction & UX
 

@@ -52,7 +52,7 @@ Tracking:
 - v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
 - Perf guide: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - imui authoring facade v2 (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
-- Unified authoring builder surface (ADR): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- Unified authoring builder surface (ADR): `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Docking + multi-window parity (ImGui-aligned): `docs/workstreams/docking-multiwindow-imgui-parity.md`
 - macOS multi-window parity anchors: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
 - Overlays policy split (Radix-aligned): `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -106,7 +106,7 @@ These are hard constraints aligned with the existing `imui` v2 plan and core ADR
    - Immediate-mode entry points are thin adapters that delegate, not parallel implementations.
 
 4) **Single patch vocabulary**
-   - `ui()` / `UiBuilder<T>` (ADR 0175) remains the canonical patch chain for chrome/layout.
+   - `ui()` / `UiBuilder<T>` (ADR 0160) remains the canonical patch chain for chrome/layout.
    - The facade should not introduce a separate “tailwind-ish” patch language.
 
 5) **Policy stays in ecosystem crates**

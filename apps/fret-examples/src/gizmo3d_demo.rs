@@ -2826,7 +2826,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         } = context;
 
         // Prefer focused-surface command handling (e.g. local widget histories) before falling
-        // back to the window's active document undo stack (ADR 0136, ADR 0020).
+        // back to the window's active document undo stack (ADR 0125, ADR 0020).
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }

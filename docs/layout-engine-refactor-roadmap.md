@@ -8,8 +8,8 @@ deliverables and acceptance checks.
 
 Primary ADRs:
 
-- AvailableSpace + non-reentrant intrinsic measurement: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
-- Window-scoped engine + viewport roots: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+- AvailableSpace + non-reentrant intrinsic measurement: `docs/adr/0113-available-space-and-non-reentrant-measurement.md`
+- Window-scoped engine + viewport roots: `docs/adr/0114-window-scoped-layout-engine-and-viewport-roots.md`
 - Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 
 Related constraints and boundaries:
@@ -55,7 +55,7 @@ GPUI reference (implementation, not contract):
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
-## P1: Constraint-Correct Intrinsic Measurement (ADR 0115)
+## P1: Constraint-Correct Intrinsic Measurement (ADR 0113)
 
 Goal: stop semantic drift and recursion hazards by making `AvailableSpace` explicit and making
 measurement leaf-only.
@@ -72,7 +72,7 @@ Acceptance:
 - `cargo test -p fret-ui` passes.
 - A minimal regression composition for "Auto main axis + flex-1/fill" does not stack overflow.
 
-## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
+## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0114)
 
 Goal: introduce a per-window `TaffyLayoutEngine` and enforce the separation between "build/request"
 and "compute/apply" (layout engine v2 is the default layout engine in `fret-ui`).
@@ -116,7 +116,7 @@ Acceptance:
 
 ## Open Decisions (Track Here)
 
-1. **"Contents-like" wrappers**: **Decision (v1)**: no general-purpose contents-like / `Slot/asChild` prop merging (ADR 0117). Prefer GPUI-aligned single-root components; if needed later, add a restricted, validated "layout-transparent wrapper" opt-in (layout-only, no prop merging).
+1. **"Contents-like" wrappers**: **Decision (v1)**: no general-purpose contents-like / `Slot/asChild` prop merging (ADR 0115). Prefer GPUI-aligned single-root components; if needed later, add a restricted, validated "layout-transparent wrapper" opt-in (layout-only, no prop merging).
 2. **Root solve orchestration**: **Decision (v1)**: viewport roots are registered during the parent/root layout pass and flushed immediately after that root, before continuing to subsequent overlay roots. This preserves the ADR 0011 ordering expectation ("viewport content before overlays") without coupling viewports into a shared solve. (Implementation: `UiTree::layout_all` viewport flush loop.)
 3. **Engine cache keys + invalidation**: **Decision (v1)**: keep intrinsic measurement memoization scoped to a single `compute_root_with_measure` call (engine-local cache keyed by `NodeId + known_dimensions + AvailableSpace`); avoid cross-frame measurement caching until we have an explicit, stable environment key. Leaf `measure_in` implementations must observe all relevant inputs (scale factor, theme revision, font stack key, model revisions) so invalidation remains correct even without long-lived caches.
 4. **Rounding policy**: **Decision (v1)**: snap layout outputs at apply/writeback using ADR 0035 `snap_rect` so hit-testing and paint share stable bounds. The engine may internally solve in device-pixel space (`* scale_factor`) with Taffy rounding enabled as an implementation detail, but the results must be semantically equivalent to `snap_rect` on writeback and must be idempotent with renderer snapping (avoid double-rounding drift).

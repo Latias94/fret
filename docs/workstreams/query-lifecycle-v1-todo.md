@@ -4,7 +4,7 @@ Last updated: 2026-02-06
 
 This file tracks concrete work for the query lifecycle semantics described in:
 
-- `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md`
+- `docs/adr/0225-query-lifecycle-and-cache-semantics-v1.md`
 - `docs/workstreams/query-lifecycle-v1.md`
 
 Status legend:
@@ -15,8 +15,8 @@ Status legend:
 
 ## Phase 0 — ADR + documentation anchors
 
-- `[x]` Draft ADR 1164 (stale/refetch/cancel/retry semantics).
-  - Evidence: `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md`
+- `[x]` Draft ADR 0225 (stale/refetch/cancel/retry semantics).
+  - Evidence: `docs/adr/0225-query-lifecycle-and-cache-semantics-v1.md`
 - `[x]` Create the workstream doc + tracker.
   - Evidence: `docs/workstreams/query-lifecycle-v1.md`
   - Evidence: `docs/workstreams/query-lifecycle-v1-todo.md`
@@ -30,7 +30,7 @@ Status legend:
   - Target: `ecosystem/fret-query/src/lib.rs`
 - `[x]` Re-evaluate `QueryPolicy` defaults (cache time, stale time) after the semantic change.
   - Decision: keep `stale_time = 2s` and `cache_time = 60s` as defaults.
-  - Reasoning: after ADR 1164 semantics, `stale_time` only gates freshness and no longer implies implicit polling.
+  - Reasoning: after ADR 0225 semantics, `stale_time` only gates freshness and no longer implies implicit polling.
   - Guidance: for realtime/high-frequency views, use explicit polling or invalidate/refetch flows.
   - Evidence: `ecosystem/fret-query/src/lib.rs` and remount boundary tests.
 

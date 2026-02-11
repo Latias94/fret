@@ -279,7 +279,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Returns the last frame's **visual** bounds (post-`render_transform` AABB) for a declarative
     /// element, if available.
     ///
-    /// This is intended for anchored overlay policies that must track render transforms (ADR 0083)
+    /// This is intended for anchored overlay policies that must track render transforms (ADR 0082)
     /// without mixing layout transforms into the layout solver.
     pub fn last_visual_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
         self.window_state.last_visual_bounds(element)
@@ -3180,7 +3180,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         )
     }
 
-    /// Retained-host VirtualList helper (ADR 0192).
+    /// Retained-host VirtualList helper (ADR 0177).
     ///
     /// This is an opt-in surface that stores `'static` row callbacks in element-local state so
     /// the runtime can attach/detach row subtrees when a cache root reuses without rerendering.

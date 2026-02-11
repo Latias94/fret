@@ -29,7 +29,7 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 /// - Keyboard-open: allow entry focus (typically the first enabled menu item).
 ///
 /// In Fret, we encode this as a pair of optional element targets and choose between them based on
-/// the last observed input modality (ADR 0095).
+/// the last observed input modality (ADR 0094).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct MenuInitialFocusTargets {
     pub keyboard_entry_focus: Option<GlobalElementId>,
@@ -273,7 +273,7 @@ pub fn submenu_pointer_move_handler(
 ///
 /// Policy:
 /// - Uses non-click-through outside press (`OverlayRequest::dismissible_menu`, ADR 0069).
-/// - Gates initial focus by last input modality (ADR 0095):
+/// - Gates initial focus by last input modality (ADR 0094):
 ///   - keyboard: allow entry focus (first focusable descendant)
 ///   - pointer: focus the content container and prevent entry focus
 pub fn dismissible_menu_request<H: UiHost>(

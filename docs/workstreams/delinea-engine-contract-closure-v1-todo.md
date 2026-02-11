@@ -15,8 +15,8 @@ Each TODO is labeled:
 ## M0 — Docs honesty + audit closure
 
 - [x] DEL-ENG0-docs-001 Update alignment docs to describe the shipped v1 subset boundaries (Y mapping-first, size-capped indices materialization).
-- [x] DEL-ENG0-docs-002 Update ADR 1150 to reflect the shipped v1 subset multi-dimensional `WeakFilter` carrier.
-- [x] DEL-ENG0-docs-003 Update ADR implementation alignment notes for ADR 1150 (remove stale “WeakFilter == Filter only” claim).
+- [x] DEL-ENG0-docs-002 Update ADR 0211 to reflect the shipped v1 subset multi-dimensional `WeakFilter` carrier.
+- [x] DEL-ENG0-docs-003 Update ADR implementation alignment notes for ADR 0211 (remove stale “WeakFilter == Filter only” claim).
 - [x] DEL-ENG0-docs-004 Update multi-grid adapter notes: retained hosts a single engine; remove stale spec-splitting references.
 
 ## M-1 — Main sync (keep worktree green)
@@ -54,19 +54,19 @@ Regression gates:
 
 - [x] DEL-ENG1-tests-020 Add a headless regression test for multi-grid: window writes + marks counts are stable.
 - [x] DEL-ENG1-tests-021 Add a retained multi-grid demo with a concrete P0 checklist.
-- [x] DEL-ENG1-contract-004 Define link event contracts for axisPointer/cursor sync (ADR 1192).
-- [x] DEL-ENG1-contract-005 Define link event contracts for domain window sync (ADR 1193).
-- [x] DEL-ENG1-contract-006 Define host-level link mapping policy for cross-spec linking (ADR 1194).
+- [x] DEL-ENG1-contract-004 Define link event contracts for axisPointer/cursor sync (ADR 0249).
+- [x] DEL-ENG1-contract-005 Define link event contracts for domain window sync (ADR 0250).
+- [x] DEL-ENG1-contract-006 Define host-level link mapping policy for cross-spec linking (ADR 0251).
 - [x] DEL-ENG1-impl-017 Add key-based chart link coordinator and mapping router (LinkAxisKey).
-- [x] DEL-ENG1-impl-018 Add explicit axis map overrides for ambiguous cross-spec linking (ADR 1194).
+- [x] DEL-ENG1-impl-018 Add explicit axis map overrides for ambiguous cross-spec linking (ADR 0251).
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 
 Design gates:
 
-- [x] DEL-ENG2-contract-001 Define “raw index identity” across transform chains (ADR 1195).
-- [x] DEL-ENG2-contract-002 Define the minimum transform node set for v1 (ADR 1196).
-- [x] DEL-ENG2-contract-003 Define caching keys and invalidation boundaries (ADR 1197).
+- [x] DEL-ENG2-contract-001 Define “raw index identity” across transform chains (ADR 0252).
+- [x] DEL-ENG2-contract-002 Define the minimum transform node set for v1 (ADR 0253).
+- [x] DEL-ENG2-contract-003 Define caching keys and invalidation boundaries (ADR 0254).
 
 Implementation steps:
 
@@ -82,9 +82,9 @@ Regression gates:
 Design gates:
 
 - [x] DEL-ENG3-contract-001 Document supported mutation operations in v1 (append-only required; updates constrained and explicit).
-  - ADR 1198: `docs/adr/1198-delinea-mutation-surface-and-data-revisioning-v1.md`
+  - ADR 0255: `docs/adr/0255-delinea-mutation-surface-and-data-revisioning-v1.md`
 - [x] DEL-ENG3-contract-002 Define which caches must resume vs invalidate for each mutation type.
-  - ADR 1199: `docs/adr/1199-delinea-mutation-cache-invalidation-and-resume-policy-v1.md`
+  - ADR 0256: `docs/adr/0256-delinea-mutation-cache-invalidation-and-resume-policy-v1.md`
 
 Implementation steps:
 

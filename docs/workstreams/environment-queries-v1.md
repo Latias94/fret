@@ -16,11 +16,11 @@ This workstream locks and implements **environment queries** for Fret UIs:
 
 Contract source of truth:
 
-- ADR 1171: `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+- ADR 0232: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 
 ## Why this matters
 
-Container queries (ADR 1170) are necessary but not sufficient:
+Container queries (ADR 0231) are necessary but not sufficient:
 
 - Some responsiveness is **device/viewport-driven** (e.g. “mobile shell” patterns like
   Drawer-vs-Popover).

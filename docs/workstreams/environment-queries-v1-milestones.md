@@ -9,7 +9,7 @@ scope: viewport/device capability queries contract + implementation + ecosystem 
 
 ADR anchor:
 
-- `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+- `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 
 This milestone plan defines “done” in terms of observable outcomes (tests / diagnostics evidence),
 not internal implementation details.
@@ -18,7 +18,7 @@ not internal implementation details.
 
 Definition of done:
 
-- ADR 1171 is `Accepted` and referenced from the relevant indices (`docs/adr/README.md`,
+- ADR 0232 is `Accepted` and referenced from the relevant indices (`docs/adr/README.md`,
   `docs/todo-tracker.md`).
 - Workstream docs exist (this file + TODO list).
 

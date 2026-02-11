@@ -66,9 +66,9 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
-    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0177).
     ///
-    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0176).
     pub retained_keep_alive_roots_len: u32,
     pub retained_keep_alive_roots_head: Vec<NodeId>,
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
@@ -1085,7 +1085,7 @@ impl WindowElementState {
                 continue;
             };
             entry.last_seen_frame = frame_id;
-            // Touching a retained subtree must not reassign cross-root ownership (ADR 0191).
+            // Touching a retained subtree must not reassign cross-root ownership (ADR 0176).
             // If the element is already owned by a different root, keep the original owner and
             // rely on diagnostics to flag the mismatch rather than "repairing" it implicitly.
             if entry.root == root_id {
@@ -1209,7 +1209,7 @@ impl WindowElementState {
         {
             assert_eq!(
                 prev.root, entry.root,
-                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0176)",
                 prev.root, entry.root
             );
         }

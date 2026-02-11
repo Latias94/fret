@@ -327,7 +327,7 @@ impl FilterProcessorStage {
                 }
             }
 
-            // ADR 1150:
+            // ADR 0211:
             // - `Filter` / `WeakFilter` may use indices views as an optimization carrier.
             // - `Empty` must preserve a stable row/index space (avoid indices-backed selections).
             if !matches!(

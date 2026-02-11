@@ -25,7 +25,7 @@ pub(super) struct RowGeom {
     /// Caret stop table for the displayed row text (byte index -> x offset).
     pub(super) caret_stops: Vec<(usize, Px)>,
     /// Optional mapping between buffer-local and display-local indices when the row materializes
-    /// fold placeholders (ADR 0200).
+    /// fold placeholders (ADR 0185).
     pub(super) fold_map: Option<RowFoldMap>,
     /// Optional caret rectangle vertical metrics derived from the renderer text system.
     ///

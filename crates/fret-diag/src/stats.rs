@@ -11784,7 +11784,7 @@ pub(super) fn check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(
     ))
 }
 
-// ADR 0194: triple-click should select the logical line.
+// ADR 0179: triple-click should select the logical line.
 pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click(
     bundle_path: &Path,
     warmup_frames: u64,

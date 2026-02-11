@@ -609,7 +609,7 @@ impl SheetContent {
             let mut props = decl_style::container_props(&theme, chrome, layout);
 
             // Apply environment-driven window insets to avoid system UI and virtual keyboard
-            // occlusion on future mobile targets (ADR 1171).
+            // occlusion on future mobile targets (ADR 0232).
             let safe = safe_area_insets_or_zero(cx, Invalidation::Layout);
             let occlusion = occlusion_insets_or_zero(cx, Invalidation::Layout);
             let max_px = |a: Px, b: Px| if a.0 > b.0 { a } else { b };

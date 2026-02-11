@@ -5,7 +5,7 @@ use fret_render::viewport_overlay::ViewportOverlay3dContext;
 
 /// App-owned, engine-pass 3D viewport overlay hooks (gizmos, debug draw, selection outlines).
 ///
-/// This hook is intentionally wgpu-facing and lives in the runner crate (ADR 0038 / ADR 0139):
+/// This hook is intentionally wgpu-facing and lives in the runner crate (ADR 0038 / ADR 0130):
 /// - the engine owns the render pass topology and depth buffers,
 /// - Fret provides a stable place to "draw after the scene" inside the viewport pass,
 /// - tool policy remains app/ecosystem-owned (ADR 0027).

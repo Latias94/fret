@@ -12,13 +12,13 @@ Workstream entry:
 
 ADR anchor:
 
-- `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+- `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
 
 ## Contract / docs
 
-- [x] Land ADR 1170 (Accepted).
+- [x] Land ADR 0231 (Accepted).
 - [x] Add workstream docs + milestones + TODO tracker.
-- [x] Add ADR 1170 to `docs/adr/README.md` task jump table under layout.
+- [x] Add ADR 0231 to `docs/adr/README.md` task jump table under layout.
 - [x] Add a `docs/known-issues.md` entry for "viewport breakpoint approximation" until recipes are migrated.
 
 ## Runtime mechanism (`crates/fret-ui`)

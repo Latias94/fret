@@ -110,7 +110,7 @@ pub(crate) fn run_fret_root_frames(
         snapshot = ui.semantics_snapshot().cloned();
 
         // Runner-owned clocks are normally advanced by the platform event loop. In tests we
-        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        // advance them explicitly so frame-lagged layout queries (ADR 0231) can settle.
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -202,7 +202,7 @@ pub(crate) fn run_fret_root_frames_with_services(
         snapshot = ui.semantics_snapshot().cloned();
 
         // Runner-owned clocks are normally advanced by the platform event loop. In tests we
-        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        // advance them explicitly so frame-lagged layout queries (ADR 0231) can settle.
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -378,7 +378,7 @@ pub(crate) fn run_fret_root_frames_with_ui_and_services(
         snapshot = ui.semantics_snapshot().cloned();
 
         // Runner-owned clocks are normally advanced by the platform event loop. In tests we
-        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        // advance them explicitly so frame-lagged layout queries (ADR 0231) can settle.
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
         app.set_frame_id(next_frame);

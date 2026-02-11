@@ -33,7 +33,7 @@ impl AnyElement {
         }
     }
 
-    /// Attach layout-transparent semantics metadata to this element (ADR 1161).
+    /// Attach layout-transparent semantics metadata to this element (ADR 0222).
     ///
     /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
     /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
@@ -63,7 +63,7 @@ pub enum ElementKind {
     /// otherwise be separated from layout.
     SemanticFlex(SemanticFlexProps),
     FocusScope(FocusScopeProps),
-    /// A layout wrapper used for frame-lagged container queries (ADR 1170).
+    /// A layout wrapper used for frame-lagged container queries (ADR 0231).
     ///
     /// This is paint- and input-transparent. It exists to provide a stable, queryable bounds
     /// snapshot for component-layer "responsive" policies that must adapt to **panel width**
@@ -77,7 +77,7 @@ pub enum ElementKind {
     /// preserved).
     InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
-    /// A scoped post-processing effect group wrapper (ADR 0119).
+    /// A scoped post-processing effect group wrapper (ADR 0117).
     EffectLayer(EffectLayerProps),
     /// Experimental view-level cache boundary wrapper.
     ///
@@ -117,12 +117,12 @@ pub enum ElementKind {
     Flex(FlexProps),
     Grid(GridProps),
     Image(ImageProps),
-    /// A declarative, leaf canvas element for custom scene emission (ADR 0156).
+    /// A declarative, leaf canvas element for custom scene emission (ADR 0141).
     Canvas(CanvasProps),
     /// Unstable bridge element for hosting a retained subtree under declarative mount.
     #[cfg(feature = "unstable-retained-bridge")]
     RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
-    /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
+    /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0123).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
     Spinner(SpinnerProps),
@@ -395,7 +395,7 @@ impl Default for ContainerProps {
     }
 }
 
-/// Layout-transparent semantics overrides attached to an existing element (ADR 1161).
+/// Layout-transparent semantics overrides attached to an existing element (ADR 0222).
 ///
 /// This is primarily intended for diagnostics and UI automation (`test_id`) and for restricted
 /// a11y stamping on typed elements without introducing a layout wrapper.
@@ -577,7 +577,7 @@ impl Default for SemanticsProps {
 /// A paint- and input-transparent layout wrapper that records a queryable bounds snapshot.
 ///
 /// This is a mechanism-only primitive: breakpoint tables and hysteresis policies live in the
-/// component ecosystem (ADR 0066 / ADR 1170).
+/// component ecosystem (ADR 0066 / ADR 0231).
 #[derive(Debug, Clone)]
 pub struct LayoutQueryRegionProps {
     pub layout: LayoutStyle,
@@ -650,7 +650,7 @@ impl Default for OpacityProps {
     }
 }
 
-/// Scoped post-processing effect wrapper for declarative element subtrees (ADR 0119).
+/// Scoped post-processing effect wrapper for declarative element subtrees (ADR 0117).
 ///
 /// This emits a `SceneOp::PushEffect/PopEffect` pair around the subtree during painting. The
 /// effect's computation bounds are the wrapper's final layout bounds.
@@ -737,7 +737,7 @@ pub struct FractionalRenderTransformProps {
     pub translate_y_fraction: f32,
 }
 
-/// Layout-driven anchored placement wrapper for declarative element subtrees (ADR 0104).
+/// Layout-driven anchored placement wrapper for declarative element subtrees (ADR 0103).
 ///
 /// This wrapper computes a placement transform during layout (based on the child's intrinsic
 /// size) and applies it via the retained runtime's `Widget::render_transform` hook.
@@ -750,7 +750,7 @@ pub struct AnchoredProps {
     pub outer_margin: Edges,
     /// Anchor rect in the same coordinate space as the wrapper bounds.
     pub anchor: fret_core::Rect,
-    /// Optional anchor element ID to resolve during layout (ADR 0104).
+    /// Optional anchor element ID to resolve during layout (ADR 0103).
     ///
     /// When set, the layout pass attempts to resolve the element's current-frame bounds and uses
     /// that rect as the anchor. This avoids cross-frame geometry jitter from
@@ -1325,7 +1325,7 @@ impl ViewportSurfaceProps {
 /// A declarative leaf canvas element.
 ///
 /// Paint handlers are registered via element-local state (not props) so the element tree can
-/// remain `Clone + Debug` (see ADR 0156).
+/// remain `Clone + Debug` (see ADR 0141).
 #[derive(Debug, Clone, Copy)]
 pub struct CanvasProps {
     pub layout: LayoutStyle,
@@ -1353,7 +1353,7 @@ impl CanvasCacheTuning {
 /// Hosted cache policy for declarative `Canvas` resources.
 ///
 /// This is intentionally numeric-only configuration: it does not encode interaction policy or
-/// domain semantics (ADR 0156 / ADR 0137).
+/// domain semantics (ADR 0141 / ADR 0128).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasCachePolicy {
     pub text: CanvasCacheTuning,
@@ -1629,7 +1629,7 @@ pub struct VirtualListProps {
     pub overscan: usize,
     /// Number of off-window items that a retained virtual-list host may keep alive for reuse.
     ///
-    /// This is primarily consumed by retained/windowed host implementations (ADR 0192) so window
+    /// This is primarily consumed by retained/windowed host implementations (ADR 0177) so window
     /// shifts can reuse previously-mounted item subtrees without forcing the parent cache root to
     /// rerender.
     pub keep_alive: usize,

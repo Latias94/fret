@@ -18,7 +18,7 @@ Related foundations:
 - Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect + pick UX: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Debugging playbook: `docs/debugging-playbook.md`
-- Base contract ADR: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- Base contract ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Semantics contract ADR: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - CLI tooling baseline: `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 - In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`

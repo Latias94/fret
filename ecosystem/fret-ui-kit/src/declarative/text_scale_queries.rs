@@ -1,6 +1,6 @@
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-/// Returns the best-effort text scale factor for the current window (ADR 1185).
+/// Returns the best-effort text scale factor for the current window (ADR 0246).
 ///
 /// When the environment value is unknown/unavailable, `default_when_unknown` is returned.
 #[track_caller]

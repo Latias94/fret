@@ -12,7 +12,7 @@ outcomes and evidence anchors (tests / scripts), not internal implementation det
 
 ADR anchor:
 
-- `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+- `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
 
 ## Status (as of 2026-02-09)
 
@@ -22,7 +22,7 @@ ADR anchor:
 
 Definition of done:
 
-- ADR 1170 is `Accepted` and referenced from the relevant indices (`docs/adr/README.md`,
+- ADR 0231 is `Accepted` and referenced from the relevant indices (`docs/adr/README.md`,
   `docs/todo-tracker.md`).
 - Workstream docs exist (this file + TODO list).
 
@@ -74,7 +74,7 @@ Evidence:
 
 - A small helper surface exists in `ecosystem/fret-ui-shadcn` (or `fret-ui-kit`) used by migrated
   recipes.
-- A docs note (audit or workstream entry) points to ADR 1170 as the contract anchor.
+- A docs note (audit or workstream entry) points to ADR 0231 as the contract anchor.
 
 ## M4 — First recipe migrations + regression gates
 

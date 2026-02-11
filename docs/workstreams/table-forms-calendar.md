@@ -4,7 +4,7 @@ Status: Draft (tracking only; ADRs remain the source of truth)
 
 This document tracks the implementation plan and progress for:
 
-- Headless Table / DataGrid (align ADR 0101; remove long-lived feature gate if no heavy deps)
+- Headless Table / DataGrid (align ADR 0100; remove long-lived feature gate if no heavy deps)
 - Forms (headless form state + validation)
 - Calendar / Date Picker (date math + interactions; shadcn-aligned recipes)
  - Diagnostics for “table not visible” regressions (bundle semantics + optional screenshot)
@@ -27,7 +27,7 @@ It is intentionally non-normative: do not treat this as a contract. For contract
 
 ## Primary Contracts (Source of Truth)
 
-- ADR 0101 (Headless Table Engine): `docs/adr/0101-headless-table-engine.md`
+- ADR 0100 (Headless Table Engine): `docs/adr/0100-headless-table-engine.md`
 - Runtime contract gates: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Virtualization vocabulary: `docs/adr/0070-virtualization-contract.md`
 - Semantics + accessibility bridge: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
@@ -94,7 +94,7 @@ As of the initial audit:
   - If semantics + bounds look correct but pixels look blank, run with `FRET_DIAG_SCREENSHOT=1` and inspect `frame.bmp` in the dumped bundle directory.
 - `ecosystem/fret-ui-shadcn`
   - `Table` primitives exist and are always available: `ecosystem/fret-ui-shadcn/src/table.rs` (shadcn taxonomy).
-  - `DataTable` is headless-backed (ADR 0101) and rendered via the shared declarative table view:
+  - `DataTable` is headless-backed (ADR 0100) and rendered via the shared declarative table view:
     `ecosystem/fret-ui-shadcn/src/data_table.rs` -> `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
     - It provides: fixed header + vertical virtualization + the headless pipeline (sorting/filtering/pagination/selection/visibility).
     - Public surface: `DataTable`.
@@ -129,14 +129,14 @@ As of the initial audit:
 
 ### M0 — Audit + Plan Lock (this week)
 
-- [x] Read ADR 0101 and translate into a v1 API sketch.
+- [x] Read ADR 0100 and translate into a v1 API sketch.
 - [x] Identify current `data_table` feature gate and its dependency reasons (if any).
 - [ ] Decide the minimal semantics role strategy (Grid vs Table vs ListBox) for v1.
 - [x] Record reference SHAs for all new `repo-ref/*`.
 
 ### M1 — Headless Table Core (v1)
 
-- [ ] Audit the existing `fret-ui-kit` headless engine (`headless::table`) for ADR 0101 parity gaps.
+- [ ] Audit the existing `fret-ui-kit` headless engine (`headless::table`) for ADR 0100 parity gaps.
 - [ ] Lock the minimal v1 public API surface (types + invariants) and add/adjust unit tests as needed.
 - [ ] Validate stable row keys + selection + sorting tie-breakers + column visibility semantics with tests.
 - [x] Decide the feature gate story:
@@ -224,7 +224,7 @@ preserving specialized variants and performance ceilings.
 ### Public mapping (current)
 
 - **Headless (source of truth):** `fret-ui-kit::headless::table` (always available).
-- **Default table recipe:** `fret-ui-shadcn::DataTable` is backed by the headless engine (ADR 0101) via the shared
+- **Default table recipe:** `fret-ui-shadcn::DataTable` is backed by the headless engine (ADR 0100) via the shared
   `fret-ui-kit` view: `ecosystem/fret-ui-shadcn/src/data_table.rs` calls
   `ecosystem/fret-ui-kit/src/declarative/table.rs::table_virtualized`.
 - `DataTable` is the stable name.

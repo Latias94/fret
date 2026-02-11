@@ -24,9 +24,9 @@ Related:
 - Living usage doc: `docs/ui-diagnostics-and-scripted-tests.md`
 - Debug workflows: `docs/debugging-ui-with-inspector-and-scripts.md`, `docs/debugging-playbook.md`
 - Workstream foundations: `docs/workstreams/ui-automation-and-debug-recipes-v1.md`, `docs/workstreams/diag-devtools-gui-v1.md`
-- Contract ADRs: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`,
-  `docs/adr/0196-ui-automation-and-debug-recipes-v1.md`,
-  `docs/adr/0204-ui-diagnostics-extensibility-and-capabilities-v1.md`
+- Contract ADRs: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`,
+  `docs/adr/0181-ui-automation-and-debug-recipes-v1.md`,
+  `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 
 Sub-documents (this workstream intentionally decomposes into small, checkable steps):
 

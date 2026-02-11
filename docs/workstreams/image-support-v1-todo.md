@@ -18,10 +18,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] IMG-adr-001 Draft and land an ADR for image `object-fit` semantics.
   - Must cover: fit enum vocabulary, default behavior, `ImageRegion` interaction rule, and backcompat.
-  - References: `docs/adr/0121-streaming-images-and-video-surfaces.md`, `docs/adr/0004-resource-handles.md`.
-  - Draft: `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
+  - References: `docs/adr/0119-streaming-images-and-video-surfaces.md`, `docs/adr/0004-resource-handles.md`.
+  - Draft: `docs/adr/0237-image-object-fit-for-sceneop-image-v1.md`
   - Evidence:
-    - `docs/adr/1176-image-object-fit-for-sceneop-image-v1.md`
+    - `docs/adr/0237-image-object-fit-for-sceneop-image-v1.md`
 
 - [x] IMG-guard-010 Add a minimal regression gate checklist for image work (fast vs full).
   - Fast (mechanism + renderer math):
@@ -49,7 +49,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] IMG-test-120 Add conformance tests for fit mapping + UV crop math.
   - Prefer: pure math unit tests (no GPU required) + one renderer smoke test.
-  - Must cover: clamp + monotonic UV rules and “no early rounding” guidance (ADR 1170).
+  - Must cover: clamp + monotonic UV rules and “no early rounding” guidance (ADR 0231).
   - Evidence:
     - `crates/fret-core/src/scene/image_object_fit.rs` (unit tests)
     - `crates/fret-render-wgpu/src/renderer/tests.rs` (`image_fit_*`)
@@ -100,7 +100,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## M5 — Video fast paths (capability-gated)
 
 - [x] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
-  - References: ADR 0123/0124/0126.
+  - References: ADR 0119/0122/0124.
   - Desktop (Windows-local):
     - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
     - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`

@@ -314,7 +314,7 @@ where
         });
 
         // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
-        // reuse roots + subtree membership lists; ADR 0191). Parent pointers are still required
+        // reuse roots + subtree membership lists; ADR 0176). Parent pointers are still required
         // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
         // inconsistencies before applying invalidations that may need to propagate across cache-root
         // boundaries.
@@ -435,13 +435,13 @@ where
 
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
         // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
-        // via explicit liveness bookkeeping (ADR 0191).
+        // via explicit liveness bookkeeping (ADR 0176).
         //
         // We only sweep nodes that are both stale and unreachable from the window's liveness
         // roots:
         // - layer roots (base + overlays),
         // - view-cache reuse roots, and
-        // - retained windowed-surface keep-alive roots (ADR 0192),
+        // - retained windowed-surface keep-alive roots (ADR 0177),
         // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
         //   edges on cache-hit frames).
         //
@@ -487,7 +487,7 @@ where
 
             // Also treat recorded view-cache subtree memberships as authoritative reachability,
             // so cache hits can keep subtrees alive even when child edges are temporarily
-            // incomplete (ADR 0191).
+            // incomplete (ADR 0176).
             for root in view_cache_reuse_roots {
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
@@ -1679,7 +1679,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                         return None;
                     }
 
-                    // Prefer the prepaint-derived window range (ADR 0190). This lets retained
+                    // Prefer the prepaint-derived window range (ADR 0175). This lets retained
                     // virtual surfaces update row membership on cache-hit frames without
                     // re-deriving the window from scroll state during reconcile.
                     let mut window_range =

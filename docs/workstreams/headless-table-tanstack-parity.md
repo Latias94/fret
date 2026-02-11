@@ -7,7 +7,7 @@ surface that exists in `table-core`, Fret’s headless engine can express it wit
 - Upstream reference (local checkout): `repo-ref/table/packages/table-core`
 - Fret implementation: `ecosystem/fret-ui-headless/src/table/`
 - Primary consumer (UI integration): `ecosystem/fret-ui-shadcn/src/data_table.rs`
-- Related ADR: `docs/adr/0101-headless-table-engine.md`
+- Related ADR: `docs/adr/0100-headless-table-engine.md`
 
 ---
 

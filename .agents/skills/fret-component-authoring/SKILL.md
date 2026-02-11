@@ -31,7 +31,7 @@ Upper layers should stay in `fret-ui-kit` / `fret-ui-shadcn` and keep `crates/fr
 - **Element-local state:** `cx.with_state(...)` / `cx.with_state_for(...)`
 - **Model observation:** a model read must also register invalidation (`Layout` vs `Paint`)
 - **Action hooks:** interaction policy is owned by components (ADR 0074)
-- **Unified authoring surface:** `UiBuilder` via `value.ui().px_3().w_full().into_element(cx)` (ADR 0175)
+- **Unified authoring surface:** `UiBuilder` via `value.ui().px_3().w_full().into_element(cx)` (ADR 0145)
 
 ## Quick start
 
@@ -93,7 +93,7 @@ If a component should be styleable/layoutable like shadcn recipes, implement the
 - `UiIntoElement` (renders to `AnyElement`)
 - `UiSupportsChrome` / `UiSupportsLayout` (enables fluent methods)
 
-Reference: `docs/component-authoring-contracts.md` (“Unified authoring builder surface”, ADR 0175).
+Reference: `docs/component-authoring-contracts.md` (“Unified authoring builder surface”, ADR 0145).
 
 ### Iterator borrow pitfall: use `*_build` constructors
 
@@ -119,7 +119,7 @@ This avoids borrow-checker conflicts while keeping rendering keyed/stable.
 - Runtime contract surface map: `docs/runtime-contract-matrix.md`
 - Key APIs:
   - `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
-  - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiBuilder`, ADR 0175)
+  - `ecosystem/fret-ui-kit/src/ui_builder.rs` (`UiBuilder`, ADR 0145)
   - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`ActionHooksExt`)
 
 ## Related skills

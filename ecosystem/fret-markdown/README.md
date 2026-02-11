@@ -81,5 +81,5 @@ Code blocks:
 - `MarkdownComponents.code_block_max_height_from_theme` (default: true): disable this to opt out of
   theme-driven `max_height` resolution.
 
-See `docs/adr/0103-text-decorations-and-markdown-theme-tokens.md` for the full token list and
+See `docs/adr/0102-text-decorations-and-markdown-theme-tokens.md` for the full token list and
 compatibility rules.

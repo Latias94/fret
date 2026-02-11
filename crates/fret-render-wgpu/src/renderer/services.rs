@@ -254,7 +254,7 @@ impl fret_core::MaterialService for Renderer {
         // v1: all baseline material kinds are supported by the quad shader on wgpu backends.
         //
         // Capability gating hooks can be added once we have a backend that cannot support a given
-        // kind under the fixed Tier B binding shape (ADR 0124).
+        // kind under the fixed Tier B binding shape (ADR 0122).
         match self.materials_by_desc.entry(desc) {
             Entry::Occupied(e) => {
                 let id = *e.get();

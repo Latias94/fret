@@ -508,7 +508,7 @@ before continuing component surface work:
     - `crates/fret-ui/src/declarative/mount.rs` (`declarative_instance_change_mask` container diff)
     - `crates/fret-ui/src/declarative/tests/layout.rs` (`container_border_change_invalidates_child_layout`)
     - `crates/fret-ui/src/element.rs` (`ShadowStyle` / `RingStyle` derive `PartialEq`)
-    - `ecosystem/fret-ui-material3/src/text_field.rs` (Filled hover state-layer overlay kept mounted; ADR 0181)
+    - `ecosystem/fret-ui-material3/src/text_field.rs` (Filled hover state-layer overlay kept mounted; ADR 0166)
     - `ecosystem/fret-ui-material3/tests/text_field_hover.rs` (`filled_text_field_hover_overlay_survives_focus_transition`)
     - `goldens/material3-headless/v1/material3-text-field.*.json` (regenerated after the fix)
 - [ ] Hoisted interaction sources: keep deferred; revisit only when we need deterministic “preview”

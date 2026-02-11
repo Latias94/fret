@@ -254,7 +254,7 @@ fn render_column_actions_menu<H: UiHost>(
     })
 }
 
-/// shadcn/ui `DataTable` backed by the TanStack-aligned headless engine (ADR 0101).
+/// shadcn/ui `DataTable` backed by the TanStack-aligned headless engine (ADR 0100).
 ///
 /// This is an integration surface:
 /// - headless row model: filtering/sorting/pagination/visibility (future: sizing/pinning)
@@ -344,7 +344,7 @@ impl DataTable {
     }
 
     /// A retained-host variant of [`Self::into_element`] that enables composable body rows under
-    /// cache-root reuse (virt-003 / ADR 0192).
+    /// cache-root reuse (virt-003 / ADR 0177).
     ///
     /// Notes (v0):
     /// - supports fixed-height and measured (variable-height) rows

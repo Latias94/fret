@@ -696,7 +696,7 @@ TODO:
   - `tools/perf/perf_log.py` now emits churn + intermediate pool lifecycle tables and includes captured stdout paths.
   - Commit: `2c40a3fb`
 - [x] Keep ADRs and audits in sync with the diagnostics bundle schema.
-  - Update ADR 0174 bundle/export notes when schema changes (renderer counters, script steps, screenshot wiring).
+  - Update ADR 0159 bundle/export notes when schema changes (renderer counters, script steps, screenshot wiring).
   - Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence and gaps when tooling contracts change.
 
 ### M4: Windowed surfaces (prepaint-driven visible windows)

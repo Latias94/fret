@@ -2,7 +2,7 @@
 //!
 //! This crate intentionally lives under `ecosystem/*` so it can evolve without forcing kernel
 //! churn in the core framework crates. The stable contract is the runner-provided
-//! `fret_runtime::Dispatcher` (ADR 0190).
+//! `fret_runtime::Dispatcher` (ADR 0175).
 
 use std::{
     collections::VecDeque,
@@ -208,7 +208,7 @@ impl<M> InboxSender<M> {
 /// Adapter that turns an [`Inbox`] into a runner-drainable [`InboxDrain`] implementation.
 ///
 /// Register instances in `fret_runtime::InboxDrainRegistry` so runners can drain inboxes at a
-/// driver boundary (ADR 0190).
+/// driver boundary (ADR 0175).
 pub struct InboxDrainer<M> {
     inbox: Inbox<M>,
     window_hint: Option<AppWindowId>,
@@ -263,7 +263,7 @@ impl Executors {
     /// Spawn a `Send` future and deliver its output into an inbox, waking the runner on success.
     ///
     /// This is intended for integrating async runtimes (tokio/async-std/etc.) with Fret's
-    /// driver-boundary inbox model (ADR 0190), without forcing a specific runtime on the kernel.
+    /// driver-boundary inbox model (ADR 0175), without forcing a specific runtime on the kernel.
     pub fn spawn_future_to_inbox<M, Fut>(
         &self,
         spawner: &dyn FutureSpawner,

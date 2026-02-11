@@ -23,11 +23,11 @@ Each TODO is labeled:
 
 - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - `docs/adr/0075-docking-layering-b-route-and-retained-bridge.md`
-- `docs/adr/0147-viewport-input-forwarding-explicit-units.md`
+- `docs/adr/0132-viewport-input-forwarding-explicit-units.md`
 - `docs/adr/0011-overlays-and-multi-root.md`
 - `docs/adr/0020-focus-and-command-routing.md`
-- `docs/adr/0165-pointer-identity-and-multi-pointer-capture.md`
-- `docs/adr/0166-multi-pointer-drag-sessions-and-routing-keys.md`
+- `docs/adr/0150-pointer-identity-and-multi-pointer-capture.md`
+- `docs/adr/0151-multi-pointer-drag-sessions-and-routing-keys.md`
 
 ## P0 — Diagnostics & Observability (AI-Friendly)
 
@@ -67,7 +67,7 @@ Each TODO is labeled:
 ## P0 — Refactor Guardrails (Multi-pointer Ready)
 
 - [x] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
-  - Rationale: ADR 0072/0165 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
+  - Rationale: ADR 0072/0150 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
   - Evidence anchors:
     - current capture: `ecosystem/fret-docking/src/dock/space.rs` (`viewport_capture: HashMap<PointerId, ViewportCaptureState>`)
     - viewport capture types: `ecosystem/fret-docking/src/dock/viewport.rs`

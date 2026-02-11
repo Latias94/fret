@@ -1,6 +1,6 @@
 //! Canvas portal host for embedding `fret-ui` subtrees into a node graph canvas.
 //!
-//! This is the staged "Canvas Portal" implementation described in ADR 0135:
+//! This is the staged "Canvas Portal" implementation described in ADR 0126:
 //! - Stage 1: canvas paints simple labels (current default).
 //! - Stage 2: host node header/body subtrees as regular `fret-ui` elements (this module).
 //! - Stage 3: per-port-row subtrees and richer semantics (future).
@@ -254,7 +254,7 @@ pub struct NodeGraphPortalNodeLayout {
 /// - feeds measured subtree sizes back into `MeasuredGeometryStore` as node size hints.
 ///
 /// The portal subtree is rendered in screen-space (window coordinates) and does not participate in
-/// the canvas pan/zoom transform, matching the ADR 0135 "escape hatch" model.
+/// the canvas pan/zoom transform, matching the ADR 0126 "escape hatch" model.
 pub struct NodeGraphPortalHost<P, C = PortalNoopCommandHandler> {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,

@@ -12,8 +12,8 @@ libraries (Fluent, Material variants, custom design systems) can follow one pred
 
 Fret already has a repository-wide contract for “state → style” authoring:
 
-- ADR 1158: `WidgetStates` + `WidgetStateProperty<T>` (state resolution primitive)
-- ADR 1159: ecosystem component `*Style` override surface (partial per-state overrides)
+- ADR 0219: `WidgetStates` + `WidgetStateProperty<T>` (state resolution primitive)
+- ADR 0220: ecosystem component `*Style` override surface (partial per-state overrides)
 
 At the same time, Material 3 alignment work introduced a Compose-inspired internal “foundation”
 layer (`token_resolver`, `indication`, `motion_scheme`, `content`, `interactive_size`, …).
@@ -24,7 +24,7 @@ Both directions are valuable, but **two parallel authoring patterns** are a long
 - new ecosystems will copy the “wrong” patterns and reintroduce drift,
 - maintaining multiple override mechanisms forces late breaking refactors.
 
-This plan aligns Material 3 components with ADR 1159 so Material 3 becomes:
+This plan aligns Material 3 components with ADR 0220 so Material 3 becomes:
 
 - a design-system policy library (tokens + defaults),
 - a proving ground for a consistent public `*Style` API shape.
@@ -36,7 +36,7 @@ This plan aligns Material 3 components with ADR 1159 so Material 3 becomes:
   `WidgetStates`, `WidgetStateProperty<T>`, and shared resolution helpers.
 - `ecosystem/fret-ui-material3` owns Material policy:
   token namespaces (`md.sys.*`, `md.comp.*`), alias mapping, motion, ink rules, etc.
-- Any public component override surface in ecosystem crates should follow ADR 1159:
+- Any public component override surface in ecosystem crates should follow ADR 0220:
   `Option<WidgetStateProperty<Option<T>>>` + shallow right-biased `merged()`.
 
 ## Goal
@@ -75,7 +75,7 @@ Do **not** introduce a second Material namespace (e.g. `material3.*`) for the sa
 If older workstreams or legacy pilot code mention `material3.*`, treat them as deprecated notes and
 migrate them to `md.*` or delete them during the refactor.
 
-## Contract: Material 3 component override shape (ADR 1159)
+## Contract: Material 3 component override shape (ADR 0220)
 
 For any slot that varies by widget state, use:
 
@@ -94,13 +94,13 @@ All Material 3 `*Style` structs must provide:
 ## Current adoption snapshot (main)
 
 This snapshot is intentionally “API-shape only”: it tracks whether a component exposes a public
-ADR 1159-style override surface, not whether it is visually aligned with Material.
+ADR 0220-style override surface, not whether it is visually aligned with Material.
 
 Important: this snapshot only counts **exported** crate surfaces (reachable from
 `ecosystem/fret-ui-material3/src/lib.rs`). Some early experiments may exist in-tree but are not
 wired into the crate and therefore do not represent the current public surface.
 
-| Component | File | Has `*Style` | Has `.style(...)` | ADR 1159 shape | Notes |
+| Component | File | Has `*Style` | Has `.style(...)` | ADR 0220 shape | Notes |
 |---|---|---:|---:|---:|---|
 | Select | `ecosystem/fret-ui-material3/src/select.rs` | Yes (`SelectStyle`) | Yes | Yes | Re-introduced on `md.sys.*` / `md.comp.*` tokens (including `md.comp.{outlined,filled}-select.*`) with a listbox overlay. |
 | RadioGroup | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Group is implemented by composing `Radio` items and forwarding `RadioStyle` into each item. |
@@ -124,11 +124,11 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 - [x] Choose (B): keep `docs/workstreams/state-driven-style-resolution-v1.md` focused on cross-ecosystem primitives; track Material 3 consumer alignment here.
 - [x] Remove deprecated v0 Material 3 token lists from the SDSR workstream (they used `material3.*` keys and are no longer authoritative).
-- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence for ADR 1159 to include current Material 3 adoption.
+- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence for ADR 0220 to include current Material 3 adoption.
 
 ### M3SA-005 — Remove or migrate legacy pilot modules
 
-There were early, ADR-1159-shaped experiments in-tree (`select.rs`, `radio_group.rs`) that were
+There were early, ADR-0220-shaped experiments in-tree (`select.rs`, `radio_group.rs`) that were
 not exported from the crate and did not follow the current `md.*` token namespace decision.
 
 - [x] Delete these modules entirely (they were not exported and used deprecated `material3.*` keys).
@@ -356,7 +356,7 @@ Recommended layering order (per slot):
 
 1. Token-derived defaults (`md.comp.*` → `md.sys.*`)
 2. Material tree-local context overrides (content color / motion scheme / ripple config) when applicable
-3. Component `*Style` overrides (ADR 1159 shape)
+3. Component `*Style` overrides (ADR 0220 shape)
 
 Recommended order:
 
@@ -389,8 +389,8 @@ Options:
 
 ## Evidence anchors
 
-- ADR 1158: `docs/adr/1158-state-driven-style-resolution-v1.md`
-- ADR 1159: `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+- ADR 0219: `docs/adr/0219-state-driven-style-resolution-v1.md`
+- ADR 0220: `docs/adr/0220-ecosystem-style-override-surface-v1.md`
 - Kit primitive: `ecosystem/fret-ui-kit/src/style/state.rs`
 - Shared patterns: `docs/shadcn-style-override-patterns.md`
 - Material foundation: `ecosystem/fret-ui-material3/src/foundation/*`

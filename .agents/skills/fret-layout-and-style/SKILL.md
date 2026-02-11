@@ -24,7 +24,7 @@ Use this skill when:
 - `LayoutRefinement`: size/position/margin/inset/flex/overflow (declarative-only)
 - `ChromeRefinement`: padding/radius/border/shadow/colors (not layout-affecting)
 - `Space` / `Radius` / `MetricRef` / `ColorRef`: token-driven values (theme-resolved)
-- `UiBuilder`: `value.ui().px_3().w_full().rounded_md().into_element(cx)` (ADR 0175)
+- `UiBuilder`: `value.ui().px_3().w_full().rounded_md().into_element(cx)` (ADR 0145)
 
 ## Quick start
 
@@ -94,7 +94,7 @@ Use the helper:
 
 - `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 
-Reference: `docs/component-authoring-contracts.md` (“Overflow and clipping”, ADR 0088).
+Reference: `docs/component-authoring-contracts.md` (“Overflow and clipping”, ADR 0086).
 
 ### 3) Use `*_build` when iterators borrow `&mut cx`
 

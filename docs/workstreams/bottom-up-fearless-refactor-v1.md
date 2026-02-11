@@ -35,7 +35,7 @@ These are the “hard seams” that make refactors safe:
 2. **Crate layering is enforced**
    - Core crates stay backend-agnostic (no `winit`/`wgpu`/`web-sys` in `fret-core`/`fret-runtime`/`fret-app`/`fret-ui`).
    - Ecosystem crates are extractable and backend-agnostic by default.
-   - Validate continuously via `tools/check_layering.py` (ADR 0093, `docs/dependency-policy.md`).
+   - Validate continuously via `tools/check_layering.py` (ADR 0092, `docs/dependency-policy.md`).
 
 3. **Hard-to-change contracts live in ADRs**
    - If a refactor changes a contract, update or add an ADR first (or explicitly mark a decision gate as proposed).

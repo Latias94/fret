@@ -1042,7 +1042,7 @@ pub enum UiOverlayPlacementTraceEntryV1 {
     },
 }
 
-/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0195).
+/// Debug-only snapshot for the wasm textarea IME bridge (ADR 0180).
 ///
 /// This is intended for diagnostics evidence and is not a normative contract surface.
 #[derive(Debug, Clone, Serialize, Deserialize)]

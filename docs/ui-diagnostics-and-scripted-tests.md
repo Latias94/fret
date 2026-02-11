@@ -26,7 +26,7 @@ The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
 Related ADRs:
 
-- ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- ADR 0159: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
 
@@ -353,11 +353,11 @@ At a high level:
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
-  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0190 “ephemeral prepaint items” workflows)
+  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0175 “ephemeral prepaint items” workflows)
   - `debug.virtual_list_windows`: VirtualList window telemetry (used to triage scroll-induced work)
     - `debug.virtual_list_windows[*].source`: whether the record was emitted from `layout` or `prepaint`
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
-  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
+  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0132)
   - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
@@ -391,7 +391,7 @@ Semantics export:
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
-- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0192).
+- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
 
