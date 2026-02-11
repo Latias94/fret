@@ -39,13 +39,16 @@ Each TODO is labeled:
   - Gate: “round trip” tests with randomized op sequences (bounded depth).
   - Status: deterministic canonicalization is in place; randomized/fixture op-sequence coverage is still TODO.
 
-- [ ] DN-P0-core-006 Update `DockGraph::compute_layout` (if needed) to match N-ary semantics.
-  - Note: current code already iterates over `children.len().min(fractions.len())`, but we should
-    enforce `len` equality via invariants rather than silent truncation.
+- [x] DN-P0-core-006 Update `DockGraph::compute_layout` to avoid silent truncation.
+  - Repair non-canonical splits locally (mismatched lengths, non-finite shares) for deterministic layout.
+  - Evidence:
+    - `crates/fret-core/src/dock/query.rs` (`DockGraph::compute_layout`)
+    - `crates/fret-core/src/dock/tests.rs` (`compute_layout_repairs_mismatched_fraction_lengths_without_truncating_children`)
 
-- [ ] DN-P0-core-007 Add a `DockGraph` helper to locate a node’s parent chain efficiently.
+- [x] DN-P0-core-007 Add a `DockGraph` helper to locate a node’s parent chain efficiently.
   - Goal: avoid repeated subtree scans in hot paths (especially for large layouts).
-  - Option: cache parent links in a temporary map during op application.
+  - Evidence:
+    - `crates/fret-core/src/dock/query.rs` (`DockGraph::build_parent_index_for_window`, `DockGraph::edge_dock_decision`)
 
 - [~] DN-P0-core-008 Introduce internal “shares” vocabulary helpers.
   - Example: `normalize_shares(&mut [f32])`, `split_share(old, k) -> (a, b)`.
@@ -83,12 +86,26 @@ Each TODO is labeled:
 
 ## P1 — Constraints hooks (editor feel)
 
-- [ ] DN-P1-policy-001 Add docking policy hooks for `min_size` per panel kind.
+- [x] DN-P1-policy-001 Add docking policy hooks for `min_size` per panel kind.
   - Start with viewport panels to prevent collapsing.
   - Gate: unit tests for clamping; manual demo verification.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/mod.rs` (`DockingPolicy`, default viewport min)
+    - `ecosystem/fret-docking/src/dock/services.rs` (`DockingPolicyService`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (split drag clamps via `min_px`)
+    - `ecosystem/fret-docking/src/dock/tests/split.rs` (`dock_split_handle_drag_respects_panel_min_size_policy`)
 
-- [ ] DN-P1-policy-002 Add drop-zone masks (disallow docking on certain edges/targets).
+- [x] DN-P1-policy-002 Add drop-zone masks (disallow docking on certain edges/targets).
   - Gate: diag script verifying disallowed zone never commits.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/mod.rs` (`DockingPolicy::allow_dock_drop_target`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (drop target resolve filters by policy)
+    - `ecosystem/fret-docking/src/dock/tests/drag.rs` (`dock_drag_drop_zone_mask_can_disallow_left_hint_rect`)
+    - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::DockDropResolveSourceIs`, `UiPredicateV1::DockDropResolvedIsSome`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + tests)
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (demo toggle + policy wiring)
+    - `tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json`
+    - `crates/fret-diag/src/lib.rs` (`docking_arbitration_suite_scripts` includes mask script)
 
 - [ ] DN-P1-policy-003 Add group locking / “no-drop-target” semantics.
   - Similar to `egui_tiles` behavior overrides; kept in docking layer.
@@ -114,24 +131,29 @@ Each TODO is labeled:
 
 ## P1 — Diagnostics (`fretboard diag`) gates
 
-- [~] DN-P1-diag-001 Add a diag suite for N-ary split docking invariants.
+- [x] DN-P1-diag-001 Add a diag suite for N-ary split docking invariants.
   - Scripts target: `docking_arbitration_demo`.
   - Must assert: no stuck capture, correct active tab, drop target matches expectation.
-  - Status: initial script + predicates landed; expand into a multi-script suite.
   - Evidence:
     - `tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json`
+    - `tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json`
+    - `tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json`
+    - `crates/fret-diag/src/lib.rs` (`docking_arbitration_suite_scripts`)
     - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1` docking predicates)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation)
 
-- [~] DN-P1-diag-002 Add a scripted “repeated edge-dock does not deepen tree” gate.
+- [x] DN-P1-diag-002 Add a scripted “repeated edge-dock does not deepen tree” gate.
   - Evidence: bundle includes dock graph stats or a simplified “depth” counter.
-  - Status: cheap dock graph stats + `*_le` predicates exist; still need a multi-step script that performs repeated edge docks.
   - Evidence:
+    - `tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json`
     - `crates/fret-diag-protocol/src/lib.rs` (`dock_graph_node_count_le`, `dock_graph_max_split_depth_le`)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + tests)
 
-- [ ] DN-P1-diag-003 Add a scripted splitter drag gate.
-  - Evidence: content rects update monotonically; no oscillation.
+- [x] DN-P1-diag-003 Add a scripted splitter drag gate.
+  - Evidence: viewport bounds cross a threshold after drag; graph remains canonical.
+  - Evidence:
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-split-handle-viewport` semantics anchor)
+    - `tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json`
 
 - [ ] DN-P1-diag-004 Add `meta.required_capabilities` to docking scripts and fail fast on missing support.
   - Goal: prevent “timeouts as failures” in CI; prefer structured capability errors.
