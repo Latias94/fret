@@ -230,6 +230,158 @@ pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
     Ok(())
 }
 
+pub(super) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(
+    out_dir: &Path,
+) -> Result<(), String> {
+    const LABEL: &str = "ui-gallery-text-mixed-script-bundled-fallback-conformance";
+
+    fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf> {
+        let suffix = format!("-{label}");
+        let mut best: Option<(u64, PathBuf)> = None;
+        let entries = std::fs::read_dir(out_dir).ok()?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let name = path.file_name()?.to_str()?.to_string();
+            if !name.ends_with(&suffix) {
+                continue;
+            }
+            let ts = name.split('-').next()?.parse::<u64>().ok()?;
+            let bundle_json = path.join("bundle.json");
+            if !bundle_json.is_file() {
+                continue;
+            }
+            match &best {
+                Some((best_ts, _)) if *best_ts >= ts => {}
+                _ => best = Some((ts, path)),
+            }
+        }
+        best.map(|(_, p)| p)
+    }
+
+    fn bundle_last_text_policy_snapshot(
+        bundle: &serde_json::Value,
+    ) -> Option<(bool, bool, Vec<String>)> {
+        let windows = bundle.get("windows")?.as_array()?;
+        let w = windows.first()?;
+        let snaps = w.get("snapshots")?.as_array()?;
+        let best = snaps
+            .iter()
+            .filter_map(|s| Some((s.get("frame_id")?.as_u64()?, s)))
+            .max_by_key(|(frame_id, _)| *frame_id)
+            .map(|(_, s)| s)?;
+
+        let policy = best
+            .get("resource_caches")?
+            .get("render_text_fallback_policy")?
+            .as_object()?;
+        let system_fonts_enabled = policy.get("system_fonts_enabled")?.as_bool()?;
+        let prefer_common_fallback = policy.get("prefer_common_fallback")?.as_bool()?;
+        let candidates = policy
+            .get("common_fallback_candidates")
+            .and_then(|v| v.as_array())
+            .map(|v| {
+                v.iter()
+                    .filter_map(|s| s.as_str().map(|s| s.to_string()))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        Some((system_fonts_enabled, prefer_common_fallback, candidates))
+    }
+
+    fn bundle_last_text_missing_glyphs(bundle: &serde_json::Value) -> Option<u64> {
+        let windows = bundle.get("windows")?.as_array()?;
+        let w = windows.first()?;
+        let snaps = w.get("snapshots")?.as_array()?;
+        let best = snaps
+            .iter()
+            .filter_map(|s| Some((s.get("frame_id")?.as_u64()?, s)))
+            .max_by_key(|(frame_id, _)| *frame_id)
+            .map(|(_, s)| s)?;
+
+        let render_text = best
+            .get("resource_caches")?
+            .get("render_text")?
+            .as_object()?;
+        render_text.get("frame_missing_glyphs")?.as_u64()
+    }
+
+    let dir = find_latest_labeled_bundle_dir(out_dir, LABEL).ok_or_else(|| {
+        format!(
+            "ui-gallery text mixed-script bundled fallback gate expected a capture_bundle label={LABEL} under out_dir, but none was found\n  out_dir: {}",
+            out_dir.display()
+        )
+    })?;
+
+    let bundle_path = dir.join("bundle.json");
+    let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let (system_fonts_enabled, prefer_common_fallback, candidates) =
+        bundle_last_text_policy_snapshot(&bundle).ok_or_else(|| {
+            format!(
+                "ui-gallery text mixed-script bundled fallback gate expected renderer text fallback policy snapshot in bundle\n  bundle: {}",
+                bundle_path.display()
+            )
+        })?;
+    let missing_glyphs = bundle_last_text_missing_glyphs(&bundle).ok_or_else(|| {
+        format!(
+            "ui-gallery text mixed-script bundled fallback gate expected renderer text perf snapshot in bundle\n  bundle: {}",
+            bundle_path.display()
+        )
+    })?;
+
+    let evidence_path =
+        out_dir.join("check.ui_gallery_text_mixed_script_bundled_fallback_conformance.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "bundle_dir": dir.display().to_string(),
+        "bundle": bundle_path.display().to_string(),
+        "fallback_policy": {
+            "system_fonts_enabled": system_fonts_enabled,
+            "prefer_common_fallback": prefer_common_fallback,
+            "common_fallback_candidates": candidates,
+        },
+        "render_text": { "frame_missing_glyphs": missing_glyphs },
+    });
+    let _ = write_json_value(&evidence_path, &payload);
+
+    if system_fonts_enabled {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected system_fonts_enabled=false for a deterministic (bundled-only) fallback baseline\n  hint: rerun with --env FRET_TEXT_SYSTEM_FONTS=0 and ensure bundled fonts are loaded (FRET_UI_GALLERY_BOOTSTRAP_FONTS=1)\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+    if !prefer_common_fallback {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected prefer_common_fallback=true when system fonts are disabled\n  evidence: {}",
+            evidence_path.display()
+        ));
+    }
+
+    const EXPECTED: &[&str] = &["Noto Sans CJK SC", "Noto Sans Arabic", "Noto Color Emoji"];
+    for &family in EXPECTED {
+        if !candidates.iter().any(|c| c == family) {
+            return Err(format!(
+                "ui-gallery text mixed-script bundled fallback gate failed: expected common_fallback_candidates to include {family:?}\n  evidence: {}",
+                evidence_path.display()
+            ));
+        }
+    }
+
+    if missing_glyphs != 0 {
+        return Err(format!(
+            "ui-gallery text mixed-script bundled fallback gate failed: expected frame_missing_glyphs=0 under bundled fonts\n  observed: {}\n  evidence: {}",
+            missing_glyphs,
+            evidence_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) enum BundleStatsSort {
     #[default]

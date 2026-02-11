@@ -73,7 +73,30 @@ FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-tex
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+### Gate 3: Bundled-only mixed-script baseline is tofu-free
+
+- Script: `tools/diag-scripts/ui-gallery-text-mixed-script-bundled-fallback-conformance.json`
+- Check flag: `--check-ui-gallery-text-mixed-script-bundled-fallback-conformance`
+
+Expected:
+
+- The script navigates to the text measure overlay page, which includes a mixed-script sample (`m你😀`).
+- The gate asserts:
+  - `system_fonts_enabled=false`
+  - `prefer_common_fallback=true`
+  - `frame_missing_glyphs=0`
+
+Run (native, deterministic):
+
+```bash
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-text-mixed-script-bundled-fallback-conformance.json \
+  --env FRET_TEXT_SYSTEM_FONTS=0 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --check-ui-gallery-text-mixed-script-bundled-fallback-conformance \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 ## Next (recommended)
 
 1) Add a locale-switch gate that asserts `fallback_policy_key` bumps when the renderer locale changes (bundle-only).
-2) Add a bundled-only (no system fonts) conformance gate that asserts missing-glyph traces are captured when tofu occurs.
+2) Add a bundled-only conformance gate that asserts missing-glyph traces are captured when tofu occurs (debug-only case).
