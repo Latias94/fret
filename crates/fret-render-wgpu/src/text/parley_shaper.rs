@@ -900,7 +900,7 @@ mod tests {
 
     #[test]
     fn rescan_is_noop_when_system_fonts_disabled() {
-        let mut shaper = ParleyShaper::new_without_system_fonts();
+        let shaper = ParleyShaper::new_without_system_fonts();
         assert!(shaper.system_font_rescan_seed().is_none());
     }
 
