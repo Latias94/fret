@@ -54,9 +54,10 @@ Each TODO is labeled:
 
 ## P0 — UI alignment (drop previews and split handles)
 
-- [ ] DN-P0-ui-001 Update docking drop preview geometry to match commit semantics.
+- [~] DN-P0-ui-001 Update docking drop preview geometry to match commit semantics.
   - If we insert into a same-axis split, preview must show the new child slot.
   - Gate: add deterministic geometry tests in `ecosystem/fret-docking`.
+  - Status: drop overlay preview consults `DockGraph::edge_dock_decision` (tests still TODO).
 
 - [ ] DN-P0-ui-002 Ensure split-handle hit-testing works for N-ary splits.
   - Verify `resizable_panel_group::compute_layout` returns N-1 handles and we respect them.
