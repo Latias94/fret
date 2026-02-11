@@ -2395,6 +2395,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-vscode-theme"
+version = "0.1.0"
+dependencies = [
+ "fret-syntax",
+ "fret-ui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "fret-workspace"
 version = "0.1.0"
 dependencies = [
@@ -2412,6 +2423,8 @@ name = "fretboard"
 version = "0.1.0"
 dependencies = [
  "fret-diag",
+ "fret-ui",
+ "fret-vscode-theme",
  "serde_json",
 ]
 

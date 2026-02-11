@@ -476,6 +476,7 @@ Recent additions:
 
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
+- `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 
 Notes:
 
