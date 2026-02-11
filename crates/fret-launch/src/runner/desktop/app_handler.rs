@@ -366,6 +366,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
+        let locale = self
+            .app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .and_then(|service| service.preferred_locales().first())
+            .map(|locale| locale.to_string());
+        let _ = renderer.set_text_locale(locale.as_deref());
         self.app
             .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
         self.app
@@ -373,9 +379,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.text_font_stack_key(),
             ));
 
-        let _ = fret_runtime::apply_font_catalog_update(
+        let entries = renderer
+            .all_font_catalog_entries()
+            .into_iter()
+            .map(|e| fret_runtime::FontCatalogEntry {
+                family: e.family,
+                has_variable_axes: e.has_variable_axes,
+                known_variable_axes: e.known_variable_axes,
+                is_monospace_candidate: e.is_monospace_candidate,
+            })
+            .collect::<Vec<_>>();
+        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
             &mut self.app,
-            renderer.all_font_names(),
+            entries,
             fret_runtime::FontFamilyDefaultsPolicy::None,
         );
 

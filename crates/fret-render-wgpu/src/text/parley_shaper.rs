@@ -3,11 +3,17 @@ use parley::FontContext;
 use parley::FontData;
 use parley::Layout;
 use parley::LayoutContext;
+use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
     FontStyle, FontWeight as ParleyFontWeight, StyleProperty, TextStyle as ParleyTextStyle,
 };
+use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
+
+use super::FontCatalogEntryMetadata;
 
 fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
     let ascent = ascent.max(0.0);
@@ -27,6 +33,8 @@ pub(crate) struct ParleyGlyph {
     pub advance: f32,
     pub font: FontData,
     pub font_size: f32,
+    pub normalized_coords: Arc<[i16]>,
+    pub synthesis: parley::fontique::Synthesis,
     pub text_range: Range<usize>,
     pub is_rtl: bool,
 }
@@ -55,11 +63,29 @@ pub(crate) struct ParleyShaper {
     fcx: FontContext,
     lcx: LayoutContext<[u8; 4]>,
     layout: Layout<[u8; 4]>,
+    default_locale: Option<String>,
+    common_fallback_stack_suffix: String,
 }
 
 impl ParleyShaper {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_default_locale(&mut self, locale_bcp47: Option<String>) -> bool {
+        if self.default_locale == locale_bcp47 {
+            return false;
+        }
+        self.default_locale = locale_bcp47;
+        true
+    }
+
+    pub fn set_common_fallback_stack_suffix(&mut self, suffix: String) -> bool {
+        if self.common_fallback_stack_suffix == suffix {
+            return false;
+        }
+        self.common_fallback_stack_suffix = suffix;
+        true
     }
 
     #[cfg(test)]
@@ -75,6 +101,131 @@ impl ParleyShaper {
         out
     }
 
+    pub fn all_font_names(&mut self) -> Vec<String> {
+        let mut by_lower: HashMap<String, String> = HashMap::new();
+        for name in self.fcx.collection.family_names() {
+            let key = name.to_ascii_lowercase();
+            by_lower.entry(key).or_insert_with(|| name.to_string());
+        }
+
+        let mut names: Vec<String> = by_lower.into_values().collect();
+        names.sort_unstable_by(|a, b| {
+            a.to_ascii_lowercase()
+                .cmp(&b.to_ascii_lowercase())
+                .then(a.cmp(b))
+        });
+        names
+    }
+
+    pub fn all_font_catalog_entries(&mut self) -> Vec<FontCatalogEntryMetadata> {
+        let mut by_lower: HashMap<String, String> = HashMap::new();
+        for name in self.fcx.collection.family_names() {
+            let key = name.to_ascii_lowercase();
+            by_lower.entry(key).or_insert_with(|| name.to_string());
+        }
+
+        let mut names: Vec<String> = by_lower.into_values().collect();
+        names.sort_unstable_by(|a, b| {
+            a.to_ascii_lowercase()
+                .cmp(&b.to_ascii_lowercase())
+                .then(a.cmp(b))
+        });
+
+        let mut out: Vec<FontCatalogEntryMetadata> = Vec::with_capacity(names.len());
+        for family in names {
+            let Some(id) = self.fcx.collection.family_id(&family) else {
+                continue;
+            };
+            let Some(info) = self.fcx.collection.family(id) else {
+                continue;
+            };
+
+            let mut has_variable_axes = false;
+            let mut has_wght = false;
+            let mut has_wdth = false;
+            let mut has_slnt = false;
+            let mut has_ital = false;
+            let mut has_opsz = false;
+
+            for font in info.fonts() {
+                has_variable_axes |= !font.axes().is_empty();
+                has_wght |= font.has_weight_axis();
+                has_wdth |= font.has_width_axis();
+                has_slnt |= font.has_slant_axis();
+                has_ital |= font.has_italic_axis();
+                has_opsz |= font.has_optical_size_axis();
+            }
+
+            let mut known_variable_axes: Vec<String> = Vec::new();
+            if has_wght {
+                known_variable_axes.push("wght".to_string());
+            }
+            if has_wdth {
+                known_variable_axes.push("wdth".to_string());
+            }
+            if has_slnt {
+                known_variable_axes.push("slnt".to_string());
+            }
+            if has_ital {
+                known_variable_axes.push("ital".to_string());
+            }
+            if has_opsz {
+                known_variable_axes.push("opsz".to_string());
+            }
+
+            let is_monospace_candidate = info
+                .default_font()
+                .and_then(|font| {
+                    let blob = font.load(Some(&mut self.fcx.source_cache))?;
+                    let face = FontRef::from_index(blob.as_ref(), font.index()).ok()?;
+                    let post = face.post().ok()?;
+                    Some(post.is_fixed_pitch() != 0)
+                })
+                .unwrap_or(false);
+
+            out.push(FontCatalogEntryMetadata {
+                family,
+                has_variable_axes,
+                known_variable_axes,
+                is_monospace_candidate,
+            });
+        }
+
+        out
+    }
+
+    pub fn resolve_family_id(&mut self, name: &str) -> Option<FamilyId> {
+        if let Some(id) = self.fcx.collection.family_id(name) {
+            return Some(id);
+        }
+
+        let target = name.to_ascii_lowercase();
+        let mut resolved: Option<String> = None;
+        for candidate in self.fcx.collection.family_names() {
+            if candidate.to_ascii_lowercase() == target {
+                resolved = Some(candidate.to_string());
+                break;
+            }
+        }
+        let resolved = resolved?;
+        self.fcx.collection.family_id(&resolved)
+    }
+
+    pub fn generic_family_ids(&mut self, generic: GenericFamily) -> Vec<FamilyId> {
+        self.fcx.collection.generic_families(generic).collect()
+    }
+
+    pub fn set_generic_family_ids(&mut self, generic: GenericFamily, ids: &[FamilyId]) -> bool {
+        let before = self.generic_family_ids(generic);
+        if before == ids {
+            return false;
+        }
+        self.fcx
+            .collection
+            .set_generic_families(generic, ids.iter().copied());
+        true
+    }
+
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         let mut added = 0usize;
         for data in fonts {
@@ -83,50 +234,6 @@ impl ParleyShaper {
             added = added.saturating_add(families.iter().map(|(_, fonts)| fonts.len()).sum());
         }
         added
-    }
-
-    pub fn set_generic_family_name(
-        &mut self,
-        generic: parley::fontique::GenericFamily,
-        family_name: &str,
-    ) -> bool {
-        let Some(id) = self.fcx.collection.family_id(family_name) else {
-            return false;
-        };
-
-        let before = self.fcx.collection.generic_families(generic).next();
-        if before == Some(id) {
-            return false;
-        }
-
-        self.fcx
-            .collection
-            .set_generic_families(generic, std::iter::once(id));
-        true
-    }
-
-    pub fn append_generic_family_name(
-        &mut self,
-        generic: parley::fontique::GenericFamily,
-        family_name: &str,
-    ) -> bool {
-        let Some(id) = self.fcx.collection.family_id(family_name) else {
-            return false;
-        };
-
-        if self
-            .fcx
-            .collection
-            .generic_families(generic)
-            .any(|existing| existing == id)
-        {
-            return false;
-        }
-
-        self.fcx
-            .collection
-            .append_generic_families(generic, std::iter::once(id));
-        true
     }
 
     pub fn shape_single_line(&mut self, input: TextInputRef<'_>, scale: f32) -> ShapedLineLayout {
@@ -140,12 +247,20 @@ impl ParleyShaper {
             .lcx
             .tree_builder(&mut self.fcx, scale, true, &root_style);
 
-        builder.push_style_span(base_parley_style(base_style));
+        builder.push_style_span(base_parley_style(
+            base_style,
+            self.default_locale.as_deref(),
+            &self.common_fallback_stack_suffix,
+        ));
 
         if let Some(span_ranges) = resolve_span_ranges(text, spans) {
             for (range, span) in span_ranges {
                 let chunk = &text[range.clone()];
-                if let Some(props) = shaping_properties_for_span(base_style, span) {
+                if let Some(props) = shaping_properties_for_span(
+                    base_style,
+                    span,
+                    &self.common_fallback_stack_suffix,
+                ) {
                     builder.push_style_modification_span(props.iter());
                     builder.push_text(chunk);
                     builder.pop_style_span();
@@ -201,6 +316,8 @@ impl ParleyShaper {
             let font = run.font();
             let font_data = font.clone();
             let font_size = run.font_size();
+            let normalized_coords: Arc<[i16]> = Arc::from(run.normalized_coords());
+            let synthesis = run.synthesis();
 
             for cluster in run.visual_clusters() {
                 let cluster_range = cluster.text_range();
@@ -218,6 +335,8 @@ impl ParleyShaper {
                         advance: g.advance,
                         font: font_data.clone(),
                         font_size,
+                        normalized_coords: normalized_coords.clone(),
+                        synthesis,
                         text_range: cluster_range.clone(),
                         is_rtl: cluster.is_rtl(),
                     });
@@ -259,12 +378,20 @@ impl ParleyShaper {
             .lcx
             .tree_builder(&mut self.fcx, scale, true, &root_style);
 
-        builder.push_style_span(base_parley_style(base_style));
+        builder.push_style_span(base_parley_style(
+            base_style,
+            self.default_locale.as_deref(),
+            &self.common_fallback_stack_suffix,
+        ));
 
         if let Some(span_ranges) = resolve_span_ranges(text, spans) {
             for (range, span) in span_ranges {
                 let chunk = &text[range.clone()];
-                if let Some(props) = shaping_properties_for_span(base_style, span) {
+                if let Some(props) = shaping_properties_for_span(
+                    base_style,
+                    span,
+                    &self.common_fallback_stack_suffix,
+                ) {
                     builder.push_style_modification_span(props.iter());
                     builder.push_text(chunk);
                     builder.pop_style_span();
@@ -373,24 +500,34 @@ fn resolve_span_ranges<'a>(
     Some(out)
 }
 
-fn base_parley_style(style: &TextStyle) -> ParleyTextStyle<'_, [u8; 4]> {
-    let stack = font_stack_for_font_id(&style.font);
+fn base_parley_style<'a>(
+    style: &TextStyle,
+    locale: Option<&'a str>,
+    common_fallback_stack_suffix: &str,
+) -> ParleyTextStyle<'a, [u8; 4]> {
+    let stack = font_stack_for_font_id(&style.font, common_fallback_stack_suffix);
     ParleyTextStyle {
         font_size: style.size.0,
         font_weight: ParleyFontWeight::new(style.weight.0 as f32),
         font_style: font_style_for_slant(style.slant),
         letter_spacing: style.letter_spacing_em.unwrap_or(0.0).clamp(-4.0, 4.0) * style.size.0,
+        locale,
         font_stack: parley::style::FontStack::Source(Cow::Owned(stack)),
         ..Default::default()
     }
 }
 
-fn font_stack_for_font_id(font: &FontId) -> String {
+fn font_stack_for_font_id(font: &FontId, common_fallback_stack_suffix: &str) -> String {
     match font {
         FontId::Ui => "sans-serif".to_string(),
         FontId::Serif => "serif".to_string(),
         FontId::Monospace => "monospace".to_string(),
-        FontId::Family(name) => name.clone(),
+        FontId::Family(name) => {
+            if common_fallback_stack_suffix.is_empty() {
+                return name.clone();
+            }
+            format!("{name}, {common_fallback_stack_suffix}")
+        }
     }
 }
 
@@ -405,6 +542,7 @@ fn font_style_for_slant(slant: TextSlant) -> FontStyle {
 fn shaping_properties_for_span(
     base: &TextStyle,
     span: &TextSpan,
+    common_fallback_stack_suffix: &str,
 ) -> Option<Vec<StyleProperty<'static, [u8; 4]>>> {
     let TextShapingStyle {
         font,
@@ -416,7 +554,7 @@ fn shaping_properties_for_span(
     let mut out: Vec<StyleProperty<'static, [u8; 4]>> = Vec::new();
 
     if let Some(font) = font {
-        let stack = font_stack_for_font_id(font);
+        let stack = font_stack_for_font_id(font, common_fallback_stack_suffix);
         out.push(StyleProperty::FontStack(parley::style::FontStack::Source(
             Cow::Owned(stack),
         )));

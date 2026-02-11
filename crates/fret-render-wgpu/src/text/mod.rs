@@ -1,4 +1,3 @@
-use cosmic_text::{Family, FontSystem};
 use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
     AttributedText, CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints,
@@ -7,16 +6,24 @@ use fret_core::{
 };
 use slotmap::SlotMap;
 use std::{
-    borrow::Cow,
     collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
     sync::{Arc, OnceLock},
 };
 
+use parley::fontique::FamilyId as ParleyFamilyId;
 use parley::fontique::GenericFamily as ParleyGenericFamily;
 
 pub(crate) mod parley_shaper;
 pub(crate) mod wrapper;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FontCatalogEntryMetadata {
+    pub family: String,
+    pub has_variable_axes: bool,
+    pub known_variable_axes: Vec<String>,
+    pub is_monospace_candidate: bool,
+}
 
 fn released_blob_cache_entries() -> usize {
     static ENTRIES: OnceLock<usize> = OnceLock::new();
@@ -104,122 +111,124 @@ fn measure_shaping_cache_min_text_len_bytes() -> usize {
     })
 }
 
-struct FretFallback;
-
-impl cosmic_text::Fallback for FretFallback {
-    fn common_fallback(&self) -> &[&'static str] {
-        // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
-        // feature flags), include those families in the fallback chain so mixed-script text works
-        // without explicit per-span font selection.
-        #[cfg(target_arch = "wasm32")]
-        {
-            &[
-                // UI (bundled in `fret-fonts` bootstrap)
-                "Inter",
-                // CJK (bundled via `fret-fonts/cjk-lite`)
-                "Noto Sans CJK SC",
-                // Emoji (bundled via `fret-fonts/emoji`)
-                "Noto Color Emoji",
-            ]
-        }
-        #[cfg(target_os = "windows")]
-        {
-            &[
-                // UI
-                "Segoe UI",
-                "Tahoma",
-                // CJK
-                "Microsoft YaHei UI",
-                "Microsoft YaHei",
-                "Yu Gothic UI",
-                "Meiryo UI",
-                "Meiryo",
-                "Nirmala UI",
-                // Bundled/portable fallbacks (if available)
-                "Noto Sans CJK SC",
-                // Emoji
-                "Segoe UI Emoji",
-                "Segoe UI Symbol",
-                "Noto Color Emoji",
-            ]
-        }
-        #[cfg(target_os = "macos")]
-        {
-            &[
-                // UI (attempt a couple of common names; fontdb will skip missing families)
-                "SF Pro Text",
-                ".SF NS Text",
-                "Helvetica Neue",
-                // CJK
-                "PingFang SC",
-                "PingFang TC",
-                "Hiragino Sans",
-                // Emoji
-                "Apple Color Emoji",
-                // Bundled/portable fallbacks (if available)
-                "Noto Sans CJK SC",
-                "Noto Color Emoji",
-            ]
-        }
-        #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
-        {
-            &[
-                // UI
-                "Noto Sans",
-                "DejaVu Sans",
-                "Liberation Sans",
-                // CJK
-                "Noto Sans CJK SC",
-                "Noto Sans CJK JP",
-                "Noto Sans CJK TC",
-                // Emoji
-                "Noto Color Emoji",
-            ]
-        }
-        #[cfg(not(any(
-            target_arch = "wasm32",
-            target_os = "windows",
-            target_os = "macos",
-            all(unix, not(any(target_os = "macos", target_os = "android")))
-        )))]
-        {
-            &[]
-        }
+fn default_common_fallback_families() -> &'static [&'static str] {
+    // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
+    // feature flags), include those families in the fallback chain so mixed-script text works
+    // without explicit per-span font selection.
+    #[cfg(target_arch = "wasm32")]
+    {
+        &[
+            // UI (bundled in `fret-fonts` bootstrap)
+            "Inter",
+            // CJK (bundled via `fret-fonts/cjk-lite`)
+            "Noto Sans CJK SC",
+            // Emoji (bundled via `fret-fonts/emoji`)
+            "Noto Color Emoji",
+        ]
     }
-
-    fn forbidden_fallback(&self) -> &[&'static str] {
-        <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
-            &cosmic_text::PlatformFallback,
-        )
+    #[cfg(target_os = "windows")]
+    {
+        &[
+            // UI
+            "Segoe UI",
+            "Tahoma",
+            // CJK
+            "Microsoft YaHei UI",
+            "Microsoft YaHei",
+            "Yu Gothic UI",
+            "Meiryo UI",
+            "Meiryo",
+            "Nirmala UI",
+            // Bundled/portable fallbacks (if available)
+            "Noto Sans CJK SC",
+            // Emoji
+            "Segoe UI Emoji",
+            "Segoe UI Symbol",
+            "Noto Color Emoji",
+        ]
     }
-
-    fn script_fallback(&self, script: unicode_script::Script, locale: &str) -> &[&'static str] {
-        <cosmic_text::PlatformFallback as cosmic_text::Fallback>::script_fallback(
-            &cosmic_text::PlatformFallback,
-            script,
-            locale,
-        )
+    #[cfg(target_os = "macos")]
+    {
+        &[
+            // UI
+            "SF Pro Text",
+            ".SF NS Text",
+            "Helvetica Neue",
+            // CJK
+            "PingFang SC",
+            "PingFang TC",
+            "Hiragino Sans",
+            // Emoji
+            "Apple Color Emoji",
+            // Bundled/portable fallbacks (if available)
+            "Noto Sans CJK SC",
+            "Noto Color Emoji",
+        ]
+    }
+    #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
+    {
+        &[
+            // UI
+            "Noto Sans",
+            "DejaVu Sans",
+            "Liberation Sans",
+            // CJK
+            "Noto Sans CJK SC",
+            "Noto Sans CJK JP",
+            "Noto Sans CJK TC",
+            // Emoji
+            "Noto Color Emoji",
+        ]
+    }
+    #[cfg(not(any(
+        target_arch = "wasm32",
+        target_os = "windows",
+        target_os = "macos",
+        all(unix, not(any(target_os = "macos", target_os = "android")))
+    )))]
+    {
+        &[]
     }
 }
 
-fn build_installed_family_set(db: &cosmic_text::fontdb::Database) -> HashSet<String> {
-    let mut set = HashSet::new();
-    for face in db.faces() {
-        for (family, _lang) in &face.families {
-            set.insert(family.to_ascii_lowercase());
+fn first_available_family_id(
+    shaper: &mut parley_shaper::ParleyShaper,
+    candidates: &[&str],
+) -> Option<ParleyFamilyId> {
+    for &name in candidates {
+        if let Some(id) = shaper.resolve_family_id(name) {
+            return Some(id);
         }
     }
-    set
+    None
 }
 
-fn first_installed_family<'a>(
-    installed: &HashSet<String>,
-    candidates: &'a [&'a str],
-) -> Option<&'a str> {
-    candidates
-        .iter()
-        .copied()
-        .find(|name| installed.contains(&name.to_ascii_lowercase()))
+fn common_fallback_stack_suffix(
+    common_fallback_config: &[String],
+    defaults: &'static [&'static str],
+) -> String {
+    let mut seen_lower: HashSet<String> = HashSet::new();
+    let mut families: Vec<String> = Vec::new();
+
+    let mut push = |name: &str| {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        let key = trimmed.to_ascii_lowercase();
+        if seen_lower.insert(key) {
+            families.push(trimmed.to_string());
+        }
+    };
+
+    for family in common_fallback_config {
+        push(family);
+    }
+    for &family in defaults {
+        push(family);
+    }
+
+    families.join(", ")
 }
 
 fn default_sans_candidates() -> &'static [&'static str] {
@@ -289,34 +298,6 @@ fn default_serif_candidates() -> &'static [&'static str] {
     {
         &[]
     }
-}
-
-fn font_stack_cache_key(
-    locale: &str,
-    db: &cosmic_text::fontdb::Database,
-    db_revision: u64,
-    common_fallback_config: &[String],
-) -> u64 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    locale.hash(&mut hasher);
-
-    db.family_name(&Family::SansSerif).hash(&mut hasher);
-    db.family_name(&Family::Serif).hash(&mut hasher);
-    db.family_name(&Family::Monospace).hash(&mut hasher);
-
-    // Include the framework-level fallback policy so changing it can't reuse stale blobs.
-    <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback).hash(&mut hasher);
-    common_fallback_config.hash(&mut hasher);
-    <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
-        &cosmic_text::PlatformFallback,
-    )
-    .hash(&mut hasher);
-
-    // Ensure font-db mutations (user font loading, web font injection, etc.) participate in the
-    // cache key even when generic family names are unchanged.
-    db_revision.hash(&mut hasher);
-
-    hasher.finish()
 }
 
 #[derive(Debug, Clone)]
@@ -495,9 +476,20 @@ impl TextShapeKey {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct FontFaceKey {
-    blob_id: u64,
+    font_data_id: u64,
     face_index: u32,
     variation_key: u64,
+}
+
+fn variation_key_from_normalized_coords(coords: &[i16]) -> u64 {
+    if coords.is_empty() {
+        return 0;
+    }
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    "fret.text.font_instance.v0".hash(&mut hasher);
+    coords.hash(&mut hasher);
+    let key = hasher.finish();
+    if key == 0 { 1 } else { key }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -510,28 +502,8 @@ struct GlyphKey {
     kind: GlyphQuadKind,
 }
 
-fn stable_font_blob_id(bytes: &[u8]) -> u64 {
-    // Stable, dependency-free fingerprint for font bytes.
-    // This intentionally avoids `DefaultHasher` to stay deterministic across Rust versions.
-    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
-
-    fn fnv1a64_update(mut hash: u64, input: &[u8]) -> u64 {
-        for b in input {
-            hash ^= u64::from(*b);
-            hash = hash.wrapping_mul(FNV_PRIME);
-        }
-        hash
-    }
-
-    let mut hash = FNV_OFFSET_BASIS;
-    hash = fnv1a64_update(hash, b"fret.text.font_blob_id.v1\0");
-    hash = fnv1a64_update(hash, &(bytes.len() as u64).to_le_bytes());
-    fnv1a64_update(hash, bytes)
-}
-
 fn subpixel_bin_q4(pos: f32) -> (i32, u8) {
-    // Keep behavior aligned with cosmic-text's `SubpixelBin::new`.
+    // Keep behavior aligned with the legacy 4-way subpixel binning policy.
     let trunc = pos as i32;
     let fract = pos - trunc as f32;
 
@@ -1237,34 +1209,6 @@ fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     out
 }
 
-fn collect_font_names(db: &cosmic_text::fontdb::Database) -> Vec<String> {
-    let mut by_lower: HashMap<String, String> = HashMap::new();
-
-    for face in db.faces() {
-        for (family, _lang) in &face.families {
-            let key = family.to_ascii_lowercase();
-            by_lower.entry(key).or_insert_with(|| family.clone());
-        }
-    }
-
-    for family in [
-        db.family_name(&Family::SansSerif),
-        db.family_name(&Family::Serif),
-        db.family_name(&Family::Monospace),
-    ] {
-        let key = family.to_ascii_lowercase();
-        by_lower.entry(key).or_insert_with(|| family.to_string());
-    }
-
-    let mut names: Vec<String> = by_lower.into_values().collect();
-    names.sort_unstable_by(|a, b| {
-        a.to_ascii_lowercase()
-            .cmp(&b.to_ascii_lowercase())
-            .then(a.cmp(b))
-    });
-    names
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TextMeasureKey {
     font: fret_core::FontId,
@@ -1444,13 +1388,14 @@ impl TextUnwrappedKey {
 }
 
 pub struct TextSystem {
-    font_system: FontSystem,
     parley_shaper: crate::text::parley_shaper::ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
     quality: TextQualityState,
     common_fallback_config: Vec<String>,
+    generic_injected_by_family: HashMap<ParleyGenericFamily, Vec<ParleyFamilyId>>,
+    text_locale: Option<String>,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1474,8 +1419,8 @@ pub struct TextSystem {
     text_pin_mask: Vec<Vec<GlyphKey>>,
     text_pin_color: Vec<Vec<GlyphKey>>,
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
-    font_bytes_by_blob_id: HashMap<u64, Arc<[u8]>>,
-    font_face_key_by_fontique: HashMap<(u64, u32), FontFaceKey>,
+    font_data_by_face: HashMap<(u64, u32), parley::FontData>,
+    font_instance_coords_by_face: HashMap<FontFaceKey, Arc<[i16]>>,
 
     perf_frame_cache_resets: u64,
     perf_frame_blob_cache_hits: u64,
@@ -1801,8 +1746,12 @@ impl TextSystem {
     /// Returns a sorted list of available font family names.
     ///
     /// This is intended for settings/UI pickers. The result is best-effort and platform-dependent.
-    pub fn all_font_names(&self) -> Vec<String> {
-        collect_font_names(self.font_system.db())
+    pub fn all_font_names(&mut self) -> Vec<String> {
+        self.parley_shaper.all_font_names()
+    }
+
+    pub fn all_font_catalog_entries(&mut self) -> Vec<FontCatalogEntryMetadata> {
+        self.parley_shaper.all_font_catalog_entries()
     }
 
     pub fn font_stack_key(&self) -> u64 {
@@ -1875,6 +1824,29 @@ impl TextSystem {
         true
     }
 
+    /// Sets the default locale for text shaping and font fallback selection.
+    ///
+    /// This participates in `font_stack_key` and clears text caches when changed.
+    pub fn set_text_locale(&mut self, locale_bcp47: Option<&str>) -> bool {
+        let parsed = locale_bcp47
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .filter(|v| parley::swash::text::Language::parse(v).is_some())
+            .map(|v| v.to_string());
+
+        if self.text_locale == parsed {
+            return false;
+        }
+
+        self.text_locale = parsed.clone();
+        let _ = self.parley_shaper.set_default_locale(parsed);
+
+        self.font_db_revision = self.font_db_revision.saturating_add(1);
+        self.font_stack_key = self.font_db_revision;
+        self.reset_caches_for_font_change();
+        true
+    }
+
     /// Adds font bytes (TTF/OTF/TTC) to the font database.
     ///
     /// Returns the number of newly loaded faces. When this returns non-zero, all cached text blobs
@@ -1882,40 +1854,11 @@ impl TextSystem {
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         let fonts: Vec<Vec<u8>> = fonts.into_iter().collect();
 
-        let before_faces = self.font_system.db().faces().count();
-        for data in fonts.iter().cloned() {
-            self.font_system.db_mut().load_font_data(data);
-        }
-        let after_faces = self.font_system.db().faces().count();
-        let added = after_faces.saturating_sub(before_faces);
-        let parley_added = self.parley_shaper.add_fonts(fonts);
-
-        if added > 0 || parley_added > 0 {
+        let added = self.parley_shaper.add_fonts(fonts);
+        if added > 0 {
             self.font_db_revision = self.font_db_revision.saturating_add(1);
-            self.font_stack_key = font_stack_cache_key(
-                self.font_system.locale(),
-                self.font_system.db(),
-                self.font_db_revision,
-                &self.common_fallback_config,
-            );
-            self.perf_frame_cache_resets = self.perf_frame_cache_resets.saturating_add(1);
-            self.blobs.clear();
-            self.blob_cache.clear();
-            self.blob_key_by_id.clear();
-            self.clear_released_blob_cache();
-            self.clear_unwrapped_layout_cache();
-            self.shape_cache.clear();
-            self.measure_cache.clear();
-            self.measure_shaping_cache.clear();
-            self.measure_shaping_fifo.clear();
-            self.mask_atlas.reset();
-            self.color_atlas.reset();
-            self.subpixel_atlas.reset();
-            self.text_pin_mask.iter_mut().for_each(|v| v.clear());
-            self.text_pin_color.iter_mut().for_each(|v| v.clear());
-            self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
-            self.font_bytes_by_blob_id.clear();
-            self.font_face_key_by_fontique.clear();
+            self.font_stack_key = self.font_db_revision;
+            self.reset_caches_for_font_change();
         }
 
         added
@@ -1989,70 +1932,23 @@ impl TextSystem {
             TEXT_ATLAS_MAX_PAGES,
         );
 
-        let (locale, mut db) = FontSystem::new().into_locale_and_db();
-        let installed = build_installed_family_set(&db);
-
-        let sans = first_installed_family(&installed, default_sans_candidates());
-        if let Some(sans) = sans {
-            db.set_sans_serif_family(sans);
-        }
-        let serif = first_installed_family(&installed, default_serif_candidates());
-        if let Some(serif) = serif {
-            db.set_serif_family(serif);
-        }
-        let mono = first_installed_family(&installed, default_monospace_candidates());
-        if let Some(mono) = mono {
-            db.set_monospace_family(mono);
-        }
-
-        let font_db_revision = 0u64;
-        let common_fallback_config = Vec::new();
-        let font_stack_key =
-            font_stack_cache_key(&locale, &db, font_db_revision, &common_fallback_config);
-        let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
-
         let mut parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
-        if let Some(sans) = sans {
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SansSerif, sans);
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SystemUi, sans);
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiSansSerif, sans);
-        }
-        if let Some(serif) = serif {
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::Serif, serif);
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiSerif, serif);
-        }
-        if let Some(mono) = mono {
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::Monospace, mono);
-            let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiMonospace, mono);
-        }
-
-        // Align Parley generic fallback ordering with the framework fallback chain so that Web/WASM
-        // (no system fonts) can resolve mixed-script text without per-span font selection.
-        let generics = [
-            ParleyGenericFamily::SansSerif,
-            ParleyGenericFamily::Serif,
-            ParleyGenericFamily::Monospace,
-            ParleyGenericFamily::SystemUi,
-            ParleyGenericFamily::UiSansSerif,
-            ParleyGenericFamily::UiSerif,
-            ParleyGenericFamily::UiMonospace,
-        ];
-        for &family in <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback) {
-            for &generic in &generics {
-                let _ = parley_shaper.append_generic_family_name(generic, family);
-            }
-        }
+        let sans = first_available_family_id(&mut parley_shaper, default_sans_candidates());
+        let serif = first_available_family_id(&mut parley_shaper, default_serif_candidates());
+        let mono = first_available_family_id(&mut parley_shaper, default_monospace_candidates());
 
         let measure_shaping_entries = measure_shaping_cache_entries();
 
-        Self {
-            font_system,
+        let mut out = Self {
             parley_shaper,
             parley_scale: parley::swash::scale::ScaleContext::new(),
-            font_stack_key,
-            font_db_revision,
+            // Non-zero by default so callers can treat `0` as "unknown/uninitialized" if desired.
+            font_stack_key: 1,
+            font_db_revision: 1,
             quality: TextQualityState::new(TextQualitySettings::default()),
-            common_fallback_config,
+            common_fallback_config: Vec::new(),
+            generic_injected_by_family: HashMap::new(),
+            text_locale: None,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -2077,8 +1973,8 @@ impl TextSystem {
             text_pin_mask: vec![Vec::new(); 3],
             text_pin_color: vec![Vec::new(); 3],
             text_pin_subpixel: vec![Vec::new(); 3],
-            font_bytes_by_blob_id: HashMap::new(),
-            font_face_key_by_fontique: HashMap::new(),
+            font_data_by_face: HashMap::new(),
+            font_instance_coords_by_face: HashMap::new(),
 
             perf_frame_cache_resets: 0,
             perf_frame_blob_cache_hits: 0,
@@ -2092,115 +1988,83 @@ impl TextSystem {
             perf_frame_unwrapped_layouts_created: 0,
 
             glyph_atlas_epoch: 1,
-        }
+        };
+
+        out.bootstrap_default_generic_families(sans, serif, mono);
+        out
     }
 
-    pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
-        let installed = build_installed_family_set(self.font_system.db());
-        let old_key = self.font_stack_key;
-        let mut parley_changed = false;
-        let common_fallback =
-            <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback);
-        let config_fallback_changed = self.common_fallback_config != config.common_fallback;
-        self.common_fallback_config
-            .clone_from(&config.common_fallback);
-
-        let pick =
-            |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
-                for candidate in overrides {
-                    if installed.contains(&candidate.to_ascii_lowercase()) {
-                        return Some(Cow::Owned(candidate.clone()));
-                    }
-                }
-                for &candidate in defaults {
-                    if installed.contains(&candidate.to_ascii_lowercase()) {
-                        return Some(Cow::Borrowed(candidate));
-                    }
-                }
-                None
-            };
-
-        {
-            let db = self.font_system.db_mut();
-
-            if let Some(sans) = pick(&config.ui_sans, default_sans_candidates()) {
-                db.set_sans_serif_family(sans.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::SansSerif, sans.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::SystemUi, sans.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::UiSansSerif, sans.as_ref());
-            }
-            if let Some(serif) = pick(&config.ui_serif, default_serif_candidates()) {
-                db.set_serif_family(serif.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::Serif, serif.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::UiSerif, serif.as_ref());
-            }
-            if let Some(mono) = pick(&config.ui_mono, default_monospace_candidates()) {
-                db.set_monospace_family(mono.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::Monospace, mono.as_ref());
-                parley_changed |= self
-                    .parley_shaper
-                    .set_generic_family_name(ParleyGenericFamily::UiMonospace, mono.as_ref());
-            }
-        }
-
-        let generics = [
-            ParleyGenericFamily::SansSerif,
-            ParleyGenericFamily::Serif,
-            ParleyGenericFamily::Monospace,
-            ParleyGenericFamily::SystemUi,
-            ParleyGenericFamily::UiSansSerif,
-            ParleyGenericFamily::UiSerif,
-            ParleyGenericFamily::UiMonospace,
-        ];
-        for family in &self.common_fallback_config {
-            for &generic in &generics {
-                parley_changed |= self
-                    .parley_shaper
-                    .append_generic_family_name(generic, family);
-            }
-        }
-        for &family in common_fallback {
-            for &generic in &generics {
-                parley_changed |= self
-                    .parley_shaper
-                    .append_generic_family_name(generic, family);
-            }
-        }
-
-        let mut new_key = font_stack_cache_key(
-            self.font_system.locale(),
-            self.font_system.db(),
-            self.font_db_revision,
+    fn bootstrap_default_generic_families(
+        &mut self,
+        sans: Option<ParleyFamilyId>,
+        serif: Option<ParleyFamilyId>,
+        mono: Option<ParleyFamilyId>,
+    ) {
+        let suffix = common_fallback_stack_suffix(
             &self.common_fallback_config,
+            default_common_fallback_families(),
         );
-        if new_key == old_key && (parley_changed || config_fallback_changed) {
-            // Fontique generic family changes do not participate in the cosmic-text key, so we
-            // bump the revision to ensure caches cannot reuse stale Parley shaping results.
-            self.font_db_revision = self.font_db_revision.saturating_add(1);
-            new_key = font_stack_cache_key(
-                self.font_system.locale(),
-                self.font_system.db(),
-                self.font_db_revision,
-                &self.common_fallback_config,
-            );
-        }
-        if new_key == old_key {
-            return false;
+        let _ = self.parley_shaper.set_common_fallback_stack_suffix(suffix);
+
+        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
+        for &family in default_common_fallback_families() {
+            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                if !fallback_ids.contains(&id) {
+                    fallback_ids.push(id);
+                }
+            }
         }
 
-        self.font_stack_key = new_key;
+        let _ = self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
+        let _ = self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
+    }
+
+    fn apply_generic_stack(
+        &mut self,
+        generic: ParleyGenericFamily,
+        primary: Option<ParleyFamilyId>,
+        fallbacks: &[ParleyFamilyId],
+    ) -> bool {
+        let mut injected: Vec<ParleyFamilyId> = Vec::new();
+        if let Some(id) = primary {
+            injected.push(id);
+        }
+        for &id in fallbacks {
+            if !injected.contains(&id) {
+                injected.push(id);
+            }
+        }
+
+        let prev_injected = self
+            .generic_injected_by_family
+            .get(&generic)
+            .cloned()
+            .unwrap_or_default();
+
+        let mut base = self.parley_shaper.generic_family_ids(generic);
+        if !prev_injected.is_empty() {
+            base.retain(|id| !prev_injected.contains(id));
+        }
+
+        let mut next: Vec<ParleyFamilyId> = Vec::new();
+        next.extend_from_slice(&injected);
+        for id in base {
+            if !next.contains(&id) {
+                next.push(id);
+            }
+        }
+
+        self.generic_injected_by_family.insert(generic, injected);
+        self.parley_shaper.set_generic_family_ids(generic, &next)
+    }
+
+    fn reset_caches_for_font_change(&mut self) {
         self.perf_frame_cache_resets = self.perf_frame_cache_resets.saturating_add(1);
         self.blobs.clear();
         self.blob_cache.clear();
@@ -2217,8 +2081,67 @@ impl TextSystem {
         self.text_pin_mask.iter_mut().for_each(|v| v.clear());
         self.text_pin_color.iter_mut().for_each(|v| v.clear());
         self.text_pin_subpixel.iter_mut().for_each(|v| v.clear());
-        self.font_bytes_by_blob_id.clear();
-        self.font_face_key_by_fontique.clear();
+        self.font_data_by_face.clear();
+        self.font_instance_coords_by_face.clear();
+    }
+
+    pub fn set_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
+        self.common_fallback_config
+            .clone_from(&config.common_fallback);
+
+        let suffix = common_fallback_stack_suffix(
+            &self.common_fallback_config,
+            default_common_fallback_families(),
+        );
+        let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(suffix);
+
+        let pick_overrides =
+            |this: &mut Self, overrides: &[String], defaults: &'static [&'static str]| {
+                for candidate in overrides {
+                    if let Some(id) = this.parley_shaper.resolve_family_id(candidate) {
+                        return Some(id);
+                    }
+                }
+                first_available_family_id(&mut this.parley_shaper, defaults)
+            };
+
+        let sans = pick_overrides(self, &config.ui_sans, default_sans_candidates());
+        let serif = pick_overrides(self, &config.ui_serif, default_serif_candidates());
+        let mono = pick_overrides(self, &config.ui_mono, default_monospace_candidates());
+
+        let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
+        for family in &self.common_fallback_config {
+            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                if !fallback_ids.contains(&id) {
+                    fallback_ids.push(id);
+                }
+            }
+        }
+        for &family in default_common_fallback_families() {
+            if let Some(id) = self.parley_shaper.resolve_family_id(family) {
+                if !fallback_ids.contains(&id) {
+                    fallback_ids.push(id);
+                }
+            }
+        }
+
+        let mut changed = false;
+        changed |= self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::SystemUi, sans, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSansSerif, sans, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::Serif, serif, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::UiSerif, serif, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::Monospace, mono, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::UiMonospace, mono, &fallback_ids);
+        changed |= self.apply_generic_stack(ParleyGenericFamily::Emoji, None, &fallback_ids);
+
+        if !changed && !suffix_changed {
+            return false;
+        }
+
+        self.font_db_revision = self.font_db_revision.saturating_add(1);
+        self.font_stack_key = self.font_db_revision;
+        self.reset_caches_for_font_change();
         true
     }
 
@@ -2381,12 +2304,15 @@ impl TextSystem {
     }
 
     fn ensure_parley_glyph(&mut self, key: GlyphKey, epoch: u64) {
-        let Some(font_bytes) = self.font_bytes_by_blob_id.get(&key.font.blob_id) else {
+        let Some(font_data) = self
+            .font_data_by_face
+            .get(&(key.font.font_data_id, key.font.face_index))
+        else {
             return;
         };
 
         let Some(font_ref) =
-            parley::swash::FontRef::from_index(font_bytes.as_ref(), key.font.face_index as usize)
+            parley::swash::FontRef::from_index(font_data.data.data(), key.font.face_index as usize)
         else {
             return;
         };
@@ -2395,12 +2321,15 @@ impl TextSystem {
         };
 
         let font_size = f32::from_bits(key.size_bits).max(1.0);
-        let mut scaler = self
+        let mut scaler_builder = self
             .parley_scale
             .builder(font_ref)
             .size(font_size)
-            .hint(false)
-            .build();
+            .hint(false);
+        if let Some(coords) = self.font_instance_coords_by_face.get(&key.font) {
+            scaler_builder = scaler_builder.normalized_coords(coords.iter());
+        }
+        let mut scaler = scaler_builder.build();
 
         let offset_px = parley::swash::zeno::Vector::new(
             subpixel_bin_as_float(key.x_bin),
@@ -2680,29 +2609,23 @@ impl TextSystem {
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
-                                let fontique_id = g.font.data.id();
+                                let font_data_id = g.font.data.id();
                                 let face_index = g.font.index;
-                                let face_key = if let Some(hit) = self
-                                    .font_face_key_by_fontique
-                                    .get(&(fontique_id, face_index))
-                                    .copied()
-                                {
-                                    hit
-                                } else {
-                                    let bytes = g.font.data.data();
-                                    let blob_id = stable_font_blob_id(bytes);
-                                    self.font_bytes_by_blob_id
-                                        .entry(blob_id)
-                                        .or_insert_with(|| Arc::from(bytes.to_vec()));
-                                    let key = FontFaceKey {
-                                        blob_id,
-                                        face_index,
-                                        variation_key: 0,
-                                    };
-                                    self.font_face_key_by_fontique
-                                        .insert((fontique_id, face_index), key);
-                                    key
+                                self.font_data_by_face
+                                    .entry((font_data_id, face_index))
+                                    .or_insert_with(|| g.font.clone());
+                                let variation_key =
+                                    variation_key_from_normalized_coords(&g.normalized_coords);
+                                let face_key = FontFaceKey {
+                                    font_data_id,
+                                    face_index,
+                                    variation_key,
                                 };
+                                if !g.normalized_coords.is_empty() {
+                                    self.font_instance_coords_by_face
+                                        .entry(face_key)
+                                        .or_insert_with(|| g.normalized_coords.clone());
+                                }
 
                                 let pos_y = g.y + line_offset_px;
                                 let (x, x_bin) = subpixel_bin_q4(g.x);
@@ -2771,12 +2694,16 @@ impl TextSystem {
                                             continue;
                                         };
 
-                                        let mut scaler = self
+                                        let mut scaler_builder = self
                                             .parley_scale
                                             .builder(font_ref)
                                             .size(g.font_size.max(1.0))
-                                            .hint(false)
-                                            .build();
+                                            .hint(false);
+                                        if !g.normalized_coords.is_empty() {
+                                            scaler_builder = scaler_builder
+                                                .normalized_coords(g.normalized_coords.iter());
+                                        }
+                                        let mut scaler = scaler_builder.build();
 
                                         let offset_px = parley::swash::zeno::Vector::new(
                                             subpixel_bin_as_float(x_bin),
@@ -2973,29 +2900,23 @@ impl TextSystem {
                                 let Ok(glyph_id) = u16::try_from(g.id) else {
                                     continue;
                                 };
-                                let fontique_id = g.font.data.id();
+                                let font_data_id = g.font.data.id();
                                 let face_index = g.font.index;
-                                let face_key = if let Some(hit) = self
-                                    .font_face_key_by_fontique
-                                    .get(&(fontique_id, face_index))
-                                    .copied()
-                                {
-                                    hit
-                                } else {
-                                    let bytes = g.font.data.data();
-                                    let blob_id = stable_font_blob_id(bytes);
-                                    self.font_bytes_by_blob_id
-                                        .entry(blob_id)
-                                        .or_insert_with(|| Arc::from(bytes.to_vec()));
-                                    let key = FontFaceKey {
-                                        blob_id,
-                                        face_index,
-                                        variation_key: 0,
-                                    };
-                                    self.font_face_key_by_fontique
-                                        .insert((fontique_id, face_index), key);
-                                    key
+                                self.font_data_by_face
+                                    .entry((font_data_id, face_index))
+                                    .or_insert_with(|| g.font.clone());
+                                let variation_key =
+                                    variation_key_from_normalized_coords(&g.normalized_coords);
+                                let face_key = FontFaceKey {
+                                    font_data_id,
+                                    face_index,
+                                    variation_key,
                                 };
+                                if !g.normalized_coords.is_empty() {
+                                    self.font_instance_coords_by_face
+                                        .entry(face_key)
+                                        .or_insert_with(|| g.normalized_coords.clone());
+                                }
 
                                 let pos_y = g.y + line_offset_px;
                                 let x = g.x - s.line_start_x;
@@ -3064,12 +2985,16 @@ impl TextSystem {
                                             continue;
                                         };
 
-                                        let mut scaler = self
+                                        let mut scaler_builder = self
                                             .parley_scale
                                             .builder(font_ref)
                                             .size(g.font_size.max(1.0))
-                                            .hint(false)
-                                            .build();
+                                            .hint(false);
+                                        if !g.normalized_coords.is_empty() {
+                                            scaler_builder = scaler_builder
+                                                .normalized_coords(g.normalized_coords.iter());
+                                        }
+                                        let mut scaler = scaler_builder.build();
 
                                         let offset_px = parley::swash::zeno::Vector::new(
                                             subpixel_bin_as_float(x_bin),
@@ -3893,17 +3818,6 @@ impl TextSystem {
     }
 }
 
-#[cfg(any())]
-#[derive(Debug, Clone)]
-struct PreparedLayout {
-    metrics: TextMetrics,
-    lines: Vec<cosmic_text::LayoutLine>,
-    line_tops_px: Vec<f32>,
-    local_starts: Vec<usize>,
-    local_ends: Vec<usize>,
-    paragraph_ends: Vec<usize>,
-}
-
 #[derive(Clone, Debug)]
 struct ResolvedSpan {
     start: usize,
@@ -4047,22 +3961,6 @@ fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSp
     Some(Arc::<[TextSpan]>::from(out))
 }
 
-#[cfg(any())]
-fn paint_span_for_glyph(
-    spans: &[ResolvedSpan],
-    base_offset: usize,
-    g: &cosmic_text::LayoutGlyph,
-) -> Option<u16> {
-    let mut global = base_offset.saturating_add(g.start);
-    if g.start == g.end && global > 0 {
-        global = global.saturating_sub(1);
-    }
-    spans
-        .iter()
-        .find(|s| global >= s.start && global < s.end)
-        .map(|s| s.slot)
-}
-
 fn paint_span_for_text_range(
     spans: &[ResolvedSpan],
     range: &std::ops::Range<usize>,
@@ -4079,259 +3977,6 @@ fn paint_span_for_text_range(
         .iter()
         .find(|s| idx >= s.start && idx < s.end)
         .map(|s| s.slot)
-}
-
-#[cfg(any())]
-fn layout_text(
-    font_system: &mut FontSystem,
-    scratch: &mut ShapeBuffer,
-    text: &str,
-    attrs: &Attrs,
-    spans: Option<&[TextSpan]>,
-    font_size_px: f32,
-    constraints: TextConstraints,
-    scale: f32,
-) -> (PreparedLayout, Vec<usize>) {
-    let max_width_px = constraints.max_width.map(|w| w.0 * scale);
-    let wrap = match constraints.wrap {
-        TextWrap::None => cosmic_text::Wrap::None,
-        TextWrap::Word => cosmic_text::Wrap::Word,
-    };
-
-    let want_ellipsis = matches!(constraints.overflow, TextOverflow::Ellipsis)
-        && matches!(constraints.wrap, TextWrap::None)
-        && max_width_px.is_some();
-
-    let mut all_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
-    let mut line_tops_px: Vec<f32> = Vec::new();
-    let mut local_starts: Vec<usize> = Vec::new();
-    let mut local_ends: Vec<usize> = Vec::new();
-    let mut paragraph_ends: Vec<usize> = Vec::new();
-    let mut line_starts_global: Vec<usize> = Vec::new();
-
-    let mut max_w_px = 0.0_f32;
-    let mut total_h_px = 0.0_f32;
-    let mut first_ascent_px: Option<f32> = None;
-
-    let resolved_spans: Option<Vec<ResolvedSpan>> =
-        spans.and_then(|spans| resolve_spans_for_text(text, spans));
-
-    let mut push_slice = |base_offset: usize, slice: &str, paragraph_end: usize| {
-        let mut attrs_list = AttrsList::new(attrs);
-        attrs_list.add_span(0..slice.len(), attrs);
-
-        if let Some(spans) = resolved_spans.as_ref() {
-            for span in spans {
-                if span.end <= base_offset || span.start >= paragraph_end {
-                    continue;
-                }
-
-                let start = span.start.max(base_offset) - base_offset;
-                let end = span.end.min(paragraph_end) - base_offset;
-                if start >= end || end > slice.len() {
-                    continue;
-                }
-
-                let mut span_attrs = attrs.clone();
-                if let Some(font) = span.font.as_ref() {
-                    span_attrs = span_attrs.family(family_for_font_id(font));
-                }
-                if let Some(weight) = span.weight {
-                    span_attrs = span_attrs.weight(Weight(weight.0));
-                }
-                if let Some(slant) = span.slant {
-                    span_attrs = match slant {
-                        TextSlant::Normal => span_attrs.style(CosmicStyle::Normal),
-                        TextSlant::Italic => span_attrs.style(CosmicStyle::Italic),
-                        TextSlant::Oblique => span_attrs.style(CosmicStyle::Oblique),
-                    };
-                }
-                if let Some(letter_spacing_em) = span.letter_spacing_em
-                    && letter_spacing_em != 0.0
-                    && letter_spacing_em.is_finite()
-                {
-                    span_attrs = span_attrs.letter_spacing(letter_spacing_em);
-                }
-                attrs_list.add_span(start..end, &span_attrs);
-            }
-        }
-
-        let shape_line = ShapeLine::new(font_system, slice, &attrs_list, Shaping::Advanced, 4);
-        let mut layout_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
-        shape_line.layout_to_buffer(
-            scratch,
-            font_size_px,
-            max_width_px,
-            wrap,
-            None,
-            &mut layout_lines,
-            None,
-            Hinting::Disabled,
-        );
-
-        let mut ellipsis_local_end: Option<usize> = None;
-        if want_ellipsis
-            && layout_lines.len() == 1
-            && let Some(max_w) = max_width_px
-            && let Some(line) = layout_lines.get_mut(0)
-            // Avoid spurious ellipses caused by subpixel layout rounding (especially visible in
-            // list rows where the remaining gap makes the truncation look "wrong").
-            && line.w > max_w + 0.5
-        {
-            let ellipsis_text = "…";
-            let (ellipsis_w, ellipsis_glyphs) = {
-                let mut ellipsis_attrs_list = AttrsList::new(attrs);
-                ellipsis_attrs_list.add_span(0..ellipsis_text.len(), attrs);
-                let ellipsis_shape = ShapeLine::new(
-                    font_system,
-                    ellipsis_text,
-                    &ellipsis_attrs_list,
-                    Shaping::Advanced,
-                    4,
-                );
-                let mut ellipsis_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
-                ellipsis_shape.layout_to_buffer(
-                    scratch,
-                    font_size_px,
-                    None,
-                    cosmic_text::Wrap::None,
-                    None,
-                    &mut ellipsis_lines,
-                    None,
-                    Hinting::Disabled,
-                );
-                let w = ellipsis_lines.first().map(|l| l.w).unwrap_or(0.0);
-                let glyphs = ellipsis_lines
-                    .first()
-                    .map(|l| l.glyphs.clone())
-                    .unwrap_or_default();
-                (w, glyphs)
-            };
-
-            let available_w = (max_w - ellipsis_w).max(0.0);
-            let mut cut_end = 0usize;
-            for g in &line.glyphs {
-                let right = (g.x + g.w).max(0.0);
-                if right <= available_w + 0.5 {
-                    cut_end = cut_end.max(g.end.min(slice.len()));
-                }
-            }
-            while cut_end > 0
-                && slice
-                    .as_bytes()
-                    .get(cut_end.saturating_sub(1))
-                    .is_some_and(|b| b.is_ascii_whitespace())
-            {
-                cut_end = cut_end.saturating_sub(1);
-            }
-
-            let mut kept: Vec<cosmic_text::LayoutGlyph> = line
-                .glyphs
-                .iter()
-                .filter(|&g| g.end <= cut_end)
-                .cloned()
-                .collect();
-
-            let ellipsis_start_x = (max_w - ellipsis_w).max(0.0);
-            for mut g in ellipsis_glyphs {
-                g.start = cut_end;
-                g.end = cut_end;
-                g.x = (g.x + ellipsis_start_x).max(0.0);
-                kept.push(g);
-            }
-            line.glyphs = kept;
-            line.w = max_w;
-            ellipsis_local_end = Some(cut_end);
-        }
-
-        if layout_lines.is_empty() {
-            layout_lines.push(cosmic_text::LayoutLine {
-                w: 0.0,
-                max_ascent: 0.0,
-                max_descent: 0.0,
-                line_height_opt: None,
-                glyphs: Vec::new(),
-            });
-        }
-
-        let layout_count = layout_lines.len();
-        let mut expected_start_local: usize = 0;
-
-        for (idx, ll) in layout_lines.into_iter().enumerate() {
-            let mut local_end = ll
-                .glyphs
-                .iter()
-                .map(|g| g.end)
-                .max()
-                .unwrap_or(expected_start_local);
-            if idx + 1 == layout_count {
-                local_end = slice.len();
-            }
-            if idx + 1 == layout_count
-                && let Some(end) = ellipsis_local_end
-            {
-                local_end = end.min(slice.len());
-            }
-
-            let local_start = expected_start_local;
-            expected_start_local = local_end;
-
-            let ascent_px = ll.max_ascent.max(0.0);
-            let descent_px = ll.max_descent.max(0.0);
-            let min_height_px = (ascent_px + descent_px).max(0.0);
-            let height_px = ll
-                .line_height_opt
-                .unwrap_or(min_height_px)
-                .max(min_height_px)
-                .max(0.0);
-
-            // Center the baseline within the line box when line-height exceeds the font's
-            // ascent+descent. This avoids visible "text floats up" artifacts when swapping fonts
-            // (e.g. Nerd Fonts with unusual metrics) while keeping behavior unchanged when the
-            // line box is tight.
-            let padding_top_px = ((height_px - ascent_px - descent_px) * 0.5).max(0.0);
-            let baseline_offset_px = padding_top_px + ascent_px;
-            first_ascent_px.get_or_insert(baseline_offset_px);
-            max_w_px = max_w_px.max(ll.w);
-
-            line_tops_px.push(total_h_px);
-            local_starts.push(local_start);
-            local_ends.push(local_end);
-            paragraph_ends.push(paragraph_end);
-            line_starts_global.push(base_offset);
-
-            total_h_px += height_px;
-            all_lines.push(ll);
-        }
-    };
-
-    let mut slice_start = 0usize;
-    for (i, ch) in text.char_indices() {
-        if ch != '\n' {
-            continue;
-        }
-        push_slice(slice_start, &text[slice_start..i], i);
-        slice_start = i + 1;
-    }
-    push_slice(slice_start, &text[slice_start..text.len()], text.len());
-
-    let first_ascent_px = first_ascent_px.unwrap_or(0.0);
-    let metrics = TextMetrics {
-        size: Size::new(Px(max_w_px / scale), Px(total_h_px / scale)),
-        baseline: Px(first_ascent_px / scale),
-    };
-
-    (
-        PreparedLayout {
-            metrics,
-            lines: all_lines,
-            line_tops_px,
-            local_starts,
-            local_ends,
-            paragraph_ends,
-        },
-        line_starts_global,
-    )
 }
 
 fn utf8_char_boundaries(text: &str) -> Vec<usize> {
@@ -4587,41 +4232,6 @@ fn caret_stops_for_slice_from_unwrapped_ltr(
 
     out.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.0.total_cmp(&b.1.0)));
     out.dedup_by(|a, b| a.0 == b.0);
-    out
-}
-
-#[cfg(any())]
-fn build_line_caret_stops(
-    base_offset: usize,
-    boundaries_local: &[usize],
-    glyphs: &[cosmic_text::LayoutGlyph],
-    local_start: usize,
-    local_end: usize,
-    line_w_px: f32,
-    scale: f32,
-) -> Vec<(usize, Px)> {
-    let mut out: Vec<(usize, Px)> = Vec::with_capacity(boundaries_local.len());
-    for &idx_local in boundaries_local {
-        let idx_global = base_offset + idx_local;
-        if idx_local <= local_start {
-            out.push((idx_global, Px(0.0)));
-            continue;
-        }
-        if idx_local >= local_end {
-            out.push((idx_global, Px(line_w_px / scale)));
-            continue;
-        }
-
-        let mut x_end = 0.0_f32;
-        for g in glyphs {
-            if g.end <= idx_local {
-                x_end = x_end.max(g.x + g.w);
-            }
-        }
-        out.push((idx_global, Px(x_end / scale)));
-    }
-    out.sort_by_key(|(idx, _)| *idx);
-    out.dedup_by_key(|(idx, _)| *idx);
     out
 }
 
@@ -4935,16 +4545,31 @@ fn decorations_for_lines(
 mod tests {
     use super::{
         ResolvedSpan, TextBlobKey, TextDecorationKind, TextMeasureKey, TextShapeKey,
-        collect_font_names, paint_span_for_text_range, spans_paint_fingerprint,
-        spans_shaping_fingerprint, subpixel_mask_to_alpha,
+        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
+        subpixel_mask_to_alpha,
     };
-    use cosmic_text::Family;
     use fret_core::{
         AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
         Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
         TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
+
+    fn pending_upload_bytes_for_key(text: &super::TextSystem, key: super::GlyphKey) -> Vec<u8> {
+        let atlas = match key.kind {
+            super::GlyphQuadKind::Mask => &text.mask_atlas,
+            super::GlyphQuadKind::Color => &text.color_atlas,
+            super::GlyphQuadKind::Subpixel => &text.subpixel_atlas,
+        };
+        let entry = atlas.entry(key).expect("expected atlas entry after ensure");
+        let page_idx = entry.page as usize;
+        let pending = atlas.pages[page_idx]
+            .pending
+            .iter()
+            .find(|p| p.x == entry.x && p.y == entry.y && p.w == entry.w && p.h == entry.h)
+            .expect("expected pending upload for ensured glyph");
+        pending.data.clone()
+    }
 
     #[test]
     fn subpixel_mask_to_alpha_uses_channel_max() {
@@ -5222,27 +4847,9 @@ mod tests {
     #[test]
     fn all_font_names_is_sorted_and_deduped() {
         // This is intentionally platform-dependent; we only assert structural invariants.
-        let (locale, db) = cosmic_text::FontSystem::new().into_locale_and_db();
-        let _ = locale;
-
-        let names = collect_font_names(&db);
-
-        assert!(
-            names
-                .iter()
-                .any(|n| n == db.family_name(&Family::SansSerif)),
-            "expected sans-serif generic family to be present"
-        );
-        assert!(
-            names.iter().any(|n| n == db.family_name(&Family::Serif)),
-            "expected serif generic family to be present"
-        );
-        assert!(
-            names
-                .iter()
-                .any(|n| n == db.family_name(&Family::Monospace)),
-            "expected monospace generic family to be present"
-        );
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+        let names = text.all_font_names();
 
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
         for name in &names {
@@ -5301,6 +4908,24 @@ mod tests {
         let k0 = TextBlobKey::new("hello", &base, constraints, 1);
         let k1 = TextBlobKey::new("hello", &base, constraints, 2);
         assert_ne!(k0, k1);
+    }
+
+    #[test]
+    fn text_locale_changes_font_stack_key() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let k0 = text.font_stack_key();
+        assert!(text.set_text_locale(Some("en-US")));
+        let k1 = text.font_stack_key();
+        assert_ne!(k0, k1);
+
+        assert!(!text.set_text_locale(Some("en-US")));
+        assert_eq!(k1, text.font_stack_key());
+
+        assert!(text.set_text_locale(Some("zh-CN")));
+        let k2 = text.font_stack_key();
+        assert_ne!(k1, k2);
     }
 
     #[test]
@@ -5951,19 +5576,12 @@ mod tests {
         let mut text = super::TextSystem::new(&ctx.device);
 
         // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
-            "en-US".to_string(),
-            cosmic_text::fontdb::Database::new(),
-            super::FretFallback,
-        );
         text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
         text.font_db_revision = 0;
-        text.font_stack_key = super::font_stack_cache_key(
-            text.font_system.locale(),
-            text.font_system.db(),
-            text.font_db_revision,
-            &text.common_fallback_config,
-        );
+        text.font_stack_key = 0;
+        text.text_locale = None;
 
         let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
             .iter()
@@ -5995,8 +5613,6 @@ mod tests {
         };
         let _ = text.set_font_families(&config);
 
-        let noto_blob_id = super::stable_font_blob_id(fret_fonts::cjk_lite_fonts()[0]);
-
         let style = TextStyle {
             font: fret_core::FontId::ui(),
             size: Px(24.0),
@@ -6009,6 +5625,25 @@ mod tests {
             scale_factor: 1.0,
         };
 
+        let expected_cjk_faces = {
+            let explicit = TextStyle {
+                font: fret_core::FontId::family(family_cjk),
+                size: Px(24.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_cjk_faces.is_empty(),
+            "expected at least one resolved CJK face for the explicit {family_cjk} family"
+        );
+
         let (blob_id, _metrics) = text.prepare("你", &style, constraints);
         let glyph_keys: Vec<super::GlyphKey> = {
             let blob = text.blob(blob_id).expect("text blob");
@@ -6017,7 +5652,9 @@ mod tests {
 
         assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
 
-        let used_cjk_lite = glyph_keys.iter().any(|k| k.font.blob_id == noto_blob_id);
+        let used_cjk_lite = glyph_keys
+            .iter()
+            .any(|k| expected_cjk_faces.contains(&k.font));
         assert!(
             used_cjk_lite,
             "expected cjk-lite font to be selected for CJK glyphs under the UI sans stack when system fonts are absent"
@@ -6025,7 +5662,7 @@ mod tests {
 
         let epoch = 1;
         for key in glyph_keys {
-            if key.font.blob_id != noto_blob_id {
+            if !expected_cjk_faces.contains(&key.font) {
                 continue;
             }
 
@@ -6045,25 +5682,108 @@ mod tests {
     }
 
     #[test]
+    fn cjk_fallback_uses_common_fallback_for_named_family_when_system_fonts_are_absent() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+        text.text_locale = None;
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_inter)),
+            "expected {family_inter} to be present after loading bootstrap fonts"
+        );
+
+        let family_cjk = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_cjk)),
+            "expected {family_cjk} to be present after loading cjk-lite fonts"
+        );
+
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
+        let _ = text.set_font_families(&config);
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let expected_cjk_faces = {
+            let explicit = TextStyle {
+                font: fret_core::FontId::family(family_cjk),
+                size: Px(24.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("你", &explicit, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_cjk_faces.is_empty(),
+            "expected at least one resolved CJK face for the explicit {family_cjk} family"
+        );
+
+        let style_named = TextStyle {
+            font: fret_core::FontId::family(family_inter),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let (blob_id, _metrics) = text.prepare("你", &style_named, constraints);
+        let glyph_keys: Vec<super::GlyphKey> = {
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape.glyphs.iter().map(|g| g.key).collect()
+        };
+
+        assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
+
+        let used_cjk_lite = glyph_keys
+            .iter()
+            .any(|k| expected_cjk_faces.contains(&k.font));
+        assert!(
+            used_cjk_lite,
+            "expected common fallback stack to select cjk-lite for CJK glyphs when an explicit named UI font is missing glyphs and system fonts are absent"
+        );
+    }
+
+    #[test]
     fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fonts_are_absent()
     {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
 
         // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
-        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
-            "en-US".to_string(),
-            cosmic_text::fontdb::Database::new(),
-            super::FretFallback,
-        );
         text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
         text.font_db_revision = 0;
-        text.font_stack_key = super::font_stack_cache_key(
-            text.font_system.locale(),
-            text.font_system.db(),
-            text.font_db_revision,
-            &text.common_fallback_config,
-        );
+        text.font_stack_key = 0;
 
         let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
             .iter()
@@ -6095,8 +5815,6 @@ mod tests {
         };
         let _ = text.set_font_families(&config);
 
-        let emoji_blob_id = super::stable_font_blob_id(fret_fonts::emoji_fonts()[0]);
-
         let style = TextStyle {
             font: fret_core::FontId::ui(),
             size: Px(32.0),
@@ -6108,6 +5826,25 @@ mod tests {
             overflow: TextOverflow::Clip,
             scale_factor: 1.0,
         };
+
+        let expected_emoji_faces = {
+            let explicit = TextStyle {
+                font: fret_core::FontId::family(family_emoji),
+                size: Px(32.0),
+                ..Default::default()
+            };
+            let (blob_id, _metrics) = text.prepare("\u{1F600}", &explicit, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape
+                .glyphs
+                .iter()
+                .map(|g| g.key.font)
+                .collect::<std::collections::HashSet<super::FontFaceKey>>()
+        };
+        assert!(
+            !expected_emoji_faces.is_empty(),
+            "expected at least one resolved emoji face for the explicit {family_emoji} family"
+        );
 
         let cases = [
             ("\u{1F600}", "single emoji"),
@@ -6135,7 +5872,7 @@ mod tests {
             let emoji_keys: Vec<super::GlyphKey> = glyph_keys
                 .iter()
                 .copied()
-                .filter(|k| k.font.blob_id == emoji_blob_id)
+                .filter(|k| expected_emoji_faces.contains(&k.font))
                 .collect();
             assert!(
                 !emoji_keys.is_empty(),
@@ -6228,6 +5965,102 @@ mod tests {
             TextShapeKey::from_blob_key(&k_a),
             TextShapeKey::from_blob_key(&k_b),
             "paint changes must not affect shape cache keys"
+        );
+    }
+
+    #[test]
+    fn variable_font_weight_changes_face_key_and_raster_output() {
+        // `repo-ref/` is pinned reference source; use a small variable-font subset as a deterministic fixture.
+        const ROBOTO_FLEX_SUBSET: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../repo-ref/xilem/xilem/resources/fonts/roboto_flex/RobotoFlex-Subset.ttf"
+        ));
+
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only the injected font.
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.common_fallback_config.clear();
+        text.generic_injected_by_family.clear();
+        text.font_db_revision = 0;
+        text.font_stack_key = 0;
+
+        let added = text.add_fonts([ROBOTO_FLEX_SUBSET.to_vec()]);
+        assert!(added > 0, "expected variable font to load");
+
+        let family = "Roboto Flex";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family)),
+            "expected {family} to be present after loading test font"
+        );
+
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let style_light = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(64.0),
+            weight: FontWeight(200),
+            ..Default::default()
+        };
+        let style_heavy = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(64.0),
+            weight: FontWeight(900),
+            ..Default::default()
+        };
+
+        let (blob_light, _) = text.prepare("0", &style_light, constraints);
+        let key_light = {
+            let blob = text.blob(blob_light).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        let (blob_heavy, _) = text.prepare("0", &style_heavy, constraints);
+        let key_heavy = {
+            let blob = text.blob(blob_heavy).expect("text blob");
+            blob.shape.glyphs.first().expect("glyph").key
+        };
+
+        assert_eq!(
+            key_light.font.font_data_id, key_heavy.font.font_data_id,
+            "expected both weights to use the same font data blob"
+        );
+        assert_eq!(
+            key_light.font.face_index, key_heavy.font.face_index,
+            "expected both weights to use the same face index"
+        );
+        assert_ne!(
+            key_light.font.variation_key, key_heavy.font.variation_key,
+            "expected variable font instance coordinates to participate in the face key"
+        );
+
+        // Ensure path must also apply instance coordinates when rasterizing on-demand.
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+        let epoch = 1;
+
+        text.ensure_glyph_in_atlas(key_light, epoch);
+        let bytes_light = pending_upload_bytes_for_key(&text, key_light);
+
+        text.mask_atlas.reset();
+        text.color_atlas.reset();
+        text.subpixel_atlas.reset();
+
+        text.ensure_glyph_in_atlas(key_heavy, epoch);
+        let bytes_heavy = pending_upload_bytes_for_key(&text, key_heavy);
+
+        assert_ne!(
+            bytes_light, bytes_heavy,
+            "expected raster output to differ across variable font weights"
         );
     }
 }

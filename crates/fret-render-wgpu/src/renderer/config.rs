@@ -333,9 +333,17 @@ impl Renderer {
         self.text_system.set_text_quality_settings(settings)
     }
 
+    pub fn set_text_locale(&mut self, locale_bcp47: Option<&str>) -> bool {
+        self.text_system.set_text_locale(locale_bcp47)
+    }
+
     /// Returns a sorted list of available font family names (best-effort).
-    pub fn all_font_names(&self) -> Vec<String> {
+    pub fn all_font_names(&mut self) -> Vec<String> {
         self.text_system.all_font_names()
+    }
+
+    pub fn all_font_catalog_entries(&mut self) -> Vec<crate::FontCatalogEntryMetadata> {
+        self.text_system.all_font_catalog_entries()
     }
 
     /// Adds font bytes (TTF/OTF/TTC) to the renderer text system.

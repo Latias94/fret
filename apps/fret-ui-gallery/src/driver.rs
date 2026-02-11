@@ -3969,9 +3969,19 @@ impl WinitAppDriver for UiGalleryDriver {
             .collect::<Vec<_>>();
         let _ = renderer.add_fonts(fonts);
 
-        let update = fret_runtime::apply_font_catalog_update(
+        let entries = renderer
+            .all_font_catalog_entries()
+            .into_iter()
+            .map(|e| fret_runtime::FontCatalogEntry {
+                family: e.family,
+                has_variable_axes: e.has_variable_axes,
+                known_variable_axes: e.known_variable_axes,
+                is_monospace_candidate: e.is_monospace_candidate,
+            })
+            .collect::<Vec<_>>();
+        let update = fret_runtime::apply_font_catalog_update_with_metadata(
             app,
-            renderer.all_font_names(),
+            entries,
             fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
         let _ = renderer.set_text_font_families(&update.config);

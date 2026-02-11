@@ -1562,6 +1562,7 @@ fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
 #[cfg(target_os = "macos")]
 fn read_desktop_accent_color() -> Option<fret_core::Color> {
     use cocoa::base::{id, nil};
+    use cocoa::foundation::NSAutoreleasePool;
     use cocoa::foundation::NSString;
     use objc::runtime::Class;
     use objc::{msg_send, sel, sel_impl};
@@ -4654,9 +4655,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let _ = fret_runtime::apply_font_catalog_update(
+                        let entries = renderer
+                            .all_font_catalog_entries()
+                            .into_iter()
+                            .map(|e| fret_runtime::FontCatalogEntry {
+                                family: e.family,
+                                has_variable_axes: e.has_variable_axes,
+                                known_variable_axes: e.known_variable_axes,
+                                is_monospace_candidate: e.is_monospace_candidate,
+                            })
+                            .collect::<Vec<_>>();
+                        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
                             &mut self.app,
-                            renderer.all_font_names(),
+                            entries,
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
                         if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
@@ -5348,6 +5359,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             for (_id, state) in self.windows.iter() {
                 state.window.request_redraw();
+            }
+        }
+
+        if changed.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>())
+            && let Some(renderer) = self.renderer.as_mut()
+        {
+            let locale = self
+                .app
+                .global::<fret_runtime::fret_i18n::I18nService>()
+                .and_then(|service| service.preferred_locales().first())
+                .map(|locale| locale.to_string());
+            if renderer.set_text_locale(locale.as_deref()) {
+                let new_key = renderer.text_font_stack_key();
+                let old_key = self
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0);
+                if old_key != Some(new_key) {
+                    self.app.set_global::<fret_runtime::TextFontStackKey>(
+                        fret_runtime::TextFontStackKey(new_key),
+                    );
+                }
+
+                for (_id, state) in self.windows.iter() {
+                    state.window.request_redraw();
+                }
             }
         }
 

@@ -1,6 +1,6 @@
 use fret_core::TextFontFamilyConfig;
 
-use crate::{FontCatalog, FontCatalogCache, GlobalsHost};
+use crate::{FontCatalog, FontCatalogCache, FontCatalogEntry, FontCatalogMetadata, GlobalsHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FontFamilyDefaultsPolicy {
@@ -141,6 +141,20 @@ pub fn apply_font_catalog_update(
     }
 }
 
+pub fn apply_font_catalog_update_with_metadata(
+    app: &mut impl GlobalsHost,
+    entries: Vec<FontCatalogEntry>,
+    policy: FontFamilyDefaultsPolicy,
+) -> FontCatalogUpdate {
+    let families = entries.iter().map(|e| e.family.clone()).collect::<Vec<_>>();
+    let update = apply_font_catalog_update(app, families, policy);
+    app.set_global::<FontCatalogMetadata>(FontCatalogMetadata {
+        entries,
+        revision: update.revision,
+    });
+    update
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,5 +228,43 @@ mod tests {
                 .iter()
                 .any(|v| v == "Noto Color Emoji")
         );
+    }
+
+    #[test]
+    fn apply_update_with_metadata_sets_metadata_global() {
+        let mut app = TestApp::default();
+        let entries = vec![
+            FontCatalogEntry {
+                family: "Inter".to_string(),
+                has_variable_axes: false,
+                known_variable_axes: vec![],
+                is_monospace_candidate: false,
+            },
+            FontCatalogEntry {
+                family: "Roboto Flex".to_string(),
+                has_variable_axes: true,
+                known_variable_axes: vec!["wght".to_string(), "wdth".to_string()],
+                is_monospace_candidate: false,
+            },
+        ];
+
+        let update = apply_font_catalog_update_with_metadata(
+            &mut app,
+            entries.clone(),
+            FontFamilyDefaultsPolicy::None,
+        );
+
+        let catalog = app.global::<FontCatalog>().expect("font catalog");
+        assert_eq!(catalog.revision, update.revision);
+        assert_eq!(
+            catalog.families,
+            vec!["Inter".to_string(), "Roboto Flex".to_string()]
+        );
+
+        let meta = app
+            .global::<FontCatalogMetadata>()
+            .expect("font catalog metadata");
+        assert_eq!(meta.revision, update.revision);
+        assert_eq!(meta.entries, entries);
     }
 }

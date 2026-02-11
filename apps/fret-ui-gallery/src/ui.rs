@@ -5559,6 +5559,27 @@ fn preview_web_ime_harness(
                             lines.push(cx.text("font_catalog: <unavailable>"));
                         }
 
+                        if let Some(meta) =
+                            cx.app.global::<fret_runtime::FontCatalogMetadata>().cloned()
+                        {
+                            let variable_count = meta.entries.iter().filter(|e| e.has_variable_axes).count();
+                            let mono_count = meta
+                                .entries
+                                .iter()
+                                .filter(|e| e.is_monospace_candidate)
+                                .count();
+                            lines.push(cx.text("font_catalog_metadata:"));
+                            lines.push(cx.text(format!(
+                                "  revision={} entries_len={} variable_families={} monospace_candidates={}",
+                                meta.revision,
+                                meta.entries.len(),
+                                variable_count,
+                                mono_count
+                            )));
+                        } else {
+                            lines.push(cx.text("font_catalog_metadata: <unavailable>"));
+                        }
+
                         let snapshot = cx
                             .app
                             .global::<fret_core::input::WebImeBridgeDebugSnapshot>()

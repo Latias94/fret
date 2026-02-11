@@ -65,8 +65,11 @@ pub use execution::{
     DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
     Runnable,
 };
-pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
-pub use font_catalog::{FontCatalog, TextFontStackKey};
+pub use font_bootstrap::{
+    FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update,
+    apply_font_catalog_update_with_metadata,
+};
+pub use font_catalog::{FontCatalog, FontCatalogEntry, FontCatalogMetadata, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;
 pub use fret_core::ImageUpdateToken;
