@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "delta_x": -245.0,
+      "delta_y": 130.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-nary-preview-insert-into-existing-split" }
+  ]
+}
+

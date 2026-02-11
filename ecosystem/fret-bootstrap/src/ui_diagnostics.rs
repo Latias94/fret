@@ -6593,7 +6593,7 @@ impl UiDockDropTargetDiagnosticsV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiDockDropPreviewKindDiagnosticsV1 {
     WrapBinary,
@@ -6625,7 +6625,7 @@ impl UiDockDropPreviewKindDiagnosticsV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDockDropPreviewDiagnosticsV1 {
     pub kind: UiDockDropPreviewKindDiagnosticsV1,
 }

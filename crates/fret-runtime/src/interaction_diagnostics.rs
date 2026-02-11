@@ -132,6 +132,7 @@ pub struct WindowInteractionDiagnosticsStore {
 struct WindowInteractionDiagnosticsFrame {
     frame_id: FrameId,
     docking: DockingInteractionDiagnostics,
+    latest_docking: DockingInteractionDiagnostics,
 }
 
 impl WindowInteractionDiagnosticsStore {
@@ -151,7 +152,8 @@ impl WindowInteractionDiagnosticsStore {
     ) {
         self.begin_frame(window, frame_id);
         let w = self.per_window.entry(window).or_default();
-        w.docking = diagnostics;
+        w.docking = diagnostics.clone();
+        w.latest_docking = diagnostics;
     }
 
     pub fn docking_for_window(
@@ -167,6 +169,49 @@ impl WindowInteractionDiagnosticsStore {
         &self,
         window: AppWindowId,
     ) -> Option<&DockingInteractionDiagnostics> {
-        self.per_window.get(&window).map(|w| &w.docking)
+        self.per_window.get(&window).map(|w| &w.latest_docking)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docking_latest_is_stable_across_begin_frame_resets() {
+        let mut store = WindowInteractionDiagnosticsStore::default();
+        let window = AppWindowId::default();
+
+        let snapshot = DockingInteractionDiagnostics {
+            dock_graph_stats: Some(DockGraphStatsDiagnostics {
+                node_count: 3,
+                tabs_count: 1,
+                split_count: 1,
+                floating_count: 0,
+                max_depth: 2,
+                max_split_depth: 1,
+                canonical_ok: true,
+                has_nested_same_axis_splits: false,
+            }),
+            ..Default::default()
+        };
+
+        store.record_docking(window, FrameId(1), snapshot);
+        store.begin_frame(window, FrameId(2));
+
+        assert!(
+            store
+                .docking_latest_for_window(window)
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.canonical_ok),
+            "latest snapshot should persist even when the current frame snapshot is reset"
+        );
+
+        assert!(
+            store
+                .docking_for_window(window, FrameId(2))
+                .is_some_and(|d| d.dock_graph_stats.is_none()),
+            "frame-scoped snapshot should be cleared by begin_frame when not recorded"
+        );
     }
 }

@@ -364,11 +364,11 @@ Recommended diagnostics additions (tracked in the TODO, implemented):
     - `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1::DockDropPreviewKindIs`)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (predicate evaluation + bundle export)
 
-Suggested initial scripts (names are placeholders):
+Suggested initial scripts (start small; grow into a suite):
 
-- `tools/diag-scripts/docking-nary-edge-insert-does-not-nest.json`
-- `tools/diag-scripts/docking-nary-splitter-drag-adjacent-only.json`
-- `tools/diag-scripts/docking-nary-escape-cancels-drag-no-stuck-hover.json`
+- `tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json`
+- (follow-up) `tools/diag-scripts/docking-nary-splitter-drag-adjacent-only.json`
+- (follow-up) `tools/diag-scripts/docking-nary-escape-cancels-drag-no-stuck-hover.json`
 
 ### Performance gates
 
