@@ -94,15 +94,18 @@ Evidence:
 - Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
 
-Status: Implemented (pending merge)
+Status: Landed
 
-Evidence (planned):
+Evidence:
 
 - `crates/fret-core/src/scene/mod.rs` (`EffectStep::ColorMatrix` / `EffectStep::AlphaThreshold`)
-- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (effect chain planning)
-- `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (render plan execution)
-- `crates/fret-render-wgpu/tests/effect_color_matrix_conformance.rs`
-- `crates/fret-render-wgpu/tests/effect_alpha_threshold_conformance.rs`
+- `crates/fret-core/src/scene/validate.rs`
+- `crates/fret-core/src/scene/fingerprint.rs`
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
+- `crates/fret-render-wgpu/src/renderer/render_scene/render.rs`
+- `crates/fret-render-wgpu/src/renderer/pipelines/{color_matrix.rs,alpha_threshold.rs}`
+- `crates/fret-render-wgpu/src/renderer/shaders.rs`
+- `crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`
 
 ## M7 — Sampled materials v2a (catalog textures)
 
