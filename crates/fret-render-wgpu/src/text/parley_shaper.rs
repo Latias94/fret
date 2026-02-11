@@ -9,7 +9,7 @@ use parley::style::{
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -65,7 +65,7 @@ pub(crate) struct ParleyShaper {
     default_locale: Option<String>,
     common_fallback_stack_suffix: String,
     system_fonts_enabled: bool,
-    registered_font_blobs: Vec<RegisteredFontBlob>,
+    registered_font_blobs: VecDeque<RegisteredFontBlob>,
     registered_font_blobs_total_bytes: usize,
     family_id_cache_lower: HashMap<String, FamilyId>,
     all_font_names_cache: Option<Vec<String>>,
@@ -115,7 +115,7 @@ impl Default for ParleyShaper {
             default_locale: None,
             common_fallback_stack_suffix: String::new(),
             system_fonts_enabled: true,
-            registered_font_blobs: Vec::new(),
+            registered_font_blobs: VecDeque::new(),
             registered_font_blobs_total_bytes: 0,
             family_id_cache_lower: HashMap::new(),
             all_font_names_cache: None,
@@ -163,27 +163,28 @@ impl ParleyShaper {
         {
             // LRU: keep the most recently injected fonts near the back.
             let entry = self.registered_font_blobs.remove(ix);
-            self.registered_font_blobs.push(entry);
+            if let Some(entry) = entry {
+                self.registered_font_blobs.push_back(entry);
+            }
             return;
         }
 
         self.registered_font_blobs_total_bytes =
             self.registered_font_blobs_total_bytes.saturating_add(len);
         self.registered_font_blobs
-            .push(RegisteredFontBlob { hash, len, blob });
+            .push_back(RegisteredFontBlob { hash, len, blob });
 
         let max_count = registered_font_blobs_max_count();
         let max_bytes = registered_font_blobs_max_bytes();
         while self.registered_font_blobs.len() > max_count
             || self.registered_font_blobs_total_bytes > max_bytes
         {
-            let Some(evicted) = self.registered_font_blobs.first() else {
+            let Some(evicted) = self.registered_font_blobs.pop_front() else {
                 break;
             };
             self.registered_font_blobs_total_bytes = self
                 .registered_font_blobs_total_bytes
                 .saturating_sub(evicted.len);
-            let _ = self.registered_font_blobs.remove(0);
         }
     }
 

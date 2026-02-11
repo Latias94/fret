@@ -44,6 +44,16 @@ pub struct SystemFontRescanResult {
     pub(crate) all_font_catalog_entries: Vec<FontCatalogEntryMetadata>,
 }
 
+const _: () = {
+    fn assert_send<T: Send>() {}
+    fn assert_sync<T: Sync>() {}
+
+    let _ = assert_send::<SystemFontRescanSeed> as fn();
+    let _ = assert_send::<SystemFontRescanResult> as fn();
+    let _ = assert_sync::<SystemFontRescanSeed> as fn();
+    let _ = assert_sync::<SystemFontRescanResult> as fn();
+};
+
 impl std::fmt::Debug for SystemFontRescanResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SystemFontRescanResult")

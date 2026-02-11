@@ -4251,6 +4251,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         })
     }
 
+    fn request_redraw_all_windows(&self) {
+        for (_id, state) in self.windows.iter() {
+            state.window.request_redraw();
+        }
+    }
+
     fn request_system_font_rescan(&mut self) {
         if !Self::system_font_rescan_async_enabled() {
             self.rescan_system_fonts_sync();
@@ -4299,33 +4305,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         }
 
-        let entries = renderer
-            .all_font_catalog_entries()
-            .into_iter()
-            .map(|e| fret_runtime::FontCatalogEntry {
-                family: e.family,
-                has_variable_axes: e.has_variable_axes,
-                known_variable_axes: e.known_variable_axes,
-                is_monospace_candidate: e.is_monospace_candidate,
-            })
-            .collect::<Vec<_>>();
         // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
-        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+        super::font_catalog::apply_renderer_font_catalog_update(
             &mut self.app,
-            entries,
+            renderer,
             fret_runtime::FontFamilyDefaultsPolicy::None,
         );
-        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
-            let _ = renderer.set_text_font_families(config);
-        }
-        self.app
-            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                renderer.text_font_stack_key(),
-            ));
-
-        for (_id, state) in self.windows.iter() {
-            state.window.request_redraw();
-        }
+        self.request_redraw_all_windows();
     }
 
     fn apply_pending_system_font_rescan_result(&mut self) -> bool {
@@ -4348,33 +4334,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return true;
         }
 
-        let entries = renderer
-            .all_font_catalog_entries()
-            .into_iter()
-            .map(|e| fret_runtime::FontCatalogEntry {
-                family: e.family,
-                has_variable_axes: e.has_variable_axes,
-                known_variable_axes: e.known_variable_axes,
-                is_monospace_candidate: e.is_monospace_candidate,
-            })
-            .collect::<Vec<_>>();
         // Font catalog refresh trigger (ADR 0258): explicit system font rescan (async).
-        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+        super::font_catalog::apply_renderer_font_catalog_update(
             &mut self.app,
-            entries,
+            renderer,
             fret_runtime::FontFamilyDefaultsPolicy::None,
         );
-        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
-            let _ = renderer.set_text_font_families(config);
-        }
-        self.app
-            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                renderer.text_font_stack_key(),
-            ));
-
-        for (_id, state) in self.windows.iter() {
-            state.window.request_redraw();
-        }
+        self.request_redraw_all_windows();
 
         let should_restart = self.system_font_rescan_pending;
         self.system_font_rescan_pending = false;
@@ -4873,32 +4839,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let entries = renderer
-                            .all_font_catalog_entries()
-                            .into_iter()
-                            .map(|e| fret_runtime::FontCatalogEntry {
-                                family: e.family,
-                                has_variable_axes: e.has_variable_axes,
-                                known_variable_axes: e.known_variable_axes,
-                                is_monospace_candidate: e.is_monospace_candidate,
-                            })
-                            .collect::<Vec<_>>();
                         // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
-                        let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                        super::font_catalog::apply_renderer_font_catalog_update(
                             &mut self.app,
-                            entries,
+                            renderer,
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
-                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
-                            let _ = renderer.set_text_font_families(config);
-                        }
-                        self.app.set_global::<fret_runtime::TextFontStackKey>(
-                            fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
-                        );
-
-                        for (_id, state) in self.windows.iter() {
-                            state.window.request_redraw();
-                        }
+                        self.request_redraw_all_windows();
                     }
                     Effect::TextRescanSystemFonts => {
                         self.request_system_font_rescan();
