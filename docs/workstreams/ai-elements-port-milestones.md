@@ -11,6 +11,7 @@ This document is a **one-screen milestone board** for the AI Elements port.
 
 Source of truth for detailed TODOs: `docs/workstreams/ai-elements-port-todo.md`.
 Narrative + contracts: `docs/workstreams/ai-elements-port.md`.
+Upstream inventory + mapping: `docs/workstreams/ai-elements-upstream-alignment.md`.
 
 ## Definition of done (port-level)
 

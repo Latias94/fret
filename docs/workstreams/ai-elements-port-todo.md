@@ -11,6 +11,7 @@ Upstream reference:
 
 Workstream narrative: `docs/workstreams/ai-elements-port.md`
 Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`
+Upstream inventory + mapping: `docs/workstreams/ai-elements-upstream-alignment.md`
 
 ## Tracking format
 

@@ -30,7 +30,7 @@ The upstream spec for this workstream is the pinned local checkout under
 Note: `repo-ref` is a local developer asset store and is not required to build the workspace.
 
 - Upstream repo: `vercel/ai-elements`
-- Pinned commit: `7401e828fdd893d4371d7e4f6c8ce9e3f423a52b` (commit date `2026-02-05`)
+- Pinned commit: `e2045329c8445ebd0523de6aa755a39d6193841f` (commit date `2026-02-06`)
 
 If the pinned upstream changes, update this stamp first so TODOs and behavior discussions remain
 anchored.
