@@ -11,6 +11,7 @@ use fret_launch::{
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::{Invalidation, UiTree};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::separator::Separator;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::collections::HashSet;

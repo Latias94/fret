@@ -48,6 +48,14 @@ impl<H: UiHost> UiTree<H> {
         // invocations when tracking "bounds were already updated this pass" markers.
         self.paint_pass = self.paint_pass.saturating_add(1);
 
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            app.with_global_mut_untracked(
+                fret_core::WindowFrameClockService::default,
+                |svc, _host| svc.record_frame(window, frame_id),
+            );
+        }
+
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.begin_debug_frame_if_needed(app.frame_id());

@@ -22,6 +22,7 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::ScrollStrategy;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn as shadcn;
 
 mod pack;

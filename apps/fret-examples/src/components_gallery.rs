@@ -19,6 +19,7 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
