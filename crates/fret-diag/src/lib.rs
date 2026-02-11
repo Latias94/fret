@@ -4621,8 +4621,8 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_select_suite {
-                    // Select scripts rely on stable role-and-name semantics selectors (Selected: ...).
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+                    // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors
+                    // so we can share bundles by default without leaking labels/values.
                     (
                         ui_gallery_select_suite_scripts()
                             .into_iter()

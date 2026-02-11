@@ -35,6 +35,7 @@ Examples of “good invariants”:
 - open/close lifecycle: trigger opens, Escape/outside-press dismisses,
 - focus behavior: close restores focus predictably,
 - selection outcome: commit updates the trigger label/value; disabled items do not commit,
+ - selection outcome: commit persists selection state; disabled items do not commit,
 - roving/typeahead: active item updates as expected (and skips disabled items),
 - placement sanity: content bounds stay within window bounds; chosen side/align is explainable under collisions,
 - routing correctness: injected clicks/keys either land or emit a trace explaining barriers/capture/occlusion.

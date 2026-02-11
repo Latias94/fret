@@ -10,7 +10,8 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
   - outside press / Escape dismisses,
   - close restores focus predictably.
 - Selection outcome:
-  - click/keyboard commit updates the trigger label,
+  - click/keyboard commit updates the selected state (and the next open highlights the selection),
+  - trigger label update can be verified via screenshot-based scripts when needed,
   - disabled items do not commit.
 - Routing correctness:
   - injected pointer lands on the intended target (or produces an explainable hit-test trace),
@@ -25,6 +26,7 @@ Goal: do not snapshot every internal state. Gate a small set of stable invariant
 ## Script authoring tips
 
 - Prefer stable `test_id` at the recipe/component layer (trigger/content/items/viewport).
+- Keep scripts redaction-friendly: avoid `role_and_name` selectors when `test_id` can work.
 - Replace sleeps with intent steps:
   - `click_stable` for jittery targets,
   - `wait_bounds_stable` for “overlay settled” phases (flip/shift, estimate→measured).

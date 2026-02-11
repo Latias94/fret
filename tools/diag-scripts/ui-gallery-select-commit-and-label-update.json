@@ -122,11 +122,10 @@
     },
     {
       "predicate": {
-        "kind": "exists",
+        "kind": "focus_is",
         "target": {
-          "kind": "role_and_name",
-          "name": "Selected: banana",
-          "role": "text"
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
         }
       },
       "timeout_frames": 240,
