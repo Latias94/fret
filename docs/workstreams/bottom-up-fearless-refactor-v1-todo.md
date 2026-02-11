@@ -37,6 +37,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
+  - Hygiene: keep shared integration-test helpers under `tests/support/` so they do not compile as standalone test crates.
   - Evidence (module split):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support.rs`
@@ -69,7 +70,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/semantics.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/viewport.rs`
   - Evidence (shadcn web golden schema + helpers):
-    - `ecosystem/fret-ui-shadcn/tests/web_golden_shadcn.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/web_golden_shadcn.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/repo_root.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`

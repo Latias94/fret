@@ -2,7 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+#[path = "repo_root.rs"]
+mod repo_root;
+
+pub(crate) use repo_root::repo_root;
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct WebGolden {
@@ -93,15 +98,6 @@ pub(crate) struct WebNode {
     pub(crate) scroll: Option<WebScrollMetrics>,
     #[serde(default)]
     pub(crate) children: Vec<WebNode>,
-}
-
-pub(crate) fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
 }
 
 pub(crate) fn web_golden_path_file(file_name: &str) -> PathBuf {
