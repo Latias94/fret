@@ -107,8 +107,12 @@ Each TODO is labeled:
     - `tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json`
     - `crates/fret-diag/src/lib.rs` (`docking_arbitration_suite_scripts` includes mask script)
 
-- [ ] DN-P1-policy-003 Add group locking / “no-drop-target” semantics.
+- [x] DN-P1-policy-003 Add group locking / “no-drop-target” semantics.
   - Similar to `egui_tiles` behavior overrides; kept in docking layer.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/mod.rs` (`DockingPolicy::allow_panel_drag`, `DockingPolicy::allow_tabs_group_drag`, `DockingPolicy::allow_tear_off`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (gates drag start + tear-off requests)
+    - `ecosystem/fret-docking/src/dock/tests/drag.rs` (`dock_drag_start_respects_tabs_group_drag_policy`, `dock_drag_tear_off_request_respects_policy`)
 
 ## P1 — Observability (required for diag/perf gates)
 
