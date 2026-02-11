@@ -19,3 +19,12 @@ pub(super) fn contains_id(node: &WebNode, needle: &str) -> bool {
     }
     node.children.iter().any(|c| contains_id(c, needle))
 }
+
+#[allow(dead_code)]
+pub(super) fn find_attr_in_subtree<'a>(node: &'a WebNode, key: &str) -> Option<&'a str> {
+    node.attrs.get(key).map(String::as_str).or_else(|| {
+        node.children
+            .iter()
+            .find_map(|child| find_attr_in_subtree(child, key))
+    })
+}

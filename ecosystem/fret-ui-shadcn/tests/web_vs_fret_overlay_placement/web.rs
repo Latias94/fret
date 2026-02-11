@@ -10,6 +10,9 @@ mod web_query;
 #[path = "../support/web_portals.rs"]
 mod web_portals;
 
+#[path = "../support/web_tree.rs"]
+mod web_tree;
+
 pub(crate) fn web_find_by_data_slot_and_state<'a>(
     root: &'a WebNode,
     slot: &str,
@@ -35,12 +38,5 @@ pub(crate) fn web_portal_node_by_data_slot<'a>(
 }
 
 pub(crate) fn find_attr_in_subtree<'a>(node: &'a WebNode, key: &str) -> Option<&'a str> {
-    node.attrs.get(key).map(String::as_str).or_else(|| {
-        for child in &node.children {
-            if let Some(found) = find_attr_in_subtree(child, key) {
-                return Some(found);
-            }
-        }
-        None
-    })
+    web_tree::find_attr_in_subtree(node, key)
 }
