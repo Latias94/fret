@@ -492,6 +492,20 @@ Schema v2 keeps the same `steps` array shape, but adds higher-level intent steps
 (selectors + window-bounds predicates), and can internally perform multi-frame behavior (wait/retry loops) without forcing
 authors to hand-write brittle `wait_frames` chains.
 
+### Script metadata (v2)
+
+Schema v2 scripts may include a top-level `meta` object. Supported fields:
+
+- `meta.name: string` (display-only)
+- `meta.tags: string[]` (display-only)
+- `meta.target_hints: string[]` (display-only)
+- `meta.required_capabilities: string[]` (gated by `capabilities.json` / DevTools session capabilities)
+- `meta.env_defaults: { [key: string]: string | number | boolean } | string[]`
+  - A script-authored set of environment defaults applied only when the harness launches a fresh process
+    (`fretboard diag run --launch` / `fretboard diag suite --launch`).
+  - Command-line `--env KEY=VALUE` always wins over script defaults.
+  - Suites fail early if scripts disagree on a default value for the same key.
+
 Supported intent steps (v2):
 
 - `ensure_visible` (wait until visible/within window bounds)

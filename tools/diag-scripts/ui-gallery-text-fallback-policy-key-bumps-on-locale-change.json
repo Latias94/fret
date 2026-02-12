@@ -3,7 +3,10 @@
   "meta": {
     "name": "ui-gallery: text fallback policy key bumps when locale changes",
     "tags": ["ui-gallery", "text", "fonts", "locale", "gate"],
-    "target_hints": ["fret-ui-gallery"]
+    "target_hints": ["fret-ui-gallery"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -61,4 +64,3 @@
     }
   ]
 }
-

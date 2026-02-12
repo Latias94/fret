@@ -3,7 +3,11 @@
   "meta": {
     "name": "UI Gallery: bundled mixed-script fallback conformance (no system fonts)",
     "tags": ["ui-gallery", "text", "fonts", "fallback", "conformance"],
-    "target_hints": ["fret-ui-gallery"]
+    "target_hints": ["fret-ui-gallery"],
+    "env_defaults": {
+      "FRET_TEXT_SYSTEM_FONTS": "0",
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+    }
   },
   "steps": [
     {
@@ -60,4 +64,3 @@
     }
   ]
 }
-

@@ -2103,6 +2103,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             let script_wants_screenshots = script_requests_screenshots(&src);
             let mut run_launch_env = launch_env.clone();
+            for (key, value) in script_env_defaults(&src) {
+                push_env_if_missing(&mut run_launch_env, &key, &value);
+            }
             let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
             let mut child = maybe_launch_demo(
                 &launch,
@@ -4053,6 +4056,37 @@ See: `docs/tracy.md`.\n";
                     || is_ui_gallery_ai_transcript_retained_suite)
             {
                 warmup_frames = 5;
+            }
+
+            let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
+                std::collections::BTreeMap::new();
+            let mut suite_env_conflicts: Vec<String> = Vec::new();
+            for src in scripts.iter() {
+                for (key, value) in script_env_defaults(src) {
+                    if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
+                    {
+                        if prev != value {
+                            suite_env_conflicts.push(format!(
+                                "{} wants {}={}, but another script requested {}={}",
+                                src.display(),
+                                key,
+                                value,
+                                key,
+                                prev
+                            ));
+                        }
+                    }
+                }
+            }
+            if !suite_env_conflicts.is_empty() {
+                suite_env_conflicts.sort();
+                return Err(format!(
+                    "conflicting script meta.env_defaults in suite:\n- {}",
+                    suite_env_conflicts.join("\n- ")
+                ));
+            }
+            for (key, value) in suite_script_env_defaults {
+                push_env_if_missing(&mut launch_env, &key, &value);
             }
 
             let suite_launch_env = launch_env.clone();
@@ -9433,6 +9467,16 @@ fn script_required_capabilities(script: &Path) -> Vec<String> {
     script_required_capabilities_value(&value)
 }
 
+fn script_env_defaults(script: &Path) -> Vec<(String, String)> {
+    let Ok(bytes) = std::fs::read(script) else {
+        return Vec::new();
+    };
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return Vec::new();
+    };
+    script_env_defaults_value(&value)
+}
+
 fn script_requests_screenshots_value(value: &serde_json::Value) -> bool {
     value
         .get("steps")
@@ -9482,6 +9526,71 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
     normalized.sort();
     normalized.dedup();
     normalized
+}
+
+fn script_env_defaults_value(value: &serde_json::Value) -> Vec<(String, String)> {
+    use std::collections::BTreeMap;
+
+    fn is_valid_key(key: &str) -> bool {
+        let key = key.trim();
+        if key.is_empty() {
+            return false;
+        }
+        if key.contains('=') {
+            return false;
+        }
+        true
+    }
+
+    fn normalize_value(v: &serde_json::Value) -> Option<String> {
+        match v {
+            serde_json::Value::String(s) => Some(s.to_string()),
+            serde_json::Value::Bool(b) => Some(b.to_string()),
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            _ => None,
+        }
+    }
+
+    let mut out: BTreeMap<String, String> = BTreeMap::new();
+    let Some(meta) = value.get("meta") else {
+        return Vec::new();
+    };
+    let Some(raw) = meta.get("env_defaults") else {
+        return Vec::new();
+    };
+
+    match raw {
+        serde_json::Value::Object(map) => {
+            for (key, v) in map.iter() {
+                if !is_valid_key(key) {
+                    continue;
+                }
+                let Some(value) = normalize_value(v) else {
+                    continue;
+                };
+                out.insert(key.trim().to_string(), value);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items.iter().filter_map(|v| v.as_str()) {
+                let item = item.trim();
+                if item.is_empty() {
+                    continue;
+                }
+                let Some((key, value)) = item.split_once('=') else {
+                    continue;
+                };
+                let key = key.trim();
+                if !is_valid_key(key) {
+                    continue;
+                }
+                out.insert(key.to_string(), value.to_string());
+            }
+        }
+        _ => {}
+    }
+
+    out.into_iter().collect()
 }
 
 fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
@@ -9641,6 +9750,53 @@ mod capability_tests {
         assert!(missing.contains(&"diag.screenshot_png".to_string()));
 
         let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn parses_script_env_defaults_from_meta() {
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "env_defaults": {
+                    "FRET_TEXT_SYSTEM_FONTS": 0,
+                    "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+                    "": "ignored",
+                    "NOT=ALLOWED": "ignored"
+                }
+            },
+            "steps": []
+        });
+        let parsed = script_env_defaults_value(&script);
+        assert_eq!(
+            parsed,
+            vec![
+                ("FRET_TEXT_SYSTEM_FONTS".to_string(), "0".to_string()),
+                (
+                    "FRET_UI_GALLERY_BOOTSTRAP_FONTS".to_string(),
+                    "1".to_string()
+                ),
+            ]
+        );
+
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "meta": {
+                "env_defaults": [
+                    "FRET_A=1",
+                    "FRET_B=two",
+                    "FRET_A=3"
+                ]
+            },
+            "steps": []
+        });
+        let parsed = script_env_defaults_value(&script);
+        assert_eq!(
+            parsed,
+            vec![
+                ("FRET_A".to_string(), "3".to_string()),
+                ("FRET_B".to_string(), "two".to_string()),
+            ]
+        );
     }
 }
 
