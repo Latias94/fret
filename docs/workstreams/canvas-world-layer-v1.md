@@ -49,7 +49,8 @@ For AI Elements parity, this shows up as:
 3. **Deterministic input arbitration** between world layer and overlays (toolbars, controls, etc.).
 4. **Two scaling modes** (configurable):
    - **Scale-with-zoom** (XYFlow-like; nodes zoom visually with the world),
-   - **Semantic zoom** (editor-like; nodes stay constant in screen px while the world pans/zooms).
+   - **Semantic zoom** (editor-like; nodes stay constant in screen px while their positions follow
+     the zoomed canvas mapping).
 
 ## Design sketch (proposed seams)
 
@@ -71,6 +72,25 @@ Open questions (to be answered by a spike):
 - How to expose a stable “world-space layout contract” without leaking renderer details into
   `crates/fret-ui`.
 
+## Current v0 status (2026-02-12)
+
+Implemented:
+
+- `fret-canvas/ui` composition helper: `ecosystem/fret-canvas/src/ui/world_layer.rs`
+  (`canvas_world_surface_panel`)
+- Scale modes:
+  - `CanvasWorldScaleMode::ScaleWithZoom` (world subtree render-transformed)
+  - `CanvasWorldScaleMode::SemanticZoom` (world subtree screen-space; callers position nodes via
+    `CanvasWorldPaintCx::canvas_to_screen`)
+- UI Gallery spike: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+- Diag gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
+
+Known limitations (v0):
+
+- Bounds for the world transform are derived from `layout_query_bounds(...)` (last-frame), so
+  sudden resizes can have one-frame transform mismatch. v1 should remove this by computing the
+  transform from current-frame bounds (requires a deeper runtime seam).
+
 ## Quality gates
 
 Minimum:
@@ -84,4 +104,3 @@ Minimum:
 
 - Milestones: `docs/workstreams/canvas-world-layer-v1-milestones.md`
 - TODO tracker: `docs/workstreams/canvas-world-layer-v1-todo.md`
-

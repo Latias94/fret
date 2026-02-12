@@ -27,12 +27,15 @@ See also:
 
 ## M1 — Correctness (hit-testing + scaling modes)
 
-- [ ] CWL-M1-001 Implement and document scale mode selection:
+- [x] CWL-M1-001 Implement and document scale mode selection:
   - Scale-with-zoom (XYFlow-like),
   - Semantic-zoom (editor-like).
-- [ ] CWL-M1-002 Add a hit-testing gate:
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldScaleMode`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+- [x] CWL-M1-002 Add a hit-testing gate:
   - click node under zoom still hits the node,
   - overlay buttons still receive input.
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
 
 ## M2 — Ergonomics (apps can build on it)
 
