@@ -11,9 +11,11 @@ mod controllable_state;
 mod input_exempt;
 mod pan_zoom;
 mod tool_router;
+mod world_layer;
 
 pub use canvas_surface::*;
 pub use controllable_state::*;
 pub use input_exempt::*;
 pub use pan_zoom::*;
 pub use tool_router::*;
+pub use world_layer::*;
