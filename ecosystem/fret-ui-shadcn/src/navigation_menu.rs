@@ -975,11 +975,11 @@ impl NavigationMenu {
                 .copied()
                 .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_easing_duration(
                 cx,
                 open_for_motion,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_DURATION_100,
+                overlay_motion::SHADCN_MOTION_DURATION_100,
                 overlay_motion::shadcn_ease,
             );
             let opacity = motion.progress;

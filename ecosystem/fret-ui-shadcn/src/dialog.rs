@@ -228,11 +228,11 @@ impl Dialog {
             let prev_content_element =
                 cx.with_state(DialogA11yState::default, |st| st.content_element);
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_easing_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_DURATION_200,
+                overlay_motion::SHADCN_MOTION_DURATION_200,
                 overlay_motion::shadcn_ease,
             );
             let (open_change, open_change_complete) = cx
@@ -1627,7 +1627,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) + 2;
         for _ in 0..settle_frames {
             render_dialog_frame_with_underlay(
                 &mut ui,
@@ -2616,7 +2618,10 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // apply focus restore when the layer is uninstalled.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
@@ -3076,7 +3081,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(2 + i as u64));
             OverlayController::begin_frame(&mut app, window);
@@ -3277,7 +3285,10 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow presence to complete and focus restore to apply.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_200,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
