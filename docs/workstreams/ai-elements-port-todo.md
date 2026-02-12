@@ -102,7 +102,7 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Partial | `fret-ui-ai` (wrappers) | `panel` + `toolbar` chrome are ported (UI-only). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
+| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Partial | `fret-ui-ai` (wrappers) | `panel` + `toolbar` + `controls` chrome are ported (UI-only). Demo + gates: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
 
 ### Voice
 

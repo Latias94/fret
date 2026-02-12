@@ -95,14 +95,15 @@ Legend:
 | `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG path/animation). |
 | `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
 | `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
-| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` (planned) | Not started | Chrome-only wrapper; apps own zoom/pan policy. |
+| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
 | `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG connection line). |
 
 ## Known upstream files not yet ported
 
 As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
 
-- Workflow wrappers (remaining): `canvas.tsx`, `node.tsx`, `edge.tsx`, `controls.tsx`, `connection.tsx`
+- Workflow wrappers (remaining): `canvas.tsx`, `node.tsx`, `edge.tsx`, `connection.tsx`
+ 
 
 ## Regenerating this diff (developer note)
 
