@@ -24,6 +24,26 @@ struct TransitionDriverState {
 
 const REFERENCE_FRAME_DELTA_NS_60HZ: u64 = 1_000_000_000 / 60;
 
+/// Convert a wall-clock duration into the closest equivalent number of 60Hz timeline ticks.
+///
+/// This is primarily used to provide ergonomic duration-based APIs while keeping the underlying
+/// transition timeline deterministic and runner-agnostic.
+pub fn ticks_60hz_for_duration(duration: Duration) -> u64 {
+    if duration == Duration::ZERO {
+        return 0;
+    }
+
+    let ref_ns = REFERENCE_FRAME_DELTA_NS_60HZ as u128;
+    let ns = duration.as_nanos();
+    if ns == 0 {
+        return 0;
+    }
+
+    // Ceil(duration / (1/60)s) so transitions do not end earlier than requested.
+    let ticks = (ns + ref_ns - 1) / ref_ns;
+    ticks.clamp(1, 10_000) as u64
+}
+
 fn scale_60fps_ticks_to_frame_ticks_rounded(ticks: u64, frame_delta: Duration) -> u64 {
     if ticks == 0 {
         return 0;
@@ -231,6 +251,28 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
 }
 
 #[track_caller]
+pub fn drive_transition_with_durations_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+) -> TransitionOutput {
+    let open_ticks = ticks_60hz_for_duration(open_duration);
+    let close_ticks = ticks_60hz_for_duration(close_duration);
+    drive_transition_with_durations(cx, open, open_ticks, close_ticks)
+}
+
+#[track_caller]
+pub fn drive_transition_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    duration: Duration,
+) -> TransitionOutput {
+    let ticks = ticks_60hz_for_duration(duration);
+    drive_transition(cx, open, ticks)
+}
+
+#[track_caller]
 pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -249,6 +291,19 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
             true,
         )
     })
+}
+
+#[track_caller]
+pub fn drive_transition_with_durations_and_easing_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    ease: fn(f32) -> f32,
+) -> TransitionOutput {
+    let open_ticks = ticks_60hz_for_duration(open_duration);
+    let close_ticks = ticks_60hz_for_duration(close_duration);
+    drive_transition_with_durations_and_easing(cx, open, open_ticks, close_ticks, ease)
 }
 
 #[track_caller]
@@ -273,6 +328,27 @@ pub fn drive_transition_with_durations_and_easing_with_mount_behavior<H: UiHost>
                 animate_on_mount,
             )
         },
+    )
+}
+
+#[track_caller]
+pub fn drive_transition_with_durations_and_easing_duration_with_mount_behavior<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    ease: fn(f32) -> f32,
+    animate_on_mount: bool,
+) -> TransitionOutput {
+    let open_ticks = ticks_60hz_for_duration(open_duration);
+    let close_ticks = ticks_60hz_for_duration(close_duration);
+    drive_transition_with_durations_and_easing_with_mount_behavior(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        ease,
+        animate_on_mount,
     )
 }
 
@@ -359,6 +435,19 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
             output
         },
     )
+}
+
+#[track_caller]
+pub fn drive_transition_with_durations_and_cubic_bezier_duration<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_duration: Duration,
+    close_duration: Duration,
+    bezier: CubicBezier,
+) -> TransitionOutput {
+    let open_ticks = ticks_60hz_for_duration(open_duration);
+    let close_ticks = ticks_60hz_for_duration(close_duration);
+    drive_transition_with_durations_and_cubic_bezier(cx, open, open_ticks, close_ticks, bezier)
 }
 
 #[cfg(test)]

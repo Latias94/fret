@@ -6,6 +6,8 @@
 //!
 //! This module provides reusable math for those effects so component wrappers don't drift.
 
+use std::time::Duration;
+
 use fret_core::{Edges, Point, Px, Rect, Transform2D};
 use fret_ui::element::{
     AnyElement, InteractivityGateProps, LayoutStyle, Length, OpacityProps, RenderTransformProps,
@@ -21,6 +23,11 @@ pub const SHADCN_MOTION_TICKS_100: u64 = 6;
 pub const SHADCN_MOTION_TICKS_200: u64 = 12;
 pub const SHADCN_MOTION_TICKS_300: u64 = 18;
 pub const SHADCN_MOTION_TICKS_500: u64 = 30;
+
+pub const SHADCN_MOTION_DURATION_100: Duration = Duration::from_millis(100);
+pub const SHADCN_MOTION_DURATION_200: Duration = Duration::from_millis(200);
+pub const SHADCN_MOTION_DURATION_300: Duration = Duration::from_millis(300);
+pub const SHADCN_MOTION_DURATION_500: Duration = Duration::from_millis(500);
 
 /// shadcn/ui v4 default easing curve (`ease-out`-ish).
 pub fn shadcn_ease(x: f32) -> f32 {

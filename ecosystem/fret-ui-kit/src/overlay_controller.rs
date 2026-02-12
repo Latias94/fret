@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
 use fret_ui::action::{
@@ -934,6 +936,22 @@ impl OverlayController {
         )
     }
 
+    /// Drive a general transition timeline with separate open/close wall-clock durations.
+    #[track_caller]
+    pub fn transition_with_durations_duration<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_duration: Duration,
+        close_duration: Duration,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_duration(
+            cx,
+            open,
+            open_duration,
+            close_duration,
+        )
+    }
+
     /// Drive a transition timeline with an explicit easing function.
     ///
     /// This enables CSS-style easing (e.g. cubic-bezier) while staying deterministic and
@@ -955,6 +973,24 @@ impl OverlayController {
         )
     }
 
+    /// Drive a transition timeline with an explicit easing function using wall-clock durations.
+    #[track_caller]
+    pub fn transition_with_durations_and_easing_duration<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_duration: Duration,
+        close_duration: Duration,
+        ease: fn(f32) -> f32,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_easing_duration(
+            cx,
+            open,
+            open_duration,
+            close_duration,
+            ease,
+        )
+    }
+
     #[track_caller]
     pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
@@ -968,6 +1004,23 @@ impl OverlayController {
             open,
             open_ticks,
             close_ticks,
+            bezier,
+        )
+    }
+
+    #[track_caller]
+    pub fn transition_with_durations_and_cubic_bezier_duration<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_duration: Duration,
+        close_duration: Duration,
+        bezier: fret_ui::theme::CubicBezier,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier_duration(
+            cx,
+            open,
+            open_duration,
+            close_duration,
             bezier,
         )
     }
