@@ -191,6 +191,54 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     self.diag_clipboard_force_unavailable = enabled;
                 }
+                Effect::DiagIncomingOpenInject {
+                    window: target_window,
+                    items,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+                    self.diag_incoming_open_next_token =
+                        self.diag_incoming_open_next_token.saturating_add(1);
+
+                    let mut payload = super::DiagIncomingOpenPayload::default();
+                    let mut request_items: Vec<fret_core::IncomingOpenItem> = Vec::new();
+                    for item in items {
+                        match item {
+                            fret_runtime::DiagIncomingOpenItem::File {
+                                name,
+                                bytes,
+                                media_type,
+                            } => {
+                                request_items.push(fret_core::IncomingOpenItem::File(
+                                    fret_core::ExternalDragFile {
+                                        name: name.clone(),
+                                        size_bytes: Some(bytes.len() as u64),
+                                        media_type,
+                                    },
+                                ));
+                                payload
+                                    .files
+                                    .push(fret_core::ExternalDropFileData { name, bytes });
+                            }
+                            fret_runtime::DiagIncomingOpenItem::Text { text, media_type } => {
+                                let estimated_size_bytes = Some(text.len() as u64);
+                                request_items.push(fret_core::IncomingOpenItem::Text {
+                                    media_type,
+                                    estimated_size_bytes,
+                                });
+                                payload.texts.push(text);
+                            }
+                        }
+                    }
+                    self.diag_incoming_open_payloads.insert(token, payload);
+                    self.pending_events.push(Event::IncomingOpenRequest {
+                        token,
+                        items: request_items,
+                    });
+                    window.request_redraw();
+                }
                 Effect::ClipboardSetText { text: _ } => {
                     // Best-effort: clipboard access is platform-dependent on web and may be
                     // restricted. For now, treat as unsupported.
@@ -610,20 +658,169 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::IncomingOpenReadAll {
                     window: target_window,
                     token,
-                }
-                | Effect::IncomingOpenReadAllWithLimits {
-                    window: target_window,
-                    token,
-                    limits: _,
                 } => {
                     if target_window != self.app_window {
                         continue;
                     }
-                    self.pending_events
-                        .push(Event::IncomingOpenUnavailable { token });
+
+                    let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                        self.pending_events
+                            .push(Event::IncomingOpenUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let cap = fret_core::ExternalDropReadLimits {
+                        max_total_bytes: self.config.file_dialog_max_total_bytes,
+                        max_file_bytes: self.config.file_dialog_max_file_bytes,
+                        max_files: self.config.file_dialog_max_files,
+                    };
+
+                    let limits = cap;
+                    let include_limits = false;
+
+                    let mut total_bytes: u64 = 0;
+                    let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                    let mut texts: Vec<String> = Vec::new();
+                    let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                    for file in payload.files.iter().take(limits.max_files) {
+                        let len = file.bytes.len() as u64;
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "file exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        files.push(file.clone());
+                    }
+
+                    for (idx, text) in payload.texts.iter().enumerate() {
+                        let len = text.len() as u64;
+                        let name = format!("text[{idx}]");
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "text exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        texts.push(text.clone());
+                    }
+
+                    self.pending_events.push(Event::IncomingOpenData(
+                        fret_core::IncomingOpenDataEvent {
+                            token,
+                            files,
+                            texts,
+                            errors,
+                            limits: include_limits.then_some(limits),
+                        },
+                    ));
                     window.request_redraw();
                 }
-                Effect::IncomingOpenRelease { token: _ } => {}
+                Effect::IncomingOpenReadAllWithLimits {
+                    window: target_window,
+                    token,
+                    limits,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+
+                    let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                        self.pending_events
+                            .push(Event::IncomingOpenUnavailable { token });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let cap = fret_core::ExternalDropReadLimits {
+                        max_total_bytes: self.config.file_dialog_max_total_bytes,
+                        max_file_bytes: self.config.file_dialog_max_file_bytes,
+                        max_files: self.config.file_dialog_max_files,
+                    };
+
+                    let limits = limits.capped_by(cap);
+                    let include_limits = true;
+
+                    let mut total_bytes: u64 = 0;
+                    let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                    let mut texts: Vec<String> = Vec::new();
+                    let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                    for file in payload.files.iter().take(limits.max_files) {
+                        let len = file.bytes.len() as u64;
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "file exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name: file.name.clone(),
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        files.push(file.clone());
+                    }
+
+                    for (idx, text) in payload.texts.iter().enumerate() {
+                        let len = text.len() as u64;
+                        let name = format!("text[{idx}]");
+                        if len > limits.max_file_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "text exceeds max_file_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                            errors.push(fret_core::ExternalDropReadError {
+                                name,
+                                message: "read exceeds max_total_bytes".to_string(),
+                            });
+                            continue;
+                        }
+                        total_bytes = total_bytes.saturating_add(len);
+                        texts.push(text.clone());
+                    }
+
+                    self.pending_events.push(Event::IncomingOpenData(
+                        fret_core::IncomingOpenDataEvent {
+                            token,
+                            files,
+                            texts,
+                            errors,
+                            limits: include_limits.then_some(limits),
+                        },
+                    ));
+                    window.request_redraw();
+                }
+                Effect::IncomingOpenRelease { token } => {
+                    self.diag_incoming_open_payloads.remove(&token);
+                }
                 _ => {}
             }
         }

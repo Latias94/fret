@@ -1243,6 +1243,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_clipboard_force_unavailable_windows: HashSet<fret_core::AppWindowId>,
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
+    diag_incoming_open_next_token: u64,
+    diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
@@ -1265,6 +1267,12 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     #[cfg(feature = "diag-screenshots")]
     diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
+}
+
+#[derive(Debug, Default)]
+struct DiagIncomingOpenPayload {
+    files: Vec<fret_core::ExternalDropFileData>,
+    texts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -3007,6 +3015,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_clipboard_force_unavailable_windows: HashSet::new(),
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
+            diag_incoming_open_next_token: 1,
+            diag_incoming_open_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
             cursor_screen_pos: None,
@@ -4820,6 +4830,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             self.diag_clipboard_force_unavailable_windows.remove(&window);
                         }
                     }
+                    Effect::DiagIncomingOpenInject { window, items } => {
+                        if self.windows.get(window).is_none() {
+                            continue;
+                        }
+
+                        let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+                        self.diag_incoming_open_next_token =
+                            self.diag_incoming_open_next_token.saturating_add(1);
+
+                        let mut payload = DiagIncomingOpenPayload::default();
+                        let mut request_items: Vec<fret_core::IncomingOpenItem> = Vec::new();
+                        for item in items {
+                            match item {
+                                fret_runtime::DiagIncomingOpenItem::File {
+                                    name,
+                                    bytes,
+                                    media_type,
+                                } => {
+                                    request_items.push(fret_core::IncomingOpenItem::File(
+                                        fret_core::ExternalDragFile {
+                                            name: name.clone(),
+                                            size_bytes: Some(bytes.len() as u64),
+                                            media_type,
+                                        },
+                                    ));
+                                    payload
+                                        .files
+                                        .push(fret_core::ExternalDropFileData { name, bytes });
+                                }
+                                fret_runtime::DiagIncomingOpenItem::Text { text, media_type } => {
+                                    let estimated_size_bytes = Some(text.len() as u64);
+                                    request_items.push(fret_core::IncomingOpenItem::Text {
+                                        media_type,
+                                        estimated_size_bytes,
+                                    });
+                                    payload.texts.push(text);
+                                }
+                            }
+                        }
+
+                        self.diag_incoming_open_payloads.insert(token, payload);
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::IncomingOpenRequest {
+                                token,
+                                items: request_items,
+                            },
+                        );
+                        if let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                            self.raf_windows.insert(window);
+                        }
+                    }
                     Effect::ExternalDropReadAll { window, token } => {
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
                             max_total_bytes: self.config.external_drop_max_total_bytes,
@@ -4882,6 +4945,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         if let Err(err) = self.open_url.open_url(&url) {
                             tracing::debug!(?err, url = %url, "failed to open url");
                         }
+                    }
+                    Effect::ShareSheetShow { window, token, items } => {
+                        if self.windows.get(window).is_none() {
+                            continue;
+                        }
+                        let _ = items;
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            },
+                        );
                     }
                     Effect::FileDialogOpen { window, options } => {
                         let caps = self
@@ -4989,6 +5065,158 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
                         self.file_dialog.release(token);
+                    }
+                    Effect::IncomingOpenReadAll { window, token } => {
+                        let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenUnavailable { token },
+                            );
+                            continue;
+                        };
+
+                        let limits = fret_core::ExternalDropReadLimits {
+                            max_total_bytes: self.config.file_dialog_max_total_bytes,
+                            max_file_bytes: self.config.file_dialog_max_file_bytes,
+                            max_files: self.config.file_dialog_max_files,
+                        };
+
+                        let mut total_bytes: u64 = 0;
+                        let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                        let mut texts: Vec<String> = Vec::new();
+                        let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                        for file in payload.files.iter().take(limits.max_files) {
+                            let len = file.bytes.len() as u64;
+                            if len > limits.max_file_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name: file.name.clone(),
+                                    message: "file exceeds max_file_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name: file.name.clone(),
+                                    message: "read exceeds max_total_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            total_bytes = total_bytes.saturating_add(len);
+                            files.push(file.clone());
+                        }
+
+                        for (idx, text) in payload.texts.iter().enumerate() {
+                            let len = text.len() as u64;
+                            let name = format!("text[{idx}]");
+                            if len > limits.max_file_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name,
+                                    message: "text exceeds max_file_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name,
+                                    message: "read exceeds max_total_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            total_bytes = total_bytes.saturating_add(len);
+                            texts.push(text.clone());
+                        }
+
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
+                                token,
+                                files,
+                                texts,
+                                errors,
+                                limits: Some(limits),
+                            }),
+                        );
+                    }
+                    Effect::IncomingOpenReadAllWithLimits {
+                        window,
+                        token,
+                        limits,
+                    } => {
+                        let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenUnavailable { token },
+                            );
+                            continue;
+                        };
+
+                        let cap = fret_core::ExternalDropReadLimits {
+                            max_total_bytes: self.config.file_dialog_max_total_bytes,
+                            max_file_bytes: self.config.file_dialog_max_file_bytes,
+                            max_files: self.config.file_dialog_max_files,
+                        };
+                        let limits = limits.capped_by(cap);
+
+                        let mut total_bytes: u64 = 0;
+                        let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                        let mut texts: Vec<String> = Vec::new();
+                        let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                        for file in payload.files.iter().take(limits.max_files) {
+                            let len = file.bytes.len() as u64;
+                            if len > limits.max_file_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name: file.name.clone(),
+                                    message: "file exceeds max_file_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name: file.name.clone(),
+                                    message: "read exceeds max_total_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            total_bytes = total_bytes.saturating_add(len);
+                            files.push(file.clone());
+                        }
+
+                        for (idx, text) in payload.texts.iter().enumerate() {
+                            let len = text.len() as u64;
+                            let name = format!("text[{idx}]");
+                            if len > limits.max_file_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name,
+                                    message: "text exceeds max_file_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                errors.push(fret_core::ExternalDropReadError {
+                                    name,
+                                    message: "read exceeds max_total_bytes".to_string(),
+                                });
+                                continue;
+                            }
+                            total_bytes = total_bytes.saturating_add(len);
+                            texts.push(text.clone());
+                        }
+
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
+                                token,
+                                files,
+                                texts,
+                                errors,
+                                limits: Some(limits),
+                            }),
+                        );
+                    }
+                    Effect::IncomingOpenRelease { token } => {
+                        self.diag_incoming_open_payloads.remove(&token);
                     }
                     Effect::TextAddFonts { fonts } => {
                         let Some(renderer) = self.renderer.as_mut() else {

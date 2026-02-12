@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "inject_incoming_open",
+      "items": [
+        {
+          "kind": "text",
+          "text": "hello from diag incoming-open",
+          "media_type": "text/plain"
+        }
+      ]
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "event_kind_seen", "event_kind": "IncomingOpenRequest" },
+      "timeout_frames": 60
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-incoming-open-inject-smoke" }
+  ]
+}

@@ -6,8 +6,8 @@
 //! - Prefer stable selectors (`test_id`, semantics role/name) over pixel coordinates.
 
 use crate::{
-    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiMouseButtonV1, UiPredicateV1,
-    UiSelectorV1,
+    UiActionScriptV2, UiActionStepV2, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
+    UiMouseButtonV1, UiPredicateV1, UiSelectorV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -184,6 +184,10 @@ impl ScriptV2Builder {
 
     pub fn set_clipboard_force_unavailable(self, enabled: bool) -> Self {
         self.push(UiActionStepV2::SetClipboardForceUnavailable { enabled })
+    }
+
+    pub fn inject_incoming_open(self, items: Vec<UiIncomingOpenInjectItemV1>) -> Self {
+        self.push(UiActionStepV2::InjectIncomingOpen { items })
     }
 
     pub fn build(self) -> UiActionScriptV2 {

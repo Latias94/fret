@@ -58,6 +58,7 @@ pub use docking_settings::{
 pub use drag::{
     DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
 };
+pub use effect::DiagIncomingOpenItem;
 pub use effect::{
     ActivationPolicy, CreateWindowKind, CreateWindowRequest, Effect, TaskbarVisibility,
     WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel,

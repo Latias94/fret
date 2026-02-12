@@ -77,8 +77,16 @@ pub struct WinitRunner<D: WinitAppDriver> {
     web_cursor: Option<fret_runner_web::WebCursorListener>,
     web_services: WebPlatformServices,
     diag_clipboard_force_unavailable: bool,
+    diag_incoming_open_next_token: u64,
+    diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
 
     environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
+}
+
+#[derive(Debug, Default)]
+struct DiagIncomingOpenPayload {
+    files: Vec<fret_core::ExternalDropFileData>,
+    texts: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -182,6 +190,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             web_cursor: None,
             web_services: WebPlatformServices::default(),
             diag_clipboard_force_unavailable: false,
+            diag_incoming_open_next_token: 1,
+            diag_incoming_open_payloads: HashMap::new(),
             environment_media_queries: None,
         }
     }

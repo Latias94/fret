@@ -8,13 +8,13 @@ use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTrans
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
-    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
-    UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
-    UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiImeEventTraceEntryV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1, UiKeyModifiersV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1,
+    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
+    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -899,6 +899,32 @@ impl UiDiagnosticsService {
                 output
                     .effects
                     .push(Effect::DiagClipboardForceUnavailable { window, enabled });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
+            UiActionStepV2::InjectIncomingOpen { items } => {
+                let items = items
+                    .into_iter()
+                    .map(|item| match item {
+                        UiIncomingOpenInjectItemV1::FileUtf8 {
+                            name,
+                            text,
+                            media_type,
+                        } => fret_runtime::DiagIncomingOpenItem::File {
+                            name,
+                            bytes: text.into_bytes(),
+                            media_type,
+                        },
+                        UiIncomingOpenInjectItemV1::Text { text, media_type } => {
+                            fret_runtime::DiagIncomingOpenItem::Text { text, media_type }
+                        }
+                    })
+                    .collect();
+                output
+                    .effects
+                    .push(Effect::DiagIncomingOpenInject { window, items });
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
@@ -3554,6 +3580,7 @@ impl UiDiagnosticsService {
         caps.push("diag.overlay_placement_trace".to_string());
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
+        caps.push("diag.incoming_open_inject".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -4784,7 +4811,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowInsets { .. }
-        | UiActionStepV2::SetClipboardForceUnavailable { .. } => false,
+        | UiActionStepV2::SetClipboardForceUnavailable { .. }
+        | UiActionStepV2::InjectIncomingOpen { .. } => false,
     }
 }
 

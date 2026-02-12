@@ -29,6 +29,9 @@ Workstream entry:
   - committed safe-area + occlusion insets,
   - `focus_is_text_input` and composing state,
   - primary pointer type/capabilities.
+- [x] Add a scripted diag scenario that injects an incoming-open request (open-in intent) and gates
+      delivery via `IncomingOpenRequest`:
+      - `tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json`
 
 ## Contract backlog ADRs (draft outlines only)
 

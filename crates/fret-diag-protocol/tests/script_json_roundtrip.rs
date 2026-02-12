@@ -73,6 +73,13 @@ fn script_v2_roundtrip_ui_gallery_button_with_icon_non_overlap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json"

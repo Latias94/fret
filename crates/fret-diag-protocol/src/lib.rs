@@ -186,6 +186,25 @@ impl Default for UiInsetsOverrideV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiIncomingOpenInjectItemV1 {
+    /// Diagnostics-only UTF-8 file payload.
+    ///
+    /// This is intended for CI fixtures and does not model binary files or platform handles.
+    FileUtf8 {
+        name: String,
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        media_type: Option<String>,
+    },
+    Text {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        media_type: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
     // v1-compatible steps
@@ -372,6 +391,12 @@ pub enum UiActionStepV2 {
     /// constraints without requiring a real mobile runner.
     SetClipboardForceUnavailable {
         enabled: bool,
+    },
+    /// Diagnostics-only incoming-open injection (best-effort).
+    ///
+    /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
+    InjectIncomingOpen {
+        items: Vec<UiIncomingOpenInjectItemV1>,
     },
 }
 

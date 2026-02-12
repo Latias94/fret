@@ -12,6 +12,19 @@ use fret_core::{
 use crate::{CommandId, MenuBar};
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum DiagIncomingOpenItem {
+    File {
+        name: String,
+        bytes: Vec<u8>,
+        media_type: Option<String>,
+    },
+    Text {
+        text: String,
+        media_type: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     /// Request a window redraw (one-shot).
     ///
@@ -132,6 +145,26 @@ pub enum Effect {
     },
     IncomingOpenRelease {
         token: IncomingOpenToken,
+    },
+    /// Diagnostics-only “incoming open” injection (best-effort).
+    ///
+    /// This simulates mobile-style share-target / open-in flows in CI by injecting an
+    /// `Event::IncomingOpenRequest` carrying tokenized items.
+    ///
+    /// Runners SHOULD:
+    ///
+    /// - allocate an `IncomingOpenToken`,
+    /// - enqueue/deliver `Event::IncomingOpenRequest { token, items }`,
+    /// - and retain the injected payload behind the token so subsequent reads can succeed.
+    ///
+    /// Notes:
+    ///
+    /// - This is intended for diagnostics/scripts only; real incoming-open requests originate from
+    ///   the OS.
+    /// - Payload bytes are diagnostic fixtures; they are not intended to model platform handles.
+    DiagIncomingOpenInject {
+        window: AppWindowId,
+        items: Vec<DiagIncomingOpenItem>,
     },
     /// Diagnostics-only clipboard override to simulate mobile privacy/user-activation denial paths.
     ///
