@@ -167,6 +167,7 @@ Done (so far):
 
 - Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
 - UI gallery pages + diag scripts exist for the above (see Evidence below)
+- Tier B patterns: dot/grid/stripe backgrounds (static + animated variants) (UI gallery page + steady script)
 
 Evidence (planned):
 
@@ -196,21 +197,29 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_DOCK`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_dock`)
 - `tools/diag-scripts/ui-gallery-magic-dock-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/patterns.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_PATTERNS`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_patterns`)
+- `tools/diag-scripts/ui-gallery-magic-patterns-steady.json`
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Next creative parity targets:
-  - Patterns (dot/grid/stripe + animated variants)
   - `SparklesText`
 - Verification:
-  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
+  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time): Landed
+    - Evidence:
+      - `tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
 
 ## M9 — External texture imports (v1)
 
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native/zero-copy pending)
+Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native copy policy landed; web zero-copy pending)
 
 Done (v1 follow-ups):
 
@@ -222,11 +231,15 @@ Done (v1 follow-ups):
   frame timing hints for diagnostics).
   - Evidence: `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata`),
     `crates/fret-render-wgpu/src/targets.rs` (`RenderTargetDescriptor.metadata`).
+- Native v1 (copy policy): a decode/import path with an explicit CPU upload policy and deterministic
+  fallback.
+  - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source).
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
-- Native v1: a decode/import path with an explicit copy/zero-copy policy and deterministic fallback.
+  (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`:
+  wgpu v28 has `unimplemented!("ExternalTexture not implemented for web")` in `wgpu/src/backend/webgpu.rs`.)
 
 Acceptance criteria (v1):
 

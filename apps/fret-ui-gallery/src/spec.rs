@@ -164,6 +164,7 @@ pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
 pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
 pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
 pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
+pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
 pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
@@ -347,6 +348,7 @@ pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
 pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
 pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
 pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
+pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
 pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
@@ -2082,6 +2084,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["magic", "dock", "pointer", "magnify"],
                 docs::DOC_MAGIC_DOCK,
                 docs::USAGE_MAGIC_DOCK,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_PATTERNS,
+                "Patterns",
+                "Patterns (Tier B materials)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_PATTERNS,
+                &["magic", "patterns", "materials", "tier-b"],
+                docs::DOC_MAGIC_PATTERNS,
+                docs::USAGE_MAGIC_PATTERNS,
             ),
             PageSpec::new(
                 PAGE_MAGIC_BLOOM,

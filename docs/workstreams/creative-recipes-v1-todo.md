@@ -58,9 +58,12 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
   - [x] `MagicCard` (pointer-follow radial gradient fill/border).
   - [x] `Lens` (radial mask + content scale + reduced-motion behavior).
   - [x] `BorderBeam` (animated border highlight + glow; Phase 0 uses gradients + additive composite).
-  - [ ] Patterns: dot/grid/stripe + animated variants.
+  - [ ] Patterns:
+    - [x] Static dot/grid/stripe backgrounds (Tier B materials) + UI gallery + diag script.
+    - [x] Animated variants (phase/offset-driven; reduced-motion fallback).
   - [ ] Sparkles text (seeded sparkle field; reduced-motion fallback).
-- [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines).
+- [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines) for remaining
+      creative parity targets.
 
 ## P1 — Effect steps extension
 
@@ -86,19 +89,26 @@ Land a MagicUI-aligned ecosystem crate that composes the existing kernel primiti
 diagnostics, not perfect CSS parity.
 
 - [x] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
-- [ ] Implement 3–5 seed components (Phase 0):
+- [x] Implement 3–5 seed components (Phase 0):
   - [x] `Lens`
   - [x] `MagicCard`
   - [x] `BorderBeam`
   - [x] `Marquee`
   - [x] `Dock`
-- [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
+- [x] Add UI gallery entries + `fretboard diag` scripts for each seed component:
   - [x] `Marquee`
   - [x] `Lens`
   - [x] `MagicCard`
   - [x] `BorderBeam`
   - [x] `Dock`
-- [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
+- [x] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
+  - Evidence (scripts):
+    - `tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
+  - Recommended invocation (example):
+    - `FRET_DIAG_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
 
 ## P1 — External texture imports (v1)
 
@@ -132,8 +142,12 @@ to `fret-ui` (ADR 0234).
     - Evidence: `apps/fret-examples/src/external_texture_imports_web_demo.rs`,
       `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
   - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
-        (capability-gated) with deterministic fallback
-  - [ ] native: a decode path (software or hardware) with an explicit copy/zero-copy policy
+        (capability-gated) with deterministic fallback.
+        Note: currently blocked on wgpu's WebGPU backend implementing `ExternalTexture`
+        (wgpu v28: `wgpu/src/backend/webgpu.rs` contains `unimplemented!("ExternalTexture not implemented for web")`).
+  - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
+        `RenderTargetUpdate::Update` with deterministic fallback.
+    - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
 - [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
 - [x] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
       alpha semantics (`premul` vs `straight`), orientation/transform metadata, and frame timing hints

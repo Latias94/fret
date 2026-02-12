@@ -3,7 +3,7 @@ use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
-use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
+use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
     ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
@@ -156,8 +156,76 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExternalTextureImportsMode {
+    CheckerGpu,
+    DecodedPngCpuCopy,
+}
+
+struct DecodedPngSource {
+    base: image::RgbaImage,
+    cached_size: (u32, u32),
+    cached_rgba: Vec<u8>,
+}
+
+impl DecodedPngSource {
+    fn new() -> anyhow::Result<Self> {
+        // Generated at build-time via a small script; stored as bytes to keep the demo in-repo and deterministic.
+        const PNG_BYTES: &[u8] = &[
+            0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48,
+            0x44, 0x52, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x20, 0x08, 0x06, 0x00, 0x00,
+            0x00, 0x73, 0x7a, 0x7a, 0xf4, 0x00, 0x00, 0x00, 0x01, 0x73, 0x52, 0x47, 0x42, 0x00,
+            0xae, 0xce, 0x1c, 0xe9, 0x00, 0x00, 0x00, 0xe1, 0x49, 0x44, 0x41, 0x54, 0x78, 0xda,
+            0xed, 0xd6, 0x21, 0xaf, 0x41, 0x01, 0x18, 0xc7, 0x61, 0x9f, 0x44, 0xbe, 0xcd, 0xcc,
+            0xcc, 0xcc, 0xcc, 0xcc, 0xc8, 0xa7, 0x48, 0x8a, 0x24, 0x99, 0x4d, 0x92, 0x14, 0x49,
+            0x52, 0x24, 0x49, 0x91, 0x14, 0x49, 0xb2, 0x99, 0x24, 0x29, 0x92, 0xa4, 0x48, 0x92,
+            0x22, 0x49, 0xee, 0xf3, 0x15, 0x04, 0xbb, 0xec, 0xbe, 0xe1, 0x39, 0xe1, 0xb7, 0x13,
+            0xfe, 0xe1, 0xbc, 0xdb, 0x49, 0xf5, 0x92, 0x6d, 0x42, 0x93, 0x16, 0xed, 0xf4, 0x4f,
+            0xa3, 0x43, 0x97, 0x3e, 0x03, 0x6d, 0xc8, 0x88, 0x31, 0x13, 0x6d, 0xca, 0x8c, 0x39,
+            0x0b, 0x6d, 0xc9, 0x8a, 0x35, 0x1b, 0x6d, 0xc7, 0x9e, 0x03, 0x47, 0xed, 0xc4, 0x99,
+            0x0b, 0x57, 0xed, 0xc6, 0x9d, 0x07, 0xcf, 0x54, 0x0c, 0xf8, 0xf3, 0x01, 0x1e, 0x09,
+            0x4d, 0x5a, 0xb4, 0xbd, 0xd4, 0xa1, 0x4b, 0x9f, 0x81, 0x36, 0x64, 0xc4, 0x98, 0x89,
+            0x36, 0x65, 0xc6, 0x9c, 0x85, 0xb6, 0x64, 0xc5, 0x9a, 0x8d, 0xb6, 0x63, 0xcf, 0x81,
+            0xa3, 0x76, 0xe2, 0xcc, 0x85, 0xab, 0x76, 0xe3, 0xce, 0x83, 0x18, 0xf0, 0x01, 0x03,
+            0xe2, 0x0a, 0x5e, 0x18, 0x90, 0x21, 0xab, 0xe5, 0xc8, 0x53, 0xa0, 0xa8, 0x95, 0x28,
+            0x53, 0xa1, 0xaa, 0xd5, 0xa8, 0x7f, 0xcf, 0x80, 0x17, 0x3e, 0xc2, 0x0c, 0x59, 0x2d,
+            0x47, 0x9e, 0x02, 0x45, 0xad, 0x44, 0x99, 0x0a, 0x55, 0xad, 0x46, 0xfd, 0x1d, 0x57,
+            0x10, 0x03, 0xde, 0x33, 0x20, 0xae, 0x20, 0x06, 0xc4, 0x15, 0xc4, 0xff, 0x40, 0xfc,
+            0x0f, 0xc4, 0x80, 0xb8, 0x82, 0x7f, 0x3f, 0xe0, 0x17, 0x58, 0x58, 0x6f, 0x2b, 0xdf,
+            0x21, 0x26, 0xba, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60,
+            0x82,
+        ];
+
+        let img = image::load_from_memory(PNG_BYTES).context("decode embedded png")?;
+        let base = img.to_rgba8();
+        Ok(Self {
+            base,
+            cached_size: (0, 0),
+            cached_rgba: Vec::new(),
+        })
+    }
+
+    fn cached_rgba8(&mut self, size: (u32, u32)) -> (&[u8], u32) {
+        if self.cached_size != size {
+            let (w, h) = size;
+            let resized = image::imageops::resize(
+                &self.base,
+                w.max(1),
+                h.max(1),
+                image::imageops::FilterType::Triangle,
+            );
+            self.cached_rgba = resized.into_raw();
+            self.cached_size = size;
+        }
+
+        let bytes_per_row = self.cached_size.0.saturating_mul(4);
+        (&self.cached_rgba, bytes_per_row)
+    }
+}
+
 struct ExternalTextureImportsState {
     show: fret_runtime::Model<bool>,
+    mode: ExternalTextureImportsMode,
 
     target: ImportedViewportRenderTarget,
     target_px_size: (u32, u32),
@@ -165,19 +233,22 @@ struct ExternalTextureImportsState {
     texture: Option<wgpu::Texture>,
 
     checker: Option<CheckerPipeline>,
+    decoded: Option<DecodedPngSource>,
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportsState {
     ExternalTextureImportsState {
         show: app.models_mut().insert(true),
         target: ImportedViewportRenderTarget::new(
-            wgpu::TextureFormat::Bgra8UnormSrgb,
+            wgpu::TextureFormat::Rgba8UnormSrgb,
             RenderTargetColorSpace::Srgb,
         ),
         target_px_size: (1, 1),
         desired_target_px_size: (1280, 720),
         texture: None,
         checker: None,
+        mode: ExternalTextureImportsMode::CheckerGpu,
+        decoded: None,
     }
 }
 
@@ -193,6 +264,16 @@ fn on_event(
         && *key == KeyCode::KeyV
     {
         let _ = app.models_mut().update(&st.show, |v| *v = !*v);
+        app.request_redraw(window);
+    }
+
+    if let Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyI
+    {
+        st.mode = match st.mode {
+            ExternalTextureImportsMode::CheckerGpu => ExternalTextureImportsMode::DecodedPngCpuCopy,
+            ExternalTextureImportsMode::DecodedPngCpuCopy => ExternalTextureImportsMode::CheckerGpu,
+        };
         app.request_redraw(window);
     }
 }
@@ -305,10 +386,6 @@ fn record_engine_frame(
         return update;
     }
 
-    if st.checker.is_none() {
-        st.checker = Some(CheckerPipeline::new(&context.device, st.target.format()));
-    }
-
     let desired = st.desired_target_px_size;
     let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
     if needs_realloc {
@@ -323,7 +400,9 @@ fn record_engine_frame(
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: st.target.format(),
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -345,44 +424,79 @@ fn record_engine_frame(
     st.target
         .push_update(&mut update, view.clone(), st.target_px_size);
 
-    if let Some(checker) = st.checker.as_ref() {
-        let t = frame_id.0 as f32 * (1.0 / 60.0);
-        let uniforms = CheckerUniforms {
-            resolution: [st.target_px_size.0 as f32, st.target_px_size.1 as f32],
-            t,
-            _pad: 0.0,
-        };
-        context
-            .queue
-            .write_buffer(&checker.uniforms, 0, bytemuck::bytes_of(&uniforms));
+    match st.mode {
+        ExternalTextureImportsMode::CheckerGpu => {
+            if st.checker.is_none() {
+                st.checker = Some(CheckerPipeline::new(&context.device, st.target.format()));
+            }
 
-        let mut encoder = context
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("external texture imports contract-path encoder"),
-            });
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("external texture imports contract-path pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    depth_slice: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            pass.set_pipeline(&checker.pipeline);
-            pass.set_bind_group(0, &checker.bind_group, &[]);
-            pass.draw(0..3, 0..1);
+            if let Some(checker) = st.checker.as_ref() {
+                let t = frame_id.0 as f32 * (1.0 / 60.0);
+                let uniforms = CheckerUniforms {
+                    resolution: [st.target_px_size.0 as f32, st.target_px_size.1 as f32],
+                    t,
+                    _pad: 0.0,
+                };
+                context
+                    .queue
+                    .write_buffer(&checker.uniforms, 0, bytemuck::bytes_of(&uniforms));
+
+                let mut encoder =
+                    context
+                        .device
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("external texture imports contract-path encoder"),
+                        });
+                {
+                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("external texture imports contract-path pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            depth_slice: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    pass.set_pipeline(&checker.pipeline);
+                    pass.set_bind_group(0, &checker.bind_group, &[]);
+                    pass.draw(0..3, 0..1);
+                }
+                update.push_command_buffer(encoder.finish());
+            }
         }
-        update.push_command_buffer(encoder.finish());
+        ExternalTextureImportsMode::DecodedPngCpuCopy => {
+            if st.decoded.is_none() {
+                match DecodedPngSource::new() {
+                    Ok(src) => st.decoded = Some(src),
+                    Err(err) => {
+                        tracing::warn!(
+                            ?err,
+                            "failed to decode embedded png; falling back to checker"
+                        );
+                        st.mode = ExternalTextureImportsMode::CheckerGpu;
+                    }
+                }
+            }
+
+            if let Some(decoded) = st.decoded.as_mut() {
+                let (bytes, bytes_per_row) = decoded.cached_rgba8(st.target_px_size);
+                write_rgba8_texture_region(
+                    &context.queue,
+                    texture,
+                    (0, 0),
+                    st.target_px_size,
+                    bytes_per_row,
+                    bytes,
+                );
+            }
+        }
     }
 
     app.push_effect(fret_app::Effect::RequestAnimationFrame(window));
@@ -409,7 +523,7 @@ pub fn run() -> anyhow::Result<()> {
             app.set_global(PlatformCapabilities::default());
         })
         .with_main_window(
-            "fret-demo external_texture_imports_demo (V toggles target)",
+            "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source)",
             (960.0, 640.0),
         );
 

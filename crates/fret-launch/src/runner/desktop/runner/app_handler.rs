@@ -3,6 +3,8 @@
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
+use fret_platform::external_drop::ExternalDropProvider as _;
+
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
 
@@ -1319,7 +1321,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    validate_scene_if_enabled(&state.scene);
+                    super::render::validate_scene_if_enabled(&state.scene);
 
                     if let Some(a11y) = state.accessibility.as_mut()
                         && a11y.is_active()

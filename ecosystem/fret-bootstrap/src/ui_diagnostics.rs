@@ -36,7 +36,14 @@ pub struct UiDiagnosticsConfig {
     pub exit_path: PathBuf,
     pub max_events: usize,
     pub max_snapshots: usize,
+    /// Maximum number of snapshots to include in script-driven bundle dumps (auto-dump and
+    /// `capture_bundle` steps).
+    pub script_dump_max_snapshots: usize,
     pub capture_semantics: bool,
+    /// Cap the number of exported semantics nodes per snapshot (bundle size control).
+    pub max_semantics_nodes: usize,
+    /// Export only semantics nodes that have a `test_id` (bundle size control).
+    pub semantics_test_ids_only: bool,
     pub screenshots_enabled: bool,
     pub screenshot_request_path: PathBuf,
     pub screenshot_trigger_path: PathBuf,
@@ -128,7 +135,22 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(300);
+        let script_dump_max_snapshots = std::env::var("FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30);
+        let script_dump_max_snapshots = if max_snapshots == 0 {
+            0
+        } else {
+            script_dump_max_snapshots.clamp(1, max_snapshots)
+        };
         let capture_semantics = env_flag_default_true("FRET_DIAG_SEMANTICS");
+        let max_semantics_nodes = std::env::var("FRET_DIAG_MAX_SEMANTICS_NODES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(50_000)
+            .clamp(0, 500_000);
+        let semantics_test_ids_only = env_flag_default_false("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY");
         let screenshots_enabled = env_flag_default_false("FRET_DIAG_SCREENSHOTS");
         let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
             .filter(|v| !v.is_empty())
@@ -209,7 +231,10 @@ impl Default for UiDiagnosticsConfig {
             exit_path,
             max_events,
             max_snapshots,
+            script_dump_max_snapshots,
             capture_semantics,
+            max_semantics_nodes,
+            semantics_test_ids_only,
             screenshots_enabled,
             screenshot_request_path,
             screenshot_trigger_path,
@@ -4009,6 +4034,8 @@ impl UiDiagnosticsService {
                     snap,
                     self.cfg.redact_text,
                     self.cfg.max_debug_string_bytes,
+                    self.cfg.max_semantics_nodes,
+                    self.cfg.semantics_test_ids_only,
                 )
             });
 
@@ -4514,13 +4541,24 @@ impl UiDiagnosticsService {
 
         let dir = self.cfg.out_dir.join(dir_name);
 
-        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
+        let is_script_dump = label.is_some()
+            && (!self.active_scripts.is_empty()
+                || self.pending_script.is_some()
+                || self.pending_script_run_id.is_some()
+                || label.unwrap_or_default().trim().starts_with("script-step-"));
+        let dump_max_snapshots = if is_script_dump {
+            self.cfg.script_dump_max_snapshots
+        } else {
+            self.cfg.max_snapshots
+        };
+
+        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self, dump_max_snapshots);
 
         if !cfg!(target_arch = "wasm32") {
             if std::fs::create_dir_all(&dir).is_err() {
                 return None;
             }
-            if write_json(dir.join("bundle.json"), &bundle).is_err() {
+            if write_json_compact(dir.join("bundle.json"), &bundle).is_err() {
                 return None;
             }
             let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
@@ -4922,7 +4960,13 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub trigger_path: String,
     pub max_events: usize,
     pub max_snapshots: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dump_max_snapshots: Option<usize>,
     pub capture_semantics: bool,
+    #[serde(default)]
+    pub max_semantics_nodes: usize,
+    #[serde(default)]
+    pub semantics_test_ids_only: bool,
     pub script_path: String,
     pub script_trigger_path: String,
     pub script_result_path: String,
@@ -4950,7 +4994,12 @@ pub struct UiDiagnosticsWindowBundleV1 {
 }
 
 impl UiDiagnosticsBundleV1 {
-    fn from_service(exported_unix_ms: u64, out_dir: &Path, svc: &UiDiagnosticsService) -> Self {
+    fn from_service(
+        exported_unix_ms: u64,
+        out_dir: &Path,
+        svc: &UiDiagnosticsService,
+        dump_max_snapshots: usize,
+    ) -> Self {
         Self {
             schema_version: 1,
             exported_unix_ms,
@@ -4959,7 +5008,11 @@ impl UiDiagnosticsBundleV1 {
                 trigger_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.trigger_path),
                 max_events: svc.cfg.max_events,
                 max_snapshots: svc.cfg.max_snapshots,
+                dump_max_snapshots: (dump_max_snapshots != svc.cfg.max_snapshots)
+                    .then_some(dump_max_snapshots),
                 capture_semantics: svc.cfg.capture_semantics,
+                max_semantics_nodes: svc.cfg.max_semantics_nodes,
+                semantics_test_ids_only: svc.cfg.semantics_test_ids_only,
                 script_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.script_path),
                 script_trigger_path: sanitize_path_for_bundle(
                     &svc.cfg.out_dir,
@@ -5002,7 +5055,7 @@ impl UiDiagnosticsBundleV1 {
                 .map(|(window, ring)| UiDiagnosticsWindowBundleV1 {
                     window: window.data().as_ffi(),
                     events: ring.events.iter().cloned().collect(),
-                    snapshots: ring.snapshots.iter().cloned().collect(),
+                    snapshots: take_last_vecdeque(&ring.snapshots, dump_max_snapshots),
                 })
                 .collect(),
         }
@@ -9089,6 +9142,8 @@ impl UiSemanticsSnapshotV1 {
         snapshot: &fret_core::SemanticsSnapshot,
         redact_text: bool,
         max_string_bytes: usize,
+        max_nodes: usize,
+        test_ids_only: bool,
     ) -> Self {
         Self {
             window: snapshot.window.data().as_ffi(),
@@ -9110,6 +9165,8 @@ impl UiSemanticsSnapshotV1 {
             nodes: snapshot
                 .nodes
                 .iter()
+                .filter(|n| !test_ids_only || n.test_id.is_some())
+                .take(max_nodes)
                 .map(|n| UiSemanticsNodeV1::from_node(n, redact_text, max_string_bytes))
                 .collect(),
         }
@@ -13175,6 +13232,24 @@ fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Err
     std::fs::create_dir_all(parent)?;
     let bytes = serde_json::to_vec_pretty(value).unwrap_or_default();
     std::fs::write(path, bytes)
+}
+
+fn write_json_compact<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Error> {
+    let Some(parent) = path.parent() else {
+        return Ok(());
+    };
+    std::fs::create_dir_all(parent)?;
+    let bytes = serde_json::to_vec(value).unwrap_or_default();
+    std::fs::write(path, bytes)
+}
+
+fn take_last_vecdeque<T: Clone>(items: &VecDeque<T>, max: usize) -> Vec<T> {
+    if max == 0 {
+        return Vec::new();
+    }
+    let len = items.len();
+    let start = len.saturating_sub(max);
+    items.iter().skip(start).cloned().collect()
 }
 
 fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
