@@ -1,0 +1,71 @@
+name: Skills Bundles
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build skills bundles
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'Latias94/fret' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate skills (strict)
+        run: python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
+
+      - name: Package bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            suffix="${{ github.event.release.tag_name }}"
+          else
+            suffix="manual-${{ github.run_id }}"
+          fi
+
+          python3 .agents/skills/fret_skills.py package \
+            --profile app-dev \
+            --bundle-name "fret-skills-app-dev-${suffix}" \
+            --out dist/fret-skills-app-dev
+
+          python3 .agents/skills/fret_skills.py package \
+            --profile framework-dev \
+            --bundle-name "fret-skills-framework-dev-${suffix}" \
+            --out dist/fret-skills-framework-dev
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fret-skills-bundles
+          if-no-files-found: error
+          path: |
+            dist/fret-skills-app-dev/*.zip
+            dist/fret-skills-framework-dev/*.zip
+            dist/fret-skills-app-dev/manifest.json
+            dist/fret-skills-framework-dev/manifest.json
+
+      - name: Upload release assets
+        if: ${{ github.event_name == 'release' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name }}"
+          gh release upload "$tag" \
+            dist/fret-skills-app-dev/*.zip \
+            dist/fret-skills-framework-dev/*.zip \
+            --clobber
