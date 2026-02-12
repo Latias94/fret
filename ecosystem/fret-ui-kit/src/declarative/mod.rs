@@ -23,6 +23,7 @@ pub mod hover_intent;
 pub mod keyboard_avoidance;
 pub mod list;
 pub mod model_watch;
+pub mod motion;
 pub mod occlusion_queries;
 pub mod overlay_motion;
 pub mod pixelate;
