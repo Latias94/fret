@@ -61,9 +61,7 @@ fn supports_external_texture_import(ctx: &WgpuContext) -> bool {
         return false;
     }
 
-    ctx.device
-        .features()
-        .contains(wgpu::Features::EXTERNAL_TEXTURE)
+    ctx.device.features().contains(wgpu::Features::EXTERNAL_TEXTURE)
 }
 
 fn supports_nv12_gpu_convert(adapter: &wgpu::Adapter) -> bool {
