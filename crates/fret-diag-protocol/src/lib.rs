@@ -256,10 +256,14 @@ pub enum UiActionStepV2 {
         n: u32,
     },
     WaitUntil {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
         timeout_frames: u32,
     },
     Assert {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
     },
     CaptureBundle {
@@ -410,6 +414,8 @@ pub enum UiActionStepV2 {
     /// This is intended for runner-owned cross-window routing: scripts can keep a drag session
     /// active while polling diagnostics predicates that are only updated between frames.
     DragPointerUntil {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -477,10 +483,14 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 predicate,
                 timeout_frames,
             } => Self::WaitUntil {
+                window: None,
                 predicate,
                 timeout_frames,
             },
-            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
+            UiActionStepV1::Assert { predicate } => Self::Assert {
+                window: None,
+                predicate,
+            },
             UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
             UiActionStepV1::CaptureScreenshot {
                 label,

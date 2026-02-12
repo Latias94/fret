@@ -142,6 +142,7 @@ impl ScriptV2Builder {
 
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {
         self.push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate,
             timeout_frames,
         })
@@ -156,7 +157,10 @@ impl ScriptV2Builder {
     }
 
     pub fn assert(self, predicate: UiPredicateV1) -> Self {
-        self.push(UiActionStepV2::Assert { predicate })
+        self.push(UiActionStepV2::Assert {
+            window: None,
+            predicate,
+        })
     }
 
     pub fn assert_exists(self, target: UiSelectorV1) -> Self {

@@ -463,8 +463,8 @@ Supported selectors (v1 MVP):
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
-- `wait_until`
-- `assert`
+- `wait_until` (schema v2 only: optional `window` target)
+- `assert` (schema v2 only: optional `window` target)
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
@@ -472,7 +472,7 @@ Supported selectors (v1 MVP):
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
-- `drag_pointer_until` (schema v2 only; drag across frames until a predicate passes or timeout; intended for cross-window routing)
+- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see

@@ -355,6 +355,39 @@ fn script_v2_roundtrip_drag_to_window_target() {
 }
 
 #[test]
+fn script_v2_roundtrip_wait_until_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen_other" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "x" } },
+      "timeout_frames": 60
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_assert_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "window": { "kind": "last_seen_other" },
+      "predicate": { "kind": "known_window_count_ge", "n": 2 }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_raise_window_last_seen_other() {
     assert_script_v2_roundtrip(
         r#"{
@@ -374,6 +407,26 @@ fn script_v2_roundtrip_drag_pointer_until_known_window_count() {
   "steps": [
     {
       "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "last_seen_other" },
       "target": { "kind": "test_id", "id": "x" },
       "delta_x": 10.0,
       "delta_y": 0.0,

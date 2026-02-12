@@ -1324,10 +1324,40 @@ impl UiDiagnosticsService {
                 }
             }
             UiActionStepV2::WaitUntil {
+                window: target_window,
                 predicate,
                 timeout_frames,
             } => {
-                if let Some(snapshot) = semantics_snapshot {
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    if target_window != window {
+                        if let Some(step_mut) = active.steps.get_mut(step_index) {
+                            if let UiActionStepV2::WaitUntil { window, .. } = step_mut {
+                                *window = None;
+                            }
+                        }
+                        handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    }
+                } else if target_window.is_some() {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-wait_until-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                }
+
+                if stop_script {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                } else if handoff_to.is_some() {
+                    // This step is window-targeted; the runtime will migrate the script.
+                } else if let Some(snapshot) = semantics_snapshot {
                     active.screenshot_wait = None;
                     let state = match active.wait_until.take() {
                         Some(mut state) if state.step_index == step_index => {
@@ -1388,10 +1418,41 @@ impl UiDiagnosticsService {
                     active.screenshot_wait = None;
                 }
             }
-            UiActionStepV2::Assert { predicate } => {
+            UiActionStepV2::Assert {
+                window: target_window,
+                predicate,
+            } => {
                 active.wait_until = None;
                 active.screenshot_wait = None;
-                if let Some(snapshot) = semantics_snapshot {
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    if target_window != window {
+                        if let Some(step_mut) = active.steps.get_mut(step_index) {
+                            if let UiActionStepV2::Assert { window, .. } = step_mut {
+                                *window = None;
+                            }
+                        }
+                        handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    }
+                } else if target_window.is_some() {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-assert-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                }
+
+                if stop_script {
+                    // Fall through to common termination logic.
+                } else if handoff_to.is_some() {
+                    // This step is window-targeted; the runtime will migrate the script.
+                } else if let Some(snapshot) = semantics_snapshot {
                     record_overlay_placement_trace(
                         &mut active.overlay_placement_trace,
                         element_runtime,
@@ -2333,6 +2394,7 @@ impl UiDiagnosticsService {
                 }
             }
             UiActionStepV2::DragPointerUntil {
+                window: target_window,
                 target,
                 button,
                 delta_x,
@@ -2345,124 +2407,158 @@ impl UiDiagnosticsService {
                 active.screenshot_wait = None;
                 output.request_redraw = true;
 
-                let docking_diag = app
-                    .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                    .and_then(|store| store.docking_latest_for_window(window));
-
-                let mut state = match active.v2_step_state.take() {
-                    Some(V2StepState::DragPointerUntil(state))
-                        if state.step_index == step_index =>
-                    {
-                        state
-                    }
-                    _ => V2DragPointerUntilState {
-                        step_index,
-                        remaining_frames: timeout_frames,
-                        playback: V2DragPointerState {
-                            step_index,
-                            steps: steps.max(1),
-                            button,
-                            start: Point::default(),
-                            end: Point::default(),
-                            frame: 0,
-                        },
-                        predicate: predicate.clone(),
-                        down_issued: false,
-                    },
-                };
-
-                // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
-                // previous frame), release immediately.
-                if let Some(snapshot) = semantics_snapshot
-                    && eval_predicate(
-                        snapshot,
-                        window_bounds,
-                        window,
-                        element_runtime,
-                        self.known_windows.as_slice(),
-                        docking_diag,
-                        &state.predicate,
-                    )
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
                 {
-                    if state.down_issued {
-                        output.events.extend(pointer_up_with_internal_drop_events(
-                            state.playback.button,
-                            state.playback.end,
-                        ));
+                    if target_window != window {
+                        if let Some(step_mut) = active.steps.get_mut(step_index) {
+                            if let UiActionStepV2::DragPointerUntil { window, .. } = step_mut {
+                                *window = None;
+                            }
+                        }
+                        handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                        active.v2_step_state = None;
                     }
-                    active.v2_step_state = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    if self.cfg.script_auto_dump {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-drag_pointer_until"));
-                    }
-                } else if state.remaining_frames == 0 {
+                } else if target_window.is_some() {
                     force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-drag_pointer_until-timeout"
+                        "script-step-{step_index:04}-drag_pointer_until-window-not-found"
                     ));
                     stop_script = true;
-                    failure_reason = Some("drag_pointer_until_timeout".to_string());
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+
+                if stop_script {
+                    active.v2_step_state = None;
+                } else if handoff_to.is_some() {
+                    // This step is window-targeted; the runtime will migrate the script.
                     active.v2_step_state = None;
                 } else {
-                    let Some(snapshot) = semantics_snapshot else {
-                        force_dump_label = Some(format!(
-                            "script-step-{step_index:04}-drag_pointer_until-no-semantics"
-                        ));
-                        stop_script = true;
-                        failure_reason = Some("no_semantics_snapshot".to_string());
-                        active.v2_step_state = None;
-                        output.request_redraw = true;
-                        return output;
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(window));
+
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::DragPointerUntil(state))
+                            if state.step_index == step_index =>
+                        {
+                            state
+                        }
+                        _ => V2DragPointerUntilState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            playback: V2DragPointerState {
+                                step_index,
+                                steps: steps.max(1),
+                                button,
+                                start: Point::default(),
+                                end: Point::default(),
+                                frame: 0,
+                            },
+                            predicate: predicate.clone(),
+                            down_issued: false,
+                        },
                     };
 
-                    // Initialize start/end positions on the first frame.
-                    if state.playback.frame == 0 && state.playback.start == Point::default() {
-                        let Some(node) = select_semantics_node_with_trace(
+                    // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
+                    // previous frame), release immediately.
+                    if let Some(snapshot) = semantics_snapshot
+                        && eval_predicate(
                             snapshot,
+                            window_bounds,
                             window,
                             element_runtime,
-                            &target,
-                            step_index as u32,
-                            self.cfg.redact_text,
-                            &mut active.selector_resolution_trace,
-                        ) else {
+                            self.known_windows.as_slice(),
+                            docking_diag,
+                            &state.predicate,
+                        )
+                    {
+                        if state.down_issued {
+                            output.events.extend(pointer_up_with_internal_drop_events(
+                                state.playback.button,
+                                state.playback.end,
+                            ));
+                        }
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-drag_pointer_until"));
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-drag_pointer_until-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("drag_pointer_until_timeout".to_string());
+                        active.v2_step_state = None;
+                    } else {
+                        let Some(snapshot) = semantics_snapshot else {
                             force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
+                                "script-step-{step_index:04}-drag_pointer_until-no-semantics"
                             ));
                             stop_script = true;
-                            failure_reason = Some("drag_pointer_until_no_match".to_string());
+                            failure_reason = Some("no_semantics_snapshot".to_string());
                             active.v2_step_state = None;
                             output.request_redraw = true;
                             return output;
                         };
 
-                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                        let end = Point::new(
-                            fret_core::Px(start.x.0 + delta_x),
-                            fret_core::Px(start.y.0 + delta_y),
-                        );
-                        state.playback.start = start;
-                        state.playback.end = end;
+                        // Initialize start/end positions on the first frame.
+                        if state.playback.frame == 0 && state.playback.start == Point::default() {
+                            let Some(node) = select_semantics_node_with_trace(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                &target,
+                                step_index as u32,
+                                self.cfg.redact_text,
+                                &mut active.selector_resolution_trace,
+                            ) else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("drag_pointer_until_no_match".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                                return output;
+                            };
+
+                            let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                            let end = Point::new(
+                                fret_core::Px(start.x.0 + delta_x),
+                                fret_core::Px(start.y.0 + delta_y),
+                            );
+                            state.playback.start = start;
+                            state.playback.end = end;
+                        }
+
+                        let done =
+                            push_drag_playback_frame(&mut state.playback, &mut output.events);
+                        if state.playback.frame >= 1 {
+                            state.down_issued = true;
+                        }
+
+                        // Keep polling for the predicate across frames; hold at end if playback is done.
+                        if done {
+                            // Hold: emit an `Over` tick at the end position to keep drag routing alive.
+                            output.events.extend(pointer_move_with_internal_over_events(
+                                state.playback.button,
+                                state.playback.end,
+                            ));
+                        }
+
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+
+                        active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                        output.request_redraw = true;
                     }
-
-                    let done = push_drag_playback_frame(&mut state.playback, &mut output.events);
-                    if state.playback.frame >= 1 {
-                        state.down_issued = true;
-                    }
-
-                    // Keep polling for the predicate across frames; hold at end if playback is done.
-                    if done {
-                        // Hold: emit an `Over` tick at the end position to keep drag routing alive.
-                        output.events.extend(pointer_move_with_internal_over_events(
-                            state.playback.button,
-                            state.playback.end,
-                        ));
-                    }
-
-                    state.remaining_frames = state.remaining_frames.saturating_sub(1);
-
-                    active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
-                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::MovePointerSweep {
