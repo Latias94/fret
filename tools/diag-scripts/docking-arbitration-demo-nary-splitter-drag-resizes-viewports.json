@@ -1,8 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "meta": {
     "name": "Docking arbitration demo: splitter drag resizes viewports (n-ary)",
-    "tags": ["docking", "nary", "gate"]
+    "tags": ["docking", "nary", "gate"],
+    "required_capabilities": ["diag.script_v2"]
   },
   "steps": [
     { "type": "press_key", "key": "escape" },

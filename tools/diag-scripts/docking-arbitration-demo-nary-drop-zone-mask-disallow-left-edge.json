@@ -1,5 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: drop-zone mask can disallow the left edge (policy gate)",
+    "tags": ["docking", "nary", "gate"],
+    "required_capabilities": ["diag.script_v2"]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 5 },
@@ -51,4 +56,3 @@
     }
   ]
 }
-
