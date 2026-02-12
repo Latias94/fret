@@ -249,3 +249,297 @@ fn script_v2_roundtrip_bounds_max_size_predicate() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_set_window_outer_position() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_window_outer_position", "x_px": 32.0, "y_px": 64.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_set_window_outer_position_last_seen() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_outer_position",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 10.0,
+      "y_px": 20.0
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_set_window_inner_size_first_seen() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_inner_size",
+      "window": { "kind": "first_seen" },
+      "width_px": 800.0,
+      "height_px": 600.0
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_set_cursor_screen_pos() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_cursor_screen_pos", "x_px": 100.0, "y_px": 120.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_set_cursor_in_window_last_seen_other() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 100.0, "y_px": 120.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_click_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "click", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "drag_pointer", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" }, "delta_x": 10.0, "delta_y": 0.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_to_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_to",
+      "window": { "kind": "last_seen_other" },
+      "from": { "kind": "test_id", "id": "a" },
+      "to": { "kind": "test_id", "id": "b" }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_pointer_down_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_down", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_pointer_move_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_move", "window": { "kind": "last_seen_other" }, "delta_x": 10.0, "delta_y": 0.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_pointer_up_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_up", "window": { "kind": "last_seen_other" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_wait_until_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen_other" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "x" } },
+      "timeout_frames": 60
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_assert_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "window": { "kind": "last_seen_other" },
+      "predicate": { "kind": "known_window_count_ge", "n": 2 }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_drag_active_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_graph_signature_predicates() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[tabs([a]),tabs([b])]);floatings=[])"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_contains",
+        "needle": "tabs([a])"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 42
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_raise_window_last_seen_other() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "raise_window", "window": { "kind": "last_seen_other" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_known_window_count() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "last_seen_other" },
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_dock_drag_current_window_is() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}

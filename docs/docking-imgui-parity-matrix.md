@@ -86,8 +86,9 @@ Docking UI + hit testing + previews:
   - `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`
 - Tab overflow affordances:
   - `ecosystem/fret-docking/src/dock/tab_overflow.rs`
-- Split stabilization:
-  - `ecosystem/fret-docking/src/dock/split_stabilize.rs`
+- Split sizing / drag semantics:
+  - `ecosystem/fret-docking/src/dock/space.rs` (adjacent-only drag updates)
+  - `crates/fret-core/src/dock/mutate.rs` (canonicalization rules; keep same-axis splits flat)
 - Interaction settings:
   - `crates/fret-runtime/src/docking_settings.rs` (`DockingInteractionSettings`)
 
@@ -425,9 +426,9 @@ Known semantic deltas to track:
   - ImGui:
     - Propagates splitter deltas across touching nodes (`DockNodeTreeUpdateSplitterFindTouchingNode`).
   - Fret:
-    - Applies same-axis locks during drag (`compute_same_axis_locks_for_split_drag`, `apply_same_axis_locks`).
+    - Same-axis nested splits are flattened into a single N-ary split (canonical form), so the legacy “touching splitter” lock pass is no longer required.
   - Evidence anchors:
-    - Fret: `ecosystem/fret-docking/src/dock/split_stabilize.rs`
+    - Fret: `crates/fret-core/src/dock/mutate.rs`, `crates/fret-core/src/dock/persistence.rs`, `ecosystem/fret-docking/src/dock/space.rs`
 
 ---
 
@@ -522,6 +523,10 @@ Open parity question:
     - `crates/fret-launch/src/runner/desktop/mod.rs`:
       - `route_internal_drag_hover_from_cursor`
       - `route_internal_drag_drop_from_cursor`
+      - Window-under-cursor selection:
+        - Windows: Win32 z-order walk (`WindowFromPoint` + `GetWindow(GW_HWNDNEXT)`) prefers the true frontmost window.
+        - macOS: `NSApp.orderedWindows` ordering prefers the true frontmost window.
+        - Fallback: focus/raise-based best-effort ordering (`window_hit_test_order`).
 
 ---
 

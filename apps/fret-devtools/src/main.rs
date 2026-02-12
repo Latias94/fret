@@ -2515,8 +2515,19 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
             label: "click",
             step: serde_json::json!({
                 "type": "click",
-                "target": target,
+                "target": target.clone(),
                 "button": "left",
+            }),
+        },
+        StepTemplate {
+            label: "drag_pointer",
+            step: serde_json::json!({
+                "type": "drag_pointer",
+                "target": placeholder_selector_value(),
+                "button": "left",
+                "delta_x": 120.0,
+                "delta_y": 0.0,
+                "steps": 8,
             }),
         },
         StepTemplate {
@@ -2562,7 +2573,7 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
             label: "wait_until",
             step: serde_json::json!({
                 "type": "wait_until",
-                "predicate": predicate,
+                "predicate": predicate.clone(),
                 "timeout_frames": 180,
             }),
         },
@@ -2600,8 +2611,134 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
         return v1;
     }
 
+    let window = serde_json::json!({ "kind": "current" });
+
     let mut v2 = Vec::new();
-    v2.extend(v1);
+    v2.push(StepTemplate {
+        label: "click",
+        step: serde_json::json!({
+            "type": "click",
+            "window": window.clone(),
+            "target": target.clone(),
+            "button": "left",
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "drag_pointer",
+        step: serde_json::json!({
+            "type": "drag_pointer",
+            "window": window.clone(),
+            "target": placeholder_selector_value(),
+            "button": "left",
+            "delta_x": 120.0,
+            "delta_y": 0.0,
+            "steps": 8,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "pointer_down",
+        step: serde_json::json!({
+            "type": "pointer_down",
+            "window": window.clone(),
+            "target": placeholder_selector_value(),
+            "button": "left",
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "pointer_move",
+        step: serde_json::json!({
+            "type": "pointer_move",
+            "window": window.clone(),
+            "delta_x": 120.0,
+            "delta_y": 0.0,
+            "steps": 8,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "pointer_up",
+        step: serde_json::json!({
+            "type": "pointer_up",
+            "window": window.clone(),
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "move_pointer",
+        step: serde_json::json!({
+            "type": "move_pointer",
+            "target": placeholder_selector_value(),
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "wheel",
+        step: serde_json::json!({
+            "type": "wheel",
+            "target": placeholder_selector_value(),
+            "delta_x": 0.0,
+            "delta_y": -120.0,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "press_key",
+        step: serde_json::json!({
+            "type": "press_key",
+            "key": "Enter",
+            "modifiers": { "shift": false, "ctrl": false, "alt": false, "meta": false },
+            "repeat": false,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "type_text",
+        step: serde_json::json!({
+            "type": "type_text",
+            "text": "TODO",
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "wait_frames",
+        step: serde_json::json!({
+            "type": "wait_frames",
+            "n": 30,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "wait_until",
+        step: serde_json::json!({
+            "type": "wait_until",
+            "window": window.clone(),
+            "predicate": predicate.clone(),
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "assert",
+        step: serde_json::json!({
+            "type": "assert",
+            "window": window.clone(),
+            "predicate": placeholder_predicate_value(),
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "capture_bundle",
+        step: serde_json::json!({
+            "type": "capture_bundle",
+            "label": "devtools",
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "capture_screenshot",
+        step: serde_json::json!({
+            "type": "capture_screenshot",
+            "label": "devtools",
+            "timeout_frames": 300,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "reset_diagnostics",
+        step: serde_json::json!({
+            "type": "reset_diagnostics",
+        }),
+    });
+
     v2.push(StepTemplate {
         label: "press_shortcut",
         step: serde_json::json!({
@@ -2687,6 +2824,7 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
         label: "drag_to",
         step: serde_json::json!({
             "type": "drag_to",
+            "window": window.clone(),
             "from": placeholder_selector_value(),
             "to": placeholder_selector_value(),
             "button": "left",
@@ -2711,8 +2849,34 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
         label: "set_window_inner_size",
         step: serde_json::json!({
             "type": "set_window_inner_size",
+            "window": window.clone(),
             "width_px": 1280.0,
             "height_px": 720.0,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "set_window_outer_position",
+        step: serde_json::json!({
+            "type": "set_window_outer_position",
+            "window": window.clone(),
+            "x_px": 100.0,
+            "y_px": 100.0
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "set_cursor_in_window",
+        step: serde_json::json!({
+            "type": "set_cursor_in_window",
+            "window": window.clone(),
+            "x_px": 200.0,
+            "y_px": 200.0,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "raise_window",
+        step: serde_json::json!({
+            "type": "raise_window",
+            "window": window.clone(),
         }),
     });
 
