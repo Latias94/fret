@@ -4684,8 +4684,11 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         return true;
     }
 
-    if active.v2_step_state.is_some() {
-        return false;
+    if let Some(state) = active.v2_step_state.as_ref() {
+        // Some schema-v2 steps cache their target geometry and can keep progressing without a
+        // semantics snapshot on every frame (e.g. `DragPointer`). Others still rely on semantics
+        // during their multi-frame state machine (e.g. `ScrollIntoView`, `ClickStable`).
+        return !matches!(state, V2StepState::DragPointer(_));
     }
 
     let Some(step) = active.steps.get(active.next_step) else {

@@ -3055,7 +3055,18 @@ impl WinitAppDriver for UiGalleryDriver {
         } = context;
 
         Self::render_ui(app, services, window, state, bounds);
-        state.ui.request_semantics_snapshot();
+
+        let diag_wants_semantics_snapshot = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| svc.wants_semantics_snapshot(window),
+        );
+        if diag_wants_semantics_snapshot {
+            // Diagnostics scripts select targets by semantics bounds. Ensure we have a fresh
+            // semantics snapshot for the current frame before we drive scripted input; otherwise,
+            // scripts may act on a 1-frame-stale snapshot and mis-predict visibility in
+            // virtualized lists (estimate -> measured jumps).
+            state.ui.request_semantics_snapshot();
+        }
         state.ui.ingest_paint_cache_source(scene);
 
         let (inspection_active, diag_enabled) = app.with_global_mut_untracked(
@@ -3068,16 +3079,6 @@ impl WinitAppDriver for UiGalleryDriver {
         state.ui.set_debug_enabled(diag_enabled);
 
         scene.clear();
-
-        if app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
-        {
-            // Diagnostics scripts select targets by semantics bounds. We must ensure we have a
-            // fresh semantics snapshot for the current frame *before* we drive scripted input;
-            // otherwise, scripts may act on a 1-frame-stale snapshot and mis-predict visibility
-            // in virtualized lists (estimate -> measured jumps).
-            state.ui.request_semantics_snapshot();
-        }
 
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
@@ -3302,6 +3303,11 @@ impl WinitAppDriver for UiGalleryDriver {
         _window: AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+        // This is called by the runner after layout when accessibility is active (or when a
+        // platform feature like WebView placement needs semantics). Requesting semantics here
+        // ensures we start producing snapshots on the next frame without forcing semantics on
+        // every frame.
+        state.ui.request_semantics_snapshot();
         state.ui.semantics_snapshot_arc()
     }
 }
