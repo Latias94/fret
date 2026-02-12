@@ -5,7 +5,7 @@ pub use super::super::common::*;
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
-    sync::{Arc, Mutex, OnceLock},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -55,6 +55,7 @@ mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
+mod effects;
 #[cfg(target_os = "ios")]
 mod ios_keyboard;
 #[cfg(target_os = "macos")]
@@ -71,6 +72,7 @@ mod platform_prefs;
 mod render;
 mod run;
 mod streaming_images;
+mod timers;
 #[cfg(target_os = "windows")]
 mod win32;
 mod window;
@@ -2501,202 +2503,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.insert_window(window, accessibility, surface)
     }
 
-    fn schedule_timer(&mut self, now: Instant, effect: &Effect) {
-        let Effect::SetTimer {
-            window,
-            token,
-            after,
-            repeat,
-        } = effect
-        else {
-            return;
-        };
-        self.timers.insert(
-            *token,
-            TimerEntry {
-                window: *window,
-                deadline: now + *after,
-                repeat: *repeat,
-            },
-        );
-    }
-
-    fn fire_due_timers(&mut self, now: Instant) -> bool {
-        let mut fired_any = false;
-        let mut due: Vec<fret_runtime::TimerToken> = Vec::new();
-        for (token, entry) in &self.timers {
-            if entry.deadline <= now {
-                due.push(*token);
-            }
-        }
-
-        for token in due {
-            let Some(entry) = self.timers.get(&token).cloned() else {
-                continue;
-            };
-            fired_any = true;
-
-            let target = entry
-                .window
-                .or(self.main_window)
-                .and_then(|w| self.windows.contains_key(w).then_some(w));
-
-            if let Some(window) = target {
-                let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-                if let Some(state) = self.windows.get_mut(window) {
-                    self.driver.handle_event(
-                        WinitEventContext {
-                            app: &mut self.app,
-                            services,
-                            window,
-                            state: &mut state.user,
-                        },
-                        &Event::Timer { token },
-                    );
-                }
-            }
-
-            match entry.repeat {
-                Some(interval) => {
-                    if let Some(e) = self.timers.get_mut(&token) {
-                        e.deadline = now + interval;
-                    }
-                }
-                None => {
-                    self.timers.remove(&token);
-                }
-            }
-        }
-
-        fired_any
-    }
-
-    fn system_font_rescan_async_enabled() -> bool {
-        static FLAG: OnceLock<bool> = OnceLock::new();
-        *FLAG.get_or_init(|| {
-            if cfg!(any(target_os = "ios", target_os = "android")) {
-                return false;
-            }
-            std::env::var("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC")
-                .ok()
-                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
-                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC").is_none()
-        })
-    }
-
-    fn system_font_catalog_startup_async_enabled() -> bool {
-        static FLAG: OnceLock<bool> = OnceLock::new();
-        *FLAG.get_or_init(|| {
-            if cfg!(any(target_os = "ios", target_os = "android")) {
-                return false;
-            }
-            std::env::var("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC")
-                .ok()
-                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
-                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC").is_none()
-        })
-    }
-
-    fn request_redraw_all_windows(&self) {
-        for (_id, state) in self.windows.iter() {
-            state.window.request_redraw();
-        }
-    }
-
-    fn request_system_font_rescan(&mut self) {
-        if !Self::system_font_rescan_async_enabled() {
-            self.rescan_system_fonts_sync();
-            return;
-        }
-
-        if self.system_font_rescan_in_flight {
-            self.system_font_rescan_pending = true;
-            return;
-        }
-
-        let Some(seed) = self
-            .renderer
-            .as_mut()
-            .and_then(|renderer| renderer.system_font_rescan_seed())
-        else {
-            return;
-        };
-
-        if let Ok(mut slot) = self.system_font_rescan_result.lock() {
-            *slot = None;
-        }
-        self.system_font_rescan_in_flight = true;
-
-        let result_slot = self.system_font_rescan_result.clone();
-        let dispatcher = self.dispatcher.handle();
-        let dispatcher_for_wake = dispatcher.clone();
-        dispatcher.dispatch_background(
-            Box::new(move || {
-                let result = seed.run();
-                if let Ok(mut slot) = result_slot.lock() {
-                    *slot = Some(result);
-                }
-                dispatcher_for_wake.wake(None);
-            }),
-            fret_runtime::DispatchPriority::Low,
-        );
-    }
-
-    fn rescan_system_fonts_sync(&mut self) {
-        let Some(renderer) = self.renderer.as_mut() else {
-            return;
-        };
-
-        if !renderer.rescan_system_fonts() {
-            return;
-        }
-
-        // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
-        super::super::font_catalog::apply_renderer_font_catalog_update(
-            &mut self.app,
-            renderer,
-            fret_runtime::FontFamilyDefaultsPolicy::None,
-        );
-        self.request_redraw_all_windows();
-    }
-
-    fn apply_pending_system_font_rescan_result(&mut self) -> bool {
-        let result = self
-            .system_font_rescan_result
-            .lock()
-            .ok()
-            .and_then(|mut slot| slot.take());
-        let Some(result) = result else {
-            return false;
-        };
-
-        self.system_font_rescan_in_flight = false;
-
-        let Some(renderer) = self.renderer.as_mut() else {
-            return true;
-        };
-
-        if !renderer.apply_system_font_rescan_result(result) {
-            return true;
-        }
-
-        // Font catalog refresh trigger (ADR 0258): explicit system font rescan (async).
-        super::super::font_catalog::apply_renderer_font_catalog_update(
-            &mut self.app,
-            renderer,
-            fret_runtime::FontFamilyDefaultsPolicy::None,
-        );
-        self.request_redraw_all_windows();
-
-        let should_restart = self.system_font_rescan_pending;
-        self.system_font_rescan_pending = false;
-        if should_restart {
-            self.request_system_font_rescan();
-        }
-
-        true
-    }
-
     fn drain_effects(&mut self, event_loop: &dyn ActiveEventLoop) {
         const MAX_EFFECT_DRAIN_TURNS: usize = 8;
 
@@ -3788,15 +3594,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 break;
             }
         }
-    }
-
-    fn drain_inboxes(&mut self, window: Option<fret_core::AppWindowId>) -> bool {
-        let did_work = self.app.with_global_mut_untracked(
-            fret_runtime::InboxDrainRegistry::default,
-            |registry, app| registry.drain_all(app, window),
-        );
-        tracing::trace!(?window, did_work, "driver: drain_inboxes");
-        did_work
     }
 
     fn propagate_model_changes(&mut self) -> bool {
