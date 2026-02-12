@@ -43,6 +43,9 @@ use winit::{
     window::{Window, WindowId, WindowLevel},
 };
 
+#[cfg(target_os = "windows")]
+use winit::raw_window_handle::RawWindowHandle;
+
 use crate::RunnerError;
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -5848,6 +5851,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
+        #[cfg(target_os = "windows")]
+        if let Some(window) = self.window_under_cursor_windows_z_order(screen_pos, prefer_not) {
+            return Some(window);
+        }
+
         let ordered: Vec<fret_core::AppWindowId> = if self.window_hit_test_order.is_empty() {
             self.windows.keys().collect()
         } else {
@@ -6003,6 +6011,97 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if _raise_on_macos {
             self.enqueue_window_front(follow.window, Some(follow.source_window), None, _now);
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn window_under_cursor_windows_z_order(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        use std::collections::{HashMap, HashSet};
+        use windows_sys::Win32::Foundation::{HWND, POINT};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GA_ROOT, GW_HWNDNEXT, GetAncestor, GetWindow, WindowFromPoint,
+        };
+
+        fn clamp_i32(v: f64) -> i32 {
+            let v = v.round();
+            if v.is_nan() {
+                0
+            } else if v <= i32::MIN as f64 {
+                i32::MIN
+            } else if v >= i32::MAX as f64 {
+                i32::MAX
+            } else {
+                v as i32
+            }
+        }
+
+        fn hwnd_for_window(window: &dyn Window) -> Option<HWND> {
+            use winit::raw_window_handle::HasWindowHandle as _;
+            let handle = window.window_handle().ok()?;
+            let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+                return None;
+            };
+            Some(handle.hwnd.get() as HWND)
+        }
+
+        let mut hwnd_to_app: HashMap<HWND, fret_core::AppWindowId> = HashMap::new();
+        for (id, state) in self.windows.iter() {
+            if let Some(hwnd) = hwnd_for_window(state.window.as_ref()) {
+                hwnd_to_app.insert(hwnd, id);
+            }
+        }
+
+        let point = POINT {
+            x: clamp_i32(screen_pos.x),
+            y: clamp_i32(screen_pos.y),
+        };
+
+        // `WindowFromPoint` can return child windows; lift to a root/top-level window so we can
+        // map back to winit windows reliably.
+        let mut hwnd = unsafe { WindowFromPoint(point) };
+        if hwnd.is_null() {
+            return None;
+        }
+        let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
+        if !root.is_null() {
+            hwnd = root;
+        }
+
+        let mut rects_front_to_back: Vec<(
+            fret_core::AppWindowId,
+            winit::dpi::PhysicalPosition<f64>,
+            winit::dpi::PhysicalSize<u32>,
+        )> = Vec::new();
+        let mut visited: HashSet<HWND> = HashSet::new();
+
+        // Walk z-order front-to-back using Win32. Keep the list bounded to avoid infinite loops
+        // in the presence of unusual window manager behavior.
+        for _ in 0..256 {
+            if hwnd.is_null() || visited.contains(&hwnd) {
+                break;
+            }
+            visited.insert(hwnd);
+
+            if let Some(app_window) = hwnd_to_app.get(&hwnd).copied()
+                && let Some(state) = self.windows.get(app_window)
+                && let Ok(outer) = state.window.outer_position()
+            {
+                let deco = state.window.surface_position();
+                let size = state.window.surface_size();
+                rects_front_to_back.push((app_window, client_origin_screen(outer, deco), size));
+            }
+
+            hwnd = unsafe { GetWindow(hwnd, GW_HWNDNEXT) };
+        }
+
+        if rects_front_to_back.is_empty() {
+            return None;
+        }
+
+        pick_window_under_cursor_from_client_rects(screen_pos, prefer_not, rects_front_to_back)
     }
 }
 
