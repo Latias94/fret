@@ -689,9 +689,6 @@ impl Carousel {
                 .on_activate(on_next)
                 .into_element(cx);
 
-            cx.key_add_on_key_down_for(prev_button.id, on_key_down.clone());
-            cx.key_add_on_key_down_for(next_button.id, on_key_down);
-
             let offset = MetricRef::Px(Px(48.0));
             let button_size = MetricRef::Px(Px(32.0));
 
@@ -760,6 +757,8 @@ impl Carousel {
                 },
                 move |_cx| vec![viewport, prev_wrapper, next_wrapper],
             );
+
+            cx.key_add_on_key_down_capture_for(root.id, on_key_down);
 
             root.attach_semantics(
                 SemanticsDecoration::default()
