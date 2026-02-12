@@ -210,11 +210,14 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: Not started
+Status: In progress (contract-path demo + diag scripts landed; perf baseline pending)
 
-Evidence (planned):
+Evidence:
 
 - `docs/adr/0234-imported-render-targets-and-external-texture-imports-v1.md`
-- `crates/fret-render-wgpu/src/renderer/render_targets.rs` / `ImportedViewportRenderTarget`
-- `apps/fret-demo*` or `apps/fretboard` (contract-path demo)
+- `crates/fret-launch/src/runner/imported_viewport_target.rs` (`ImportedViewportRenderTarget`)
+- `apps/fret-demo/src/bin/external_texture_imports_demo.rs`
+- `apps/fret-examples/src/external_texture_imports_demo.rs`
+- `tools/diag-scripts/external-texture-imports-contract-path.json`
+- `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)
