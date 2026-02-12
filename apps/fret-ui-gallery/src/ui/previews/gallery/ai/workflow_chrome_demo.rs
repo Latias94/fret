@@ -202,6 +202,7 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                         Point::new(Px(40.0), Px(128.0)),
                         Point::new(Px(320.0), Px(128.0)),
                     )
+                    .marker_end(ui_ai::WorkflowEdgeMarkerEnd::Arrow)
                     .test_id("ui-ai-workflow-edge-animated-demo-root")
                     .refine_layout(abs)
                     .into_element(cx);
