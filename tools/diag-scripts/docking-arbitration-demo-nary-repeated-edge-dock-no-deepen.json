@@ -28,6 +28,13 @@
       "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
 
     {
       "type": "drag_pointer",
@@ -112,6 +119,13 @@
     {
       "type": "assert",
       "predicate": { "kind": "dock_graph_max_split_depth_le", "max": 4 }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      }
     },
     {
       "type": "capture_bundle",

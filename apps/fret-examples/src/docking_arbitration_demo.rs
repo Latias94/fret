@@ -2155,13 +2155,17 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let layout_preset = DockingArbitrationLayoutPreset::from_env();
+    let diag_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
     let no_persist = std::env::var("FRET_DOCK_ARB_NO_PERSIST")
         .ok()
         .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
     let persist_layout_on_exit =
-        layout_preset == DockingArbitrationLayoutPreset::Default && !no_persist;
+        layout_preset == DockingArbitrationLayoutPreset::Default && !no_persist && !diag_enabled;
 
-    let pending_layout = if layout_preset == DockingArbitrationLayoutPreset::Default {
+    let pending_layout = if layout_preset == DockingArbitrationLayoutPreset::Default
+        && !diag_enabled
+    {
         fret_app::DockLayoutFileV1::load_json_if_exists(DockingArbitrationDriver::DOCK_LAYOUT_PATH)
             .map(|v| v.map(|f| f.layout))
             .unwrap_or_else(|err| {
