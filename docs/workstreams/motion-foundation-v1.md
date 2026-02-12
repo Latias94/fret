@@ -207,9 +207,13 @@ Already landed (evidence anchors):
   - `spring.rs`, `friction.rs`, `tween.rs`, `inertia.rs`
 - UI-kit drivers: `ecosystem/fret-ui-kit/src/declarative/motion.rs`
   - `drive_tween_f32`, `drive_spring_f32`, `drive_inertia_f32`
+- UI-kit `MotionValue` driver (unified snap/to/inertia update surface):
+  - `ecosystem/fret-ui-kit/src/declarative/motion_value.rs` (`drive_motion_value_f32`)
 - Pointer velocity snapshots exposed to component hooks (ADR 0243 alignment):
   - `crates/fret-ui/src/action.rs` (`PointerMoveCx.velocity_window`, `PointerUpCx.velocity_window`)
 - Drawer release uses velocity projection to decide close/snap (starting point for Vaul-like feel):
+  - `ecosystem/fret-ui-shadcn/src/drawer.rs`
+- Drawer settle uses `MotionValue` (no manual priming fields like `settle_primed`):
   - `ecosystem/fret-ui-shadcn/src/drawer.rs`
 - Sheet uses duration-based overlay transitions (no shadcn tick constants in component code):
   - `ecosystem/fret-ui-shadcn/src/sheet.rs`
