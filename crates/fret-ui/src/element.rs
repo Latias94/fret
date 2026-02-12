@@ -1,6 +1,7 @@
 use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
+use fret_core::scene::Paint;
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
     ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
@@ -379,9 +380,18 @@ pub struct ContainerProps {
     pub layout: LayoutStyle,
     pub padding: Edges,
     pub background: Option<Color>,
+    /// Optional paint override for the container background (ADR 0233).
+    ///
+    /// When set, this takes precedence over `background` and enables gradients/materials for
+    /// declarative container chrome.
+    pub background_paint: Option<Paint>,
     pub shadow: Option<ShadowStyle>,
     pub border: Edges,
     pub border_color: Option<Color>,
+    /// Optional paint override for the container border (ADR 0233).
+    ///
+    /// When set, this takes precedence over `border_color`.
+    pub border_paint: Option<Paint>,
     /// Optional focus-visible ring decoration.
     pub focus_ring: Option<RingStyle>,
     /// Optional border-color override applied when focus-visible is active.
@@ -402,9 +412,11 @@ impl Default for ContainerProps {
             layout: LayoutStyle::default(),
             padding: Edges::all(Px(0.0)),
             background: None,
+            background_paint: None,
             shadow: None,
             border: Edges::all(Px(0.0)),
             border_color: None,
+            border_paint: None,
             focus_ring: None,
             focus_border_color: None,
             focus_within: false,

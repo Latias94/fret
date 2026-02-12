@@ -56,7 +56,9 @@ impl ElementHostWidget {
 
                 let should_draw = props.shadow.is_some()
                     || props.background.is_some()
+                    || props.background_paint.is_some()
                     || props.border_color.is_some()
+                    || props.border_paint.is_some()
                     || props.border != Edges::all(Px(0.0));
 
                 if should_draw {
@@ -66,11 +68,13 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: bounds,
-                        background: Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT)),
+                        background: props.background_paint.unwrap_or_else(|| {
+                            Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT))
+                        }),
                         border: props.border,
-                        border_paint: Paint::Solid(
-                            props.border_color.unwrap_or(Color::TRANSPARENT),
-                        ),
+                        border_paint: props.border_paint.unwrap_or_else(|| {
+                            Paint::Solid(props.border_color.unwrap_or(Color::TRANSPARENT))
+                        }),
                         corner_radii: props.corner_radii,
                     });
                 }
