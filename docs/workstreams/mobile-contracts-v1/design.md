@@ -85,8 +85,11 @@ Not required for initial bring-up, but likely “hard to change” once apps dep
 
 - File picker + sandbox semantics (paths vs handles vs URIs; Android SAF / iOS UIDocumentPicker):
   `docs/adr/0264-mobile-file-picker-and-sandbox-handles-v1.md`
-- Share sheet and “open in…” intent-style surfaces.
-- Clipboard files / rich clipboard formats on mobile.
+- Share sheet and “open in…” intent-style surfaces:
+  `docs/adr/0265-mobile-share-sheet-and-open-in-intents-v1.md`
+- Mobile clipboard portability baseline:
+  `docs/adr/0266-mobile-clipboard-portability-v1.md`
+- Clipboard files / rich clipboard formats on mobile (follow-up beyond v1 text baseline).
 - Accessibility tree requirements (semantics stability; selection/composition exposure).
 - Fonts and fallback strategy (CJK/emoji parity; packaging vs system discovery).
 - Resource packaging strategy (rust-embed vs platform assets; large assets, streaming, updates).

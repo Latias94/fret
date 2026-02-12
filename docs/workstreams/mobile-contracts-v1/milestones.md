@@ -39,3 +39,8 @@ Definition of done:
   - share sheet / intent bridge,
   - clipboard portability (mobile).
 
+Evidence anchors:
+
+- File picker + sandbox handles: `docs/adr/0264-mobile-file-picker-and-sandbox-handles-v1.md`
+- Share sheet + open-in intents: `docs/adr/0265-mobile-share-sheet-and-open-in-intents-v1.md`
+- Clipboard portability: `docs/adr/0266-mobile-clipboard-portability-v1.md`

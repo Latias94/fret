@@ -33,8 +33,10 @@ Workstream entry:
 
 - [x] Draft “Mobile file picker + sandbox handles (v1)” ADR:
   - `docs/adr/0264-mobile-file-picker-and-sandbox-handles-v1.md`
-- [ ] Draft “Share sheet / open-in intent (v1)” ADR.
-- [ ] Draft “Mobile clipboard portability (v1)” ADR (text baseline, file/rich formats later).
+- [x] Draft “Share sheet / open-in intent (v1)” ADR:
+  - `docs/adr/0265-mobile-share-sheet-and-open-in-intents-v1.md`
+- [x] Draft “Mobile clipboard portability (v1)” ADR (text baseline, file/rich formats later):
+  - `docs/adr/0266-mobile-clipboard-portability-v1.md`
 
 ## Cross-workstream alignment
 

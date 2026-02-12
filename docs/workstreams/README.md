@@ -28,6 +28,9 @@ Active workstreams:
 - `docs/workstreams/mobile-contracts-v1/design.md`
 - `docs/workstreams/mobile-contracts-v1/todo.md`
 - `docs/workstreams/mobile-contracts-v1/milestones.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/design.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/todo.md`
+- `docs/workstreams/mobile-share-and-clipboard-v1/milestones.md`
 - `docs/workstreams/gesture-recognizers-v1.md`
 - `docs/workstreams/gesture-recognizers-v1-todo.md`
 - `docs/workstreams/gesture-recognizers-v1-milestones.md`
