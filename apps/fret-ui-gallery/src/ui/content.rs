@@ -458,6 +458,7 @@ fn page_preview(
         PAGE_AI_AGENT_DEMO => preview_ai_agent_demo(cx, theme),
         PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
         PAGE_AI_PERSONA_DEMO => preview_ai_persona_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),

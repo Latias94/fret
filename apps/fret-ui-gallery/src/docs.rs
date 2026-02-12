@@ -885,6 +885,24 @@ use fret_ui_ai::{Persona, PersonaState, PersonaVariant};
 ```
 "#;
 
+pub(crate) const DOC_AI_WORKFLOW_CHROME_DEMO: &str = r#"
+## AI workflow chrome (demo)
+
+This page demonstrates AI Elements-aligned workflow chrome surfaces:
+
+- `WorkflowPanel` (bordered, rounded panel container),
+- `WorkflowToolbar` (small tool row container).
+
+Note: upstream uses `@xyflow/react` (React Flow). The Fret port is UI-only chrome intended to wrap
+existing ecosystem crates (node graph/canvas/docking) without introducing new engines.
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_CHROME_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{WorkflowPanel, WorkflowToolbar};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 
