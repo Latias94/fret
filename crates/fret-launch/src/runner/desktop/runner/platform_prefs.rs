@@ -676,3 +676,40 @@ fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
 fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
     None
 }
+
+#[cfg(target_os = "linux")]
+fn is_wayland_session(xdg_session_type: Option<&str>, wayland_display: Option<&str>) -> bool {
+    if xdg_session_type.is_some_and(|v| v.eq_ignore_ascii_case("wayland")) {
+        return true;
+    }
+    wayland_display.is_some_and(|v| !v.is_empty())
+}
+
+#[cfg(target_os = "linux")]
+pub(super) fn linux_is_wayland_session() -> bool {
+    let xdg_session_type = std::env::var("XDG_SESSION_TYPE").ok();
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").ok();
+    is_wayland_session(xdg_session_type.as_deref(), wayland_display.as_deref())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_wayland_session_true_for_xdg_session_type_wayland() {
+        assert!(is_wayland_session(Some("wayland"), None));
+        assert!(is_wayland_session(Some("Wayland"), None));
+    }
+
+    #[test]
+    fn is_wayland_session_true_for_wayland_display() {
+        assert!(is_wayland_session(None, Some("wayland-0")));
+    }
+
+    #[test]
+    fn is_wayland_session_false_for_x11_and_no_wayland_display() {
+        assert!(!is_wayland_session(Some("x11"), None));
+        assert!(!is_wayland_session(None, Some("")));
+    }
+}

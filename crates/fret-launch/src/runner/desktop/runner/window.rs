@@ -599,6 +599,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         fallback
     }
 
+    pub(super) fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        if self.windows.get(window).is_none() {
+            return;
+        }
+        self.windows_z_order.retain(|w| *w != window);
+        self.windows_z_order.push(window);
+
+        #[cfg(target_os = "macos")]
+        {
+            self.enqueue_window_front(window, None, None, Instant::now());
+        }
+    }
+
     pub(super) fn virtual_desktop_bounds(window: &dyn Window) -> Option<MonitorRectF64> {
         let mut monitors = window.available_monitors();
         let first = monitors.next()?;
