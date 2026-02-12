@@ -70,7 +70,7 @@ fn clamp_frame_delta(dt: Duration) -> Duration {
     dt.min(MAX_FRAME_DELTA)
 }
 
-fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+pub(crate) fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
     let Some(svc) = cx.app.global::<WindowFrameClockService>() else {
         return REFERENCE_FRAME_DELTA_60HZ;
     };
@@ -94,7 +94,7 @@ fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Durati
     clamp_frame_delta(snapshot.delta)
 }
 
-fn tween_value_at(
+pub(crate) fn tween_value_at(
     start: f32,
     end: f32,
     duration: Duration,
@@ -109,7 +109,7 @@ fn tween_value_at(
     start + (end - start) * eased
 }
 
-fn tween_velocity_at(
+pub(crate) fn tween_velocity_at(
     start: f32,
     end: f32,
     duration: Duration,

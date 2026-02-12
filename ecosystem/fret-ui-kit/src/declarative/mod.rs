@@ -24,6 +24,7 @@ pub mod keyboard_avoidance;
 pub mod list;
 pub mod model_watch;
 pub mod motion;
+pub mod motion_value;
 pub mod occlusion_queries;
 pub mod overlay_motion;
 pub mod pixelate;

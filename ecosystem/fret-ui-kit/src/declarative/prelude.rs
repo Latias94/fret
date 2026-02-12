@@ -15,6 +15,10 @@ pub use super::model_watch::ModelWatchExt;
 pub use super::motion::{
     DrivenMotionF32, InertiaKick, SpringKick, drive_inertia_f32, drive_spring_f32, drive_tween_f32,
 };
+pub use super::motion_value::{
+    InertiaSpecF32, MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32,
+    TweenSpecF32, drive_motion_value_f32,
+};
 pub use super::occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use super::pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
