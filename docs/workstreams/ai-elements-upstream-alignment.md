@@ -90,7 +90,7 @@ Legend:
 | `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
-| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` (planned) | Not started | Chrome-only wrapper over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports). |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
 | `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` | Ported (prototype) | UI-only node chrome + handle indicators. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
 | `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` | Ported (prototype) | UI-only edge chrome (temporary + animated). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 | `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
@@ -100,9 +100,7 @@ Legend:
 
 ## Known upstream files not yet ported
 
-As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
-
-- Workflow wrappers (remaining): `canvas.tsx`
+As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.
  
 
 ## Regenerating this diff (developer note)

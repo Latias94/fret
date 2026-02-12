@@ -764,7 +764,7 @@ Legend:
 | `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
 | `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Prototype | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl`. Demo + diag gate exist. |
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` | Prototype | Workflow chrome wrapper (UI-only). Upstream uses `@xyflow/react` `Panel`; Fret port is composition-only. |
-| `canvas.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/canvas.rs` | Planned (M4/M6) | Chrome-only wrapper; apps own canvas/graph engines (likely reuse `fret-canvas`, `fret-node`, docking/viewports). |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/canvas.rs` | Prototype | UI-only canvas host (wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
 | `node.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/node.rs` | Prototype | UI-only node chrome + handle indicators. Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
 | `edge.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` | Prototype | UI-only edge chrome (temporary + animated). Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 | `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |

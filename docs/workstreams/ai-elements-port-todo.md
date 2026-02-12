@@ -26,14 +26,14 @@ Each TODO is labeled:
 
 - [x] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
 - [x] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.
-- [~] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).
+- [x] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).
   - Done: `panel.tsx` → `workflow/panel.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
   - Done: `toolbar.tsx` → `workflow/toolbar.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
   - Done: `controls.tsx` → `workflow/controls.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
   - Done: `node.tsx` → `workflow/node.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
   - Done: `edge.tsx` → `workflow/edge.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
   - Done: `connection.tsx` → `workflow/connection.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
-  - Next: `canvas.tsx`
+  - Done: `canvas.tsx` → `workflow/canvas.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
 - [x] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
 
 ### M0 — Foundations (composition + gates)
