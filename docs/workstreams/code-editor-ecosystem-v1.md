@@ -185,7 +185,7 @@ P0 (correctness and contracts):
   - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFonts`) for full CJK coverage when validating IME/editor behavior.
   - Diagnostics: surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel to make tofu causes debuggable.
   - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFonts` effect) to reduce “first frame” tofu.
-  - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render-wgpu/src/text.rs` (`cjk_fallback_*` tests).
+  - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render-wgpu/src/text/mod.rs` (`cjk_fallback_*` tests).
 
 P1 (robustness and testability):
 

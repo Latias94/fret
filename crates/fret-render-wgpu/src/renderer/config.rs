@@ -1,9 +1,17 @@
 use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
+use crate::{SystemFontRescanResult, SystemFontRescanSeed};
 
 impl Renderer {
     pub fn begin_text_diagnostics_frame(&mut self) {
         self.text_system.begin_frame_diagnostics();
+    }
+
+    pub fn text_font_trace_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFontTraceSnapshot {
+        self.text_system.font_trace_snapshot(frame_id)
     }
 
     pub fn text_diagnostics_snapshot(
@@ -333,9 +341,17 @@ impl Renderer {
         self.text_system.set_text_quality_settings(settings)
     }
 
+    pub fn set_text_locale(&mut self, locale_bcp47: Option<&str>) -> bool {
+        self.text_system.set_text_locale(locale_bcp47)
+    }
+
     /// Returns a sorted list of available font family names (best-effort).
-    pub fn all_font_names(&self) -> Vec<String> {
+    pub fn all_font_names(&mut self) -> Vec<String> {
         self.text_system.all_font_names()
+    }
+
+    pub fn all_font_catalog_entries(&mut self) -> Vec<crate::FontCatalogEntryMetadata> {
+        self.text_system.all_font_catalog_entries()
     }
 
     /// Adds font bytes (TTF/OTF/TTC) to the renderer text system.
@@ -343,6 +359,18 @@ impl Renderer {
     /// Returns the number of newly loaded faces.
     pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
         self.text_system.add_fonts(fonts)
+    }
+
+    pub fn system_font_rescan_seed(&self) -> Option<SystemFontRescanSeed> {
+        self.text_system.system_font_rescan_seed()
+    }
+
+    pub fn apply_system_font_rescan_result(&mut self, result: SystemFontRescanResult) -> bool {
+        self.text_system.apply_system_font_rescan_result(result)
+    }
+
+    pub fn rescan_system_fonts(&mut self) -> bool {
+        self.text_system.rescan_system_fonts()
     }
 
     pub fn text_font_stack_key(&self) -> u64 {

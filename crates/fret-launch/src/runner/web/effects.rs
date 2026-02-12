@@ -128,16 +128,37 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let update = fret_runtime::apply_font_catalog_update(
+                    let entries = gfx
+                        .renderer
+                        .all_font_catalog_entries()
+                        .into_iter()
+                        .map(|e| fret_runtime::FontCatalogEntry {
+                            family: e.family,
+                            has_variable_axes: e.has_variable_axes,
+                            known_variable_axes: e.known_variable_axes,
+                            is_monospace_candidate: e.is_monospace_candidate,
+                        })
+                        .collect::<Vec<_>>();
+                    // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
+                    let update = fret_runtime::apply_font_catalog_update_with_metadata(
                         &mut self.app,
-                        gfx.renderer.all_font_names(),
+                        entries,
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
                     );
                     let _ = gfx.renderer.set_text_font_families(&update.config);
+                    let locale = self
+                        .app
+                        .global::<fret_runtime::fret_i18n::I18nService>()
+                        .and_then(|service| service.preferred_locales().first())
+                        .map(|locale| locale.to_string());
+                    let _ = gfx.renderer.set_text_locale(locale.as_deref());
                     self.app.set_global::<fret_runtime::TextFontStackKey>(
                         fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
                     );
                     window.request_redraw();
+                }
+                Effect::TextRescanSystemFonts => {
+                    // Web/WASM cannot access system fonts; ignore (ADR 0258).
                 }
                 Effect::CursorSetIcon { icon, .. } => {
                     let cursor = match icon {
@@ -150,6 +171,50 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         fret_core::CursorIcon::NeswResize => winit::cursor::CursorIcon::NeswResize,
                     };
                     window.set_cursor(Cursor::Icon(cursor));
+                }
+                Effect::WindowMetricsSetInsets {
+                    window: target_window,
+                    safe_area_insets,
+                    occlusion_insets,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    let mut changed = false;
+                    self.app.with_global_mut(
+                        fret_core::WindowMetricsService::default,
+                        |svc, _app| {
+                            if let Some(value) = safe_area_insets {
+                                let current = svc.safe_area_insets(target_window);
+                                let current_known = svc.safe_area_insets_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_safe_area_insets(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                            if let Some(value) = occlusion_insets {
+                                let current = svc.occlusion_insets(target_window);
+                                let current_known = svc.occlusion_insets_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_occlusion_insets(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                        },
+                    );
+                    if changed {
+                        window.request_redraw();
+                    }
                 }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,

@@ -59,12 +59,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -73,6 +80,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 const MAX_STOPS: u32 = 8u;
 
@@ -200,6 +228,96 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     );
     let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
     alpha = alpha * sdf_coverage_smooth(sdf);
+  }
+  return alpha;
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
   }
   return alpha;
 }
@@ -429,6 +547,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let inst = quad_instances.instances[input.instance_index];
 
   let outer_sdf = quad_sdf(input.local_pos, input.rect.xy, input.rect.zw, input.corner_radii);
@@ -468,7 +587,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let fill = paint_eval(inst.fill_paint, input.local_pos) * alpha_fill;
   let border = paint_eval(inst.border_paint, input.local_pos) * border_cov;
 
-  let out = (fill + border) * clip;
+  let out = (fill + border) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -489,10 +608,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -501,6 +629,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var viewport_sampler: sampler;
 @group(1) @binding(1) var viewport_texture: texture_2d<f32>;
@@ -583,6 +732,98 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  // 1 = LinearGradient
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  // 2 = RadialGradient
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
+}
+
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   let a = 0.055;
   let lo = rgb * 12.92;
@@ -617,8 +858,9 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
-  let factor = input.opacity * clip;
+  let factor = input.opacity * clip * mask;
   let a = tex.a * factor;
   let premul = input.premul >= 0.5;
   let rgb = select(tex.rgb * a, tex.rgb * factor, premul);
@@ -774,10 +1016,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -875,10 +1126,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
 };
@@ -961,10 +1214,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
 };
@@ -1116,10 +1371,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1233,10 +1497,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
 };
@@ -1471,10 +1737,14 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1592,10 +1862,14 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1713,10 +1987,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
 };
@@ -1819,10 +2095,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
 };
@@ -1925,10 +2203,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1937,6 +2224,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
@@ -2013,6 +2321,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
+}
+
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   let a = 0.055;
   let lo = rgb * 12.92;
@@ -2046,9 +2448,10 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);
-  let out = vec4<f32>(sample.rgb * o, sample.a * o) * clip;
+  let out = vec4<f32>(sample.rgb * o, sample.a * o) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -2058,15 +2461,43 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var tex_sampler: sampler;
 @group(1) @binding(1) var tex: texture_2d<f32>;
@@ -2089,6 +2520,100 @@ fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
   let ndc_x = (pixel_pos.x / viewport.viewport_size.x) * 2.0 - 1.0;
   let ndc_y = 1.0 - (pixel_pos.y / viewport.viewport_size.y) * 2.0;
   return vec2<f32>(ndc_x, ndc_y);
+}
+
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
 }
 
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
@@ -2134,9 +2659,10 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
   let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let sample = textureSample(tex, tex_sampler, input.uv);
-  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x * select(0.0, 1.0, inside);
+  let mask_tex = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x * select(0.0, 1.0, inside);
+  let mask_stack = mask_alpha(input.pixel_pos);
   let o = clamp(input.opacity, 0.0, 1.0);
-  let out = vec4<f32>(sample.rgb * o, sample.a * o) * mask;
+  let out = vec4<f32>(sample.rgb * o, sample.a * o) * mask_tex * mask_stack;
   return encode_output_premul(out);
 }
 "#;
@@ -2153,10 +2679,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -2165,6 +2700,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 struct VsIn {
   @location(0) pos_px: vec2<f32>,
@@ -2236,6 +2792,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
+}
+
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   let a = 0.055;
   let lo = rgb * 12.92;
@@ -2268,7 +2918,8 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
-  let out = input.color * clip;
+  let mask = mask_alpha(input.pixel_pos);
+  let out = input.color * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -2285,10 +2936,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
   text_gamma_ratios: vec4<f32>,
@@ -2304,6 +2957,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -2376,6 +3050,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
+  }
+  return alpha;
+}
+
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
   }
   return alpha;
 }
@@ -2443,9 +3211,10 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let coverage = apply_contrast_and_gamma_correction(tex.r, input.color.rgb);
-  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -2462,10 +3231,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
   text_gamma_ratios: vec4<f32>,
@@ -2481,6 +3252,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -2557,6 +3349,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
+}
+
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   let a = 0.055;
   let lo = rgb * 12.92;
@@ -2590,9 +3476,10 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let a = tex.a * input.color.a;
-  let out = vec4<f32>(tex.rgb * a, a) * clip;
+  let out = vec4<f32>(tex.rgb * a, a) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -2609,10 +3496,12 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
   mask_viewport_origin: vec2<f32>,
   mask_viewport_size: vec2<f32>,
   text_gamma_ratios: vec4<f32>,
@@ -2628,6 +3517,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var glyph_sampler: sampler;
 @group(1) @binding(1) var glyph_atlas: texture_2d<f32>;
@@ -2700,6 +3610,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
     let aa = max(fwidth(sdf), 1e-4);
     let a = 1.0 - smoothstep(-aa, aa, sdf);
     alpha = alpha * a;
+  }
+  return alpha;
+}
+
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
   }
   return alpha;
 }
@@ -2763,10 +3767,11 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let coverage = apply_contrast_and_gamma_correction3(tex.rgb, input.color.rgb);
   let a = max(max(coverage.r, coverage.g), coverage.b);
-  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * a) * clip;
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * a) * clip * mask;
   return encode_output_premul(out);
 }
 "#;
@@ -2783,10 +3788,19 @@ struct Viewport {
   viewport_size: vec2<f32>,
   clip_head: u32,
   clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
   output_is_srgb: u32,
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -2795,6 +3809,27 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct MaskGradient {
+  bounds: vec4<f32>,
+  kind: u32,
+  tile_mode: u32,
+  stop_count: u32,
+  _pad0: u32,
+  params0: vec4<f32>,
+  inv0: vec4<f32>,
+  inv1: vec4<f32>,
+  stop_alphas0: vec4<f32>,
+  stop_alphas1: vec4<f32>,
+  stop_offsets0: vec4<f32>,
+  stop_offsets1: vec4<f32>,
+};
+
+struct MaskStack {
+  masks: array<MaskGradient>,
+};
+
+@group(0) @binding(2) var<storage, read> mask_stack: MaskStack;
 
 @group(1) @binding(0) var mask_sampler: sampler;
 @group(1) @binding(1) var mask_texture: texture_2d<f32>;
@@ -2871,6 +3906,100 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   return alpha;
 }
 
+fn saturate(x: f32) -> f32 {
+  return clamp(x, 0.0, 1.0);
+}
+
+fn mask_stop_offset(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_offsets0[i]; }
+  return m.stop_offsets1[i - 4u];
+}
+
+fn mask_stop_alpha(m: MaskGradient, i: u32) -> f32 {
+  if (i < 4u) { return m.stop_alphas0[i]; }
+  return m.stop_alphas1[i - 4u];
+}
+
+fn mask_sample_stops(m: MaskGradient, t: f32) -> f32 {
+  let n = min(m.stop_count, 8u);
+  if (n == 0u) { return 1.0; }
+
+  var prev_offset = mask_stop_offset(m, 0u);
+  var prev_alpha = mask_stop_alpha(m, 0u);
+  if (n == 1u || t <= prev_offset) {
+    return prev_alpha;
+  }
+
+  for (var i = 1u; i < 8u; i = i + 1u) {
+    if (i >= n) {
+      break;
+    }
+    let off = mask_stop_offset(m, i);
+    let a = mask_stop_alpha(m, i);
+    if (t <= off) {
+      let denom = max(off - prev_offset, 1e-6);
+      let u = saturate((t - prev_offset) / denom);
+      return mix(prev_alpha, a, u);
+    }
+    prev_offset = off;
+    prev_alpha = a;
+  }
+  return prev_alpha;
+}
+
+fn mask_eval(m: MaskGradient, pixel_pos: vec2<f32>) -> f32 {
+  let local_pos = vec2<f32>(
+    dot(m.inv0.xy, pixel_pos) + m.inv0.z,
+    dot(m.inv1.xy, pixel_pos) + m.inv1.z
+  );
+
+  let p = local_pos - m.bounds.xy;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > m.bounds.z || p.y > m.bounds.w) {
+    return 1.0;
+  }
+
+  if (m.kind == 1u) {
+    let start = m.params0.xy;
+    let end = m.params0.zw;
+    let dir = end - start;
+    let len2 = dot(dir, dir);
+    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  if (m.kind == 2u) {
+    let center = m.params0.xy;
+    let radius = max(m.params0.zw, vec2<f32>(1e-6));
+    let d = (local_pos - center) / radius;
+    let t = length(d);
+    let tt = clamp(t, 0.0, 1.0);
+    return mask_sample_stops(m, tt);
+  }
+
+  return 1.0;
+}
+
+fn mask_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.mask_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.mask_count) {
+      break;
+    }
+    if (viewport.mask_scope_count != 0u && idx == viewport.mask_scope_head) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let m = mask_stack.masks[idx];
+    idx = bitcast<u32>(m.inv0.w);
+    alpha = alpha * clamp(mask_eval(m, pixel_pos), 0.0, 1.0);
+  }
+  return alpha;
+}
+
 fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   let a = 0.055;
   let lo = rgb * 12.92;
@@ -2904,9 +4033,10 @@ fn vs_main(input: VsIn) -> VsOut {
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
+  let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(mask_texture, mask_sampler, input.uv);
   let coverage = tex.r;
-  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip * mask;
   return encode_output_premul(out);
 }
 "#;

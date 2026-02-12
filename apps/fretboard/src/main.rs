@@ -9,6 +9,7 @@ mod dev;
 mod diag;
 mod hotpatch;
 mod scaffold;
+mod theme;
 
 fn main() -> ExitCode {
     cli::main()

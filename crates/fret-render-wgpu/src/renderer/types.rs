@@ -15,12 +15,38 @@ pub(super) struct ClipRRectUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct MaskGradientUniform {
+    /// Bounds in local pixel coordinates (x, y, w, h). Outside bounds, the mask is treated as 1.0.
+    pub(super) bounds: [f32; 4],
+    /// 1 = LinearGradient, 2 = RadialGradient.
+    pub(super) kind: u32,
+    pub(super) tile_mode: u32,
+    pub(super) stop_count: u32,
+    pub(super) _pad0: u32,
+    /// Linear: start.xy end.xy. Radial: center.xy radius.xy.
+    pub(super) params0: [f32; 4],
+    pub(super) inv0: [f32; 4],
+    pub(super) inv1: [f32; 4],
+    pub(super) stop_alphas0: [f32; 4],
+    pub(super) stop_alphas1: [f32; 4],
+    pub(super) stop_offsets0: [f32; 4],
+    pub(super) stop_offsets1: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct ViewportUniform {
     pub(super) viewport_size: [f32; 2],
     pub(super) clip_head: u32,
     pub(super) clip_count: u32,
+    pub(super) mask_head: u32,
+    pub(super) mask_count: u32,
+    /// Masks active at this scope boundary are excluded from draw shaders (applied later by
+    /// composites). See ADR 0239.
+    pub(super) mask_scope_head: u32,
+    pub(super) mask_scope_count: u32,
     pub(super) output_is_srgb: u32,
-    pub(super) _pad: [u32; 3],
+    pub(super) _pad: u32,
     /// The viewport-space rect that mask textures are scoped to (top-left origin in pixels).
     ///
     /// For non-effect draws this is the full viewport. For effect scopes this is the effect
@@ -28,6 +54,8 @@ pub(super) struct ViewportUniform {
     pub(super) mask_viewport_origin: [f32; 2],
     /// The viewport-space size of the rect that mask textures are scoped to (in pixels).
     pub(super) mask_viewport_size: [f32; 2],
+    /// Padding to match WGSL uniform layout rules: `vec4<f32>` requires 16-byte alignment.
+    pub(super) _pad_text_gamma: [u32; 2],
 
     /// Text gamma correction ratios (GPUI-aligned). Applied to grayscale coverage masks and
     /// subpixel RGB coverage in the text sampling shaders.
@@ -523,6 +551,13 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    CompositeGroupPush {
+        scissor: ScissorRect,
+        uniform_index: u32,
+        mode: fret_core::BlendMode,
+        quality: fret_core::EffectQuality,
+    },
+    CompositeGroupPop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -538,6 +573,7 @@ pub(super) struct SceneEncoding {
     pub(super) text_vertices: Vec<TextVertex>,
     pub(super) path_vertices: Vec<PathVertex>,
     pub(super) clips: Vec<ClipRRectUniform>,
+    pub(super) masks: Vec<MaskGradientUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
@@ -555,6 +591,7 @@ impl SceneEncoding {
         self.text_vertices.clear();
         self.path_vertices.clear();
         self.clips.clear();
+        self.masks.clear();
         self.uniforms.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();

@@ -33,6 +33,10 @@ pub fn focus_is(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::FocusIs { target }
 }
 
+pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::ActiveItemIs { container, item }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ScriptV2Builder {
     steps: Vec<UiActionStepV2>,

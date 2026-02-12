@@ -289,7 +289,72 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.app.with_global_mut(
+            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
+            |store, _app| {
+                store.record_can_create_surfaces();
+            },
+        );
+
         if self.context.is_some() {
+            let Some(context) = self.context.as_ref() else {
+                return;
+            };
+
+            let surface_usage = {
+                let base = self.diag_bundle_screenshots.surface_usage();
+                #[cfg(feature = "diag-screenshots")]
+                {
+                    if self.diag_screenshots.is_some() {
+                        base | wgpu::TextureUsages::COPY_SRC
+                    } else {
+                        base
+                    }
+                }
+                #[cfg(not(feature = "diag-screenshots"))]
+                {
+                    base
+                }
+            };
+
+            for (app_window, state) in self.windows.iter_mut() {
+                if state.surface.is_some() {
+                    continue;
+                }
+
+                let surface = match context.create_surface(state.window.clone()) {
+                    Ok(surface) => surface,
+                    Err(e) => {
+                        error!(window = ?app_window, error = ?e, "failed to recreate surface");
+                        continue;
+                    }
+                };
+
+                let size = state.window.surface_size();
+                let surface_state = match SurfaceState::new_with_usage(
+                    &context.adapter,
+                    &context.device,
+                    surface,
+                    size.width,
+                    size.height,
+                    surface_usage,
+                ) {
+                    Ok(state) => state,
+                    Err(e) => {
+                        error!(
+                            window = ?app_window,
+                            error = ?e,
+                            "failed to configure recreated surface"
+                        );
+                        continue;
+                    }
+                };
+
+                state.surface = Some(surface_state);
+                state.window.request_redraw();
+            }
+
+            self.drain_effects(event_loop);
             return;
         }
 
@@ -366,6 +431,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
+        let locale = self
+            .app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .and_then(|service| service.preferred_locales().first())
+            .map(|locale| locale.to_string());
+        let _ = renderer.set_text_locale(locale.as_deref());
         self.app
             .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
         self.app
@@ -373,11 +444,24 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 renderer.text_font_stack_key(),
             ));
 
-        let _ = fret_runtime::apply_font_catalog_update(
-            &mut self.app,
-            renderer.all_font_names(),
-            fret_runtime::FontFamilyDefaultsPolicy::None,
-        );
+        let startup_async = Self::system_font_rescan_async_enabled()
+            && Self::system_font_catalog_startup_async_enabled();
+        if startup_async {
+            // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
+            // empty picker snapshot and populate it asynchronously via the rescan pipeline.
+            let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                &mut self.app,
+                Vec::new(),
+                fret_runtime::FontFamilyDefaultsPolicy::None,
+            );
+        } else {
+            // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
+            super::super::font_catalog::apply_renderer_font_catalog_update(
+                &mut self.app,
+                &mut renderer,
+                fret_runtime::FontFamilyDefaultsPolicy::None,
+            );
+        }
 
         self.context = Some(context);
         self.renderer = Some(renderer);
@@ -396,7 +480,25 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         self.main_window = Some(main_window);
         self.driver.init(&mut self.app, main_window);
         self.app.request_redraw(main_window);
+        if startup_async {
+            self.request_system_font_rescan();
+        }
         self.drain_effects(event_loop);
+    }
+
+    fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        self.app.with_global_mut(
+            fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore::default,
+            |store, _app| {
+                store.record_destroy_surfaces();
+            },
+        );
+
+        for (_app_window, state) in self.windows.iter_mut() {
+            state.surface = None;
+            state.pending_surface_resize = None;
+        }
+        self.raf_windows.clear();
     }
 
     fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
@@ -492,6 +594,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if !focused {
                         state.platform.input.pressed_buttons = fret_core::MouseButtons::default();
                     }
+                }
+                if focused {
+                    self.bump_window_z_order(app_window);
                 }
                 self.deliver_window_event_now(app_window, &Event::WindowFocusChanged(focused));
                 macos_window_log(format_args!(
@@ -871,6 +976,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
+                    let Some(surface) = state.surface.as_mut() else {
+                        return;
+                    };
 
                     let capturing = self
                         .renderdoc
@@ -1032,10 +1140,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
                     let draw_result = (|| -> Result<(), fret_render::RenderError> {
-                        let (frame, view) =
-                            state.surface.get_current_frame_view().map_err(|source| {
-                                fret_render::RenderError::SurfaceAcquireFailed { source }
-                            })?;
+                        let (frame, view) = surface.get_current_frame_view().map_err(|source| {
+                            fret_render::RenderError::SurfaceAcquireFailed { source }
+                        })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
@@ -1045,17 +1152,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             &context.device,
                             &context.queue,
                             fret_render::RenderSceneParams {
-                                format: state.surface.format(),
+                                format: surface.format(),
                                 target_view: &view,
                                 scene: &state.scene,
                                 clear: self.config.clear_color,
                                 scale_factor,
-                                viewport_size: state.surface.size(),
+                                viewport_size: surface.size(),
                             },
                         );
                         if render_text_diag_enabled {
                             self.app
                                 .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
+                            self.app
+                                .set_global(renderer.text_font_trace_snapshot(self.frame_id));
                         }
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
@@ -1087,8 +1196,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 &context.device,
                                 window_ffi,
                                 &frame.texture,
-                                state.surface.format(),
-                                state.surface.size(),
+                                surface.format(),
+                                surface.size(),
                             ) {
                                 cmd_buffers.push(cmd);
                                 screenshot_inflight = Some(inflight);
@@ -1101,8 +1210,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 self.diag_bundle_screenshots.begin_readback(
                                     &context.device,
                                     &frame.texture,
-                                    state.surface.format(),
-                                    state.surface.size(),
+                                    surface.format(),
+                                    surface.size(),
                                 )
                         {
                             cmd_buffers.push(copy_cmd);
@@ -1130,7 +1239,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 &context.device,
                                 pending,
                                 &dir,
-                                state.surface.format(),
+                                surface.format(),
                             );
                         }
 
@@ -1150,9 +1259,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 source: wgpu::SurfaceError::Lost,
                             } => {
                                 let size = state.window.surface_size();
-                                state
-                                    .surface
-                                    .resize(&context.device, size.width, size.height);
+                                surface.resize(&context.device, size.width, size.height);
                                 state.window.request_redraw();
                                 self.raf_windows.insert(app_window);
                                 return;
@@ -1161,9 +1268,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 source: wgpu::SurfaceError::Outdated,
                             } => {
                                 let size = state.window.surface_size();
-                                state
-                                    .surface
-                                    .resize(&context.device, size.width, size.height);
+                                surface.resize(&context.device, size.width, size.height);
                                 state.window.request_redraw();
                                 self.raf_windows.insert(app_window);
                                 return;
@@ -1291,12 +1396,150 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
         self.drain_effects(event_loop);
 
+        if self.is_suspended {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            return;
+        }
+
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
         self.poll_window_environment_if_due(Instant::now());
 
+        #[cfg(target_os = "ios")]
+        if self.ios_keyboard.is_none() {
+            self.ios_keyboard = Some(ios_keyboard::IosKeyboardTracker::new());
+        }
+
         for (app_window, state) in self.windows.iter_mut() {
+            #[cfg(target_os = "android")]
+            {
+                use winit::platform::android::WindowExtAndroid as _;
+
+                let content_rect = state.window.content_rect();
+                let surface_size = state.window.surface_size();
+                let scale_factor = (state.window.scale_factor() as f32).max(0.0001);
+
+                let surface_w = surface_size.width as i32;
+                let surface_h = surface_size.height as i32;
+
+                let left_px = content_rect.left.max(0).min(surface_w) as f32;
+                let top_px = content_rect.top.max(0).min(surface_h) as f32;
+                let right_px = (surface_w - content_rect.right).max(0).min(surface_w) as f32;
+                let bottom_px = (surface_h - content_rect.bottom).max(0).min(surface_h) as f32;
+
+                let focus_is_text_input = self
+                    .app
+                    .global::<fret_runtime::WindowTextInputSnapshotService>()
+                    .and_then(|svc| svc.snapshot(app_window))
+                    .map(|s| s.focus_is_text_input)
+                    .unwrap_or(false);
+
+                let bottom_inset = Px(bottom_px / scale_factor);
+                let baseline_bottom_inset = match state.android_bottom_inset_baseline {
+                    Some(prev) if focus_is_text_input => Px(prev.0.min(bottom_inset.0)),
+                    _ => bottom_inset,
+                };
+                state.android_bottom_inset_baseline = Some(baseline_bottom_inset);
+
+                let ime_bottom_inset = if focus_is_text_input {
+                    Px((bottom_inset.0 - baseline_bottom_inset.0).max(0.0))
+                } else {
+                    Px(0.0)
+                };
+
+                let safe_area_insets = fret_core::Edges {
+                    top: Px(top_px / scale_factor),
+                    right: Px(right_px / scale_factor),
+                    bottom: baseline_bottom_inset,
+                    left: Px(left_px / scale_factor),
+                };
+                let occlusion_insets = fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: ime_bottom_inset,
+                    left: Px(0.0),
+                };
+
+                let mut insets_changed = false;
+                self.app
+                    .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
+                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                            insets_changed = true;
+                        }
+                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
+                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                            insets_changed = true;
+                        }
+                    });
+                if insets_changed {
+                    state.window.request_redraw();
+                }
+            }
+
+            #[cfg(target_os = "ios")]
+            {
+                let safe_area = state.window.safe_area();
+                let scale_factor = (state.window.scale_factor() as f32).max(0.0001);
+
+                let safe_area_insets = fret_core::Edges {
+                    top: Px(safe_area.top as f32 / scale_factor),
+                    right: Px(safe_area.right as f32 / scale_factor),
+                    bottom: Px(safe_area.bottom as f32 / scale_factor),
+                    left: Px(safe_area.left as f32 / scale_factor),
+                };
+
+                let focus_is_text_input = self
+                    .app
+                    .global::<fret_runtime::WindowTextInputSnapshotService>()
+                    .and_then(|svc| svc.snapshot(app_window))
+                    .map(|s| s.focus_is_text_input)
+                    .unwrap_or(false);
+
+                let keyboard_overlap_bottom = if focus_is_text_input {
+                    let frame = self
+                        .ios_keyboard
+                        .as_ref()
+                        .and_then(|tracker| tracker.keyboard_frame_screen());
+                    frame
+                        .and_then(|frame| {
+                            ios_keyboard::keyboard_overlap_bottom_in_window_points(
+                                &*state.window,
+                                frame,
+                            )
+                        })
+                        .unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                let ime_bottom_inset =
+                    Px((keyboard_overlap_bottom - safe_area_insets.bottom.0).max(0.0));
+
+                let occlusion_insets = fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: ime_bottom_inset,
+                    left: Px(0.0),
+                };
+
+                let mut insets_changed = false;
+                self.app
+                    .with_global_mut(fret_core::WindowMetricsService::default, |svc, _app| {
+                        if svc.safe_area_insets(app_window) != Some(safe_area_insets) {
+                            svc.set_safe_area_insets(app_window, Some(safe_area_insets));
+                            insets_changed = true;
+                        }
+                        if svc.occlusion_insets(app_window) != Some(occlusion_insets) {
+                            svc.set_occlusion_insets(app_window, Some(occlusion_insets));
+                            insets_changed = true;
+                        }
+                    });
+                if insets_changed {
+                    state.window.request_redraw();
+                }
+            }
+
             let Some(a11y) = state.accessibility.as_mut() else {
                 continue;
             };
@@ -1489,5 +1732,30 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         } else {
             event_loop.set_control_flow(ControlFlow::Wait);
         }
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    fn resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = false;
+
+        // Recreate surfaces eagerly when possible so the first post-resume frame presents without
+        // waiting for additional input events.
+        self.can_create_surfaces(event_loop);
+
+        for (app_window, state) in self.windows.iter() {
+            let _ = (app_window, state);
+            state.window.request_redraw();
+        }
+        self.drain_effects(event_loop);
+    }
+
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    fn suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.is_suspended = true;
+
+        // Best-effort: drop surfaces to avoid presenting while backgrounded and to ensure we can
+        // recreate cleanly on resume.
+        self.destroy_surfaces(event_loop);
+        event_loop.set_control_flow(ControlFlow::Wait);
     }
 }

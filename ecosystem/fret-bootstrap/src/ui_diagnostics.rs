@@ -856,6 +856,35 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV2::SetWindowInsets {
+                safe_area_insets,
+                occlusion_insets,
+            } => {
+                let edges_from_insets = |insets: UiPaddingInsetsV1| fret_core::Edges {
+                    left: fret_core::Px(insets.left_px),
+                    top: fret_core::Px(insets.top_px),
+                    right: fret_core::Px(insets.right_px),
+                    bottom: fret_core::Px(insets.bottom_px),
+                };
+
+                let to_override = |ovr: fret_diag_protocol::UiInsetsOverrideV1| match ovr {
+                    fret_diag_protocol::UiInsetsOverrideV1::NoChange => None,
+                    fret_diag_protocol::UiInsetsOverrideV1::Clear => Some(None),
+                    fret_diag_protocol::UiInsetsOverrideV1::Set { insets_px } => {
+                        Some(Some(edges_from_insets(insets_px)))
+                    }
+                };
+
+                output.effects.push(Effect::WindowMetricsSetInsets {
+                    window,
+                    safe_area_insets: to_override(safe_area_insets),
+                    occlusion_insets: to_override(occlusion_insets),
+                });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -1171,8 +1200,15 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "wait_until",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        &predicate,
+                    ) {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -1213,8 +1249,15 @@ impl UiDiagnosticsService {
                         step_index as u32,
                         "assert",
                     );
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        &predicate,
+                    ) {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -2308,14 +2351,22 @@ impl UiDiagnosticsService {
                         UiPredicateV1::BoundsWithinWindow {
                             target,
                             padding_px,
+                            padding_insets_px: None,
                             eps_px: 0.0,
                         }
                     } else {
                         UiPredicateV1::VisibleInWindow { target }
                     };
 
-                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
-                    {
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        &predicate,
+                    ) {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -2378,6 +2429,7 @@ impl UiDiagnosticsService {
                         UiPredicateV1::BoundsWithinWindow {
                             target: target.clone(),
                             padding_px,
+                            padding_insets_px,
                             eps_px: 0.0,
                         }
                     } else {
@@ -2390,6 +2442,8 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
@@ -3458,6 +3512,7 @@ impl UiDiagnosticsService {
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
+        caps.push("diag.window_insets_override".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -3936,13 +3991,26 @@ impl UiDiagnosticsService {
                 .global::<fret_core::RendererTextPerfSnapshot>()
                 .copied()
                 .map(UiRendererTextPerfSnapshotV1::from_core);
-            (icon_svg_cache.is_some() || !canvas.is_empty() || render_text.is_some()).then_some(
-                UiResourceCachesV1 {
-                    icon_svg_cache,
-                    canvas,
-                    render_text,
-                },
-            )
+            let render_text_font_trace = app
+                .global::<fret_core::RendererTextFontTraceSnapshot>()
+                .cloned()
+                .map(|s| {
+                    UiRendererTextFontTraceSnapshotV1::from_core(
+                        s,
+                        self.cfg.redact_text,
+                        self.cfg.max_debug_string_bytes,
+                    )
+                });
+            (icon_svg_cache.is_some()
+                || !canvas.is_empty()
+                || render_text.is_some()
+                || render_text_font_trace.is_some())
+            .then_some(UiResourceCachesV1 {
+                icon_svg_cache,
+                canvas,
+                render_text,
+                render_text_font_trace,
+            })
         };
 
         let renderer_perf = app
@@ -4604,7 +4672,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
-        | UiActionStepV2::SetWindowInnerSize { .. } => false,
+        | UiActionStepV2::SetWindowInnerSize { .. }
+        | UiActionStepV2::SetWindowInsets { .. } => false,
     }
 }
 
@@ -4811,6 +4880,8 @@ pub struct UiResourceCachesV1 {
     pub canvas: Vec<UiCanvasCacheEntryV1>,
     #[serde(default)]
     pub render_text: Option<UiRendererTextPerfSnapshotV1>,
+    #[serde(default)]
+    pub render_text_font_trace: Option<UiRendererTextFontTraceSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -4845,6 +4916,11 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub font_stack_key: u64,
     pub font_db_revision: u64,
 
+    #[serde(default)]
+    pub frame_missing_glyphs: u64,
+    #[serde(default)]
+    pub frame_texts_with_missing_glyphs: u64,
+
     pub blobs_live: u64,
     pub blob_cache_entries: u64,
     pub shape_cache_entries: u64,
@@ -4878,6 +4954,8 @@ impl UiRendererTextPerfSnapshotV1 {
             frame_id: snapshot.frame_id.0,
             font_stack_key: snapshot.font_stack_key,
             font_db_revision: snapshot.font_db_revision,
+            frame_missing_glyphs: snapshot.frame_missing_glyphs,
+            frame_texts_with_missing_glyphs: snapshot.frame_texts_with_missing_glyphs,
             blobs_live: snapshot.blobs_live,
             blob_cache_entries: snapshot.blob_cache_entries,
             shape_cache_entries: snapshot.shape_cache_entries,
@@ -4896,6 +4974,163 @@ impl UiRendererTextPerfSnapshotV1 {
             mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
             color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
             subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceSnapshotV1 {
+    pub frame_id: u64,
+    #[serde(default)]
+    pub entries: Vec<UiRendererTextFontTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceEntryV1 {
+    pub text_preview: String,
+    pub text_len_bytes: u32,
+
+    pub font: String,
+    pub font_size_px: f32,
+    pub scale_factor: f32,
+
+    pub wrap: String,
+    pub overflow: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width_px: Option<f32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locale_bcp47: Option<String>,
+
+    pub missing_glyphs: u32,
+
+    #[serde(default)]
+    pub families: Vec<UiRendererTextFontTraceFamilyUsageV1>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiRendererTextFontTraceFamilyUsageV1 {
+    pub family: String,
+    pub glyphs: u32,
+    pub missing_glyphs: u32,
+    pub class: UiRendererTextFontTraceFamilyClassV1,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiRendererTextFontTraceFamilyClassV1 {
+    Requested,
+    CommonFallback,
+    SystemFallback,
+    Unknown,
+}
+
+impl Default for UiRendererTextFontTraceFamilyClassV1 {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl UiRendererTextFontTraceSnapshotV1 {
+    fn from_core(
+        snapshot: fret_core::RendererTextFontTraceSnapshot,
+        redact_text: bool,
+        max_debug_string_bytes: usize,
+    ) -> Self {
+        fn wrap_to_string(wrap: fret_core::TextWrap) -> &'static str {
+            match wrap {
+                fret_core::TextWrap::None => "none",
+                fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Grapheme => "grapheme",
+            }
+        }
+
+        fn overflow_to_string(overflow: fret_core::TextOverflow) -> &'static str {
+            match overflow {
+                fret_core::TextOverflow::Clip => "clip",
+                fret_core::TextOverflow::Ellipsis => "ellipsis",
+            }
+        }
+
+        fn font_id_to_string(font: &fret_core::FontId) -> String {
+            match font {
+                fret_core::FontId::Ui => "ui".to_string(),
+                fret_core::FontId::Serif => "serif".to_string(),
+                fret_core::FontId::Monospace => "monospace".to_string(),
+                fret_core::FontId::Family(name) => format!("family:{name}"),
+            }
+        }
+
+        fn class_from_core(
+            class: fret_core::RendererTextFontTraceFamilyClass,
+        ) -> UiRendererTextFontTraceFamilyClassV1 {
+            match class {
+                fret_core::RendererTextFontTraceFamilyClass::Requested => {
+                    UiRendererTextFontTraceFamilyClassV1::Requested
+                }
+                fret_core::RendererTextFontTraceFamilyClass::CommonFallback => {
+                    UiRendererTextFontTraceFamilyClassV1::CommonFallback
+                }
+                fret_core::RendererTextFontTraceFamilyClass::SystemFallback => {
+                    UiRendererTextFontTraceFamilyClassV1::SystemFallback
+                }
+                fret_core::RendererTextFontTraceFamilyClass::Unknown => {
+                    UiRendererTextFontTraceFamilyClassV1::Unknown
+                }
+            }
+        }
+
+        let mut entries = snapshot
+            .entries
+            .into_iter()
+            .map(|mut e| {
+                if redact_text {
+                    e.text_preview = "<redacted>".to_string();
+                }
+                truncate_string_bytes(&mut e.text_preview, max_debug_string_bytes);
+                if let Some(locale) = e.locale_bcp47.as_mut() {
+                    truncate_string_bytes(locale, max_debug_string_bytes);
+                }
+
+                let mut families: Vec<UiRendererTextFontTraceFamilyUsageV1> = e
+                    .families
+                    .into_iter()
+                    .map(|mut f| {
+                        truncate_string_bytes(&mut f.family, max_debug_string_bytes);
+                        UiRendererTextFontTraceFamilyUsageV1 {
+                            family: f.family,
+                            glyphs: f.glyphs,
+                            missing_glyphs: f.missing_glyphs,
+                            class: class_from_core(f.class),
+                        }
+                    })
+                    .collect();
+                families.sort_by(|a, b| {
+                    b.glyphs
+                        .cmp(&a.glyphs)
+                        .then_with(|| a.family.cmp(&b.family))
+                });
+
+                UiRendererTextFontTraceEntryV1 {
+                    text_preview: e.text_preview,
+                    text_len_bytes: e.text_len_bytes,
+                    font: font_id_to_string(&e.font),
+                    font_size_px: e.font_size.0,
+                    scale_factor: e.scale_factor,
+                    wrap: wrap_to_string(e.wrap).to_string(),
+                    overflow: overflow_to_string(e.overflow).to_string(),
+                    max_width_px: e.max_width.map(|px| px.0),
+                    locale_bcp47: e.locale_bcp47,
+                    missing_glyphs: e.missing_glyphs,
+                    families,
+                }
+            })
+            .collect::<Vec<_>>();
+        entries.truncate(4096);
+
+        Self {
+            frame_id: snapshot.frame_id.0,
+            entries,
         }
     }
 }
@@ -6044,9 +6279,63 @@ pub struct UiTreeDebugSnapshotV1 {
     /// that do not want to parse the entire element runtime snapshot payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<ElementEnvironmentSnapshotV1>,
+    /// Best-effort window insets snapshot (safe-area + occlusion) from `WindowMetricsService`.
+    ///
+    /// Unlike `debug.environment`, this does not require the element runtime snapshot to be
+    /// enabled. It is intended as a quick "what does the runner think the insets are" anchor
+    /// during mobile bring-up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_insets: Option<UiWindowInsetsSnapshotV1>,
+    /// Best-effort platform text-input snapshot for the current window.
+    ///
+    /// This records `focus_is_text_input` and the last committed IME cursor area, which are
+    /// frequently needed when diagnosing virtual keyboard avoidance and IME candidate placement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_input: Option<UiWindowTextInputSnapshotV1>,
+    /// Runner surface lifecycle state, sourced from `RunnerSurfaceLifecycleDiagnosticsStore`.
+    ///
+    /// This is intended for Android/iOS bring-up to verify that background/foreground transitions
+    /// are dropping and recreating surfaces as expected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_surface_lifecycle: Option<UiRunnerSurfaceLifecycleSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiWindowInsetsSnapshotV1 {
+    pub safe_area_known: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_area_insets_px: Option<UiPaddingInsetsV1>,
+    pub occlusion_known: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occlusion_insets_px: Option<UiPaddingInsetsV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWindowTextInputSnapshotV1 {
+    pub focus_is_text_input: bool,
+    pub is_composing: bool,
+    /// Total length (UTF-16 code units) of the composed view.
+    pub text_len_utf16: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marked_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_cursor_area: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiRunnerSurfaceLifecycleSnapshotV1 {
+    pub can_create_surfaces_calls: u64,
+    pub destroy_surfaces_calls: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_can_create_surfaces_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_destroy_surfaces_unix_ms: Option<u64>,
+    pub surfaces_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -6195,6 +6484,52 @@ impl UiTreeDebugSnapshotV1 {
         let environment = element_runtime_snapshot
             .as_ref()
             .and_then(|snapshot| snapshot.environment.clone());
+
+        let window_insets = app.global::<fret_core::WindowMetricsService>().map(|svc| {
+            let safe_area_known = svc.safe_area_insets_is_known(window);
+            let safe_area_insets_px = svc.safe_area_insets(window).map(|e| UiPaddingInsetsV1 {
+                left_px: e.left.0,
+                top_px: e.top.0,
+                right_px: e.right.0,
+                bottom_px: e.bottom.0,
+            });
+            let occlusion_known = svc.occlusion_insets_is_known(window);
+            let occlusion_insets_px = svc.occlusion_insets(window).map(|e| UiPaddingInsetsV1 {
+                left_px: e.left.0,
+                top_px: e.top.0,
+                right_px: e.right.0,
+                bottom_px: e.bottom.0,
+            });
+            UiWindowInsetsSnapshotV1 {
+                safe_area_known,
+                safe_area_insets_px,
+                occlusion_known,
+                occlusion_insets_px,
+            }
+        });
+
+        let text_input = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .map(|snapshot| UiWindowTextInputSnapshotV1 {
+                focus_is_text_input: snapshot.focus_is_text_input,
+                is_composing: snapshot.is_composing,
+                text_len_utf16: snapshot.text_len_utf16,
+                selection_utf16: snapshot.selection_utf16,
+                marked_utf16: snapshot.marked_utf16,
+                ime_cursor_area: snapshot.ime_cursor_area.map(RectV1::from),
+            });
+
+        let runner_surface_lifecycle = app
+            .global::<fret_runtime::RunnerSurfaceLifecycleDiagnosticsStore>()
+            .map(|store| store.snapshot())
+            .map(|snapshot| UiRunnerSurfaceLifecycleSnapshotV1 {
+                can_create_surfaces_calls: snapshot.can_create_surfaces_calls,
+                destroy_surfaces_calls: snapshot.destroy_surfaces_calls,
+                last_can_create_surfaces_unix_ms: snapshot.last_can_create_surfaces_unix_ms,
+                last_destroy_surfaces_unix_ms: snapshot.last_destroy_surfaces_unix_ms,
+                surfaces_available: snapshot.surfaces_available,
+            });
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -6372,6 +6707,9 @@ impl UiTreeDebugSnapshotV1 {
                 .map(UiOverlayPolicyDecisionV1::from_decision)
                 .collect(),
             environment,
+            window_insets,
+            text_input,
+            runner_surface_lifecycle,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
@@ -11549,6 +11887,8 @@ fn eval_predicate(
     window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
+    render_text: Option<fret_core::RendererTextPerfSnapshot>,
+    render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     pred: &UiPredicateV1,
 ) -> bool {
     match pred {
@@ -11592,6 +11932,24 @@ fn eval_predicate(
             };
             node.flags.checked.is_none()
         }
+        UiPredicateV1::ActiveItemIs { container, item } => {
+            let Some(item_node) = select_semantics_node(snapshot, window, element_runtime, item)
+            else {
+                return false;
+            };
+
+            if snapshot.focus == Some(item_node.id) {
+                return true;
+            }
+
+            let Some(container_node) =
+                select_semantics_node(snapshot, window, element_runtime, container)
+            else {
+                return false;
+            };
+
+            container_node.active_descendant == Some(item_node.id)
+        }
         UiPredicateV1::BarrierRoots {
             barrier_root,
             focus_barrier_root,
@@ -11620,6 +11978,25 @@ fn eval_predicate(
                 Some(false) => barrier != focus_barrier,
             }
         }
+        UiPredicateV1::RenderTextMissingGlyphsIs { missing_glyphs } => {
+            render_text.is_some_and(|snapshot| snapshot.frame_missing_glyphs == *missing_glyphs)
+        }
+        UiPredicateV1::RenderTextFontTraceCapturedWhenMissingGlyphs => {
+            let Some(perf) = render_text else {
+                return false;
+            };
+            if perf.frame_missing_glyphs == 0 {
+                return true;
+            }
+
+            let Some(trace) = render_text_font_trace else {
+                return false;
+            };
+            trace
+                .entries
+                .iter()
+                .any(|e| e.missing_glyphs > 0 && !e.families.is_empty())
+        }
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -11630,6 +12007,7 @@ fn eval_predicate(
         UiPredicateV1::BoundsWithinWindow {
             target,
             padding_px,
+            padding_insets_px,
             eps_px,
         } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
@@ -11638,12 +12016,17 @@ fn eval_predicate(
             };
             let bounds = node.bounds;
             let pad = padding_px.max(0.0);
+            let pad_insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(0.0));
             let eps = eps_px.max(0.0);
 
-            let window_left = window_bounds.origin.x.0 + pad;
-            let window_top = window_bounds.origin.y.0 + pad;
-            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0 - pad;
-            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0 - pad;
+            let window_left = window_bounds.origin.x.0 + pad + pad_insets.left_px.max(0.0);
+            let window_top = window_bounds.origin.y.0 + pad + pad_insets.top_px.max(0.0);
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0
+                - pad
+                - pad_insets.right_px.max(0.0);
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0
+                - pad
+                - pad_insets.bottom_px.max(0.0);
 
             let node_left = bounds.origin.x.0;
             let node_top = bounds.origin.y.0;
@@ -12997,12 +13380,15 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 0.0,
+            padding_insets_px: None,
             eps_px: 0.0,
         };
         assert!(eval_predicate(
             &snapshot,
             window_bounds,
             window_id(1),
+            None,
+            None,
             None,
             &pred
         ));
@@ -13012,10 +13398,19 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 12.0,
+            padding_insets_px: None,
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected padding to shrink the allowed window rect"
         );
     }
@@ -13056,8 +13451,122 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected node to satisfy the min-size gate"
+        );
+    }
+
+    #[test]
+    fn active_item_is_predicate_matches_focus_or_active_descendant() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let mut root = semantics_node_with_test_id(
+            1,
+            None,
+            SemanticsRole::ListBox,
+            rect(0.0, 0.0, 100.0, 100.0),
+            "listbox",
+            "listbox",
+        );
+        let mut item_a = semantics_node_with_test_id(
+            2,
+            Some(1),
+            SemanticsRole::Option,
+            rect(0.0, 0.0, 100.0, 20.0),
+            "a",
+            "a",
+        );
+        let item_b = semantics_node_with_test_id(
+            3,
+            Some(1),
+            SemanticsRole::Option,
+            rect(0.0, 20.0, 100.0, 20.0),
+            "b",
+            "b",
+        );
+
+        // Model A: roving focus (focused item is active).
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(2)),
+            captured: None,
+            nodes: vec![root.clone(), item_a.clone(), item_b.clone()],
+        };
+
+        let pred = UiPredicateV1::ActiveItemIs {
+            container: UiSelectorV1::TestId {
+                id: "listbox".to_string(),
+            },
+            item: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
+            "expected roving focus to satisfy active_item_is"
+        );
+
+        // Model B: composite focus + active_descendant.
+        root.active_descendant = Some(node_id(3));
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(1)),
+            captured: None,
+            nodes: vec![root, item_a, item_b],
+        };
+
+        let pred = UiPredicateV1::ActiveItemIs {
+            container: UiSelectorV1::TestId {
+                id: "listbox".to_string(),
+            },
+            item: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
+            "expected active_descendant to satisfy active_item_is"
         );
     }
 
@@ -13097,7 +13606,15 @@ mod tests {
         };
 
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "collapsed node should fail the min-size gate"
         );
     }
@@ -13155,7 +13672,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected overlap (a right edge > b left edge) to fail"
         );
 
@@ -13169,7 +13694,15 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected eps_px to tolerate a small overlap"
         );
     }
@@ -13205,7 +13738,15 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected missing test id to satisfy NotExists"
         );
     }
@@ -13263,7 +13804,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected overlap (a right edge > b left edge) to pass"
         );
 
@@ -13277,7 +13826,15 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected eps_px to require more overlap than available"
         );
     }
@@ -13335,7 +13892,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected x overlap to pass even when y does not overlap"
         );
 
@@ -13349,7 +13914,15 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected eps_px to require more x overlap than available"
         );
     }
@@ -13407,7 +13980,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected y overlap to pass even when x does not overlap"
         );
 
@@ -13421,7 +14002,15 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                &pred
+            ),
             "expected eps_px to require more y overlap than available"
         );
     }
@@ -13573,7 +14162,7 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            eval_predicate(&snapshot, window_bounds, window, None, None, None, &pred),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
         );
 
@@ -13583,7 +14172,7 @@ mod tests {
             require_equal: Some(true),
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window, None, None, None, &pred),
             "expected require_equal=true to fail when the roots differ"
         );
     }

@@ -44,9 +44,9 @@ pub use image_metadata::{ImageMetadata, ImageMetadataStore, with_image_metadata_
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
-    MetricRef, OverflowRefinement, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
-    resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+    MetricRef, OverflowRefinement, OverrideSlot, PaddingRefinement, Radius, ShadowPreset,
+    SignedMetricRef, Space, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
+    merge_slot, resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
     resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};

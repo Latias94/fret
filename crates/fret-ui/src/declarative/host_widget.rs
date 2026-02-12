@@ -615,6 +615,16 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.is_text_input = false;
     }
 
+    fn sync_hit_test_gate(&mut self, hit_test: bool) {
+        self.hit_testable = false;
+        self.hit_test_children = hit_test;
+    }
+
+    fn sync_focus_traversal_gate(&mut self, traverse: bool) {
+        self.hit_testable = false;
+        self.focus_traversal_children = traverse;
+    }
+
     fn is_focusable(&self) -> bool {
         self.is_focusable
     }

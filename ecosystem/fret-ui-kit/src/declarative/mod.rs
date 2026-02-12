@@ -20,6 +20,7 @@ pub mod form;
 pub mod glass;
 pub mod global_watch;
 pub mod hover_intent;
+pub mod keyboard_avoidance;
 pub mod list;
 pub mod model_watch;
 pub mod occlusion_queries;
@@ -43,6 +44,7 @@ pub mod table;
 pub mod text;
 pub mod text_scale_queries;
 pub mod theme_access;
+pub mod touch_pan_scroll;
 pub mod transition;
 pub mod tree;
 pub mod viewport_queries;
@@ -61,6 +63,7 @@ pub use container_queries::{
 pub use contrast_queries::{contrast_preference, prefers_more_contrast};
 pub use forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use global_watch::GlobalWatchExt;
+pub use keyboard_avoidance::window_insets_padding_refinement_or_zero;
 pub use model_watch::ModelWatchExt;
 pub use occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use pointer_queries::{

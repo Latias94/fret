@@ -7,7 +7,7 @@ mod fixtures;
 fn web_vs_fret_date_picker_with_presets_select_open_vp375x160_listbox_paints_above_popover() {
     let web = read_web_golden_open("date-picker-with-presets.select-open-vp375x160");
     let theme = web_theme_named(&web, "light");
-    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+    let bounds = bounds_for_theme_viewport(theme).unwrap_or_else(|| {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(640.0), Px(480.0)),

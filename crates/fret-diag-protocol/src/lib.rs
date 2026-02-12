@@ -172,6 +172,20 @@ impl UiPaddingInsetsV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiInsetsOverrideV1 {
+    NoChange,
+    Clear,
+    Set { insets_px: UiPaddingInsetsV1 },
+}
+
+impl Default for UiInsetsOverrideV1 {
+    fn default() -> Self {
+        Self::NoChange
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
     // v1-compatible steps
@@ -345,6 +359,12 @@ pub enum UiActionStepV2 {
     SetWindowInnerSize {
         width_px: f32,
         height_px: f32,
+    },
+    SetWindowInsets {
+        #[serde(default)]
+        safe_area_insets: UiInsetsOverrideV1,
+        #[serde(default)]
+        occlusion_insets: UiInsetsOverrideV1,
     },
 }
 
@@ -532,6 +552,19 @@ pub enum UiPredicateV1 {
     CheckedIsNone {
         target: UiSelectorV1,
     },
+    /// True when the current active item is the specified `item`.
+    ///
+    /// This supports both common semantics models:
+    ///
+    /// - Composite widgets that retain focus on a container and express the highlighted row via
+    ///   `active_descendant` (DOM-style `aria-activedescendant`).
+    /// - Widgets that use roving focus (the focused node itself is the active item).
+    ActiveItemIs {
+        /// Container node (e.g. listbox). Used when the widget uses `active_descendant`.
+        container: UiSelectorV1,
+        /// The expected active item (highlighted option / row).
+        item: UiSelectorV1,
+    },
     BarrierRoots {
         #[serde(default)]
         barrier_root: UiOptionalRootStateV1,
@@ -540,6 +573,15 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         require_equal: Option<bool>,
     },
+    RenderTextMissingGlyphsIs {
+        missing_glyphs: u64,
+    },
+    /// Ensures that when the renderer reports missing/tofu glyphs for the current frame, a
+    /// renderer-owned font fallback trace has been captured and is non-empty.
+    ///
+    /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
+    /// the diagnostics bundle should contain an audit trail of the selected families.
+    RenderTextFontTraceCapturedWhenMissingGlyphs,
     VisibleInWindow {
         target: UiSelectorV1,
     },
@@ -547,6 +589,9 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         #[serde(default)]
         padding_px: f32,
+        /// Optional per-edge padding (added on top of `padding_px`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
         #[serde(default)]
         eps_px: f32,
     },

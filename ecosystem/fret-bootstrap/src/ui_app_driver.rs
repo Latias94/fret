@@ -17,6 +17,7 @@ use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, Invalidation, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::primitives::dialog as dialog_prim;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
@@ -1395,6 +1396,10 @@ fn ui_app_handle_global_command<S>(
                 app.push_effect(Effect::ShowAboutPanel);
                 return;
             }
+        }
+        fret_app::core_commands::TEXT_RESCAN_SYSTEM_FONTS => {
+            app.push_effect(Effect::TextRescanSystemFonts);
+            return;
         }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);

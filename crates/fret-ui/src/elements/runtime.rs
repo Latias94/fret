@@ -377,6 +377,8 @@ pub struct WindowElementState {
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw_below_barrier: Option<GlobalElementId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     continuous_frames: Arc<AtomicUsize>,
@@ -1237,6 +1239,16 @@ impl WindowElementState {
         {
             self.hovered_pressable = None;
         }
+        if let Some(id) = self.hovered_pressable_raw
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable_raw = None;
+        }
+        if let Some(id) = self.hovered_pressable_raw_below_barrier
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable_raw_below_barrier = None;
+        }
         if let Some(id) = self.pressed_pressable
             && !is_live_this_frame(id)
         {
@@ -1370,6 +1382,11 @@ impl WindowElementState {
 
     pub(crate) fn committed_occlusion_insets(&self) -> Option<Edges> {
         self.committed_occlusion_insets
+    }
+
+    pub(crate) fn occlusion_insets_changed_this_frame(&self) -> bool {
+        self.environment_changed_this_frame
+            .contains(&EnvironmentQueryKey::OcclusionInsets)
     }
 
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {

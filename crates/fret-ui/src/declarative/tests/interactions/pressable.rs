@@ -624,6 +624,155 @@ fn pressable_on_hover_change_hook_runs_after_wheel_scroll_without_pointer_move()
 }
 
 #[test]
+fn touch_pan_scroll_steals_capture_from_pressable_and_clears_pressed_state() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let handle = crate::scroll::ScrollHandle::default();
+    let handle_for_ui = handle.clone();
+    let pressed_element: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "touch-pan-steals-capture-from-pressable",
+        {
+            let pressed_element = pressed_element.clone();
+            move |cx| {
+                let scroll = cx.scroll(
+                    crate::element::ScrollProps {
+                        layout: {
+                            let mut layout = crate::element::LayoutStyle::default();
+                            layout.size.width = crate::element::Length::Fill;
+                            layout.size.height = crate::element::Length::Fill;
+                            layout.overflow = crate::element::Overflow::Clip;
+                            layout
+                        },
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(handle_for_ui.clone()),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let pressed_element = pressed_element.clone();
+                        vec![
+                            cx.column(crate::element::ColumnProps::default(), move |cx| {
+                                (0..30)
+                                    .map(|idx| {
+                                        let pressed_element = pressed_element.clone();
+                                        cx.keyed(idx, move |cx| {
+                                            let mut props =
+                                                crate::element::PressableProps::default();
+                                            props.layout.size.width = crate::element::Length::Fill;
+                                            props.layout.size.height =
+                                                crate::element::Length::Px(Px(20.0));
+
+                                            if idx == 0 {
+                                                cx.pressable_with_id(props, move |cx, _st, id| {
+                                                    pressed_element.set(Some(id));
+                                                    vec![cx.text("Row 0")]
+                                                })
+                                            } else {
+                                                cx.pressable(props, move |cx, _st| {
+                                                    vec![cx.text(format!("Row {idx}"))]
+                                                })
+                                            }
+                                        })
+                                    })
+                                    .collect::<Vec<_>>()
+                            }),
+                        ]
+                    },
+                );
+                vec![scroll]
+            }
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        handle.max_offset().y.0 > 0.01,
+        "expected scrollable content (max_offset={:?})",
+        handle.max_offset()
+    );
+
+    let pressable_element = pressed_element.get().expect("pressable element id");
+    let pressable_node = crate::elements::node_for_element(&mut app, window, pressable_element)
+        .expect("pressable node");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 4.0),
+        Px(pressable_bounds.origin.y.0 + 4.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(inside.x, Px(inside.y.0 - 80.0)),
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert!(
+        handle.offset().y.0 > 0.01,
+        "expected touch pan to scroll parent (offset={:?})",
+        handle.offset()
+    );
+    assert!(
+        !crate::elements::is_pressed_pressable(&mut app, window, pressable_element),
+        "expected pressable pressed state to be cleared when touch pan scroll starts"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(inside.x, Px(inside.y.0 - 80.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+}
+
+#[test]
 fn pressable_hover_state_ignores_touch_pointer_moves() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

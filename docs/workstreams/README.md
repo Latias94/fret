@@ -10,6 +10,9 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/docking-nary-split-graph-v1.md`
+- `docs/workstreams/docking-nary-split-graph-v1-todo.md`
+- `docs/workstreams/docking-nary-split-graph-v1-milestones.md`
 - `docs/workstreams/workspace-crate-boundaries-v1.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
@@ -19,6 +22,12 @@ Active workstreams:
 - `docs/workstreams/environment-queries-v1-extensions.md`
 - `docs/workstreams/environment-queries-v1-extensions-todo.md`
 - `docs/workstreams/environment-queries-v1-extensions-milestones.md`
+- `docs/workstreams/mobile-bringup-v1.md`
+- `docs/workstreams/mobile-bringup-v1-todo.md`
+- `docs/workstreams/mobile-bringup-v1-milestones.md`
+- `docs/workstreams/gesture-recognizers-v1.md`
+- `docs/workstreams/gesture-recognizers-v1-todo.md`
+- `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1.md`
@@ -53,6 +62,8 @@ Active workstreams:
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
+- `docs/workstreams/font-system-v1.md`
+- `docs/workstreams/font-catalog-refresh-policy-v1.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/imui-authoring-facade-v2.md`
@@ -123,6 +134,9 @@ Active workstreams:
 - `docs/workstreams/router-v1-todo.md`
 - `docs/workstreams/router-tanstack-parity-v1.md`
 - `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1.md`
+- `docs/workstreams/fret-interaction-kernel-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1-milestones.md`
 - `docs/workstreams/router-ui-v1.md`
 - `docs/workstreams/router-ui-v1-todo.md`
 - `docs/workstreams/image-support-v1.md`

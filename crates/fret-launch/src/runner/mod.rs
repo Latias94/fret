@@ -1,4 +1,5 @@
 mod common;
+mod font_catalog;
 mod streaming_upload;
 mod viewport_overlay_immediate_3d;
 mod viewport_target;

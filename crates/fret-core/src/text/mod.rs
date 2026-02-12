@@ -26,12 +26,44 @@ pub struct TextFontFamilyConfig {
     pub ui_serif: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ui_mono: Vec<String>,
+    /// Controls how `common_fallback` is injected into the effective font stack.
+    ///
+    /// - `platform_default`: prefer deterministic injection on wasm/bundled-only environments and
+    ///   prefer system fallback on desktop.
+    /// - `none`: never inject `common_fallback` into the explicit stack (system fallback only).
+    /// - `common_fallback`: inject `common_fallback` into both generic and named family stacks to
+    ///   enforce a "no tofu" baseline (may override system fallback selection on desktop).
+    #[serde(
+        default,
+        skip_serializing_if = "TextCommonFallbackInjection::is_platform_default"
+    )]
+    pub common_fallback_injection: TextCommonFallbackInjection,
     /// Additional family candidates appended to the framework fallback stack.
     ///
     /// This list is intended to cover "missing glyph" cases for mixed-script UIs (CJK + emoji +
     /// RTL) without requiring per-span font selection.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub common_fallback: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TextCommonFallbackInjection {
+    PlatformDefault,
+    None,
+    CommonFallback,
+}
+
+impl Default for TextCommonFallbackInjection {
+    fn default() -> Self {
+        Self::PlatformDefault
+    }
+}
+
+impl TextCommonFallbackInjection {
+    fn is_platform_default(v: &TextCommonFallbackInjection) -> bool {
+        *v == TextCommonFallbackInjection::PlatformDefault
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

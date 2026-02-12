@@ -1,108 +1,6 @@
-use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
-
-#[derive(Debug, Clone, Deserialize)]
-pub(super) struct WebGolden {
-    pub(super) themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(super) struct WebGoldenTheme {
-    #[allow(dead_code)]
-    pub(super) root: WebNode,
-    #[serde(default)]
-    pub(super) portals: Vec<WebNode>,
-    #[serde(rename = "portalWrappers", default)]
-    pub(super) portal_wrappers: Vec<WebNode>,
-    #[serde(default)]
-    pub(super) viewport: Option<WebViewport>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub(super) struct WebViewport {
-    pub(super) w: f32,
-    pub(super) h: f32,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub(super) struct WebRect {
-    #[allow(dead_code)]
-    pub(super) x: f32,
-    #[allow(dead_code)]
-    pub(super) y: f32,
-    pub(super) w: f32,
-    pub(super) h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(super) struct WebNode {
-    #[allow(dead_code)]
-    pub(super) tag: String,
-    #[serde(default)]
-    pub(super) attrs: BTreeMap<String, String>,
-    #[serde(default)]
-    pub(super) active: bool,
-    #[serde(rename = "activeDescendant", default)]
-    pub(super) active_descendant: bool,
-    #[serde(default)]
-    pub(super) text: Option<String>,
-    pub(super) rect: WebRect,
-    #[serde(rename = "computedStyle", default)]
-    pub(super) computed_style: BTreeMap<String, String>,
-    #[allow(dead_code)]
-    #[serde(default)]
-    pub(super) children: Vec<WebNode>,
-}
-
-pub(super) fn web_theme_named<'a>(golden: &'a WebGolden, name: &str) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get(name)
-        .unwrap_or_else(|| panic!("missing {name} theme in web golden"))
-}
-
-pub(super) fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-pub(super) fn web_golden_path(file_name: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("shadcn-web")
-        .join("v4")
-        .join("new-york-v4")
-        .join(file_name)
-}
-
-pub(super) fn read_web_golden_open(name: &str) -> WebGolden {
-    let path = web_golden_path(&format!("{name}.open.json"));
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing web open golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts {name} --modes=open --update --baseUrl=http://localhost:4020\n\nDocs:\n  docs/shadcn-web-goldens.md",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse web open golden: {}\nerror: {err}",
-            path.display()
-        )
-    })
-}
-
-pub(super) fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get("light")
-        .or_else(|| golden.themes.get("dark"))
-        .expect("missing theme in web golden")
-}
+#[path = "../support/web_golden_shadcn.rs"]
+mod web_golden_shadcn;
+pub(super) use web_golden_shadcn::*;
 
 pub(super) fn find_portal_by_role<'a>(
     theme: &'a WebGoldenTheme,
@@ -112,6 +10,12 @@ pub(super) fn find_portal_by_role<'a>(
         .portals
         .iter()
         .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
+        .or_else(|| {
+            theme
+                .portal_wrappers
+                .iter()
+                .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
+        })
 }
 
 pub(super) fn find_portal_by_slot<'a>(
@@ -122,21 +26,12 @@ pub(super) fn find_portal_by_slot<'a>(
         .portals
         .iter()
         .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-}
-
-pub(super) fn find_first<'a>(
-    node: &'a WebNode,
-    pred: &impl Fn(&'a WebNode) -> bool,
-) -> Option<&'a WebNode> {
-    if pred(node) {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_first(child, pred) {
-            return Some(found);
-        }
-    }
-    None
+        .or_else(|| {
+            theme
+                .portal_wrappers
+                .iter()
+                .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
+        })
 }
 
 pub(super) fn find_by_data_slot_and_state<'a>(
