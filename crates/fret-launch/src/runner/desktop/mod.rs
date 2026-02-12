@@ -5856,6 +5856,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return Some(window);
         }
 
+        #[cfg(target_os = "macos")]
+        if let Some(window) = self.window_under_cursor_macos_z_order(screen_pos, prefer_not) {
+            return Some(window);
+        }
+
         let ordered: Vec<fret_core::AppWindowId> = if self.window_hit_test_order.is_empty() {
             self.windows.keys().collect()
         } else {
@@ -6102,6 +6107,86 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         pick_window_under_cursor_from_client_rects(screen_pos, prefer_not, rects_front_to_back)
+    }
+
+    #[cfg(target_os = "macos")]
+    #[allow(deprecated)]
+    fn window_under_cursor_macos_z_order(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        use cocoa::{
+            appkit::{NSApp, NSApplication},
+            base::{id, nil},
+        };
+        use objc::{msg_send, sel, sel_impl};
+        use std::collections::HashMap;
+        use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+
+        unsafe fn ns_window_id_for_winit_window(window: &dyn Window) -> Option<id> {
+            let handle = window.window_handle().ok()?;
+            let RawWindowHandle::AppKit(h) = handle.as_raw() else {
+                return None;
+            };
+            let ns_view: id = h.ns_view.as_ptr() as id;
+            if ns_view == nil {
+                return None;
+            }
+            let ns_window: id = msg_send![ns_view, window];
+            (!ns_window.is_null()).then_some(ns_window)
+        }
+
+        unsafe {
+            let app = NSApp();
+            if app == nil {
+                return None;
+            }
+
+            let ordered_windows: id = msg_send![app, orderedWindows];
+            if ordered_windows == nil {
+                return None;
+            }
+
+            let mut ns_window_to_app: HashMap<usize, fret_core::AppWindowId> = HashMap::new();
+            for (id, state) in self.windows.iter() {
+                if let Some(ns_window) = ns_window_id_for_winit_window(state.window.as_ref()) {
+                    ns_window_to_app.insert(ns_window as usize, id);
+                }
+            }
+
+            let count: usize = msg_send![ordered_windows, count];
+            let mut rects_front_to_back: Vec<(
+                fret_core::AppWindowId,
+                winit::dpi::PhysicalPosition<f64>,
+                winit::dpi::PhysicalSize<u32>,
+            )> = Vec::new();
+
+            for idx in 0..count {
+                let ns_window: id = msg_send![ordered_windows, objectAtIndex: idx];
+                if ns_window == nil {
+                    continue;
+                }
+                let Some(app_window) = ns_window_to_app.get(&(ns_window as usize)).copied() else {
+                    continue;
+                };
+                let Some(state) = self.windows.get(app_window) else {
+                    continue;
+                };
+                let Ok(outer) = state.window.outer_position() else {
+                    continue;
+                };
+                let deco = state.window.surface_position();
+                let size = state.window.surface_size();
+                rects_front_to_back.push((app_window, client_origin_screen(outer, deco), size));
+            }
+
+            if rects_front_to_back.is_empty() {
+                return None;
+            }
+
+            pick_window_under_cursor_from_client_rects(screen_pos, prefer_not, rects_front_to_back)
+        }
     }
 }
 
