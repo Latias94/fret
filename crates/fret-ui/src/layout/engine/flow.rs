@@ -1,5 +1,7 @@
 use crate::UiHost;
-use crate::declarative::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
+use crate::declarative::frame::{
+    ElementInstance, element_record_for_node, layout_style_for_node, with_element_record_for_node,
+};
 use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
 use crate::widget::LayoutCx;
@@ -217,15 +219,17 @@ fn build_flow_subtree_impl<H: UiHost>(
         } else {
             taffy::style_helpers::auto()
         })];
-        let child_instance = element_record_for_node(app, window, child).map(|r| r.instance);
-        let child_is_layout_container = matches!(
-            child_instance,
-            Some(ElementInstance::Flex(_))
-                | Some(ElementInstance::SemanticFlex(_))
-                | Some(ElementInstance::RovingFlex(_))
-                | Some(ElementInstance::Stack(_))
-                | Some(ElementInstance::Grid(_))
-        );
+        let child_is_layout_container = with_element_record_for_node(app, window, child, |r| {
+            matches!(
+                &r.instance,
+                ElementInstance::Flex(_)
+                    | ElementInstance::SemanticFlex(_)
+                    | ElementInstance::RovingFlex(_)
+                    | ElementInstance::Stack(_)
+                    | ElementInstance::Grid(_)
+            )
+        })
+        .unwrap_or(false);
 
         // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers), but still
         // stretch layout containers (Flex/Grid/Stack/...) when the wrapper provides a definite box.
@@ -252,15 +256,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             style.size.height = Dimension::percent(1.0);
         }
 
-        if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
-            if let ElementInstance::Container(p) = r.instance {
-                Some(p)
-            } else {
-                None
+        let _ = with_element_record_for_node(app, window, node, |r| {
+            if let ElementInstance::Container(p) = &r.instance {
+                apply_container_insets(&mut style, p, sf);
             }
-        }) {
-            apply_container_insets(&mut style, &props, sf);
-        }
+        });
 
         engine.set_style(node, style);
         engine.set_children(node, &[child]);
@@ -555,15 +555,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             style.justify_items = Some(AlignItems::FlexStart);
             style.justify_content = Some(JustifyContent::FlexStart);
 
-            if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
-                if let ElementInstance::Container(p) = r.instance {
-                    Some(p)
-                } else {
-                    None
+            let _ = with_element_record_for_node(app, window, node, |r| {
+                if let ElementInstance::Container(p) = &r.instance {
+                    apply_container_insets(&mut style, p, sf);
                 }
-            }) {
-                apply_container_insets(&mut style, &props, sf);
-            }
+            });
 
             let children = tree.children_ref(node);
 
@@ -724,13 +720,14 @@ fn style_for_item_in_parent<H: UiHost>(
     let mut min_w = layout_style.size.min_width.map(|p| p.0);
     let mut min_h = layout_style.size.min_height.map(|p| p.0);
     if let ParentLayoutKind::Flex { direction } = parent_kind {
-        let spacer_min = element_record_for_node(app, window, node).and_then(|r| {
-            if let ElementInstance::Spacer(p) = r.instance {
+        let spacer_min = with_element_record_for_node(app, window, node, |r| {
+            if let ElementInstance::Spacer(p) = &r.instance {
                 Some(p.min)
             } else {
                 None
             }
-        });
+        })
+        .flatten();
         if let Some(min) = spacer_min {
             let min = min.0.max(0.0);
             match direction {
@@ -817,16 +814,16 @@ fn style_for_item_in_parent<H: UiHost>(
             // Passthrough wrappers should remain layout-transparent: their single child should
             // inherit the wrapper's resolved box when possible, without forcing intrinsic leaves
             // (e.g. Spacer) to stretch.
-            let instance = element_record_for_node(app, window, node).map(|r| r.instance);
-            match instance {
-                Some(ElementInstance::Spacer(_)) => {
-                    style.align_self = Some(AlignSelf::FlexStart);
-                    style.justify_self = Some(AlignSelf::FlexStart);
-                }
-                _ => {
-                    style.align_self = Some(AlignSelf::Stretch);
-                    style.justify_self = Some(AlignSelf::Stretch);
-                }
+            let is_spacer = with_element_record_for_node(app, window, node, |r| {
+                matches!(&r.instance, ElementInstance::Spacer(_))
+            })
+            .unwrap_or(false);
+            if is_spacer {
+                style.align_self = Some(AlignSelf::FlexStart);
+                style.justify_self = Some(AlignSelf::FlexStart);
+            } else {
+                style.align_self = Some(AlignSelf::Stretch);
+                style.justify_self = Some(AlignSelf::Stretch);
             }
         }
         ParentLayoutKind::PassthroughOverlayNoStretch => {
@@ -887,8 +884,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         return None;
     }
 
-    let instance = element_record_for_node(app, window, node).map(|r| r.instance)?;
-    match instance {
+    with_element_record_for_node(app, window, node, |r| match &r.instance {
         ElementInstance::InteractivityGate(gate) if gate.present => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
@@ -914,7 +910,8 @@ fn passthrough_wrapper_child<H: UiHost>(
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
         _ => None,
-    }
+    })
+    .flatten()
 }
 
 fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {
