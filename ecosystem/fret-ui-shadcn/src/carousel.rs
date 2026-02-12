@@ -6,7 +6,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, MainAlign,
-    PointerRegionProps, RenderTransformProps, SemanticsDecoration,
+    PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -469,7 +469,6 @@ impl Carousel {
                 },
             );
 
-            let orientation_for_key = orientation;
             let index_for_key = index_model.clone();
             let offset_for_key = offset_model.clone();
             let runtime_for_key = runtime_model.clone();
@@ -482,12 +481,9 @@ impl Carousel {
                         return false;
                     }
 
-                    let (prev_key, next_key) = match orientation_for_key {
-                        CarouselOrientation::Horizontal => {
-                            (KeyCode::ArrowLeft, KeyCode::ArrowRight)
-                        }
-                        CarouselOrientation::Vertical => (KeyCode::ArrowUp, KeyCode::ArrowDown),
-                    };
+                    // shadcn/ui v4 Carousel uses left/right keys even when `orientation="vertical"`
+                    // (it rotates the controls instead of switching the key mapping).
+                    let (prev_key, next_key) = (KeyCode::ArrowLeft, KeyCode::ArrowRight);
 
                     if down.key != prev_key && down.key != next_key {
                         return false;
@@ -560,7 +556,8 @@ impl Carousel {
                             if let Some(basis) = item_basis {
                                 item_layout =
                                     item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
-                            } else if track_direction == fret_core::Axis::Horizontal {
+                            } else {
+                                // Match shadcn/ui v4 `basis-full` default for both orientations.
                                 item_layout = item_layout.basis(LengthRefinement::Fill);
                             }
 
@@ -669,13 +666,34 @@ impl Carousel {
             let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
             let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));
 
+            let rotate_controls = orientation == CarouselOrientation::Vertical;
+            let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
+            let arrow_center = Point::new(Px(8.0), Px(8.0));
+            let arrow_transform = fret_core::Transform2D::rotation_about_degrees(
+                arrow_rotation,
+                arrow_center,
+            );
+            let arrow_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default()
+                    .w_px(Px(16.0))
+                    .h_px(Px(16.0))
+                    .flex_shrink_0(),
+            );
+
             let prev_button = Button::new("Previous slide")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
                 .disabled(prev_disabled)
                 .test_id(prev_test_id)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::ARROW_LEFT)])
+                .children([cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: arrow_layout,
+                        transform: arrow_transform,
+                    },
+                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_LEFT)],
+                )])
                 .on_activate(on_prev)
                 .into_element(cx);
 
@@ -685,7 +703,13 @@ impl Carousel {
                 .disabled(next_disabled)
                 .test_id(next_test_id)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, ids::ui::ARROW_RIGHT)])
+                .children([cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: arrow_layout,
+                        transform: arrow_transform,
+                    },
+                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_RIGHT)],
+                )])
                 .on_activate(on_next)
                 .into_element(cx);
 
