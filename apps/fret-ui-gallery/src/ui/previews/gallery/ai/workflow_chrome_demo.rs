@@ -84,6 +84,51 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
             .gap(Space::N3)
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |cx| {
+            let canvas_controls = ui_ai::WorkflowControls::new([
+                ui_ai::WorkflowControlsButton::new("Zoom in", IconId::new_static("lucide.plus"))
+                    .test_id("ui-ai-workflow-canvas-demo-zoom-in")
+                    .into_element(cx),
+                ui_ai::WorkflowControlsButton::new("Zoom out", IconId::new_static("lucide.minus"))
+                    .test_id("ui-ai-workflow-canvas-demo-zoom-out")
+                    .into_element(cx),
+            ])
+            .test_id("ui-ai-workflow-canvas-demo-controls")
+            .into_element(cx);
+
+            let canvas_toolbar = ui_ai::WorkflowToolbar::new([shadcn::Button::new("Run")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .test_id("ui-ai-workflow-canvas-demo-run")
+                .into_element(cx)])
+            .test_id("ui-ai-workflow-canvas-demo-toolbar")
+            .into_element(cx);
+
+            let canvas_overlay_panel = ui_ai::WorkflowPanel::new([stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N3)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |_cx| vec![canvas_controls, canvas_toolbar],
+            )])
+            .test_id("ui-ai-workflow-canvas-demo-panel")
+            .refine_layout(
+                LayoutRefinement::default()
+                    .absolute()
+                    .top(Space::N0)
+                    .left(Space::N0),
+            )
+            .into_element(cx);
+
+            let canvas = ui_ai::WorkflowCanvas::new([canvas_overlay_panel])
+                .test_id("ui-ai-workflow-canvas-demo-root")
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(Px(240.0))
+                        .min_w_0(),
+                )
+                .into_element(cx);
+
             vec![
                 stack::hstack(
                     cx,
@@ -151,6 +196,7 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                     })
                     .test_id("ui-ai-workflow-edge-stage-demo-root")
                 },
+                canvas,
             ]
         },
     );
