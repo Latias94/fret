@@ -199,6 +199,10 @@ Suggested steps:
 Already landed (evidence anchors):
 
 - Refresh-rate stable overlay transitions: `ecosystem/fret-ui-kit/src/declarative/transition.rs`
+- Duration-based overlay transitions (Duration → 60Hz ticks → refresh-rate stable frames):
+  - `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`ticks_60hz_for_duration`, `drive_transition_*_duration`)
+  - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations*_duration`)
+- Shadcn motion durations (wall-time constants): `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs` (`SHADCN_MOTION_DURATION_*`)
 - Headless motion primitives: `ecosystem/fret-ui-headless/src/motion/`
   - `spring.rs`, `friction.rs`, `tween.rs`, `inertia.rs`
 - UI-kit drivers: `ecosystem/fret-ui-kit/src/declarative/motion.rs`
@@ -207,6 +211,8 @@ Already landed (evidence anchors):
   - `crates/fret-ui/src/action.rs` (`PointerMoveCx.velocity_window`, `PointerUpCx.velocity_window`)
 - Drawer release uses velocity projection to decide close/snap (starting point for Vaul-like feel):
   - `ecosystem/fret-ui-shadcn/src/drawer.rs`
+- Sheet uses duration-based overlay transitions (no shadcn tick constants in component code):
+  - `ecosystem/fret-ui-shadcn/src/sheet.rs`
 
 Diag gates:
 
