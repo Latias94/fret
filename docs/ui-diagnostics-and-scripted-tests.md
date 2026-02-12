@@ -469,6 +469,9 @@ Supported selectors (v1 MVP):
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
+- `raise_window` (schema v2 only; optional `window` target)
+- `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
+- `drag_pointer_until` (schema v2 only; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -482,6 +485,8 @@ Recent additions:
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
+- `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
+- `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 
 Notes:
 
@@ -508,6 +513,9 @@ Supported intent steps (v2):
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
+- `raise_window` (emit `WindowRequest::Raise`)
+- `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags)
+- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
 
 For window-targeted steps, the optional `window` field supports:
 
@@ -588,6 +596,8 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
+- `{"kind":"known_window_count_ge","n":2}`
+- `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
 
