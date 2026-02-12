@@ -20,6 +20,7 @@ The hard-to-change part is not the packaging tool; it is the shell ↔ runtime c
 - entrypoints (who owns the thread and event loop),
 - diagnostics (logging + panics),
 - platform service bridging (IME, insets, clipboard, file pickers),
+- lifecycle + surface recreation policy,
 - version/config injection semantics.
 
 ## Decision
@@ -71,8 +72,13 @@ Layering intent:
 
 For v1 mobile bring-up, the minimum platform service bridge we must support is:
 
-- IME: enable/disable + cursor rect updates.
-- Insets: safe-area + occlusion (keyboard) insets committed into window metrics.
+- IME: enable/disable + cursor rect updates (ADR 0012 + ADR 0261).
+- Insets: safe-area + occlusion (keyboard) insets committed into window metrics (ADR 0232).
+- Lifecycle + surfaces: suspended/resumed + surface error recovery policy (ADR 0262).
+
+Pointer/touch semantics are a separate but required “contract baseline” for mobile readiness:
+
+- see ADR 0263 (and ADR 0150/0151/0238/0243).
 
 ## Consequences
 
@@ -88,3 +94,10 @@ For v1 mobile bring-up, the minimum platform service bridge we must support is:
 - This ADR does not define a full mobile gesture arena contract.
 - This ADR does not define distribution/release workflows beyond the responsibility boundaries.
 
+## Contract anchors
+
+- IME event model + caret anchoring: `docs/adr/0012-keyboard-ime-and-text-input.md`
+- Platform text input client interop: `docs/adr/0261-platform-text-input-client-interop-v1.md`
+- Environment queries + insets seam: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
+- Mobile lifecycle/surface policy: `docs/adr/0262-mobile-lifecycle-and-surface-policy-v1.md`
+- Pointer/touch baseline: `docs/adr/0263-pointer-and-touch-semantics-baseline-v1.md`
