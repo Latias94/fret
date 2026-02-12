@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery clipboard: paste unavailable does not crash",
+    "required_capabilities": ["diag.clipboard_force_unavailable", "diag.script_v2"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } },
+    { "type": "wait_until", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } }, "timeout_frames": 240 },
+    { "type": "type_text", "text": "before " },
+
+    { "type": "reset_diagnostics" },
+    { "type": "set_clipboard_force_unavailable", "enabled": true },
+
+    { "type": "press_key", "key": "v", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "v", "modifiers": { "meta": true } },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "event_kind_seen", "event_kind": "ClipboardTextUnavailable" },
+      "timeout_frames": 240
+    },
+
+    { "type": "type_text", "text": "after" },
+    { "type": "set_clipboard_force_unavailable", "enabled": false },
+
+    { "type": "capture_bundle", "label": "ui-gallery-clipboard-paste-unavailable" }
+  ]
+}

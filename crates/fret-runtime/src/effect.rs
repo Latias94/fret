@@ -133,6 +133,16 @@ pub enum Effect {
     IncomingOpenRelease {
         token: IncomingOpenToken,
     },
+    /// Diagnostics-only clipboard override to simulate mobile privacy/user-activation denial paths.
+    ///
+    /// Notes:
+    /// - Runners SHOULD treat this as a best-effort toggle and default to `enabled=false`.
+    /// - When enabled, clipboard reads (`ClipboardGetText`, `PrimarySelectionGetText`) SHOULD
+    ///   complete as unavailable rather than attempting platform access.
+    DiagClipboardForceUnavailable {
+        window: AppWindowId,
+        enabled: bool,
+    },
     /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
     ///
     /// The runner/backend is responsible for applying this to the renderer and triggering any

@@ -182,6 +182,42 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
+                Effect::DiagClipboardForceUnavailable {
+                    window: target_window,
+                    enabled,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.diag_clipboard_force_unavailable = enabled;
+                }
+                Effect::ClipboardSetText { text: _ } => {
+                    // Best-effort: clipboard access is platform-dependent on web and may be
+                    // restricted. For now, treat as unsupported.
+                }
+                Effect::ClipboardGetText {
+                    window: target_window,
+                    token,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events
+                        .push(Event::ClipboardTextUnavailable { token });
+                    window.request_redraw();
+                }
+                Effect::PrimarySelectionSetText { text: _ } => {}
+                Effect::PrimarySelectionGetText {
+                    window: target_window,
+                    token,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events
+                        .push(Event::PrimarySelectionTextUnavailable { token });
+                    window.request_redraw();
+                }
                 Effect::WindowMetricsSetInsets {
                     window: target_window,
                     safe_area_insets,

@@ -182,6 +182,10 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn set_clipboard_force_unavailable(self, enabled: bool) -> Self {
+        self.push(UiActionStepV2::SetClipboardForceUnavailable { enabled })
+    }
+
     pub fn build(self) -> UiActionScriptV2 {
         UiActionScriptV2 {
             schema_version: 2,

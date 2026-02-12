@@ -1240,6 +1240,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
+    diag_clipboard_force_unavailable_windows: HashSet<fret_core::AppWindowId>,
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
     #[cfg(target_os = "ios")]
@@ -3003,6 +3004,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
+            diag_clipboard_force_unavailable_windows: HashSet::new(),
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
             #[cfg(target_os = "ios")]
@@ -4745,16 +4747,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             tracing::debug!(?err, "failed to set clipboard text");
                         }
                     }
-                    Effect::ClipboardGetText { window, token } => match self.clipboard.get_text() {
-                        Ok(Some(text)) => self.deliver_window_event_now(
-                            window,
-                            &Event::ClipboardText { token, text },
-                        ),
-                        Ok(None) | Err(_) => self.deliver_window_event_now(
-                            window,
-                            &Event::ClipboardTextUnavailable { token },
-                        ),
-                    },
+                    Effect::ClipboardGetText { window, token } => {
+                        if self.diag_clipboard_force_unavailable_windows.contains(&window) {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ClipboardTextUnavailable { token },
+                            );
+                            continue;
+                        }
+
+                        match self.clipboard.get_text() {
+                            Ok(Some(text)) => self.deliver_window_event_now(
+                                window,
+                                &Event::ClipboardText { token, text },
+                            ),
+                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                                window,
+                                &Event::ClipboardTextUnavailable { token },
+                            ),
+                        }
+                    }
                     Effect::PrimarySelectionSetText { text } => {
                         let caps = self
                             .app
@@ -4769,6 +4781,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::PrimarySelectionGetText { window, token } => {
+                        if self.diag_clipboard_force_unavailable_windows.contains(&window) {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionTextUnavailable { token },
+                            );
+                            continue;
+                        }
+
                         let caps = self
                             .app
                             .global::<PlatformCapabilities>()
@@ -4791,6 +4811,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 window,
                                 &Event::PrimarySelectionTextUnavailable { token },
                             ),
+                        }
+                    }
+                    Effect::DiagClipboardForceUnavailable { window, enabled } => {
+                        if enabled {
+                            self.diag_clipboard_force_unavailable_windows.insert(window);
+                        } else {
+                            self.diag_clipboard_force_unavailable_windows.remove(&window);
                         }
                     }
                     Effect::ExternalDropReadAll { window, token } => {

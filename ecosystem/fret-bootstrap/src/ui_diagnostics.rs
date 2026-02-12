@@ -895,6 +895,15 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV2::SetClipboardForceUnavailable { enabled } => {
+                output
+                    .effects
+                    .push(Effect::DiagClipboardForceUnavailable { window, enabled });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -1189,99 +1198,120 @@ impl UiDiagnosticsService {
                 predicate,
                 timeout_frames,
             } => {
-                if let Some(snapshot) = semantics_snapshot {
-                    active.screenshot_wait = None;
-                    let state = match active.wait_until.take() {
-                        Some(mut state) if state.step_index == step_index => {
-                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                            state
-                        }
-                        _ => WaitUntilState {
-                            step_index,
-                            remaining_frames: timeout_frames,
-                        },
-                    };
-
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        Some(snapshot),
-                        window,
-                        step_index as u32,
-                        "wait_until",
-                    );
-                    if eval_predicate(
-                        snapshot,
-                        window_bounds,
-                        window,
-                        element_runtime,
-                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                        &predicate,
-                    ) {
-                        active.wait_until = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-wait_until-timeout"));
-                        stop_script = true;
-                        failure_reason = Some("wait_until_timeout".to_string());
-                        active.wait_until = None;
-                        output.request_redraw = true;
-                    } else {
-                        active.wait_until = Some(WaitUntilState {
-                            step_index: state.step_index,
-                            remaining_frames: state.remaining_frames.saturating_sub(1),
-                        });
-                        output.request_redraw = true;
+                active.screenshot_wait = None;
+                let state = match active.wait_until.take() {
+                    Some(mut state) if state.step_index == step_index => {
+                        state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                        state
                     }
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-wait_until-no-semantics"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
-                    output.request_redraw = true;
+                    _ => WaitUntilState {
+                        step_index,
+                        remaining_frames: timeout_frames,
+                    },
+                };
+
+                let ok = match &predicate {
+                    UiPredicateV1::EventKindSeen { event_kind } => self
+                        .per_window
+                        .get(&window)
+                        .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-wait_until-no-semantics"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("no_semantics_snapshot".to_string());
+                            output.request_redraw = true;
+                            active.wait_until = None;
+                            active.screenshot_wait = None;
+                            return output;
+                        };
+
+                        record_overlay_placement_trace(
+                            &mut active.overlay_placement_trace,
+                            element_runtime,
+                            Some(snapshot),
+                            window,
+                            step_index as u32,
+                            "wait_until",
+                        );
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            element_runtime,
+                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                            &predicate,
+                        )
+                    }
+                };
+
+                if ok {
                     active.wait_until = None;
-                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else if state.remaining_frames == 0 {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-wait_until-timeout"));
+                    stop_script = true;
+                    failure_reason = Some("wait_until_timeout".to_string());
+                    active.wait_until = None;
+                    output.request_redraw = true;
+                } else {
+                    active.wait_until = Some(WaitUntilState {
+                        step_index: state.step_index,
+                        remaining_frames: state.remaining_frames.saturating_sub(1),
+                    });
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Assert { predicate } => {
                 active.wait_until = None;
                 active.screenshot_wait = None;
-                if let Some(snapshot) = semantics_snapshot {
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        Some(snapshot),
-                        window,
-                        step_index as u32,
-                        "assert",
-                    );
-                    if eval_predicate(
-                        snapshot,
-                        window_bounds,
-                        window,
-                        element_runtime,
-                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                        &predicate,
-                    ) {
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-assert-failed"));
-                        stop_script = true;
-                        failure_reason = Some("assert_failed".to_string());
-                        output.request_redraw = true;
+                let ok = match &predicate {
+                    UiPredicateV1::EventKindSeen { event_kind } => self
+                        .per_window
+                        .get(&window)
+                        .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                            stop_script = true;
+                            failure_reason = Some("no_semantics_snapshot".to_string());
+                            output.request_redraw = true;
+                            return output;
+                        };
+
+                        record_overlay_placement_trace(
+                            &mut active.overlay_placement_trace,
+                            element_runtime,
+                            Some(snapshot),
+                            window,
+                            step_index as u32,
+                            "assert",
+                        );
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            element_runtime,
+                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                            &predicate,
+                        )
                     }
+                };
+
+                if ok {
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
                 } else {
-                    force_dump_label =
-                        Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                    force_dump_label = Some(format!("script-step-{step_index:04}-assert-failed"));
                     stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    failure_reason = Some("assert_failed".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -3523,6 +3553,7 @@ impl UiDiagnosticsService {
         caps.push("diag.shortcut_routing_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
         caps.push("diag.window_insets_override".to_string());
+        caps.push("diag.clipboard_force_unavailable".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -4716,7 +4747,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
-        | UiActionStepV2::SetWindowInsets { .. } => false,
+        | UiActionStepV2::SetWindowInsets { .. }
+        | UiActionStepV2::SetClipboardForceUnavailable { .. } => false,
     }
 }
 
@@ -12314,6 +12346,7 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
+        UiPredicateV1::EventKindSeen { event_kind: _ } => false,
     }
 }
 

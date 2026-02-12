@@ -366,6 +366,13 @@ pub enum UiActionStepV2 {
         #[serde(default)]
         occlusion_insets: UiInsetsOverrideV1,
     },
+    /// Diagnostics-only clipboard override to simulate clipboard read denial/unavailability.
+    ///
+    /// This is intended to gate “paste request fails gracefully” behavior under mobile privacy
+    /// constraints without requiring a real mobile runner.
+    SetClipboardForceUnavailable {
+        enabled: bool,
+    },
 }
 
 impl From<UiActionStepV1> for UiActionStepV2 {
@@ -636,6 +643,13 @@ pub enum UiPredicateV1 {
         b: UiSelectorV1,
         #[serde(default)]
         eps_px: f32,
+    },
+    /// True when the diagnostics event ring contains an event whose recorded kind equals `kind`.
+    ///
+    /// This is intentionally a coarse predicate: it is meant to gate “a platform completion was
+    /// delivered” without requiring a dedicated predicate per event type.
+    EventKindSeen {
+        event_kind: String,
     },
 }
 

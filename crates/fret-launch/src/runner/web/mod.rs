@@ -76,6 +76,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_web::WebCursorListener>,
     web_services: WebPlatformServices,
+    diag_clipboard_force_unavailable: bool,
 
     environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
 }
@@ -180,6 +181,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
+            diag_clipboard_force_unavailable: false,
             environment_media_queries: None,
         }
     }

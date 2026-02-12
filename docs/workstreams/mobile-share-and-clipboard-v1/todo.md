@@ -24,6 +24,6 @@ Workstream entry:
 
 ## Diagnostics & gates
 
-- [ ] Add a scripted diag that exercises “paste request fails gracefully” (mobile privacy model simulation).
+- [x] Add a scripted diag that exercises “paste request fails gracefully” (mobile privacy model simulation):
+  - `tools/diag-scripts/ui-gallery-clipboard-paste-unavailable.json`
 - [ ] Add a scripted diag that exercises an incoming-open request (simulated token + bounded read).
-
