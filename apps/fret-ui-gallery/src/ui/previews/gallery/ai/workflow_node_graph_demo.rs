@@ -29,6 +29,7 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         graph: Option<Model<Graph>>,
         view: Option<Model<NodeGraphViewState>>,
         view_queue: Option<Model<NodeGraphViewQueue>>,
+        bounds: Option<Model<Option<fret_core::Rect>>>,
     }
 
     fn build_demo_graph(graph_id: GraphId) -> Graph {
@@ -194,28 +195,100 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         g
     }
 
+    fn zoom_around_view_center(
+        bounds: fret_core::Rect,
+        pan: CanvasPoint,
+        zoom: f32,
+        next_zoom: f32,
+    ) -> (CanvasPoint, f32) {
+        let w = bounds.size.width.0;
+        let h = bounds.size.height.0;
+
+        let z0 = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        let z1 = if next_zoom.is_finite() && next_zoom > 0.0 {
+            next_zoom
+        } else {
+            z0
+        };
+
+        // Invert `fret_node::ui::viewport_helper::pan_for_center`:
+        // pan.x = w / (2*z) - center.x  =>  center.x = w / (2*z) - pan.x
+        let center = CanvasPoint {
+            x: w / (2.0 * z0) - pan.x,
+            y: h / (2.0 * z0) - pan.y,
+        };
+
+        let pan1 = CanvasPoint {
+            x: w / (2.0 * z1) - center.x,
+            y: h / (2.0 * z1) - center.y,
+        };
+
+        (pan1, z1)
+    }
+
+    #[derive(Clone)]
+    struct BoundsRecorder {
+        bounds: Model<Option<fret_core::Rect>>,
+    }
+
+    impl BoundsRecorder {
+        fn new(bounds: Model<Option<fret_core::Rect>>) -> Self {
+            Self { bounds }
+        }
+    }
+
+    impl<H: fret_ui::UiHost> fret_ui::retained_bridge::Widget<H> for BoundsRecorder {
+        fn layout(
+            &mut self,
+            cx: &mut fret_ui::retained_bridge::LayoutCx<'_, H>,
+        ) -> fret_core::Size {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&self.bounds, |b| *b = Some(cx.bounds));
+            cx.bounds.size
+        }
+
+        fn hit_test(&self, _bounds: fret_core::Rect, _position: fret_core::Point) -> bool {
+            false
+        }
+    }
+
     let existing = cx.with_state(HarnessState::default, |st| {
-        match (st.graph.clone(), st.view.clone(), st.view_queue.clone()) {
-            (Some(graph), Some(view), Some(view_queue)) => Some((graph, view, view_queue)),
+        match (
+            st.graph.clone(),
+            st.view.clone(),
+            st.view_queue.clone(),
+            st.bounds.clone(),
+        ) {
+            (Some(graph), Some(view), Some(view_queue), Some(bounds)) => {
+                Some((graph, view, view_queue, bounds))
+            }
             _ => None,
         }
     });
 
-    let (graph, view, view_queue) = if let Some(existing) = existing {
+    let (graph, view, view_queue, bounds) = if let Some(existing) = existing {
         existing
     } else {
         let graph = build_demo_graph(GraphId::from_u128(42));
         let graph = cx.app.models_mut().insert(graph);
         let view = cx.app.models_mut().insert(NodeGraphViewState::default());
         let view_queue = cx.app.models_mut().insert(NodeGraphViewQueue::default());
+        let bounds = cx.app.models_mut().insert(None);
 
         cx.with_state(HarnessState::default, |st| {
             st.graph = Some(graph.clone());
             st.view = Some(view.clone());
             st.view_queue = Some(view_queue.clone());
+            st.bounds = Some(bounds.clone());
         });
 
-        (graph, view, view_queue)
+        (graph, view, view_queue, bounds)
     };
 
     let max_w = LayoutRefinement::default()
@@ -225,22 +298,56 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
 
     let zoom_in: OnActivate = Arc::new({
         let view = view.clone();
+        let view_queue = view_queue.clone();
+        let bounds = bounds.clone();
         move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&view, |st| {
-                let z = st.zoom;
-                let z = if z.is_finite() && z > 0.0 { z } else { 1.0 };
-                st.zoom = (z * 1.10).min(4.0);
+            let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
+                return;
+            };
+
+            let (pan, zoom) = host
+                .models_mut()
+                .read(&view, |st| (st.pan, st.zoom))
+                .unwrap_or((CanvasPoint::default(), 1.0));
+            let next_zoom = {
+                let z = if zoom.is_finite() && zoom > 0.0 {
+                    zoom
+                } else {
+                    1.0
+                };
+                (z * 1.10).min(4.0)
+            };
+            let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
+            let _ = host.models_mut().update(&view_queue, |q| {
+                q.push_set_viewport(pan, zoom);
             });
         }
     });
 
     let zoom_out: OnActivate = Arc::new({
         let view = view.clone();
+        let view_queue = view_queue.clone();
+        let bounds = bounds.clone();
         move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&view, |st| {
-                let z = st.zoom;
-                let z = if z.is_finite() && z > 0.0 { z } else { 1.0 };
-                st.zoom = (z / 1.10).max(0.15);
+            let Some(bounds) = host.models_mut().read(&bounds, |b| *b).ok().flatten() else {
+                return;
+            };
+
+            let (pan, zoom) = host
+                .models_mut()
+                .read(&view, |st| (st.pan, st.zoom))
+                .unwrap_or((CanvasPoint::default(), 1.0));
+            let next_zoom = {
+                let z = if zoom.is_finite() && zoom > 0.0 {
+                    zoom
+                } else {
+                    1.0
+                };
+                (z / 1.10).max(0.15)
+            };
+            let (pan, zoom) = zoom_around_view_center(bounds, pan, zoom, next_zoom);
+            let _ = host.models_mut().update(&view_queue, |q| {
+                q.push_set_viewport(pan, zoom);
             });
         }
     });
@@ -260,11 +367,10 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
     });
 
     let reset_view: OnActivate = Arc::new({
-        let view = view.clone();
+        let view_queue = view_queue.clone();
         move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&view, |st| {
-                st.pan = CanvasPoint::default();
-                st.zoom = 1.0;
+            let _ = host.models_mut().update(&view_queue, |q| {
+                q.push_set_viewport(CanvasPoint::default(), 1.0);
             });
         }
     });
@@ -347,6 +453,7 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         let graph = graph.clone();
         let view = view.clone();
         let view_queue = view_queue.clone();
+        let bounds = bounds.clone();
 
         let mut layout = LayoutStyle::default();
         layout.size.width = fret_ui::element::Length::Fill;
@@ -360,7 +467,8 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
                 .with_view_queue(view_queue.clone())
                 .with_fit_view_on_mount();
             let canvas_node = ui.create_node_retained(canvas);
-            ui.set_children(editor, vec![canvas_node]);
+            let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));
+            ui.set_children(editor, vec![canvas_node, bounds_node]);
             editor
         })
         .with_layout(layout);
