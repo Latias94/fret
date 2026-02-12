@@ -83,20 +83,26 @@ Legend:
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 | `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
 | `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
+| `jsx-preview.tsx` | n/a | n/a | N/A | Upstream is web-only (JSX render preview). In Fret, prefer app-owned webview previews if needed. |
 | `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
 | `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | UI-only placeholder (upstream uses Rive/webgl2). Add gates: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
 | `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
 | `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
-| Workflow wrappers (`canvas/node/edge/panel/toolbar/controls/connection`) | `fret-ui-ai` (chrome) | `workflow/*.rs` | Not started | Chrome-only wrappers over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports). |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` (planned) | Not started | Chrome-only wrapper over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports). |
+| `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` (planned) | Not started | Chrome-only wrapper (upstream uses `@xyflow/react` handles). |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG path/animation). |
+| `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
+| `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` (planned) | Not started | Chrome-only wrapper; apps own zoom/pan policy. |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG connection line). |
 
 ## Known upstream files not yet ported
 
 As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
 
-- `jsx-preview.tsx` (likely out of scope for Rust)
-- Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
+- Workflow wrappers (remaining): `canvas.tsx`, `node.tsx`, `edge.tsx`, `controls.tsx`, `connection.tsx`
 
 ## Regenerating this diff (developer note)
 

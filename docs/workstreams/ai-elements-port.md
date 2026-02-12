@@ -737,7 +737,7 @@ Legend:
 | `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Prototype | Renders an `ImageId` (decode/upload policy remains app-owned). |
 | `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Prototype | UI-only chrome port (controls + time/volume sliders) + UI Gallery demo + diag gate. Playback remains app-owned. |
 | `shimmer.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/shimmer.rs` | Done | Animated text shimmer surface (`duration` + `spread`) + UI Gallery demo + diag gate. |
-| `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
+| `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/toolbar.rs` | Prototype | Workflow chrome wrapper (UI-only). Upstream uses `@xyflow/react` `NodeToolbar`; Fret port is composition-only. |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestions.rs` | Done | Suggestions row + pill surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`). |
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Prototype | Auto-open while streaming (unless `default_open=false`), auto-close once (1s after stream end), duration accounting, markdown content. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | Prototype | Optional; ported as a “step list disclosure” surface (apps control data). UI Gallery demo + diag gate: `ai_chain_of_thought_demo`, `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
@@ -745,7 +745,7 @@ Legend:
 | `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
 | `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Prototype | Viewer-only v1: output text + copy/clear + auto-scroll. No PTY/TTY integration yet; ANSI formatting is a future enhancement. |
 | `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
-| `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
+| `jsx-preview.tsx` | n/a | n/a | N/A | Upstream is web-only (JSX render preview). In Fret, we do not provide an in-process JSX renderer; apps can embed a webview if they need a preview surface. |
 | `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Prototype | Chrome port exists (`WebPreview*`) and can be paired with a host-owned embedded backend (feature-gated `wry`). UI Gallery demo + diag gate: `ai_web_preview_demo`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Backend narrative/TODO: `docs/workstreams/webview-wry-v1.md`. |
 | `sandbox.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sandbox.rs` | Prototype | UI-only chrome (collapsible + tabs). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
 | `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Done | Test results surfaces + suite disclosure + UI Gallery demo + diag gate. |
@@ -763,7 +763,7 @@ Legend:
 | `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
 | `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
 | `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Prototype | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl`. Demo + diag gate exist. |
-| `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/panel.rs` | Defer | Workspace shell/panels belong in docking/viewports workstreams. |
+| `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` | Prototype | Workflow chrome wrapper (UI-only). Upstream uses `@xyflow/react` `Panel`; Fret port is composition-only. |
 | `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |
 | `node.tsx` / `edge.tsx` | `fret-node` + `fret-ui-ai` | `ecosystem/fret-node` (core) + `fret-ui-ai` chrome | Defer | Same. |
 | `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |

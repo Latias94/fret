@@ -84,7 +84,7 @@ Status legend:
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
-| `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
+| `jsx-preview` | N/A | n/a | Upstream is web-only (JSX render preview). Apps can use a webview-based preview instead. |
 | `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
 | `agent` | Prototype | `fret-ui-ai` | UI-only chrome (instructions/tools/output schema). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
 | `sandbox` | Prototype | `fret-ui-ai` | UI-only chrome (collapsible + tabs). UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
@@ -102,7 +102,7 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Not started | `fret-ui-ai` (wrappers) | Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
+| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Partial | `fret-ui-ai` (wrappers) | `panel` + `toolbar` chrome are ported (UI-only). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
 
 ### Voice
 
