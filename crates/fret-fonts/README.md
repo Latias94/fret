@@ -12,7 +12,7 @@ are not available.
 
 The canonical API is:
 
-- `fret_fonts::default_fonts()` — bootstrap + optional emoji (if enabled).
+- `fret_fonts::default_fonts()` — bootstrap + CJK-lite (by default) + optional emoji (if enabled).
 - `fret_fonts::bootstrap_fonts()` — bootstrap fonts only (never includes emoji).
 - `fret_fonts::emoji_fonts()` — emoji fonts only (requires `emoji` feature).
 
@@ -23,6 +23,7 @@ All are intended to be fed into `Effect::TextAddFonts`.
 The default feature set uses **subset fonts** to reduce WASM payload size:
 
 - `bootstrap-subset` (default): uses `*-subset.ttf` for Inter/JetBrains Mono.
+- `cjk-lite` (default): adds a small subset of `Noto Sans CJK SC` for basic CJK coverage.
 - `bootstrap-full`: uses the full font files (much larger).
 
 Emoji:
@@ -40,8 +41,8 @@ Emoji:
 
 For a general-purpose app shell:
 
-- Web/WASM: keep `bootstrap-subset` on by default, and gate `emoji` behind an explicit feature or
-  user setting (WASM size impact is significant).
+- Web/WASM: keep `bootstrap-subset` + `cjk-lite` on by default, and gate `emoji` behind an explicit
+  feature or user setting (WASM size impact is significant).
 - Native: either rely on system UI fonts (plus user-loaded fonts) or use `bootstrap-full` for a
   deterministic demo experience.
 

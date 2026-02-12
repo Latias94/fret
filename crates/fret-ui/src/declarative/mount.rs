@@ -176,11 +176,19 @@ where
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
         window_state.record_committed_viewport_bounds(bounds);
-        let scale_factor = _app
-            .global::<fret_core::window::WindowMetricsService>()
-            .and_then(|svc| svc.scale_factor(window))
-            .unwrap_or(1.0);
-        window_state.record_committed_scale_factor(scale_factor);
+        if let Some(svc) = _app.global::<fret_core::window::WindowMetricsService>() {
+            let scale_factor = svc.scale_factor(window).unwrap_or(1.0);
+            window_state.record_committed_scale_factor(scale_factor);
+
+            if svc.safe_area_insets_is_known(window) {
+                window_state.record_committed_safe_area_insets(svc.safe_area_insets(window));
+            }
+            if svc.occlusion_insets_is_known(window) {
+                window_state.record_committed_occlusion_insets(svc.occlusion_insets(window));
+            }
+        } else {
+            window_state.record_committed_scale_factor(1.0);
+        }
     });
 
     // Out-of-band scroll handle mutations (e.g. deferred scroll-to-item) must be visible to view

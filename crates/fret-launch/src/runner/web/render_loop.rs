@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -350,6 +351,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let changed_globals = self.app.take_changed_globals();
         if !changed_globals.is_empty() {
             did_work = true;
+            if changed_globals.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>()) {
+                let locale = self
+                    .app
+                    .global::<fret_runtime::fret_i18n::I18nService>()
+                    .and_then(|service| service.preferred_locales().first())
+                    .map(|locale| locale.to_string());
+                if gfx.renderer.set_text_locale(locale.as_deref()) {
+                    self.app.set_global::<fret_runtime::TextFontStackKey>(
+                        fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
+                    );
+                    self.app.request_redraw(self.app_window);
+                }
+            }
             self.driver.handle_global_changes(
                 WinitWindowContext {
                     app: &mut self.app,
@@ -514,6 +528,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if render_text_diag_enabled {
             self.app
                 .set_global(gfx.renderer.text_diagnostics_snapshot(self.frame_id));
+            self.app
+                .set_global(gfx.renderer.text_font_trace_snapshot(self.frame_id));
         }
 
         let mut submit: Vec<wgpu::CommandBuffer> = engine.command_buffers;

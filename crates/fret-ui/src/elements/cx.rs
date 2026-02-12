@@ -293,23 +293,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// information like `focus_within`) without consuming callsite slots and disturbing
     /// subsequent element identity in the real render pass.
     pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-        let depth = self.callsite_counters.len();
-        let saved = self
-            .callsite_counters
-            .last()
-            .cloned()
-            .expect("callsite counters exist");
+        let prev_stack = self.stack.clone();
+        let prev_counters = self.callsite_counters.clone();
 
         let out = f(self);
 
         debug_assert_eq!(
+            self.stack.len(),
+            prev_stack.len(),
+            "element stack depth must be balanced"
+        );
+        debug_assert_eq!(
             self.callsite_counters.len(),
-            depth,
+            prev_counters.len(),
             "callsite counters stack depth must be balanced"
         );
-        if let Some(last) = self.callsite_counters.last_mut() {
-            *last = saved;
-        }
+
+        self.stack = prev_stack;
+        self.callsite_counters = prev_counters;
         out
     }
 

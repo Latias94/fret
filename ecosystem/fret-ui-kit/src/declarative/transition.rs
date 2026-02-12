@@ -299,7 +299,6 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::window::WindowMetricsService;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_runtime::{Effect, FrameId, TickId};
 
@@ -398,8 +397,8 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
-            svc.set_prefers_reduced_motion(window, Some(true));
+        app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
+            rt.set_window_prefers_reduced_motion(window, Some(true));
         });
 
         app.set_tick_id(TickId(1));

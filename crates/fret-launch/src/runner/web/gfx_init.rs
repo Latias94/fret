@@ -33,16 +33,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .collect::<Vec<_>>();
         let _ = gfx.renderer.add_fonts(default_fonts);
 
-        let update = fret_runtime::apply_font_catalog_update(
+        // Font catalog refresh trigger (ADR 0258): initial renderer availability (adopt gfx).
+        let update = super::font_catalog::apply_renderer_font_catalog_update(
             &mut self.app,
-            gfx.renderer.all_font_names(),
+            &mut gfx.renderer,
             fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
-        let _ = gfx.renderer.set_text_font_families(&update.config);
-        self.app
-            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                gfx.renderer.text_font_stack_key(),
-            ));
+        let locale = self
+            .app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .and_then(|service| service.preferred_locales().first())
+            .map(|locale| locale.to_string());
+        let _ = gfx.renderer.set_text_locale(locale.as_deref());
 
         self.gfx = Some(gfx);
     }

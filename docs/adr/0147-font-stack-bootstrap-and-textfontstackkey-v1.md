@@ -20,6 +20,10 @@ The repository already has globals intended for this boundary:
 - `TextFontFamilyConfig` (user-configurable family candidates).
 - `TextFontStackKey` (stable key that participates in renderer text cache keys).
 
+Catalog refresh and revisioning semantics are tracked separately (to keep churn out of the font-stack contract):
+
+- ADR 0258: “font catalog refresh + revisioning” (runner/runtime boundary).
+
 Runner wiring must remain consistent (e.g. web runner and desktop runner should publish the same globals through the same helper),
 and Web/WASM needs a deterministic bootstrap story because system font discovery is not available.
 
@@ -128,8 +132,11 @@ The runner should allow toggling these tiers via crate features (e.g. `fret-laun
    - Decide a better policy vocabulary (e.g. “use platform defaults” vs “seed with curated candidates”).
 
 2) Unifying font resolution sources:
-   - Today the renderer may bridge multiple libraries (e.g. `cosmic-text` fontdb + Parley/fontique).
-   - Long term we should converge on a single source of truth for generic families + fallback ordering to avoid “key vs behavior” drift.
+   - Resolved (2026-02-11): the renderer uses Parley/fontique as the single source of truth for family resolution and
+     generic stack injection, and no longer bridges a separate fontdb implementation.
+   - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::set_font_families`, `font_stack_key`,
+     `reset_caches_for_font_change`), `crates/fret-render-wgpu/src/text/parley_shaper.rs` (family resolution +
+     generic family injection).
 
 3) Emoji policy:
    - Baseline pipeline and cache-key rules are tracked by ADR 0152.

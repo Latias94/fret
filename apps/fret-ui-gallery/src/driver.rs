@@ -3161,6 +3161,38 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::Result<()> {
+    let app = build_app();
+    let config = build_runner_config();
+    let project_root = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
+        .and_then(|v| (!v.is_empty()).then_some(v))
+        .map(|v| {
+            let s = v.to_string_lossy();
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                std::path::PathBuf::from(".")
+            } else {
+                std::path::PathBuf::from(trimmed)
+            }
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    fret_bootstrap::BootstrapBuilder::new(app, build_driver())
+        .configure(move |c| {
+            *c = config;
+        })
+        .with_default_diagnostics()
+        .with_default_config_files_for_root(&project_root)?
+        .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
+        .with_lucide_icons()
+        .preload_icon_svgs_on_gpu_ready()
+        .into_inner()
+        .with_event_loop(event_loop)
+        .run()
+        .map_err(anyhow::Error::from)
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn run() -> anyhow::Result<()> {
     Ok(())
@@ -3187,9 +3219,19 @@ impl WinitAppDriver for UiGalleryDriver {
             .collect::<Vec<_>>();
         let _ = renderer.add_fonts(fonts);
 
-        let update = fret_runtime::apply_font_catalog_update(
+        let entries = renderer
+            .all_font_catalog_entries()
+            .into_iter()
+            .map(|e| fret_runtime::FontCatalogEntry {
+                family: e.family,
+                has_variable_axes: e.has_variable_axes,
+                known_variable_axes: e.known_variable_axes,
+                is_monospace_candidate: e.is_monospace_candidate,
+            })
+            .collect::<Vec<_>>();
+        let update = fret_runtime::apply_font_catalog_update_with_metadata(
             app,
-            renderer.all_font_names(),
+            entries,
             fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
         let _ = renderer.set_text_font_families(&update.config);

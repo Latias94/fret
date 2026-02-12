@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, OpacityProps,
-    PressableProps, SemanticsDecoration, StackProps,
+    AnyElement, ColumnProps, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle,
+    OpacityProps, PressableProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -164,9 +164,10 @@ impl Collapsible {
 
             let content = motion.should_render.then(|| content(cx));
 
-            let stack = cx.stack_props(
-                StackProps {
+            let stack = cx.column(
+                ColumnProps {
                     layout: decl_style::layout_style(&theme, layout),
+                    ..Default::default()
                 },
                 move |cx| {
                     let mut children = Vec::new();
@@ -357,9 +358,10 @@ impl CollapsibleContent {
         let children = self.children;
 
         cx.container(wrapper, move |cx| {
-            vec![cx.stack_props(
-                StackProps {
+            vec![cx.column(
+                ColumnProps {
                     layout: decl_style::layout_style(&theme, layout),
+                    ..Default::default()
                 },
                 move |_cx| children,
             )]
