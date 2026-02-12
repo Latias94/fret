@@ -6,7 +6,8 @@
   "skills": {
     "onboarding": [
       "fret-repo-orientation",
-      "fret-skills-playbook"
+      "fret-skills-playbook",
+      "fret-external-app-mode"
     ],
     "foundation": [
       "fret-component-authoring",
@@ -312,6 +313,7 @@
     "app-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",
+      "fret-external-app-mode",
       "fret-component-authoring",
       "fret-action-hooks",
       "fret-app-architecture-and-effects",
@@ -330,6 +332,7 @@
     "framework-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",
+      "fret-external-app-mode",
       "fret-component-authoring",
       "fret-action-hooks",
       "fret-app-architecture-and-effects",

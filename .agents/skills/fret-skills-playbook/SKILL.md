@@ -88,6 +88,15 @@ When you fix a tricky issue, record:
 - the smallest script/test added,
 - the conclusion (“what changed” + “why it’s correct”).
 
+### 6) External app repos (framework users)
+
+If you are using these skills outside the Fret mono-repo:
+
+- Expect that repo-local commands (`fretboard`, `tools/*`, `tools/diag-scripts/*`) must be run from a Fret checkout.
+- Keep a sibling clone or submodule so evidence anchors remain clickable.
+
+See: `fret-external-app-mode`.
+
 ## Definition of done (what to leave behind)
 
 Minimum deliverables (3-pack):
