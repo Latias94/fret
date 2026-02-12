@@ -587,7 +587,7 @@ fn default_slider_epsilon() -> f32 {
     0.5
 }
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
     #[default]

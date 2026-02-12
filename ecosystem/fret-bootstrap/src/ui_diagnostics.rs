@@ -5557,6 +5557,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::PointerDown { .. }
         | UiActionStepV2::DragPointer { .. }
+        | UiActionStepV2::DragPointerUntil { .. }
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
         | UiActionStepV2::WaitUntil { .. }
@@ -5577,6 +5578,9 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
+        | UiActionStepV2::SetCursorScreenPos { .. }
+        | UiActionStepV2::SetCursorInWindow { .. }
+        | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
         | UiActionStepV2::PointerUp { .. } => false,
     }
@@ -13599,6 +13603,71 @@ fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) ->
         modifiers,
     }));
     out
+}
+
+fn pointer_move_with_internal_over_events(button: UiMouseButtonV1, position: Point) -> [Event; 2] {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let pressed_buttons = match button {
+        UiMouseButtonV1::Left => MouseButtons {
+            left: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Right => MouseButtons {
+            right: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Middle => MouseButtons {
+            middle: true,
+            ..Default::default()
+        },
+    };
+
+    let move_event = Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: pressed_buttons,
+        modifiers,
+        pointer_type,
+    });
+    let over = Event::InternalDrag(fret_core::InternalDragEvent {
+        pointer_id,
+        position,
+        kind: fret_core::InternalDragKind::Over,
+        modifiers,
+    });
+    [move_event, over]
+}
+
+fn pointer_up_with_internal_drop_events(button: UiMouseButtonV1, position: Point) -> [Event; 2] {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+
+    let up = Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position,
+        button,
+        modifiers,
+        is_click: false,
+        click_count: 1,
+        pointer_type,
+    });
+    let drop = Event::InternalDrag(fret_core::InternalDragEvent {
+        pointer_id,
+        position,
+        kind: fret_core::InternalDragKind::Drop,
+        modifiers,
+    });
+    [up, drop]
 }
 
 fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Event>) -> bool {
