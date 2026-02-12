@@ -4,6 +4,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     #[derive(Default)]
     struct DrawerPageModels {
         demo_open: Option<Model<bool>>,
+        snap_points_open: Option<Model<bool>>,
         scroll_open: Option<Model<bool>>,
         side_top_open: Option<Model<bool>>,
         side_right_open: Option<Model<bool>>,
@@ -16,6 +17,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
     let (
         demo_open,
+        snap_points_open,
         scroll_open,
         side_top_open,
         side_right_open,
@@ -27,6 +29,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     ) = cx.with_state(DrawerPageModels::default, |st| {
         (
             st.demo_open.clone(),
+            st.snap_points_open.clone(),
             st.scroll_open.clone(),
             st.side_top_open.clone(),
             st.side_right_open.clone(),
@@ -40,6 +43,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
     let (
         demo_open,
+        snap_points_open,
         scroll_open,
         side_top_open,
         side_right_open,
@@ -50,6 +54,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         rtl_open,
     ) = match (
         demo_open,
+        snap_points_open,
         scroll_open,
         side_top_open,
         side_right_open,
@@ -61,6 +66,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     ) {
         (
             Some(demo_open),
+            Some(snap_points_open),
             Some(scroll_open),
             Some(side_top_open),
             Some(side_right_open),
@@ -71,6 +77,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             Some(rtl_open),
         ) => (
             demo_open,
+            snap_points_open,
             scroll_open,
             side_top_open,
             side_right_open,
@@ -82,6 +89,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         ),
         _ => {
             let demo_open = cx.app.models_mut().insert(false);
+            let snap_points_open = cx.app.models_mut().insert(false);
             let scroll_open = cx.app.models_mut().insert(false);
             let side_top_open = cx.app.models_mut().insert(false);
             let side_right_open = cx.app.models_mut().insert(false);
@@ -93,6 +101,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
             cx.with_state(DrawerPageModels::default, |st| {
                 st.demo_open = Some(demo_open.clone());
+                st.snap_points_open = Some(snap_points_open.clone());
                 st.scroll_open = Some(scroll_open.clone());
                 st.side_top_open = Some(side_top_open.clone());
                 st.side_right_open = Some(side_right_open.clone());
@@ -105,6 +114,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
             (
                 demo_open,
+                snap_points_open,
                 scroll_open,
                 side_top_open,
                 side_right_open,
@@ -215,6 +225,50 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         );
 
         section_card(cx, "Demo", drawer).test_id("ui-gallery-drawer-demo")
+    };
+
+    let snap_points = {
+        let trigger_open = snap_points_open.clone();
+        let close_open = snap_points_open.clone();
+
+        let drawer = shadcn::Drawer::new(snap_points_open.clone())
+            .snap_points(vec![
+                shadcn::DrawerSnapPoint::Fraction(0.25),
+                shadcn::DrawerSnapPoint::Fraction(0.5),
+                shadcn::DrawerSnapPoint::Fraction(1.0),
+            ])
+            .into_element(
+                cx,
+                move |cx| {
+                    shadcn::Button::new("Snap Points")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(trigger_open.clone())
+                        .test_id("ui-gallery-drawer-snap-points-trigger")
+                        .into_element(cx)
+                },
+                move |cx| {
+                    shadcn::DrawerContent::new([
+                        shadcn::DrawerHeader::new([
+                            shadcn::DrawerTitle::new("Snap Points").into_element(cx),
+                            shadcn::DrawerDescription::new(
+                                "Releasing a drag settles to the nearest snap point (Vaul-style).",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(close_open.clone())
+                            .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .drag_handle_test_id("ui-gallery-drawer-snap-points-handle")
+                    .into_element(cx)
+                    .test_id("ui-gallery-drawer-snap-points-content")
+                },
+            );
+
+        section_card(cx, "Snap Points", drawer).test_id("ui-gallery-drawer-snap-points")
     };
 
     let scrollable_content = {
@@ -500,7 +554,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
     let preview_hint = shadcn::typography::muted(
         cx,
-        "Preview follows shadcn Drawer docs order: Demo, Scrollable Content, Sides, Responsive Dialog, RTL.",
+        "Preview follows shadcn Drawer docs order with an extra snap-points recipe: Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL.",
     );
 
     let component_stack = stack::vstack(
@@ -513,6 +567,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             vec![
                 preview_hint,
                 demo,
+                snap_points,
                 scrollable_content,
                 sides,
                 responsive_dialog,
@@ -574,6 +629,17 @@ shadcn::DrawerContent::new([
     body,
     shadcn::DrawerFooter::new([submit, cancel]).into_element(cx),
 ]).into_element(cx);"#,
+                ),
+                code_block(
+                    cx,
+                    "Snap Points",
+                    r#"shadcn::Drawer::new(open)
+    .snap_points(vec![
+        shadcn::DrawerSnapPoint::Fraction(0.25),
+        shadcn::DrawerSnapPoint::Fraction(0.5),
+        shadcn::DrawerSnapPoint::Fraction(1.0),
+    ])
+    .into_element(cx, trigger, content);"#,
                 ),
             ]
         },
