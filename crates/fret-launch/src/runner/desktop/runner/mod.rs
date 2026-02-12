@@ -44,6 +44,31 @@ use winit::platform::android::EventLoopExtAndroid as _;
 use crate::RunnerError;
 // Platform provider traits are imported where their methods are called.
 
+fn read_startup_incoming_open_paths_from_args() -> Vec<std::path::PathBuf> {
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    for arg in std::env::args_os().skip(1) {
+        if arg.is_empty() {
+            continue;
+        }
+        let path = std::path::PathBuf::from(arg);
+        if path.is_file() {
+            paths.push(path);
+        }
+    }
+    paths
+}
+
+#[derive(Debug, Default)]
+struct DiagIncomingOpenPayload {
+    files: Vec<fret_core::ExternalDropFileData>,
+    texts: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+struct IncomingOpenPathPayload {
+    paths: Vec<std::path::PathBuf>,
+}
+
 mod app_handler;
 mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
@@ -171,8 +196,14 @@ pub struct WinitRunner<D: WinitAppDriver> {
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
+    diag_clipboard_force_unavailable_windows: HashSet<fret_core::AppWindowId>,
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
+    diag_incoming_open_next_token: u64,
+    diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
+    startup_incoming_open_paths: Vec<std::path::PathBuf>,
+    startup_incoming_open_delivered: bool,
+    incoming_open_path_payloads: HashMap<fret_core::IncomingOpenToken, IncomingOpenPathPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
@@ -625,5 +656,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new_app(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         Self::new(config, app, driver)
+    }
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    fn allocate_incoming_open_token(&mut self) -> fret_core::IncomingOpenToken {
+        let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+        self.diag_incoming_open_next_token = self.diag_incoming_open_next_token.saturating_add(1);
+        token
+    }
+
+    fn maybe_deliver_startup_incoming_open(&mut self, window: fret_core::AppWindowId) {
+        if self.startup_incoming_open_delivered {
+            return;
+        }
+        self.startup_incoming_open_delivered = true;
+
+        if self.startup_incoming_open_paths.is_empty() {
+            return;
+        }
+
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        if !caps.shell.incoming_open {
+            return;
+        }
+
+        let token = self.allocate_incoming_open_token();
+
+        let mut items: Vec<fret_core::IncomingOpenItem> = Vec::new();
+        for path in self.startup_incoming_open_paths.iter() {
+            let name = path
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "file".to_string());
+            let size_bytes = std::fs::metadata(path).ok().map(|m| m.len());
+            items.push(fret_core::IncomingOpenItem::File(
+                fret_core::ExternalDragFile {
+                    name,
+                    size_bytes,
+                    media_type: None,
+                },
+            ));
+        }
+
+        self.incoming_open_path_payloads.insert(
+            token,
+            IncomingOpenPathPayload {
+                paths: std::mem::take(&mut self.startup_incoming_open_paths),
+            },
+        );
+        self.deliver_window_event_now(window, &Event::IncomingOpenRequest { token, items });
     }
 }

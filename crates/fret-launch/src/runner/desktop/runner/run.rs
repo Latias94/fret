@@ -38,6 +38,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
         let now = Instant::now();
+        let startup_incoming_open_paths = read_startup_incoming_open_paths_from_args();
         let requested = match app.global::<PlatformCapabilities>().cloned() {
             Some(caps) => caps,
             None => {
@@ -95,8 +96,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
+            diag_clipboard_force_unavailable_windows: HashSet::new(),
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
+            diag_incoming_open_next_token: 1,
+            diag_incoming_open_payloads: HashMap::new(),
+            startup_incoming_open_paths,
+            startup_incoming_open_delivered: false,
+            incoming_open_path_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
             cursor_screen_pos: None,
