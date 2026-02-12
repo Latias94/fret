@@ -1,7 +1,9 @@
+mod alpha_threshold;
 mod blit;
 mod blur;
 mod clip_mask;
 mod color_adjust;
+mod color_matrix;
 mod composite;
 mod mask;
 mod path;

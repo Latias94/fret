@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};

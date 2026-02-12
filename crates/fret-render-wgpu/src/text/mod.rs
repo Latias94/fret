@@ -3370,20 +3370,69 @@ impl TextSystem {
             // we also snap vertical layout to device pixels (common on Windows at 125%/150% DPI).
             // Prefer the full wrapper in that case so layout height matches the prepared blob.
             let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
-            let wrapped = if snap_vertical {
-                crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
-                    TextInputRef::plain(text, style),
-                    normalized_constraints,
-                )
+            let unwrapped_metrics = if snap_vertical
+                && let TextConstraints {
+                    max_width: Some(max_width),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    ..
+                } = normalized_constraints
+                && !text.contains('\n')
+            {
+                let entries = unwrapped_layout_cache_entries();
+                if entries != 0 && text.len() <= unwrapped_layout_cache_max_text_len_bytes() {
+                    let blob_key =
+                        TextBlobKey::new(text, style, normalized_constraints, self.font_stack_key);
+                    let unwrapped = self.get_or_shape_unwrapped_layout(
+                        TextInputRef::plain(text, style),
+                        &blob_key,
+                        scale,
+                        entries,
+                    );
+                    let max_width_px = max_width.0 * scale;
+                    if let Some(lines) = crate::text::wrapper::wrap_word_slices_from_unwrapped_ltr(
+                        text,
+                        unwrapped.as_ref(),
+                        max_width_px,
+                    ) {
+                        let max_w_px = lines
+                            .iter()
+                            .fold(0.0_f32, |acc, l| acc.max(l.width_px.max(0.0)));
+                        Some(metrics_for_uniform_lines(
+                            max_w_px,
+                            lines.len(),
+                            unwrapped.baseline,
+                            unwrapped.line_height,
+                            scale,
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             } else {
-                crate::text::wrapper::wrap_with_constraints_measure_only(
-                    &mut self.parley_shaper,
-                    TextInputRef::plain(text, style),
-                    normalized_constraints,
-                )
+                None
             };
-            metrics_from_wrapped_lines(&wrapped.lines, scale)
+
+            if let Some(metrics) = unwrapped_metrics {
+                metrics
+            } else {
+                let wrapped = if snap_vertical {
+                    crate::text::wrapper::wrap_with_constraints(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    )
+                } else {
+                    crate::text::wrapper::wrap_with_constraints_measure_only(
+                        &mut self.parley_shaper,
+                        TextInputRef::plain(text, style),
+                        normalized_constraints,
+                    )
+                };
+                metrics_from_wrapped_lines(&wrapped.lines, scale)
+            }
         };
 
         let bucket = self.measure_cache.entry(key).or_default();

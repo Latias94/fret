@@ -287,14 +287,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
-    /// Run `f` while preserving the current callsite counters snapshot.
+    /// Runs `f` and then restores the current callsite counters to their previous state.
     ///
-    /// This is useful when you need to build a "probe" subtree (e.g. to inspect focus) without
-    /// consuming callsite slots that would otherwise change derived element identities.
+    /// This is useful when you need to "probe-render" a subtree (e.g. to compute derived
+    /// information like `focus_within`) without consuming callsite slots and disturbing
+    /// subsequent element identity in the real render pass.
     pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-        let snapshot = self.callsite_counters.clone();
+        let depth = self.callsite_counters.len();
+        let saved = self
+            .callsite_counters
+            .last()
+            .cloned()
+            .expect("callsite counters exist");
+
         let out = f(self);
-        self.callsite_counters = snapshot;
+
+        debug_assert_eq!(
+            self.callsite_counters.len(),
+            depth,
+            "callsite counters stack depth must be balanced"
+        );
+        if let Some(last) = self.callsite_counters.last_mut() {
+            *last = saved;
+        }
         out
     }
 

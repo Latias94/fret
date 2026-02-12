@@ -13,6 +13,7 @@ use fret_ui::element::{
     VirtualListOptions,
 };
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

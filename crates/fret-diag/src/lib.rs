@@ -299,6 +299,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut compare_ignore_scene_fingerprint: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
+    let mut fixed_frame_delta_ms: Option<u64> = None;
     let mut with_tracy: bool = false;
     let mut with_renderdoc: bool = false;
     let mut renderdoc_after_frames: Option<u32> = None;
@@ -1542,6 +1543,23 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_no_outputs_png = true;
                 i += 1;
             }
+            "--fixed-frame-delta-ms" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --fixed-frame-delta-ms".to_string());
+                };
+                let parsed = v
+                    .trim()
+                    .parse::<u64>()
+                    .map_err(|_| "invalid value for --fixed-frame-delta-ms".to_string())?;
+                if parsed == 0 {
+                    return Err(
+                        "invalid value for --fixed-frame-delta-ms (must be > 0)".to_string()
+                    );
+                }
+                fixed_frame_delta_ms = Some(parsed);
+                i += 1;
+            }
             "--env" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1590,6 +1608,20 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
+
+    if fixed_frame_delta_ms.is_some() && launch.is_none() && devtools_ws_url.is_some() {
+        return Err(
+            "--fixed-frame-delta-ms requires --launch when used with --devtools-ws-url (or start the app with FRET_DIAG_FIXED_FRAME_DELTA_MS)"
+                .to_string(),
+        );
+    }
+    if let Some(ms) = fixed_frame_delta_ms {
+        push_env_if_missing(
+            &mut launch_env,
+            "FRET_DIAG_FIXED_FRAME_DELTA_MS",
+            &ms.to_string(),
+        );
+    }
 
     let resource_footprint_thresholds = ResourceFootprintThresholds {
         max_working_set_bytes,

@@ -271,6 +271,18 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         state = mix_f32(state, brightness);
                         mix_f32(state, contrast)
                     }
+                    EffectStep::ColorMatrix { m } => {
+                        let mut state = mix_u64(state, 5);
+                        for v in m {
+                            state = mix_f32(state, v);
+                        }
+                        state
+                    }
+                    EffectStep::AlphaThreshold { cutoff, soft } => {
+                        let mut state = mix_u64(state, 6);
+                        state = mix_f32(state, cutoff);
+                        mix_f32(state, soft)
+                    }
                     EffectStep::Pixelate { scale } => mix_u64(mix_u64(state, 3), u64::from(scale)),
                     EffectStep::Dither { mode } => mix_u64(
                         mix_u64(state, 4),

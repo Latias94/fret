@@ -12,6 +12,7 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::table::{
     ColumnDef, ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
     contains_ascii_case_insensitive, create_column_helper,

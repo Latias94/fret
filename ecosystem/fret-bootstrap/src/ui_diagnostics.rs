@@ -58,6 +58,11 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    /// Optional fixed frame delta (ms) for deterministic diagnostics/scripted tests (ADR 0240).
+    ///
+    /// When set, the per-window frame clock uses a synthetic monotonic time that advances by this
+    /// delta each frame, rather than wall-clock `Instant::now()`.
+    pub frame_clock_fixed_delta_ms: Option<u64>,
 
     /// Optional DevTools WebSocket endpoint for diagnostics control (script/pick/dump).
     ///
@@ -192,6 +197,10 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
+        let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
+            .map(|d| d.as_millis())
+            .and_then(|ms| u64::try_from(ms).ok())
+            .filter(|v| *v > 0);
 
         Self {
             enabled,
@@ -222,6 +231,7 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            frame_clock_fixed_delta_ms,
             devtools_ws_url,
             devtools_token,
             devtools_embed_bundle: cfg!(target_arch = "wasm32"),
@@ -4259,6 +4269,27 @@ impl UiDiagnosticsService {
             .as_ref()
             .and_then(|provider| provider(app, window));
 
+        let frame_clock = app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| {
+                let snapshot = svc.snapshot(window)?;
+                let fixed_delta_ms = svc.effective_fixed_delta(window).map(|d| {
+                    let ms = d.as_millis();
+                    ms.min(u64::MAX as u128) as u64
+                });
+                Some(UiFrameClockSnapshotV1 {
+                    now_monotonic_ms: {
+                        let ms = snapshot.now_monotonic.as_millis();
+                        ms.min(u64::MAX as u128) as u64
+                    },
+                    delta_ms: {
+                        let ms = snapshot.delta.as_millis();
+                        ms.min(u64::MAX as u128) as u64
+                    },
+                    fixed_delta_ms,
+                })
+            });
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -4271,6 +4302,7 @@ impl UiDiagnosticsService {
             scene_fingerprint: scene.fingerprint(),
             semantics_fingerprint,
             debug,
+            frame_clock,
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
@@ -5015,6 +5047,8 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub inspect_trigger_path: String,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock_fixed_delta_ms: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -5070,6 +5104,7 @@ impl UiDiagnosticsBundleV1 {
                 ),
                 redact_text: svc.cfg.redact_text,
                 max_debug_string_bytes: svc.cfg.max_debug_string_bytes,
+                frame_clock_fixed_delta_ms: svc.cfg.frame_clock_fixed_delta_ms,
             },
             windows: svc
                 .per_window
@@ -5141,12 +5176,22 @@ impl UiDiagnosticsEnvFingerprintV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiFrameClockSnapshotV1 {
+    pub now_monotonic_ms: u64,
+    pub delta_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_delta_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsSnapshotV1 {
     pub schema_version: u32,
     pub tick_id: u64,
     pub frame_id: u64,
     pub window: u64,
     pub timestamp_unix_ms: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_clock: Option<UiFrameClockSnapshotV1>,
     pub scale_factor: f32,
     pub window_bounds: RectV1,
     pub scene_ops: u64,
@@ -13152,6 +13197,10 @@ fn rect_fully_contains(outer: Rect, inner: Rect) -> bool {
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
+        "shift" => Some(KeyCode::ShiftLeft),
+        "ctrl" | "control" => Some(KeyCode::ControlLeft),
+        "alt" | "option" => Some(KeyCode::AltLeft),
+        "meta" | "super" | "cmd" | "command" => Some(KeyCode::MetaLeft),
         "escape" | "esc" => Some(KeyCode::Escape),
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),

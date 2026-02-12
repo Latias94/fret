@@ -85,3 +85,26 @@ Rule of thumb:
   - mask coverage behavior at edges,
   - blend group compositing order,
   - deterministic degradation behavior under reduced budgets.
+
+## Current status (as of `main`)
+
+Landed kernel primitives:
+
+- Paint v1: gradients via `Paint` (`crates/fret-render-wgpu/tests/paint_gradient_conformance.rs`)
+- Materials v1: controlled `MaterialId` registry + baseline procedural kinds
+  (`crates/fret-render-wgpu/tests/materials_conformance.rs`)
+- Masks v1: gradient alpha masks (`crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`)
+- Compositing groups v1: isolated groups + blend modes
+  (`crates/fret-render-wgpu/tests/composite_group_conformance.rs`)
+- Motion/pointer seams: pointer coordinate helpers + pointer motion snapshots + frame clock + diag
+  fixed-delta support
+- Effect steps extension: `ColorMatrix` + `AlphaThreshold`
+  (`crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`)
+- Sampled materials v2a: renderer-owned catalog textures (ADR 0242)
+  (`crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`)
+
+Not yet landed (tracked in this workstream):
+
+1. `VisualCatalog`/`MaterialCatalog` skeleton API (ecosystem foundation; see TODO list)
+2. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
+3. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)

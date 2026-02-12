@@ -57,6 +57,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) material_paints_used: u64,
     pub(super) material_seen: Vec<fret_core::MaterialId>,
     pub(super) material_quad_ops: &'a mut u64,
+    pub(super) material_sampled_quad_ops: &'a mut u64,
     pub(super) material_distinct: &'a mut u64,
     pub(super) material_unknown_ids: &'a mut u64,
     pub(super) material_degraded_due_to_budget: &'a mut u64,
@@ -88,6 +89,7 @@ impl<'a> EncodeState<'a> {
         let effect_markers = &mut encoding.effect_markers;
 
         let material_quad_ops = &mut encoding.material_quad_ops;
+        let material_sampled_quad_ops = &mut encoding.material_sampled_quad_ops;
         let material_distinct = &mut encoding.material_distinct;
         let material_unknown_ids = &mut encoding.material_unknown_ids;
         let material_degraded_due_to_budget = &mut encoding.material_degraded_due_to_budget;
@@ -132,6 +134,7 @@ impl<'a> EncodeState<'a> {
             material_paints_used: 0,
             material_seen: Vec::new(),
             material_quad_ops,
+            material_sampled_quad_ops,
             material_distinct,
             material_unknown_ids,
             material_degraded_due_to_budget,

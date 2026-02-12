@@ -497,6 +497,16 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         pass_kind: LayoutPassKind,
     ) {
+        if pass_kind == LayoutPassKind::Final
+            && let Some(window) = self.window
+        {
+            let frame_id = app.frame_id();
+            app.with_global_mut_untracked(
+                fret_core::WindowFrameClockService::default,
+                |svc, _host| svc.record_frame(window, frame_id),
+            );
+        }
+
         let profile_layout_all = std::env::var_os("FRET_LAYOUT_ALL_PROFILE")
             .is_some_and(|v| !v.is_empty() && v != "0")
             && pass_kind == LayoutPassKind::Final;
