@@ -2183,6 +2183,54 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn key_on_key_down_capture_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = Some(handler);
+        });
+    }
+
+    pub fn key_add_on_key_down_capture_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnKeyDown,
+    ) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_prepend_on_key_down_capture_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnKeyDown,
+    ) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        next(host, cx, down) || prev(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_clear_on_key_down_capture_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = None;
+        });
+    }
+
     pub fn command_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
         self.with_state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = Some(handler);

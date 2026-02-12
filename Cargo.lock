@@ -2439,6 +2439,7 @@ dependencies = [
  "fret-ui-assets",
  "fret-ui-headless",
  "fret-ui-kit",
+ "fret-ui-magic",
  "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-undo",
@@ -2510,6 +2511,19 @@ dependencies = [
  "time",
  "tracing",
  "virtualizer",
+]
+
+[[package]]
+name = "fret-ui-magic"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "time",
+ "tracing",
 ]
 
 [[package]]

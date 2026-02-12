@@ -1,0 +1,27 @@
+[package]
+name = "fret-ui-magic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "MagicUI-inspired creative components and recipes for Fret."
+
+[features]
+default = []
+app-integration = ["dep:fret-app"]
+
+[dependencies]
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["recipes"] }
+time.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }

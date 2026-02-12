@@ -13,25 +13,14 @@ See:
 - Keep existing public helpers (e.g. glass/pixelate wrappers) stable; migrate internals only.
 - Add a minimal diagnostics sink seam for “recipe degraded” events (best-effort).
 
-Status: Landed (partial; catalog skeleton pending)
+Status: Landed
 
 Evidence:
 
 - `ecosystem/fret-ui-kit/src/recipes/resolve.rs`
+- `ecosystem/fret-ui-kit/src/recipes/catalog.rs`
 - `ecosystem/fret-ui-kit/src/declarative/glass.rs`
 - `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
-
-Remaining gate (to fully close M0):
-
-- Land a `VisualCatalog`/`MaterialCatalog` skeleton API (stable storage + resolve surface + diag seam).
-
-Status: Not started
-
-Evidence (planned):
-
-- `ecosystem/fret-ui-kit/src/recipes/catalog.rs` (or similar)
-- `ecosystem/fret-ui-kit/src/recipes/mod.rs`
-- `docs/workstreams/creative-recipes-v1-todo.md` (P0 foundation checklist)
 
 ## M1 — Paint v1 (gradients)
 
@@ -146,13 +135,20 @@ Evidence:
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
 - Add UI gallery entries and `fretboard diag` scripts for each seed component.
 
-Status: Not started
+Status: In progress
 
 Evidence (planned):
 
 - `ecosystem/fret-ui-magic/` (crate surface + recipes)
 - `apps/fret-ui-gallery/` (entries)
 - `tools/diag-scripts/` (scripts)
+
+Evidence (partial):
+
+- `ecosystem/fret-ui-magic/src/marquee.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_marquee`)
+- `tools/diag-scripts/ui-gallery-magic-marquee-steady.json`
 
 ## M9 — External texture imports (v1)
 
