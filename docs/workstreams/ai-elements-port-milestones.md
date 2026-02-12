@@ -181,6 +181,9 @@ Progress:
   - `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
 - `WorkflowNode` chrome is ported and demoed on the same page with gate:
   - `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
+- `WorkflowConnection` / `WorkflowEdgeTemporary` / `WorkflowEdgeAnimated` chrome are ported and
+  demoed on the same page with gate:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
 
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
@@ -210,7 +213,7 @@ Acceptance criteria:
   (diag script preferred for interactive surfaces).
 - Heavy dependencies and backends are feature-gated; UI surfaces remain intent-driven.
 
-Status: In progress (remaining workflow wrappers: `canvas.tsx`, `edge.tsx`, `connection.tsx`).
+Status: In progress (remaining workflow wrapper: `canvas.tsx`).
 
 ## Next-step checklist (recommended weekly cadence)
 

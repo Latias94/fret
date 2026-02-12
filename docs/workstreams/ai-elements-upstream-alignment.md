@@ -92,17 +92,17 @@ Legend:
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
 | `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` (planned) | Not started | Chrome-only wrapper over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports). |
 | `node.tsx` | `fret-ui-ai` (chrome) | `workflow/node.rs` | Ported (prototype) | UI-only node chrome + handle indicators. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
-| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG path/animation). |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `workflow/edge.rs` | Ported (prototype) | UI-only edge chrome (temporary + animated). Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 | `panel.tsx` | `fret-ui-ai` (chrome) | `workflow/panel.rs` | Ported (prototype) | UI-only panel chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
 | `toolbar.tsx` | `fret-ui-ai` (chrome) | `workflow/toolbar.rs` | Ported (prototype) | UI-only toolbar chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`. |
 | `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. Demo + diag: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
-| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` (planned) | Not started | Chrome-only wrapper (upstream is SVG connection line). |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. Demo + gate: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 
 ## Known upstream files not yet ported
 
 As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
 
-- Workflow wrappers (remaining): `canvas.tsx`, `edge.tsx`, `connection.tsx`
+- Workflow wrappers (remaining): `canvas.tsx`
  
 
 ## Regenerating this diff (developer note)

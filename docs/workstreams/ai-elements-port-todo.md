@@ -31,7 +31,9 @@ Each TODO is labeled:
   - Done: `toolbar.tsx` → `workflow/toolbar.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
   - Done: `controls.tsx` → `workflow/controls.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
   - Done: `node.tsx` → `workflow/node.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
-  - Next: `canvas.tsx`, `edge.tsx`, `connection.tsx`
+  - Done: `edge.tsx` → `workflow/edge.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+  - Done: `connection.tsx` → `workflow/connection.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+  - Next: `canvas.tsx`
 - [x] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
 
 ### M0 — Foundations (composition + gates)

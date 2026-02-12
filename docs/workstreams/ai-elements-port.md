@@ -766,9 +766,9 @@ Legend:
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` | Prototype | Workflow chrome wrapper (UI-only). Upstream uses `@xyflow/react` `Panel`; Fret port is composition-only. |
 | `canvas.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/canvas.rs` | Planned (M4/M6) | Chrome-only wrapper; apps own canvas/graph engines (likely reuse `fret-canvas`, `fret-node`, docking/viewports). |
 | `node.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/node.rs` | Prototype | UI-only node chrome + handle indicators. Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
-| `edge.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` | Planned (M4/M6) | Chrome-only wrapper; apps own graph engines. |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` | Prototype | UI-only edge chrome (temporary + animated). Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 | `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |
-| `connection.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/connection.rs` | Planned (M4/M6) | Chrome-only wrapper; upstream is SVG connection line. |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/connection.rs` | Prototype | UI-only connection line chrome. Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 | `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`. |
 | `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Prototype | Package info card surface (name + change badge + version row + deps list building blocks) + UI Gallery demo + diag gate. |
 
