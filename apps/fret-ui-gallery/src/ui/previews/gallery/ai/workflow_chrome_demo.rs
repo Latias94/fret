@@ -4,9 +4,11 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
     cx: &mut ElementContext<'_, App>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
+    use fret_canvas::ui::{CanvasInputExemptRegionProps, canvas_input_exempt_region};
     use fret_core::Point;
     use fret_core::Px;
     use fret_icons::IconId;
+    use fret_ui::element::PointerRegionProps;
     use fret_ui_kit::declarative::stack;
     use fret_ui_kit::declarative::style as decl_style;
     use fret_ui_kit::{
@@ -111,13 +113,26 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                 move |_cx| vec![canvas_controls, canvas_toolbar],
             )])
             .test_id("ui-ai-workflow-canvas-demo-panel")
-            .refine_layout(
+            .into_element(cx);
+
+            // XyFlow-style `.nowheel`/`.nopan` behavior: overlay chrome should not trigger canvas
+            // wheel-pan or middle-drag pan when the pointer is over the panel.
+            let mut pr = PointerRegionProps::default();
+            pr.layout = decl_style::layout_style(
+                _theme,
                 LayoutRefinement::default()
                     .absolute()
                     .top(Space::N0)
                     .left(Space::N0),
-            )
-            .into_element(cx);
+            );
+            let canvas_overlay_panel = canvas_input_exempt_region(
+                cx,
+                CanvasInputExemptRegionProps {
+                    pointer_region: pr,
+                    ..Default::default()
+                },
+                move |_cx| vec![canvas_overlay_panel],
+            );
 
             let canvas = ui_ai::WorkflowCanvas::new([canvas_overlay_panel])
                 .test_id("ui-ai-workflow-canvas-demo-root")
