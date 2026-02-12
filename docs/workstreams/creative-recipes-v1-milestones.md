@@ -226,6 +226,7 @@ Done (v1 follow-ups):
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
+  (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`.)
 - Native v1: a decode/import path with an explicit copy/zero-copy policy and deterministic fallback.
 
 Acceptance criteria (v1):

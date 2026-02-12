@@ -132,7 +132,8 @@ to `fret-ui` (ADR 0234).
     - Evidence: `apps/fret-examples/src/external_texture_imports_web_demo.rs`,
       `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
   - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
-        (capability-gated) with deterministic fallback
+        (capability-gated) with deterministic fallback.
+        Note: currently blocked on wgpu's WebGPU backend implementing `ExternalTexture`.
   - [ ] native: a decode path (software or hardware) with an explicit copy/zero-copy policy
 - [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
 - [x] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
