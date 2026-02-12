@@ -47,34 +47,59 @@
     { "type": "wait_frames", "n": 10 },
 
     {
-      "type": "click",
+      "type": "wait_until",
       "window": { "kind": "last_seen_other" },
-      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "raise_window" },
+    { "type": "set_cursor_in_window", "x_px": 640.0, "y_px": 260.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" }
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": 20.0,
+      "delta_y": 0.0,
+      "steps": 12
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
     },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "raise_window", "window": { "kind": "last_seen_other" } },
-    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 640.0, "y_px": 260.0 },
+    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
 
     {
-      "type": "drag_pointer_until",
-      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
-      "delta_x": 20.0,
+      "type": "pointer_move",
+      "delta_x": -800.0,
       "delta_y": 0.0,
-      "steps": 12,
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 10 },
-
-    {
-      "type": "click",
-      "window": { "kind": "last_seen_other" },
-      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
+      "steps": 90
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "timeout_frames": 240
+    },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen_other" },
       "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },
@@ -82,4 +107,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

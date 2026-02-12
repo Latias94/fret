@@ -875,6 +875,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::DragPointerUntil { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
+                | UiActionStepV2::PointerMove { .. }
                 | UiActionStepV2::MovePointerSweep { .. }
         );
         if !is_v2_intent_step {
@@ -2433,13 +2434,28 @@ impl UiDiagnosticsService {
                     active.v2_step_state = None;
                 } else if handoff_to.is_some() {
                     // Window-targeted: migrate to the target window before continuing the session.
+                    active.v2_step_state = None;
                 } else {
-                    let steps = steps.max(1);
-                    let start = session.position;
-                    let end = Point::new(
-                        fret_core::Px(start.x.0 + delta_x),
-                        fret_core::Px(start.y.0 + delta_y),
-                    );
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::PointerMove(state)) if state.step_index == step_index => {
+                            state
+                        }
+                        _ => {
+                            let steps = steps.max(1);
+                            let start = session.position;
+                            let end = Point::new(
+                                fret_core::Px(start.x.0 + delta_x),
+                                fret_core::Px(start.y.0 + delta_y),
+                            );
+                            V2PointerMoveState {
+                                step_index,
+                                steps,
+                                start,
+                                end,
+                                frame: 1,
+                            }
+                        }
+                    };
 
                     let pressed_buttons = match session.button {
                         UiMouseButtonV1::Left => MouseButtons {
@@ -2458,10 +2474,15 @@ impl UiDiagnosticsService {
 
                     let pointer_id = PointerId(0);
                     let pointer_type = PointerType::Mouse;
-                    for i in 1..=steps {
-                        let t = i as f32 / steps as f32;
-                        let x = start.x.0 + (end.x.0 - start.x.0) * t;
-                        let y = start.y.0 + (end.y.0 - start.y.0) * t;
+
+                    if state.frame == 0 {
+                        state.frame = 1;
+                    }
+
+                    if state.frame <= state.steps {
+                        let t = state.frame as f32 / state.steps as f32;
+                        let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                        let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
                         let position = Point::new(fret_core::Px(x), fret_core::Px(y));
                         output.events.push(Event::Pointer(PointerEvent::Move {
                             pointer_id,
@@ -2478,16 +2499,26 @@ impl UiDiagnosticsService {
                                 kind: fret_core::InternalDragKind::Over,
                                 modifiers: session.modifiers,
                             }));
-                    }
 
-                    session.position = end;
-                    active.pointer_session = Some(session);
-                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                    if self.cfg.script_auto_dump {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-pointer_move"));
+                        session.position = position;
+                        active.pointer_session = Some(session);
+
+                        state.frame = state.frame.saturating_add(1);
+                        active.v2_step_state = Some(V2StepState::PointerMove(state));
+                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                        output.request_redraw = true;
+                    } else {
+                        session.position = state.end;
+                        active.pointer_session = Some(session);
+
+                        active.v2_step_state = None;
+                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-pointer_move"));
+                        }
                     }
                 }
             }
@@ -6751,6 +6782,7 @@ enum V2StepState {
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
+    PointerMove(V2PointerMoveState),
     MovePointerSweep(V2MovePointerSweepState),
 }
 
@@ -6760,6 +6792,15 @@ struct V2PointerSessionState {
     button: UiMouseButtonV1,
     modifiers: Modifiers,
     position: Point,
+}
+
+#[derive(Debug, Clone)]
+struct V2PointerMoveState {
+    step_index: usize,
+    steps: u32,
+    start: Point,
+    end: Point,
+    frame: u32,
 }
 
 #[derive(Debug, Clone)]
