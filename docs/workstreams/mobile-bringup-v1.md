@@ -30,7 +30,7 @@ Why GameActivity:
 
 Run:
 
-- `tools/mobile/android_game_activity_run.sh --release`
+- `tools/mobile/run.sh android --app ui-gallery --release`
 
 ## iOS simulator run (no Xcode project)
 
@@ -45,7 +45,7 @@ Prereqs:
 
 Run:
 
-- `tools/mobile/ios_sim_run.sh --release`
+- `tools/mobile/run.sh ios --app ui-gallery --sim --release`
 
 Notes:
 

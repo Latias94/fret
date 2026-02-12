@@ -17,7 +17,7 @@ Current bring-up loop:
 - Use a minimal Gradle wrapper + `GameActivity` to package a `cdylib`:
   - Entry crate: `apps/fret-ui-gallery-mobile`
   - Gradle wrapper: `apps/fret-ui-gallery-mobile/android`
-  - Script: `tools/mobile/android_game_activity_run.sh`
+  - Script: `tools/mobile/run.sh android --app ui-gallery`
 
 Prereqs (typical):
 
