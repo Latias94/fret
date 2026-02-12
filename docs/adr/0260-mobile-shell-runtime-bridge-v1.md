@@ -72,7 +72,7 @@ Layering intent:
 
 For v1 mobile bring-up, the minimum platform service bridge we must support is:
 
-- IME: enable/disable + cursor rect updates (ADR 0012 + ADR 0261).
+- IME: enable/disable + cursor rect updates + best-effort virtual keyboard requests (ADR 0012 + ADR 0261).
 - Insets: safe-area + occlusion (keyboard) insets committed into window metrics (ADR 0232).
 - Lifecycle + surfaces: suspended/resumed + surface error recovery policy (ADR 0262).
 

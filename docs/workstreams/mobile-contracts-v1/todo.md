@@ -14,8 +14,11 @@ Workstream entry:
 
 - [ ] Review ADR 0261/0262/0263 for consistency with existing accepted ADRs (0012/0071/0232/0054).
 - [ ] Add a short “Implementation status” section to each new ADR (what exists today vs gaps).
-- [ ] Decide whether to extend `ImeAllow` semantics further or introduce an explicit “show keyboard”
-      effect for Android user-activation constraints (ADR 0261 open question).
+- [x] Decide whether to extend `ImeAllow` semantics further or introduce an explicit “show keyboard”
+      effect for Android user-activation constraints:
+      - Chosen: add `Effect::ImeRequestVirtualKeyboard` (best-effort) alongside `Effect::ImeAllow`
+        (source of truth).
+      - ADR: `docs/adr/0261-platform-text-input-client-interop-v1.md`
 
 ## Evidence & gates (diagnostics-first)
 

@@ -4542,6 +4542,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             window_state_dirty.insert(window);
                         }
                     }
+                    Effect::ImeRequestVirtualKeyboard { window, visible } => {
+                        if self.windows.get(window).is_none() {
+                            continue;
+                        }
+                        #[cfg(target_os = "android")]
+                        self.android_force_soft_input(visible);
+                        #[cfg(not(target_os = "android"))]
+                        {
+                            let _ = visible;
+                        }
+                    }
                     Effect::ImeSetCursorArea { window, rect } => {
                         if let Some(state) = self.windows.get_mut(window) {
                             if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {

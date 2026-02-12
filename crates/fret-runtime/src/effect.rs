@@ -138,6 +138,17 @@ pub enum Effect {
         window: AppWindowId,
         enabled: bool,
     },
+    /// Best-effort request to show/hide the platform virtual keyboard.
+    ///
+    /// Notes:
+    /// - This does not replace `Effect::ImeAllow`, which remains the source of truth for whether
+    ///   the focused widget is a text input.
+    /// - Some platforms (notably Android) may require this request to be issued within a
+    ///   user-activation turn (direct input event handling), otherwise it may be ignored.
+    ImeRequestVirtualKeyboard {
+        window: AppWindowId,
+        visible: bool,
+    },
     ImeSetCursorArea {
         window: AppWindowId,
         rect: Rect,

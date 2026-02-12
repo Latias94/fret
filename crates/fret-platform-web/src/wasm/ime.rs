@@ -1025,6 +1025,29 @@ impl WebImeBridge {
             let _ = style.set_property("height", &format!("{}px", rect.size.height.0.max(0.0)));
         }
     }
+
+    pub(super) fn request_virtual_keyboard(&mut self, visible: bool) {
+        // v1: best-effort "show keyboard" request for platforms that require an explicit call.
+        // On the web this maps to a best-effort `focus()` retry. We intentionally do not map
+        // "hide keyboard" to `blur()` here, as blurring would also disable further typing while
+        // the runtime still believes a text input is focused.
+        if !visible || !self.enabled {
+            return;
+        }
+
+        let focus_result = self.textarea.focus();
+        #[cfg(debug_assertions)]
+        {
+            if let Err(err) = &focus_result {
+                ime_console_log(format!("ime_request_keyboard visible=1 focus_err={err:?}"));
+            } else {
+                ime_console_log("ime_request_keyboard visible=1 focus_ok");
+            }
+            debug_update_textarea_metrics(&self.textarea, &self.debug);
+            debug_push_recent_event(&self.debug, "ime_request_keyboard visible=1");
+        }
+        let _ = focus_result;
+    }
 }
 
 #[derive(Debug, Default)]

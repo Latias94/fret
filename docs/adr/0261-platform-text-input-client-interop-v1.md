@@ -114,6 +114,24 @@ Mobile-friendly semantics (v1):
 Rationale: many platforms tie keyboard visibility and composition enablement to the same “text input
 client active” concept, even if they expose separate APIs.
 
+### D4.1 — Explicit virtual keyboard requests (mobile user-activation constraints)
+
+Some platforms (notably Android, depending on the IME and hosting activity) require that “show the
+soft keyboard” be triggered within a user-activation context (a direct input event turn).
+
+To keep this constraint from leaking into app/component code, the runtime defines a best-effort
+explicit request effect:
+
+- `Effect::ImeRequestVirtualKeyboard { window, visible }`
+
+Semantics (v1):
+
+- This effect is **best-effort** and MAY be ignored by the runner.
+- The runner SHOULD treat this as a request to show/hide the on-screen keyboard **without**
+  changing the IME allow state by itself (the source of truth remains `ImeAllow`).
+- If the platform requires user activation and the request occurs outside a user-activation turn,
+  the runner MAY ignore it. Debug/diagnostics hooks SHOULD make this failure mode observable.
+
 ### D5 — Platform-driven edits: replace-by-range (UTF-16)
 
 To support platform-native edit application (e.g. Android `InputConnection`, macOS text services),
@@ -160,9 +178,5 @@ Evidence anchors (current code paths that already match this ADR’s intent):
 
 ## Open questions
 
-1. Do we want a dedicated effect to request “show keyboard now” that can be emitted only inside a
-   user gesture (Android constraint), or do we treat `ImeAllow(true)` as sufficient and let runners
-   use gesture-origin heuristics?
-2. Should `PointerCancelReason` grow more variants so mobile cancellations (system interruption,
+1. Should `PointerCancelReason` grow more variants so mobile cancellations (system interruption,
    gesture arena loss) are distinguishable for higher-level policies?
-
