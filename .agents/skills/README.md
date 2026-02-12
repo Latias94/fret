@@ -19,6 +19,9 @@ Install script (recommended for consistency, cross-platform via Python):
   - Claude Code: `python3 .agents/skills/fret_skills.py install --agent claude-code --target <project> --force`
   - Codex CLI: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --force`
   - Gemini CLI: `python3 .agents/skills/fret_skills.py install --agent gemini --target <project> --force`
+- Install a profile (recommended for most users):
+  - App developers: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --profile app-dev --force`
+  - Framework developers: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --profile framework-dev --force`
 - Install a subset:
   - `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --skills fret-diag-workflow,fret-shadcn-app-recipes --force`
 

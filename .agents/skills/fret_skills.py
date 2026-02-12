@@ -483,7 +483,19 @@ def cmd_install(args: argparse.Namespace) -> int:
     if not available:
         _die(f"No skills found under {root} (expected {SKILL_DIR_PREFIX}*/{SKILL_FILE_NAME})")
 
-    requested = _split_csv(args.skills) if args.skills else list(available)
+    if args.profile and args.skills:
+        _die("Use either --profile or --skills (not both)")
+
+    if args.profile:
+        profiles = _load_profiles(root)
+        if args.profile not in profiles:
+            _die(f"Unknown profile: {args.profile} (known: {', '.join(sorted(profiles.keys())) or '<none>'})")
+        requested = profiles[args.profile]
+    elif args.skills:
+        requested = _split_csv(args.skills)
+    else:
+        requested = list(available)
+
     missing = [s for s in requested if s not in available]
     if missing:
         _die(f"Unknown skill(s): {', '.join(missing)} (use `list` to see available skills)")
@@ -492,6 +504,8 @@ def cmd_install(args: argparse.Namespace) -> int:
     _info(f"Target: {target_abs}")
     _info(f"Agent:  {agent}")
     _info(f"Dest:   {dest_dir}")
+    if args.profile:
+        _info(f"Profile:{args.profile}")
     _info(f"Skills: {', '.join(requested)}")
     if dry_run:
         _info("Dry run: no files will be changed")
@@ -722,6 +736,7 @@ def main(argv: list[str]) -> int:
     p_install = sub.add_parser("install", help="Install skills into a target project for a specific agent")
     p_install.add_argument("--agent", default="claude-code", help="claude-code|codex|gemini")
     p_install.add_argument("--target", default=".", help="Target project directory")
+    p_install.add_argument("--profile", help="Profile name from metadata.json (e.g. app-dev, framework-dev)")
     p_install.add_argument("--skills", action="append", default=[], help="Comma-separated skill names (repeatable)")
     p_install.add_argument("--force", action="store_true", help="Overwrite existing installed skills")
     p_install.add_argument("--dry-run", action="store_true", help="Print actions without changing files")
