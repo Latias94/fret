@@ -13,10 +13,6 @@ pub(super) fn push_settings_sheet(
     settings_menu_bar_os_open: Model<bool>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window_open: Model<bool>,
-    settings_text_common_fallback_injection: Model<Option<Arc<str>>>,
-    settings_text_common_fallback_injection_open: Model<bool>,
-    settings_text_locale_override: Model<Option<Arc<str>>>,
-    settings_text_locale_override_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
     content: &mut Vec<AnyElement>,
@@ -74,58 +70,6 @@ pub(super) fn push_settings_sheet(
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
-                    let injection_select = shadcn::Select::new(
-                        settings_text_common_fallback_injection.clone(),
-                        settings_text_common_fallback_injection_open.clone(),
-                    )
-                    .placeholder("Text common fallback injection")
-                    .trigger_test_id("ui-gallery-settings-text-common-fallback-injection")
-                    .items([
-                        shadcn::SelectItem::new("platform_default", "Platform default")
-                            .test_id(
-                                "ui-gallery-settings-text-common-fallback-injection-platform-default",
-                            ),
-                        shadcn::SelectItem::new("none", "None (system fallback only)")
-                            .test_id("ui-gallery-settings-text-common-fallback-injection-none"),
-                        shadcn::SelectItem::new(
-                            "common_fallback",
-                            "Common fallback (deterministic injection)",
-                        )
-                        .test_id(
-                            "ui-gallery-settings-text-common-fallback-injection-common-fallback",
-                        ),
-                    ])
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx);
-
-                    let current_locale = cx
-                        .app
-                        .global::<fret_runtime::fret_i18n::I18nService>()
-                        .and_then(|svc| svc.preferred_locales().first())
-                        .map(|l| l.to_string())
-                        .unwrap_or_else(|| "<unavailable>".to_string());
-
-                    let locale_select = shadcn::Select::new(
-                        settings_text_locale_override.clone(),
-                        settings_text_locale_override_open.clone(),
-                    )
-                    .placeholder("Text locale override")
-                    .trigger_test_id("ui-gallery-settings-text-locale-override")
-                    .items([
-                        shadcn::SelectItem::new("no_change", "No change")
-                            .test_id("ui-gallery-settings-text-locale-override-no-change"),
-                        shadcn::SelectItem::new("en-US", "en-US")
-                            .test_id("ui-gallery-settings-text-locale-override-en-us"),
-                        shadcn::SelectItem::new("zh-CN", "zh-CN")
-                            .test_id("ui-gallery-settings-text-locale-override-zh-cn"),
-                        shadcn::SelectItem::new("ar", "ar")
-                            .test_id("ui-gallery-settings-text-locale-override-ar"),
-                        shadcn::SelectItem::new("he", "he")
-                            .test_id("ui-gallery-settings-text-locale-override-he"),
-                    ])
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx);
-
                     let body = stack::vstack(
                         cx,
                         stack::VStackProps::default()
@@ -153,12 +97,6 @@ pub(super) fn push_settings_sheet(
                                             cx.text("Menu bar surfaces"),
                                             os_select,
                                             in_window_select,
-                                            cx.text("Text fallback policy"),
-                                            injection_select,
-                                            cx.text(format!(
-                                                "Text locale override (current: {current_locale})"
-                                            )),
-                                            locale_select,
                                             cx.text("Command availability (debug)"),
                                             stack::hstack(
                                                 cx,
