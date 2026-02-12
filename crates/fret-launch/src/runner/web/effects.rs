@@ -1,6 +1,9 @@
 use fret_app::Effect;
 use fret_core::Event;
-use fret_runtime::WindowRequest;
+use fret_runtime::{PlatformCapabilities, WindowRequest};
+use js_sys::{Function, Object, Promise, Reflect};
+use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen_futures::{JsFuture, spawn_local};
 use winit::cursor::Cursor;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
@@ -9,6 +12,81 @@ use super::super::streaming_upload::StreamingUploadAckKind;
 use super::super::{WinitCommandContext, WinitGlobalContext};
 use super::streaming_images;
 use super::{GfxState, WinitAppDriver, WinitRunner};
+
+fn share_items_to_web_share_data(items: &[fret_core::ShareItem]) -> Option<Object> {
+    let mut text_parts: Vec<String> = Vec::new();
+    let mut url: Option<String> = None;
+
+    for item in items {
+        match item {
+            fret_core::ShareItem::Text(text) => {
+                if !text.is_empty() {
+                    text_parts.push(text.clone());
+                }
+            }
+            fret_core::ShareItem::Url(u) => {
+                if url.is_none() && !u.is_empty() {
+                    url = Some(u.clone());
+                } else if !u.is_empty() {
+                    text_parts.push(u.clone());
+                }
+            }
+            fret_core::ShareItem::Bytes { .. } => {
+                // Web Share API Level 2 (files) is not wired up yet.
+            }
+        }
+    }
+
+    if text_parts.is_empty() && url.is_none() {
+        return None;
+    }
+
+    let data = Object::new();
+    if !text_parts.is_empty() {
+        let text = text_parts.join("\n");
+        let _ = Reflect::set(
+            data.as_ref(),
+            &JsValue::from_str("text"),
+            &JsValue::from_str(&text),
+        );
+    }
+    if let Some(url) = url {
+        let _ = Reflect::set(
+            data.as_ref(),
+            &JsValue::from_str("url"),
+            &JsValue::from_str(&url),
+        );
+    }
+
+    Some(data)
+}
+
+fn js_error_string(err: &JsValue) -> String {
+    let name = Reflect::get(err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string());
+    let message = Reflect::get(err, &JsValue::from_str("message"))
+        .ok()
+        .and_then(|v| v.as_string());
+    match (name, message) {
+        (Some(name), Some(message)) if !message.is_empty() => format!("{name}: {message}"),
+        (Some(name), _) => name,
+        (_, Some(message)) if !message.is_empty() => message,
+        _ => "navigator.share rejected".to_string(),
+    }
+}
+
+fn share_outcome_from_error(err: JsValue) -> fret_core::ShareSheetOutcome {
+    let name = Reflect::get(&err, &JsValue::from_str("name"))
+        .ok()
+        .and_then(|v| v.as_string());
+    if name.as_deref() == Some("AbortError") {
+        return fret_core::ShareSheetOutcome::Canceled;
+    }
+    fret_core::ShareSheetOutcome::Failed {
+        message: js_error_string(&err),
+    }
+}
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn drain_effects(
@@ -593,16 +671,133 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::ShareSheetShow {
                     window: target_window,
                     token,
-                    items: _,
+                    items,
                 } => {
                     if target_window != self.app_window {
                         continue;
                     }
-                    self.pending_events.push(Event::ShareSheetCompleted {
-                        token,
-                        outcome: fret_core::ShareSheetOutcome::Unavailable,
+
+                    let caps = self
+                        .app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !caps.shell.share_sheet {
+                        self.pending_events.push(Event::ShareSheetCompleted {
+                            token,
+                            outcome: fret_core::ShareSheetOutcome::Unavailable,
+                        });
+                        window.request_redraw();
+                        continue;
+                    }
+
+                    let Some(data) = share_items_to_web_share_data(&items) else {
+                        self.pending_events.push(Event::ShareSheetCompleted {
+                            token,
+                            outcome: fret_core::ShareSheetOutcome::Unavailable,
+                        });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let Some(web_window) = web_sys::window() else {
+                        self.pending_events.push(Event::ShareSheetCompleted {
+                            token,
+                            outcome: fret_core::ShareSheetOutcome::Unavailable,
+                        });
+                        window.request_redraw();
+                        continue;
+                    };
+
+                    let navigator =
+                        match Reflect::get(web_window.as_ref(), &JsValue::from_str("navigator")) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                self.pending_events.push(Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Unavailable,
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        };
+
+                    let share_fn = match Reflect::get(&navigator, &JsValue::from_str("share"))
+                        .ok()
+                        .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        Some(v) => v,
+                        None => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    // Best-effort: if `navigator.canShare` exists, consult it for the computed payload.
+                    if let Some(can_share_fn) =
+                        Reflect::get(&navigator, &JsValue::from_str("canShare"))
+                            .ok()
+                            .and_then(|v| v.dyn_into::<Function>().ok())
+                    {
+                        if let Ok(v) = can_share_fn.call1(&navigator, data.as_ref())
+                            && v.as_bool() == Some(false)
+                        {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    }
+
+                    // Important: call `navigator.share(...)` synchronously while draining effects so the
+                    // invocation can inherit a browser user-activation gesture when applicable.
+                    let promise = match share_fn.call1(&navigator, data.as_ref()) {
+                        Ok(v) => match v.dyn_into::<Promise>() {
+                            Ok(p) => p,
+                            Err(_) => {
+                                self.pending_events.push(Event::ShareSheetCompleted {
+                                    token,
+                                    outcome: fret_core::ShareSheetOutcome::Failed {
+                                        message: "navigator.share did not return a Promise"
+                                            .to_string(),
+                                    },
+                                });
+                                window.request_redraw();
+                                continue;
+                            }
+                        },
+                        Err(err) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Failed {
+                                    message: js_error_string(&err),
+                                },
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                    };
+
+                    let pending = self.pending_async_events.clone();
+                    let proxy = self.event_loop_proxy.clone();
+                    spawn_local(async move {
+                        let outcome = match JsFuture::from(promise).await {
+                            Ok(_) => fret_core::ShareSheetOutcome::Shared,
+                            Err(err) => share_outcome_from_error(err),
+                        };
+                        pending
+                            .borrow_mut()
+                            .push(Event::ShareSheetCompleted { token, outcome });
+                        if let Some(proxy) = proxy {
+                            proxy.wake_up();
+                        }
                     });
-                    window.request_redraw();
                 }
                 Effect::Window(req) => match req {
                     WindowRequest::Close(target) => {

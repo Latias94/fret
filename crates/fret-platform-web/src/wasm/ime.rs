@@ -1389,7 +1389,14 @@ impl WebPlatformServices {
                             let token = st.allocate_token();
                             let files_meta = selected
                                 .iter()
-                                .map(|f| ExternalDragFile { name: f.name() })
+                                .map(|f| {
+                                    let media_type = f.type_();
+                                    ExternalDragFile {
+                                        name: f.name(),
+                                        size_bytes: Some(f.size().max(0.0) as u64),
+                                        media_type: (!media_type.is_empty()).then_some(media_type),
+                                    }
+                                })
                                 .collect::<Vec<_>>();
                             st.selections.insert(token, selected);
                             (token, files_meta)

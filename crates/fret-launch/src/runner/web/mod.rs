@@ -27,6 +27,8 @@ use fret_app::App;
 use fret_core::{AppWindowId, Event, Scene};
 use fret_render::{Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{FrameId, PlatformCapabilities, TickId};
+use js_sys::{Function, Reflect};
+use wasm_bindgen::{JsCast, JsValue};
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowId};
 
@@ -66,6 +68,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     scene: Scene,
 
     pending_events: Vec<Event>,
+    pending_async_events: Rc<RefCell<Vec<Event>>>,
     tick_id: TickId,
     frame_id: FrameId,
 
@@ -181,6 +184,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             gpu_ready_called: false,
             scene: Scene::default(),
             pending_events: Vec::new(),
+            pending_async_events: Rc::new(RefCell::new(Vec::new())),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             uploaded_images: HashMap::new(),
@@ -252,7 +256,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.fs.real_paths = false;
         available.fs.file_dialogs = true;
         available.shell.open_url = true;
-        available.shell.share_sheet = false;
+        available.shell.share_sheet = window_has_web_share();
         available.shell.incoming_open = false;
         available.gfx.native_gpu = false;
         available.gfx.webgpu = true;
@@ -306,4 +310,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.gfx.webgpu &= available.gfx.webgpu;
         caps
     }
+}
+
+fn window_has_web_share() -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    let navigator = match Reflect::get(window.as_ref(), &JsValue::from_str("navigator")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let share = match Reflect::get(&navigator, &JsValue::from_str("share")) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    share.dyn_ref::<Function>().is_some()
 }

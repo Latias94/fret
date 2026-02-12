@@ -34,7 +34,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = gfx.renderer.add_fonts(default_fonts);
 
         // Font catalog refresh trigger (ADR 0258): initial renderer availability (adopt gfx).
-        let update = super::font_catalog::apply_renderer_font_catalog_update(
+        let _update = super::super::font_catalog::apply_renderer_font_catalog_update(
             &mut self.app,
             &mut gfx.renderer,
             fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,

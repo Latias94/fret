@@ -151,6 +151,17 @@ Runners may map these contracts as follows:
   - Share sheet: `UIActivityViewController`.
   - Incoming open: scene/app delegate open callbacks mapped to token + security-scoped reads.
 
+## Implementation status (non-normative)
+
+As of 2026-02-12:
+
+- Web/WASM:
+  - Share sheet is implemented as a best-effort mapping to `navigator.share`, capability-gated via runtime detection.
+  - `ShareItem::Bytes` sharing is not implemented yet (text/url only).
+  - Incoming-open supports diag-only request injection plus bounded `ReadAll*` and explicit `Release`; there is no OS-produced request plumbing yet.
+- Desktop:
+  - Share sheet is currently a stub (completes as `Unavailable`).
+
 ## Consequences
 
 - Higher-level apps/components never depend on non-portable path/URI strings.
@@ -165,4 +176,3 @@ Runners may map these contracts as follows:
 - Capabilities gating: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 - Mobile file picker + sandbox handles: `docs/adr/0264-mobile-file-picker-and-sandbox-handles-v1.md`
 - Mobile shell ↔ runtime bridge: `docs/adr/0260-mobile-shell-runtime-bridge-v1.md`
-
