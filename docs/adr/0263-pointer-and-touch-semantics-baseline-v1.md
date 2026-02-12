@@ -125,6 +125,28 @@ The runtime’s responsibility is to provide:
 - Complex interactions (docking, DnD, viewport tools) can evolve to multi-pointer semantics without
   retrofitting identity/capture later.
 
+## Implementation status (current)
+
+As of 2026-02-12:
+
+Implemented (evidence anchors):
+
+- Pointer identity + cancel vocabulary:
+  - `crates/fret-core/src/ids.rs` (`PointerId`)
+  - `crates/fret-core/src/input/mod.rs` (`PointerType`, `PointerCancelReason`, `PointerCancelEvent`)
+- Capture + routing in the UI runtime:
+  - `crates/fret-ui/src/tree/dispatch.rs` (per-pointer capture + cancel handling)
+- Runner click normalization (`click_count`, `is_click`) exists in both native and web runners:
+  - `crates/fret-runner-winit/src/state/input/mod.rs`
+  - `crates/fret-runner-web/src/events.rs`
+
+Known gaps (v1):
+
+- Touch-first gesture policy (pan thresholds, axis lock, inertia, long-press) is intentionally not
+  provided by the runtime and should be implemented in ecosystem crates (D5).
+- Mobile-specific sources of cancellation (system gesture competition, OS interruptions) must be
+  mapped into `Event::PointerCancel` consistently by future Android/iOS runners.
+
 ## References
 
 - ADR 0136: `docs/adr/0136-pointer-click-count-and-double-click.md`
@@ -133,4 +155,3 @@ The runtime’s responsibility is to provide:
 - ADR 0232: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 - ADR 0238: `docs/adr/0238-pointer-coordinate-spaces-and-element-local-mapping-v1.md`
 - ADR 0243: `docs/adr/0243-pointer-motion-snapshots-and-move-coalescing-v1.md`
-

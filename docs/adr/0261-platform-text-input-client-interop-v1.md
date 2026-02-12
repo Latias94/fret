@@ -167,14 +167,26 @@ This avoids stale-caret positioning during scroll/wrap/layout changes.
 - Runners may gradually implement richer platform interop (selection handles, marked text rects,
   bounds queries) without changing the widget authoring model.
 
-## Implementation notes (current)
+## Implementation status (current)
 
-Evidence anchors (current code paths that already match this ADR’s intent):
+As of 2026-02-12:
+
+Implemented (evidence anchors):
 
 - Snapshot publishing (after paint): `crates/fret-ui/src/tree/paint.rs`
 - Runner consumption (after render): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Query + replace entry points: `crates/fret-ui/src/tree/mod.rs`
 - Query types: `crates/fret-runtime/src/platform_text_input.rs`
+- Mobile-friendly “show keyboard within the input turn” request:
+  `crates/fret-ui/src/tree/dispatch.rs` (touch focus → `Effect::ImeRequestVirtualKeyboard`)
+
+Known gaps (v1):
+
+- Runner implementations may ignore `Effect::ImeRequestVirtualKeyboard` outside user-activation turns;
+  diagnostics should make this observable (no portable “guaranteed show keyboard” exists).
+- Keyboard avoidance behavior (“keep focused input visible when occlusion changes”) is policy-owned
+  and should be implemented in ecosystem crates on top of the insets/environment query seam
+  (ADR 0232).
 
 ## Open questions
 

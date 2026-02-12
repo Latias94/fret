@@ -106,9 +106,23 @@ Rationale: on mobile the OS can invalidate input sessions and insets state acros
 - The runner has a clear place to evolve platform-specific lifecycle quirks without leaking them into
   `crates/fret-ui`.
 
+## Implementation status (current)
+
+As of 2026-02-12:
+
+Implemented (desktop + web evidence anchors):
+
+- Surface error recovery (desktop): `crates/fret-launch/src/runner/desktop/app_handler.rs`
+- Surface error recovery (web): `crates/fret-launch/src/runner/web/render_loop.rs`
+
+In progress / target gaps for mobile bring-up:
+
+- Mobile-specific `Suspended` / `Resumed` behavior is runner-owned but not yet validated on Android/iOS.
+- Post-resume re-synchronization of IME + insets should be verified with diagnostics scenarios once
+  mobile runners exist (ADR 0261 + ADR 0232).
+
 ## Evidence anchors (current implementation)
 
 - `Suspended` / `Resumed` handlers (mobile targets): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Surface error recovery (desktop): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Surface error recovery (web): `crates/fret-launch/src/runner/web/render_loop.rs`
-
