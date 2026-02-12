@@ -14,6 +14,24 @@ public class MainActivity extends GameActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        String diag = getIntent().getStringExtra("FRET_DIAG");
+        if (diag != null && !diag.trim().isEmpty()) {
+            try {
+                Os.setenv("FRET_DIAG", diag.trim(), true);
+            } catch (ErrnoException e) {
+                Log.w("fret", "failed to set FRET_DIAG", e);
+            }
+        }
+
+        String diagDir = getIntent().getStringExtra("FRET_DIAG_DIR");
+        if (diagDir != null && !diagDir.trim().isEmpty()) {
+            try {
+                Os.setenv("FRET_DIAG_DIR", diagDir.trim(), true);
+            } catch (ErrnoException e) {
+                Log.w("fret", "failed to set FRET_DIAG_DIR", e);
+            }
+        }
+
         String backend = getIntent().getStringExtra("FRET_WGPU_BACKEND");
         if (backend != null && !backend.trim().isEmpty()) {
             // Must run before the Rust side initializes wgpu.

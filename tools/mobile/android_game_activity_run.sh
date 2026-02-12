@@ -5,10 +5,12 @@ profile="debug"
 device=""
 no_logcat=""
 backend=""
+diag=""
+diag_dir=""
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--release] [--device <serial>] [--backend <vk|gl|...>] [--no-logcat]
+Usage: $(basename "$0") [--release] [--device <serial>] [--backend <vk|gl|...>] [--diag] [--diag-dir <path>] [--no-logcat]
 
 Builds and runs the Android APK using the Gradle GameActivity wrapper:
   apps/fret-ui-gallery-mobile/android
@@ -22,6 +24,8 @@ while [[ $# -gt 0 ]]; do
     --release) profile="release"; shift ;;
     --device|-d) device="$2"; shift 2 ;;
     --backend) backend="$2"; shift 2 ;;
+    --diag) diag="1"; shift ;;
+    --diag-dir) diag_dir="$2"; shift 2 ;;
     --no-logcat) no_logcat="1"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
@@ -107,6 +111,12 @@ if [[ "${profile}" == "debug" ]]; then
   am_args=(shell am start -n "dev.fret.ui_gallery/dev.fret.ui_gallery.MainActivity")
   if [[ -n "${backend}" ]]; then
     am_args+=(--es "FRET_WGPU_BACKEND" "${backend}")
+  fi
+  if [[ -n "${diag}" ]]; then
+    am_args+=(--es "FRET_DIAG" "1")
+  fi
+  if [[ -n "${diag_dir}" ]]; then
+    am_args+=(--es "FRET_DIAG_DIR" "${diag_dir}")
   fi
   adb "${adb_args[@]}" "${am_args[@]}" >/dev/null
 fi

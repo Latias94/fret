@@ -7,7 +7,7 @@ shift || true
 usage() {
   cat <<EOF
 Usage:
-  tools/mobile/run.sh android --app <name> [--device <serial>] [--backend <vk|gl|...>] [--release] [--no-logcat]
+  tools/mobile/run.sh android --app <name> [--device <serial>] [--backend <vk|gl|...>] [--diag] [--diag-dir <path>] [--release] [--no-logcat]
   tools/mobile/run.sh ios --app <name> [--sim] [--udid <sim-udid>] [--device <udid>] [--team <team-id>] [--release]
   tools/mobile/run.sh doctor [android|ios|all]
 
@@ -37,6 +37,8 @@ profile="debug"
 device=""
 no_logcat=""
 backend=""
+diag=""
+diag_dir=""
 udid=""
 ios_sim=""
 team=""
@@ -47,6 +49,8 @@ while [[ $# -gt 0 ]]; do
     --release) profile="release"; shift ;;
     --device|-d) device="$2"; shift 2 ;;
     --backend) backend="$2"; shift 2 ;;
+    --diag) diag="--diag"; shift ;;
+    --diag-dir) diag_dir="$2"; shift 2 ;;
     --no-logcat) no_logcat="--no-logcat"; shift ;;
     --udid) udid="$2"; shift 2 ;;
     --sim) ios_sim="1"; shift ;;
@@ -78,6 +82,12 @@ case "${platform}" in
     fi
     if [[ -n "${backend}" ]]; then
       args+=(--backend "${backend}")
+    fi
+    if [[ -n "${diag}" ]]; then
+      args+=(--diag)
+    fi
+    if [[ -n "${diag_dir}" ]]; then
+      args+=(--diag-dir "${diag_dir}")
     fi
     if [[ -n "${no_logcat}" ]]; then
       args+=(--no-logcat)
