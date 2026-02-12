@@ -25,3 +25,5 @@ In Fret, prefer `Theme` lookups and token references (`ColorRef`, `MetricRef`, `
 ## See also
 
 - `fret-shadcn-source-alignment` (upstream parity workflow)
+- Token cheat sheet: `references/theme/token-groups.md`
+- Starter presets: `references/theme/editor-presets.md`

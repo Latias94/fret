@@ -81,6 +81,9 @@ export a bundle zip and attach it to a GitHub Release:
 CI helper (recommended): `.github/workflows/skills-bundles.yml` builds and uploads `consumer-app-dev` + `framework-dev`
 bundles on every published GitHub Release (and supports manual runs via `workflow_dispatch`).
 
+Auto-release (recommended): `.github/workflows/skills-auto-release.yml` creates a GitHub Release automatically whenever
+`.agents/skills/metadata.json`'s `version` changes on `main`. The release tag format is `fret-skills-v<version>`.
+
 ```bash
 python3 .agents/skills/fret_skills.py package --profile consumer-app-dev --out dist/fret-skills-consumer-app-dev
 python3 .agents/skills/fret_skills.py package --profile framework-dev --out dist/fret-skills-framework-dev

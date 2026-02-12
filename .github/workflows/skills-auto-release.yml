@@ -5,73 +5,88 @@ on:
     branches: [main]
     paths:
       - ".agents/skills/metadata.json"
-      - ".agents/skills/**"
-      - ".github/workflows/skills-bundles.yml"
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
-  auto-release:
-    name: Create skills release (on version bump)
+  release:
+    name: Create skills release on version bump
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'Latias94/fret' }}
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Detect version bump
+        id: v
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          before="${{ github.event.before }}"
+
+          new_version="$(python3 - <<'PY'
+          import json
+          with open(".agents/skills/metadata.json", "r", encoding="utf-8") as f:
+              print(json.load(f).get("version", ""))
+          PY
+          )"
+
+          old_version=""
+          if git cat-file -e "${before}:.agents/skills/metadata.json" 2>/dev/null; then
+            old_version="$(git show "${before}:.agents/skills/metadata.json" | python3 - <<'PY'
+          import json, sys
+          try:
+              print(json.load(sys.stdin).get("version", ""))
+          except Exception:
+              print("")
+          PY
+            )"
+          fi
+
+          echo "old_version=${old_version}" >> "${GITHUB_OUTPUT}"
+          echo "new_version=${new_version}" >> "${GITHUB_OUTPUT}"
+
+          if [[ -n "${new_version}" && "${new_version}" != "${old_version}" ]]; then
+            echo "bumped=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "bumped=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+          echo "tag=fret-skills-v${new_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Skip (no bump)
+        if: ${{ steps.v.outputs.bumped != 'true' }}
+        run: echo "No skills version bump; skipping release."
+
       - name: Setup Python
+        if: ${{ steps.v.outputs.bumped == 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Validate skills (strict)
+        if: ${{ steps.v.outputs.bumped == 'true' }}
         run: python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
 
-      - name: Create release if version changed
+      - name: Create GitHub Release (tagged)
+        if: ${{ steps.v.outputs.bumped == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BEFORE_SHA: ${{ github.event.before }}
-          CURRENT_SHA: ${{ github.sha }}
+          TAG: ${{ steps.v.outputs.tag }}
+          VERSION: ${{ steps.v.outputs.new_version }}
         shell: bash
         run: |
           set -euo pipefail
 
-          current_version="$(python3 -c 'import json; print(json.load(open(".agents/skills/metadata.json", "r", encoding="utf-8"))["version"])')"
-          if [[ -z "${current_version}" ]]; then
-            echo "metadata.json missing version" >&2
-            exit 1
-          fi
-
-          prev_version=""
-          if [[ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
-            prev_version="$(
-              git show "${BEFORE_SHA}:.agents/skills/metadata.json" 2>/dev/null \
-                | python3 -c 'import sys, json; print(json.load(sys.stdin).get("version",""))' 2>/dev/null \
-                || true
-            )"
-          fi
-
-          echo "prev_version=${prev_version}"
-          echo "current_version=${current_version}"
-
-          if [[ "${prev_version}" == "${current_version}" ]]; then
-            echo "No skills version bump detected; skipping release."
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release already exists: ${TAG}; skipping."
             exit 0
           fi
 
-          tag="skills-v${current_version}"
-          title="Skills v${current_version}"
-          notes=$'Automated skills release.\n\n- Version: '"${current_version}"$'\n- Commit: '"${CURRENT_SHA}"$'\n'
-
-          if gh release view "${tag}" >/dev/null 2>&1; then
-            echo "Release already exists: ${tag}"
-            exit 0
-          fi
-
-          gh release create "${tag}" \
-            --title "${title}" \
-            --notes "${notes}"
+          gh release create "${TAG}" \
+            --title "fret-skills ${VERSION}" \
+            --notes "Automated skills release for .agents/skills/metadata.json version bump (${VERSION})."

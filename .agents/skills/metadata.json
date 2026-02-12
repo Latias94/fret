@@ -1,6 +1,6 @@
 {
   "name": "fret-skills",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
   "last_updated": "2026-02-12",
   "intents": {

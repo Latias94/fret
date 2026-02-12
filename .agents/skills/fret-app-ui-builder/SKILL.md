@@ -52,6 +52,8 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
 - `python3 .agents/skills/fret-app-ui-builder/scripts/stylegen.py --style editor-compact > theme_overrides.json`
 
 2) Apply the baseline preset + overrides (keep it small: density + ring first).
+   - Token cheat sheet: `references/theme/token-groups.md`
+   - Starter presets: `references/theme/editor-presets.md`
 
 3) Compose one “app surface” recipe and keep it minimal (start from the in-skill references):
 
@@ -95,6 +97,10 @@ These are the most common places app authors get stuck. Keep the work **layered*
 - Prefer “theme-first”: one preset + small overrides. Avoid per-component magic numbers.
 - Generator helper:
   - `python3 .agents/skills/fret-app-ui-builder/scripts/stylegen.py --suggest "<keywords>"`
+- High-leverage knobs:
+  - `references/theme/token-groups.md`
+- Editor-oriented presets (copy/paste overrides):
+  - `references/theme/editor-presets.md`
 
 ### Layout/overflow (avoid clipped focus rings)
 
@@ -149,6 +155,7 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
 - Style generation: `.agents/skills/fret-app-ui-builder/scripts/stylegen.py`
+- Style catalog (used by `stylegen.py`): `.agents/skills/fret-app-ui-builder/references/style_catalog.json`
 - Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
 - Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
