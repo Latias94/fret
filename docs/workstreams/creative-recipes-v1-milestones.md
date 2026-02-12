@@ -229,7 +229,8 @@ Done (v1 follow-ups):
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
-  (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`.)
+  (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`:
+  wgpu v28 has `unimplemented!("ExternalTexture not implemented for web")` in `wgpu/src/backend/webgpu.rs`.)
 
 Acceptance criteria (v1):
 

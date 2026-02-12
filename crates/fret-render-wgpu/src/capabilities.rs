@@ -54,7 +54,8 @@ impl RendererCapabilities {
 }
 
 fn supports_external_texture_import(ctx: &WgpuContext) -> bool {
-    // WebGPU `ExternalTexture` is not implemented in wgpu's web backend as of wgpu 28,
+    // WebGPU `ExternalTexture` is not implemented in wgpu's web backend as of wgpu 28
+    // (`wgpu/src/backend/webgpu.rs` uses `unimplemented!("ExternalTexture not implemented for web")`),
     // so we conservatively report false on wasm32 for now.
     if cfg!(target_arch = "wasm32") {
         return false;
