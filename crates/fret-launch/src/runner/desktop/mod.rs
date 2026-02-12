@@ -5565,20 +5565,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             Some(prev) => stamp > prev,
         };
         if !is_newer {
-            self.diag_cursor_screen_pos_override_active = false;
+            self.diag_cursor_screen_pos_override_active = cfg.last_stamp.is_some();
             return false;
         }
-        cfg.last_stamp = Some(stamp);
 
         let Ok(bytes) = std::fs::read(&cfg.json_path) else {
-            self.diag_cursor_screen_pos_override_active = false;
+            self.diag_cursor_screen_pos_override_active = cfg.last_stamp.is_some();
             return false;
         };
         let Some((x, y)) = parse_cursor_screen_pos_override_json(&bytes) else {
-            self.diag_cursor_screen_pos_override_active = false;
+            self.diag_cursor_screen_pos_override_active = cfg.last_stamp.is_some();
             return false;
         };
 
+        cfg.last_stamp = Some(stamp);
         self.cursor_screen_pos = Some(PhysicalPosition::new(x, y));
         self.diag_cursor_screen_pos_override_active = true;
         true
