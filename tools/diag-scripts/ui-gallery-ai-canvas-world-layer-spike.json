@@ -36,6 +36,7 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_frames", "n": 2 },
 
     {
       "type": "wheel",
@@ -79,6 +80,30 @@
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-ai-cwl-fit-view" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-cwl-bounds-ready" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-node-a" },
+      "button": "left",
+      "delta_x": 30.0,
+      "delta_y": 30.0,
+      "steps": 6
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-cwl-marquee-blocked" }
+      },
+      "timeout_frames": 240
     },
     {
       "type": "drag_pointer",

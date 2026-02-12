@@ -59,8 +59,12 @@ See also:
 This milestone is *not* a node-graph engine. It is a set of composable recipes/helpers so apps can
 build XYFlow-like interactions on top of the world-layer substrate.
 
-- [ ] CWL-M3-001 Document an input arbitration recipe:
+- [x] CWL-M3-001 Document an input arbitration recipe:
   - marquee selection should only start from “background” hits (not when clicking a node subtree).
+  - Mechanism: `CanvasMarqueeSelectionProps::start_filter` (background-only gate).
+  - Evidence: `ecosystem/fret-canvas/src/ui/pan_zoom.rs` (`CanvasMarqueeSelectionProps::start_filter`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (bounds-store-based filter)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-marquee-blocked`)
   - Reference: `docs/workstreams/xyflow-gap-analysis.md` (Gap B)
 - [ ] CWL-M3-002 Provide a minimal node-drag recipe (app-owned model edits):
   - capture pointer in a node subtree,

@@ -56,6 +56,7 @@ Status: Done (with known gaps)
 
 Status: Planned
 
+- Background-only marquee start filtering exists (node subtrees do not trigger selection-on-drag).
 - Node dragging recipe exists (app-owned position edits; canvas-space deltas).
 - Connection dragging recipe exists (handles + preview + validity checks).
 - Input arbitration recipe exists (background-hit only marquee start).

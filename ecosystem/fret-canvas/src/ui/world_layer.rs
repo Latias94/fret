@@ -367,6 +367,7 @@ where
     let marquee_button = marquee.button;
     let min_drag = marquee.min_drag_distance_px.max(0.0);
     let marquee_style = marquee.style;
+    let start_filter = marquee.start_filter.clone();
     let on_commit = marquee.on_commit.clone();
 
     let drag_state: fret_runtime::Model<Option<MarqueeDragState>> =
@@ -380,6 +381,12 @@ where
                   down: fret_ui::action::PointerDownCx| {
                 if down.button != marquee_button {
                     return false;
+                }
+
+                if let Some(start_filter) = start_filter.as_ref() {
+                    if !start_filter(host, action_cx, down) {
+                        return false;
+                    }
                 }
 
                 host.capture_pointer();

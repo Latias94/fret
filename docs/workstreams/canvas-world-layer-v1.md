@@ -133,6 +133,14 @@ world-layer substrate, the remaining work is mostly **interaction glue**:
 - Selection model updates (click vs marquee, shift-add/remove, connected-edges selection policy).
 - Optional snap tuning (grid snap, snaplines).
 
+Input arbitration note:
+
+- XYFlow-style marquee selection should only start from “background” hits (pane), not when the down
+  event is within a node subtree.
+- In Fret, a practical recipe is to provide a `CanvasMarqueeSelectionProps::start_filter` that
+  checks the down position against an app-owned node bounds store (see
+  `CanvasWorldBoundsStore` + the UI Gallery spike).
+
 Reference implementations:
 
 - XyFlow substrate: `repo-ref/xyflow/packages/system/src/*` (`xydrag`, `xyhandle`, `xyresizer`)

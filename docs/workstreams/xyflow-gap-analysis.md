@@ -137,8 +137,8 @@ Recommendation:
 XYFlow includes fine-grained input filtering:
 
 - Ignore wheel or pan when the event target is inside a `noWheelClassName` / `noPanClassName` subtree.
-- Allow marquee selection “above” nodes by using pointer events capture, unless target is inside
-  `.nokey`.
+- Allow marquee selection “above” nodes by using pointer events capture, unless the down event is
+  within a `.nokey` subtree (background-only selection-on-drag).
 
 In Fret:
 
@@ -154,6 +154,10 @@ Recommendation:
   - For **world-layer nodes as element subtrees**, prefer:
     - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
     - Rationale: marquee chrome must render above node subtrees (canvas-paint marquee would sit behind).
+  - For XYFlow-style “background-only” selection-on-drag, use:
+    - `ecosystem/fret-canvas/src/ui/pan_zoom.rs`: `CanvasMarqueeSelectionProps::start_filter`
+    - A practical implementation is a bounds-store-based filter using `CanvasWorldBoundsStore`
+      (see the UI Gallery spike + diag gate).
 
 ### Gap F — World-layer node bounds → viewport helpers (fit view) (partially closed)
 
@@ -182,7 +186,9 @@ Target outcome:
 
 Still missing:
 
-- A clear selection-on-drag integration story for world-layer nodes (CWL-M2-002).
+- (v1) Selection-on-drag integration is now accounted for:
+  - marquee chrome above nodes via `canvas_world_surface_panel_with_marquee_selection`,
+  - background-only start via `CanvasMarqueeSelectionProps::start_filter`.
 
 Notes:
 

@@ -439,6 +439,21 @@ pub type OnCanvasMarqueeCommit = Arc<
         + 'static,
 >;
 
+/// Optional filter invoked on pointer down before starting a marquee drag.
+///
+/// Return `true` to allow starting selection-on-drag, or `false` to defer to other handlers.
+///
+/// This is useful for XYFlow-style "background-only" marquee semantics:
+/// selection should only start when the down event is not within a node subtree.
+pub type OnCanvasMarqueeStart = Arc<
+    dyn Fn(
+            &mut dyn fret_ui::action::UiPointerActionHost,
+            fret_ui::action::ActionCx,
+            fret_ui::action::PointerDownCx,
+        ) -> bool
+        + 'static,
+>;
+
 #[derive(Debug, Clone, Copy)]
 pub struct CanvasMarqueeStyle {
     pub fill: fret_core::Color,
@@ -474,6 +489,11 @@ pub struct CanvasMarqueeSelectionProps {
     pub button: MouseButton,
     pub min_drag_distance_px: f32,
     pub style: CanvasMarqueeStyle,
+    /// Optional predicate that decides whether the marquee gesture should start.
+    ///
+    /// When this returns `false`, the canvas surface does not capture the pointer and does not
+    /// start marquee selection.
+    pub start_filter: Option<OnCanvasMarqueeStart>,
     pub on_commit: Option<OnCanvasMarqueeCommit>,
 }
 
@@ -485,6 +505,7 @@ impl Default for CanvasMarqueeSelectionProps {
             button: MouseButton::Left,
             min_drag_distance_px: 3.0,
             style: CanvasMarqueeStyle::default(),
+            start_filter: None,
             on_commit: None,
         }
     }
@@ -534,6 +555,7 @@ pub fn editor_pan_zoom_canvas_surface_panel_with_marquee_selection<H: UiHost>(
     let marquee_button = props.marquee.button;
     let min_drag = props.marquee.min_drag_distance_px.max(0.0);
     let marquee_style = props.marquee.style;
+    let start_filter = props.marquee.start_filter.clone();
     let on_commit = props.marquee.on_commit.take();
 
     let view_model = use_controllable_model(cx, props.pan_zoom.view.take(), || {
@@ -556,6 +578,12 @@ pub fn editor_pan_zoom_canvas_surface_panel_with_marquee_selection<H: UiHost>(
                   down: fret_ui::action::PointerDownCx| {
                 if down.button != marquee_button {
                     return false;
+                }
+
+                if let Some(start_filter) = start_filter.as_ref() {
+                    if !start_filter(host, action_cx, down) {
+                        return false;
+                    }
                 }
 
                 host.capture_pointer();

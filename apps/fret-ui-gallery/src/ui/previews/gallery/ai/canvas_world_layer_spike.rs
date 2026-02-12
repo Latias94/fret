@@ -9,9 +9,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use fret_canvas::ui::{
         CanvasInputExemptRegionProps, CanvasMarqueeSelectionProps, CanvasWorldBoundsStore,
         CanvasWorldScaleMode, CanvasWorldSurfacePanelProps, OnCanvasMarqueeCommit,
-        PanZoomInputPreset, canvas_input_exempt_region, canvas_world_bounds_item,
-        canvas_world_fit_view_to_keys, canvas_world_surface_panel_with_marquee_selection,
-        use_controllable_model,
+        OnCanvasMarqueeStart, PanZoomInputPreset, canvas_input_exempt_region,
+        canvas_world_bounds_item, canvas_world_fit_view_to_keys,
+        canvas_world_surface_panel_with_marquee_selection, use_controllable_model,
     };
     use fret_canvas::view::{FitViewOptions2D, PanZoom2D, visible_canvas_rect};
     use fret_core::scene::Paint;
@@ -49,6 +49,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         use_controllable_model(cx, None, CanvasWorldBoundsStore::default).model();
     let selected_count: fret_runtime::Model<u64> =
         use_controllable_model(cx, None, || 0u64).model();
+    let marquee_blocked_count: fret_runtime::Model<u64> =
+        use_controllable_model(cx, None, || 0u64).model();
 
     let scale_mode_value = cx
         .get_model_copied(&scale_mode, fret_ui::Invalidation::Layout)
@@ -61,6 +63,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         .unwrap_or(0);
     let selected_count_value = cx
         .get_model_copied(&selected_count, fret_ui::Invalidation::Layout)
+        .unwrap_or(0);
+    let marquee_blocked_count_value = cx
+        .get_model_copied(&marquee_blocked_count, fret_ui::Invalidation::Layout)
         .unwrap_or(0);
 
     let (bounds_count, bounds_union_canvas) = cx
@@ -215,8 +220,51 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         host.request_redraw(action_cx.window);
     });
 
+    let view_for_marquee_start_filter = view.clone();
+    let bounds_store_for_marquee_start_filter = bounds_store.clone();
+    let blocked_for_marquee_start_filter = marquee_blocked_count.clone();
+    let marquee_start_filter: OnCanvasMarqueeStart = Arc::new(move |host, action_cx, down| {
+        let bounds = host.bounds();
+        let view = host
+            .models_mut()
+            .read(&view_for_marquee_start_filter, |v| *v)
+            .ok()
+            .unwrap_or_default();
+        let p_canvas = view.screen_to_canvas(bounds, down.position);
+
+        let hit_node = host
+            .models_mut()
+            .read(&bounds_store_for_marquee_start_filter, |st| {
+                st.items.values().any(|item| {
+                    let x0 = item.canvas_bounds.origin.x.0;
+                    let y0 = item.canvas_bounds.origin.y.0;
+                    let x1 = x0 + item.canvas_bounds.size.width.0;
+                    let y1 = y0 + item.canvas_bounds.size.height.0;
+                    p_canvas.x.0 >= x0
+                        && p_canvas.x.0 <= x1
+                        && p_canvas.y.0 >= y0
+                        && p_canvas.y.0 <= y1
+                })
+            })
+            .ok()
+            .unwrap_or(false);
+
+        if hit_node {
+            let _ = host
+                .models_mut()
+                .update(&blocked_for_marquee_start_filter, |v| {
+                    *v = v.saturating_add(1)
+                });
+            host.request_redraw(action_cx.window);
+            return false;
+        }
+
+        true
+    });
+
     let mut marquee = CanvasMarqueeSelectionProps::default();
     marquee.on_commit = Some(on_marquee_commit);
+    marquee.start_filter = Some(marquee_start_filter);
 
     let world = canvas_world_surface_panel_with_marquee_selection(
         cx,
@@ -403,6 +451,23 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             vec![
                 anchor,
                 canvas_input_exempt_region(cx, overlay_region, move |cx| {
+                    let blocked = (marquee_blocked_count_value > 0).then(|| {
+                        cx.text("Marquee blocked (node hit)").attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Text)
+                                .test_id("ui-ai-cwl-marquee-blocked"),
+                        )
+                    });
+
+                    let bounds_ready = (bounds_count >= 2).then(|| {
+                        cx.text(format!("Bounds items: {bounds_count}"))
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(fret_core::SemanticsRole::Text)
+                                    .test_id("ui-ai-cwl-bounds-ready"),
+                            )
+                    });
+
                     vec![
                         mode_scale,
                         mode_semantic,
@@ -410,7 +475,14 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                         overlay,
                         cx.text(format!("Selected: {selected_count_value}")),
                         cx.text(bounds_text),
+                        cx.text(format!(
+                            "Marquee blocked count: {marquee_blocked_count_value}"
+                        )),
                     ]
+                    .into_iter()
+                    .chain(bounds_ready)
+                    .chain(blocked)
+                    .collect::<Vec<_>>()
                 }),
             ]
         },
