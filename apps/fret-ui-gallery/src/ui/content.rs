@@ -475,6 +475,7 @@ fn page_preview(
         PAGE_MAGIC_LENS => preview_magic_lens(cx),
         PAGE_MAGIC_MARQUEE => preview_magic_marquee(cx),
         PAGE_MAGIC_CARD => preview_magic_card(cx),
+        PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
         PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => preview_overlay(
             cx,

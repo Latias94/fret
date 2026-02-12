@@ -105,6 +105,31 @@ let lens = magic::lens(cx, magic::LensProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_BORDER_BEAM: &str = r#"
+## BorderBeam (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Animates a moving highlight around the border using a runner-owned frame clock (ADR 0240).
+- Renders glow via `GaussianBlur` + additive compositing groups (ADR 0247).
+- Uses `Paint::RadialGradient` for Phase 0; a future revision may switch to a Tier B material kind.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS conic-gradient parity.
+- Exposing custom shader code at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_BORDER_BEAM: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let card = magic::border_beam(cx, magic::BorderBeamProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_CARD: &str = r#"
 ## MagicCard (fret-ui-magic)
 

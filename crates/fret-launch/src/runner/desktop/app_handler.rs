@@ -1055,7 +1055,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .and_then(|svc| svc.snapshot(app_window))
                     {
                         let mut dirty = false;
-                        let ime_changed = state.platform.set_ime_allowed(snapshot.focus_is_text_input);
+                        let ime_changed =
+                            state.platform.set_ime_allowed(snapshot.focus_is_text_input);
                         dirty |= ime_changed;
                         #[cfg(target_os = "android")]
                         if ime_changed {

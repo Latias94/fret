@@ -162,6 +162,7 @@ pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
 pub(crate) const PAGE_MAGIC_LENS: &str = "magic_lens";
 pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
 pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
+pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -342,6 +343,7 @@ pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_o
 pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
 pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
 pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
+pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -2054,6 +2056,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["magic", "card", "pointer-follow", "gradient"],
                 docs::DOC_MAGIC_CARD,
                 docs::USAGE_MAGIC_CARD,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_BORDER_BEAM,
+                "BorderBeam",
+                "BorderBeam (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_BORDER_BEAM,
+                &["magic", "border", "beam", "glow", "blend"],
+                docs::DOC_MAGIC_BORDER_BEAM,
+                docs::USAGE_MAGIC_BORDER_BEAM,
             ),
         ],
     },

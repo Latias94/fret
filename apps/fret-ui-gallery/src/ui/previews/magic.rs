@@ -95,6 +95,79 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
     )]
 }
 
+pub(in crate::ui) fn preview_magic_border_beam(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_required("card"));
+    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+
+    let mut highlight = ring;
+    highlight.a = (highlight.a * 0.85).clamp(0.0, 1.0);
+
+    let mut card_layout = LayoutStyle::default();
+    card_layout.size.width = Length::Px(Px(520.0));
+    card_layout.size.height = Length::Px(Px(240.0));
+
+    let card = magic::border_beam(
+        cx,
+        magic::BorderBeamProps {
+            layout: card_layout,
+            background: base,
+            border_base: border,
+            beam_color: highlight,
+            ..Default::default()
+        },
+        |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .items_start(),
+                |cx| {
+                    vec![
+                        shadcn::typography::h4(cx, "BorderBeam"),
+                        shadcn::typography::p(
+                            cx,
+                            "The beam is animated using the runner-owned frame clock; \
+                             glow uses blur + additive compositing.",
+                        ),
+                        stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full())
+                                .justify_between()
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Badge::new("left")
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-magic-border-beam-target-left"),
+                                    shadcn::Badge::new("right")
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-magic-border-beam-target-right"),
+                                ]
+                            },
+                        ),
+                    ]
+                },
+            )]
+        },
+    )
+    .test_id("ui-gallery-magic-border-beam");
+
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center(),
+        |_cx| [card],
+    )]
+}
+
 pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_required("muted"));
     let border = cx.with_theme(|theme| theme.color_required("border"));
