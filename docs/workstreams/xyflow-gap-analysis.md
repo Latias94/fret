@@ -134,10 +134,10 @@ In Fret:
 
 Recommendation:
 
-- Add an explicit recipe in `fret-canvas/ui` that composes:
-  - pan/zoom base policy,
-  - selection-on-drag gesture,
-  - and a small “filter” interface (hit-test based, not class-name based).
+- Use the explicit `fret-canvas/ui` exemption + marquee recipes (hit-test based, not class-name based):
+  - `ecosystem/fret-canvas/src/ui/input_exempt.rs`: `canvas_input_exempt_region` (`.nowheel` / `.nopan` equivalents).
+  - `ecosystem/fret-canvas/src/ui/pan_zoom.rs`: `editor_pan_zoom_canvas_surface_panel_with_marquee_selection`
+    (selection-on-drag / marquee overlay).
 
 ### Gap C — Dashed strokes for paths (edge temporary)
 
@@ -197,4 +197,3 @@ Pick one of two paths:
    - Use `WorkflowCanvas` + `fret-canvas/ui` tool router for pan/zoom and tools.
    - Render nodes/edges in the canvas paint pass.
    - Avoid “DOM-like nodes as element subtrees” until a dedicated world-layer substrate exists.
-

@@ -45,7 +45,9 @@ AI Elements is now fully accounted for. If we want an XYFlow/ReactFlow-like work
 experience (nodes as element subtrees, marquee selection, input filtering), track it separately:
 
 - [ ] AIEL-FLOW-001 Define a declarative “world layer” contract for canvas-space element subtrees.
-- [ ] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
+- [x] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
+  - Input exemptions: `ecosystem/fret-canvas/src/ui/input_exempt.rs` (`canvas_input_exempt_region`)
+  - Marquee recipe: `ecosystem/fret-canvas/src/ui/pan_zoom.rs` (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`)
 - [ ] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
 - [ ] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
 
