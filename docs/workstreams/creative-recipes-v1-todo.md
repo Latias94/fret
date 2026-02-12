@@ -80,14 +80,14 @@ diagnostics, not perfect CSS parity.
 - [x] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
 - [ ] Implement 3–5 seed components (Phase 0):
   - [ ] `Lens`
-  - [ ] `MagicCard`
+  - [x] `MagicCard`
   - [ ] `BorderBeam`
   - [x] `Marquee`
   - [ ] `Dock`
 - [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
   - [x] `Marquee`
   - [ ] `Lens`
-  - [ ] `MagicCard`
+  - [x] `MagicCard`
   - [ ] `BorderBeam`
   - [ ] `Dock`
 - [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).

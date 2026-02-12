@@ -146,9 +146,13 @@ Evidence (planned):
 Evidence (partial):
 
 - `ecosystem/fret-ui-magic/src/marquee.rs`
+- `ecosystem/fret-ui-magic/src/magic_card.rs`
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_marquee`)
 - `tools/diag-scripts/ui-gallery-magic-marquee-steady.json`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_CARD`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_card`)
+- `tools/diag-scripts/ui-gallery-magic-card-pointer-follow.json`
 
 ## M9 — External texture imports (v1)
 

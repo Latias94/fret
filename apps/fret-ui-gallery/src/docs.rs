@@ -80,6 +80,31 @@ let marquee = magic::marquee(cx, props, |cx| vec![/* repeated content */]);
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_CARD: &str = r#"
+## MagicCard (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Pointer-follow radial gradient chrome (background + border).
+- Built on the declarative `ContainerProps` paint surface (ADR 0233) using `Paint::RadialGradient`.
+- Uses `PointerRegion` move hooks for pointer tracking (ADR 0238).
+
+Non-goals (v1):
+
+- Perfect visual parity with CSS/WebKit gradients.
+- Complex blending/mask semantics beyond the current kernel contracts.
+"#;
+
+pub(crate) const USAGE_MAGIC_CARD: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let card = magic::magic_card(cx, magic::MagicCardProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_VIEW_CACHE: &str = r#"
 ## View Cache (experimental)
 

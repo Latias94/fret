@@ -159,6 +159,7 @@ pub(crate) const PAGE_BADGE: &str = "badge";
 pub(crate) const PAGE_AVATAR: &str = "avatar";
 pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
 pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
+pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -335,6 +336,7 @@ pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
 pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
 pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
 pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
+pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -1999,16 +2001,28 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
     },
     PageGroupSpec {
         title: "Magic",
-        items: &[PageSpec::new(
-            PAGE_MAGIC_MARQUEE,
-            "Marquee",
-            "Marquee (Phase 0)",
-            "fret-ui-magic",
-            CMD_NAV_MAGIC_MARQUEE,
-            &["magic", "marquee", "animation", "reduced-motion"],
-            docs::DOC_MAGIC_MARQUEE,
-            docs::USAGE_MAGIC_MARQUEE,
-        )],
+        items: &[
+            PageSpec::new(
+                PAGE_MAGIC_MARQUEE,
+                "Marquee",
+                "Marquee (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_MARQUEE,
+                &["magic", "marquee", "animation", "reduced-motion"],
+                docs::DOC_MAGIC_MARQUEE,
+                docs::USAGE_MAGIC_MARQUEE,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_CARD,
+                "MagicCard",
+                "MagicCard (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_CARD,
+                &["magic", "card", "pointer-follow", "gradient"],
+                docs::DOC_MAGIC_CARD,
+                docs::USAGE_MAGIC_CARD,
+            ),
+        ],
     },
     PageGroupSpec {
         title: "Material 3",
