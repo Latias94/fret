@@ -79,7 +79,7 @@ Override rules:
 
 Downlevel/fallback (e.g. trying GLES/GL after Vulkan fails) is allowed only if:
 
-- it is explicitly enabled by a developer configuration knob (future),
+- it is explicitly enabled by a developer configuration knob (v1: env, debug-only; future: structured runner config),
 - and the runner can provide a clear diagnostic trail showing:
   - which backends were attempted,
   - why each attempt failed,
@@ -100,6 +100,17 @@ The runner MUST log, at minimum:
 When diagnostics are enabled (diag bundles), the selected backend + adapter info SHOULD be captured
 as part of the bundle metadata so failures are reviewable without reproducing locally.
 
+### D6 — Minimum renderer capability gate (downlevel flags)
+
+Fret’s default wgpu renderer relies on storage buffers in vertex shaders (e.g. per-quad instance
+data). Therefore, the selected adapter MUST satisfy:
+
+- `wgpu::DownlevelFlags::VERTEX_STORAGE`
+
+If the adapter does not meet this minimum, initialization MUST fail fast with a clear error (even
+if the backend “creates a device”), because later validation panics would otherwise occur during
+pipeline creation.
+
 ## Consequences
 
 - “Mobile support” can advance without being blocked by the Android emulator’s GPU stack quirks.
@@ -118,3 +129,30 @@ Expected implementation loci (not exhaustive):
 - runner init + lifecycle gating: `crates/fret-launch`
 - backend parsing and context creation: `crates/fret-render-wgpu`
 
+## Implementation status (current)
+
+As of 2026-02-12:
+
+Implemented (evidence anchors):
+
+- Default backend policy:
+  - Android defaults to Vulkan-only.
+  - iOS defaults to Metal-only.
+  - Other targets default to `wgpu::Backends::PRIMARY`.
+  - Code: `crates/fret-render-wgpu/src/lib.rs` (`default_wgpu_backends_for_target`)
+- Explicit override knob:
+  - `FRET_WGPU_BACKEND` (parsed in `fret-render-wgpu`).
+  - Invalid overrides fail fast.
+  - Code: `crates/fret-render-wgpu/src/lib.rs` (`backend_override_from_env`)
+- Opt-in fallback (dev only):
+  - `FRET_WGPU_ALLOW_FALLBACK=1` enables additional backend attempts in debug builds.
+  - Release builds remain fail-fast.
+  - Code: `crates/fret-render-wgpu/src/lib.rs` (`allow_fallback_from_env`)
+- Downlevel capability gate:
+  - Enforces `DownlevelFlags::VERTEX_STORAGE` at init time.
+  - Code: `crates/fret-render-wgpu/src/lib.rs` (`validate_adapter`)
+- Diagnostics capture:
+  - Adapter selection snapshot includes the selected backend + adapter info and init attempt
+    history.
+  - Code: `crates/fret-render-wgpu/src/lib.rs` (`WgpuAdapterSelectionSnapshot`)
+  - Bundle: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`

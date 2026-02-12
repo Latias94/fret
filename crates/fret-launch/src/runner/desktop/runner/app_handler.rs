@@ -483,16 +483,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                 }
 
-                let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
-                    let trimmed = v.trim();
-                    (!trimmed.is_empty()).then(|| trimmed.to_string())
-                });
+                if context.init_diagnostics.allow_fallback
+                    || context.init_diagnostics.attempts.len() > 1
+                {
+                    tracing::info!(
+                        attempts = ?context.init_diagnostics.attempts,
+                        "wgpu init attempts"
+                    );
+                }
                 self.app
                     .set_global::<fret_render::WgpuAdapterSelectionSnapshot>(
-                        fret_render::WgpuAdapterSelectionSnapshot::from_adapter(
-                            &context.adapter,
-                            requested_backend,
-                        ),
+                        fret_render::WgpuAdapterSelectionSnapshot::from_context(&context),
                     );
 
                 let mut renderer = Renderer::new(&context.adapter, &context.device);
@@ -681,16 +682,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
             }
 
-            let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
-                let trimmed = v.trim();
-                (!trimmed.is_empty()).then(|| trimmed.to_string())
-            });
+            if context.init_diagnostics.allow_fallback
+                || context.init_diagnostics.attempts.len() > 1
+            {
+                tracing::info!(
+                    attempts = ?context.init_diagnostics.attempts,
+                    "wgpu init attempts"
+                );
+            }
             self.app
                 .set_global::<fret_render::WgpuAdapterSelectionSnapshot>(
-                    fret_render::WgpuAdapterSelectionSnapshot::from_adapter(
-                        &context.adapter,
-                        requested_backend,
-                    ),
+                    fret_render::WgpuAdapterSelectionSnapshot::from_context(&context),
                 );
 
             let mut renderer = Renderer::new(&context.adapter, &context.device);
