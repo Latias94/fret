@@ -6,7 +6,10 @@ use std::{
 
 use fret_core::{Point, Scene};
 use fret_render::SurfaceState;
-use winit::{dpi::PhysicalPosition, window::Window};
+use winit::{
+    dpi::{PhysicalPosition, Position},
+    window::Window,
+};
 
 pub(super) struct WindowRuntime<S> {
     pub(super) window: Arc<dyn Window>,
@@ -271,6 +274,331 @@ pub(super) fn outer_pos_for_cursor_grab(
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
+
+    pub(super) fn compute_window_position_from_anchor(
+        &self,
+        anchor: fret_core::WindowAnchor,
+    ) -> Option<Position> {
+        let anchor_state = self.windows.get(anchor.window)?;
+        // `WindowAnchor::position` is in surface-local logical coordinates (matching pointer
+        // events), so start from the surface origin in desktop coordinates.
+        let outer = anchor_state.window.outer_position().ok()?;
+        let surface = anchor_state.window.surface_position();
+        let scale = anchor_state.window.scale_factor();
+
+        let (ox, oy) = self.config.new_window_anchor_offset;
+        let mut x = outer.x as f64 + surface.x as f64 + anchor.position.x.0 as f64 * scale + ox;
+        let mut y = outer.y as f64 + surface.y as f64 + anchor.position.y.0 as f64 * scale + oy;
+
+        // Best-effort clamping: avoid creating "off-screen" floating windows due to
+        // platform-specific coordinate spaces and DPI conversions.
+        if let Some(monitor) = anchor_state.window.current_monitor()
+            && let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode())
+        {
+            let size = mode.size();
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            // Leave a small margin so the window stays reachable even if its size is larger
+            // than the monitor work area.
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
+
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
+    pub(super) fn compute_window_position_from_cursor(
+        &self,
+        reference_window: fret_core::AppWindowId,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let ref_state = self.windows.get(reference_window)?;
+        let (ox, oy) = self.config.new_window_anchor_offset;
+        let mut x = screen_pos.x + ox;
+        let mut y = screen_pos.y + oy;
+
+        if let Some(monitor) = ref_state.window.current_monitor()
+            && let (Some(pos), Some(mode)) = (monitor.position(), monitor.current_video_mode())
+        {
+            let size = mode.size();
+            let min_x = pos.x as f64;
+            let min_y = pos.y as f64;
+            let max_x = min_x + size.width as f64 - 40.0;
+            let max_y = min_y + size.height as f64 - 40.0;
+
+            x = x.clamp(min_x, max_x);
+            y = y.clamp(min_y, max_y);
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
+    pub(super) fn compute_window_position_from_cursor_grab_estimate(
+        &self,
+        reference_window: fret_core::AppWindowId,
+        new_window_inner_size: winit::dpi::LogicalSize<f64>,
+        grab_offset_logical: Point,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let state = self.windows.get(reference_window)?;
+        let scale = state.window.scale_factor();
+
+        let max_client = winit::dpi::LogicalSize::new(
+            new_window_inner_size.width as f32,
+            new_window_inner_size.height as f32,
+        );
+
+        let mut x = screen_pos.x;
+        let mut y = screen_pos.y;
+
+        if let Some((ox, oy)) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(max_client),
+        ) {
+            x = ox;
+            y = oy;
+        }
+
+        // Best-effort clamping: avoid creating "off-screen" floating windows due to
+        // platform-specific coordinate spaces and DPI conversions.
+        let outer_size = new_window_inner_size.to_physical::<u32>(scale);
+
+        #[cfg(target_os = "windows")]
+        if let Some(work) = super::win32::monitor_work_area_for_point(screen_pos) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
+    pub(super) fn compute_window_outer_position_from_cursor_grab(
+        &self,
+        target_window: fret_core::AppWindowId,
+        grab_offset_logical: Point,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let state = self.windows.get(target_window)?;
+        let scale = state.window.scale_factor();
+
+        // Clamp the grab point to the target window's current client size. During tear-off, the
+        // grab offset comes from the source window's client coordinates; if the new floating
+        // window is smaller, keeping the original offset would place the cursor outside the new
+        // window (visible as a fixed offset between cursor and window).
+        let target_inner = state.window.surface_size();
+        let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
+        let (mut x, mut y) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(target_inner_logical),
+        )?;
+
+        // Align with ImGui docking/multi-viewport behavior:
+        // - platform backend sets the window pos as requested
+        // - visibility/reachability constraints are based on the *target monitor*, not the window's
+        //   current monitor (which can pin the window at monitor edges).
+        let outer_size = state.window.outer_size();
+
+        #[cfg(target_os = "windows")]
+        if let Some(work) = super::win32::monitor_work_area_for_point(screen_pos) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        } else {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            } else if let Some(monitor) = Self::virtual_desktop_bounds(state.window.as_ref()) {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
+    pub(super) fn cursor_screen_pos_fallback_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+    ) -> Option<PhysicalPosition<f64>> {
+        let state = self.windows.get(window)?;
+        // `Window::surface_position()` is defined as the decoration offset from the outer
+        // window position to the client/surface origin (ImGui-style multi-viewport contract).
+        // Convert it to a screen-space client origin before adding a local cursor position.
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
+        let scale = state.window.scale_factor();
+        let origin = client_origin_screen(outer, deco);
+        let x = origin.x + state.platform.input.cursor_pos.x.0 as f64 * scale;
+        let y = origin.y + state.platform.input.cursor_pos.y.0 as f64 * scale;
+        Some(PhysicalPosition::new(x, y))
+    }
+
+    pub(super) fn screen_pos_in_window(
+        &self,
+        window: fret_core::AppWindowId,
+        screen_pos: PhysicalPosition<f64>,
+    ) -> bool {
+        let Some(state) = self.windows.get(window) else {
+            return false;
+        };
+        let Ok(outer) = state.window.outer_position() else {
+            return false;
+        };
+        let deco = state.window.surface_position();
+        let size = state.window.surface_size();
+        screen_pos_in_client(client_origin_screen(outer, deco), size, screen_pos)
+    }
+
+    pub(super) fn local_pos_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+        screen_pos: PhysicalPosition<f64>,
+    ) -> Option<Point> {
+        let state = self.windows.get(window)?;
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
+        Some(local_pos_for_screen_pos(
+            client_origin_screen(outer, deco),
+            state.window.scale_factor(),
+            screen_pos,
+        ))
+    }
+
+    pub(super) fn window_under_cursor(
+        &self,
+        screen_pos: PhysicalPosition<f64>,
+        prefer_not: Option<fret_core::AppWindowId>,
+    ) -> Option<fret_core::AppWindowId> {
+        let mut fallback: Option<fret_core::AppWindowId> = None;
+        for &w in self.windows_z_order.iter().rev() {
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
+            let size = state.window.surface_size();
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        // Fallback if the z-order list has drifted.
+        for w in self.windows.keys() {
+            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+                continue;
+            }
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
+            let size = state.window.surface_size();
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        fallback
+    }
+
     pub(super) fn virtual_desktop_bounds(window: &dyn Window) -> Option<MonitorRectF64> {
         let mut monitors = window.available_monitors();
         let first = monitors.next()?;
@@ -471,5 +799,84 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         } else {
             Some(target)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn outer_pos_for_cursor_grab_accounts_for_decorations_and_scale() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(20.0), Px(40.0));
+        let scale = 1.5;
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let max_client = winit::dpi::LogicalSize::new(200.0f32, 200.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 960.0);
+        assert_eq!(y, 410.0);
+    }
+
+    #[test]
+    fn outer_pos_for_cursor_grab_clamps_to_client_size() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(9999.0), Px(9999.0));
+        let scale = 2.0;
+        let deco = winit::dpi::PhysicalPosition::new(0, 0);
+        let max_client = winit::dpi::LogicalSize::new(100.0f32, 100.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 800.0);
+        assert_eq!(y, 300.0);
+    }
+
+    #[test]
+    fn client_origin_screen_adds_decoration_offset() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(12, 34);
+        let origin = client_origin_screen(outer, deco);
+        assert_eq!(origin, PhysicalPosition::new(112.0, 234.0));
+    }
+
+    #[test]
+    fn screen_pos_in_client_uses_half_open_bounds() {
+        let origin = PhysicalPosition::new(10.0, 20.0);
+        let size = PhysicalSize::new(100u32, 50u32);
+
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 20.0)
+        ));
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(109.9, 69.9)
+        ));
+
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(110.0, 20.0)
+        ));
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 70.0)
+        ));
+    }
+
+    #[test]
+    fn local_pos_for_screen_pos_respects_scale_factor() {
+        let origin = PhysicalPosition::new(100.0, 200.0);
+        let scale = 2.0;
+        let screen_pos = PhysicalPosition::new(120.0, 240.0);
+        let local = local_pos_for_screen_pos(origin, scale, screen_pos);
+        assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
     }
 }

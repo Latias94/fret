@@ -1,6 +1,249 @@
 use super::*;
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn create_os_window(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        spec: WindowCreateSpec,
+        style: WindowStyleRequest,
+        _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
+    ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
+        let mut attrs = winit::window::WindowAttributes::default()
+            .with_title(spec.title)
+            .with_surface_size(spec.size)
+            .with_visible(if self.config.accessibility_enabled {
+                false
+            } else {
+                spec.visible
+            });
+        if let Some(policy) = style.activation {
+            let active = matches!(policy, ActivationPolicy::Activates);
+            attrs = attrs.with_active(active);
+        }
+        if let Some(position) = spec.position {
+            attrs = attrs.with_position(position);
+        }
+        #[cfg(windows)]
+        {
+            if let Some(taskbar) = style.taskbar {
+                use winit::platform::windows::WindowAttributesWindows;
+
+                let win = WindowAttributesWindows::default()
+                    .with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+                attrs = attrs.with_platform_attributes(Box::new(win));
+            }
+        }
+        #[cfg(target_os = "macos")]
+        if _parent_window.is_some() {
+            // macOS tool/aux windows: best-effort parent/child relationship so DockFloating windows
+            // follow the parent window's Space/fullscreen lifecycle.
+            //
+            // winit maps this to `NSWindow.addChildWindow_ordered(...)`.
+            attrs = unsafe { attrs.with_parent_window(_parent_window) };
+        }
+        let window = Arc::<dyn Window>::from(
+            event_loop
+                .create_window(attrs)
+                .map_err(|source| RunnerError::CreateWindowFailed { source })?,
+        );
+
+        macos_window_log(format_args!("[create] winit={:?}", window.id()));
+
+        let accessibility = self
+            .config
+            .accessibility_enabled
+            .then(|| accessibility::WinitAccessibility::new(event_loop, window.as_ref()));
+
+        if self.config.accessibility_enabled && spec.visible {
+            window.set_visible(true);
+        }
+
+        if let Some(level) = style.z_level {
+            window.set_window_level(match level {
+                WindowZLevel::Normal => WindowLevel::Normal,
+                WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
+            });
+        }
+
+        Ok((window, accessibility))
+    }
+
+    pub(super) fn create_window_from_request(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        request: &CreateWindowRequest,
+    ) -> Result<fret_core::AppWindowId, RunnerError> {
+        let mut spec = self
+            .driver
+            .window_create_spec(&mut self.app, request)
+            .unwrap_or_else(|| self.config.default_window_spec());
+
+        if spec.position.is_none() {
+            // For dock tear-off, initially place near the cursor; we will refine the position
+            // after the OS window exists using its own decoration offset (ImGui-style).
+            if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
+                if let Some(anchor) = request.anchor {
+                    // Initial positioning is best-effort until the OS window exists, but it's
+                    // worth approximating with the source window's decoration offset so Windows
+                    // doesn't "jump" after creation under mixed DPI / non-client offsets.
+                    spec.position = self.compute_window_position_from_cursor_grab_estimate(
+                        anchor.window,
+                        spec.size,
+                        anchor.position,
+                    );
+                }
+                if spec.position.is_none() {
+                    spec.position = self.compute_window_position_from_cursor(source_window);
+                }
+            }
+
+            if spec.position.is_none()
+                && let Some(anchor) = request.anchor
+            {
+                spec.position = self.compute_window_position_from_anchor(anchor);
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            // Avoid the "flash behind the source window" when tearing off a dock panel by
+            // creating the new OS window hidden, then letting the deferred raise show it.
+            if let CreateWindowKind::DockFloating { source_window, .. } = request.kind
+                && !self.is_left_mouse_down_for_window(source_window)
+            {
+                spec.visible = false;
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        let parent_window = {
+            use winit::raw_window_handle::HasWindowHandle as _;
+            if !macos_dockfloating_parenting_enabled() {
+                None
+            } else {
+                match request.kind {
+                    CreateWindowKind::DockFloating { source_window, .. } => self
+                        .windows
+                        .get(source_window)
+                        .and_then(|w| w.window.window_handle().ok())
+                        .map(|h| h.as_raw()),
+                    _ => None,
+                }
+            }
+        };
+        #[cfg(not(target_os = "macos"))]
+        let parent_window = None;
+
+        let (window, accessibility) =
+            self.create_os_window(event_loop, spec, request.style, parent_window)?;
+        let surface = {
+            let Some(context) = self.context.as_ref() else {
+                return Err(RunnerError::WgpuNotInitialized);
+            };
+            context.create_surface(window.clone())?
+        };
+        self.insert_window(window, accessibility, surface)
+    }
+
+    pub(super) fn enqueue_window_front(
+        &mut self,
+        window: fret_core::AppWindowId,
+        source_window: Option<fret_core::AppWindowId>,
+        panel: Option<fret_core::PanelKey>,
+        now: Instant,
+    ) {
+        macos_window_log(format_args!(
+            "[enqueue-front] target={:?} source={:?} now={:?}",
+            window, source_window, now
+        ));
+
+        // macOS may ignore focus changes during an active interaction in the source window.
+        // Retry a few times over subsequent event-loop turns (and stop once the window reports
+        // `Focused(true)`).
+        self.windows_pending_front.insert(
+            window,
+            PendingFrontRequest {
+                source_window,
+                panel,
+                created_at: now,
+                // Defer the first raise to `about_to_wait` (Godot uses `call_deferred`); this
+                // avoids fighting the platform while a tracked interaction is still active.
+                next_attempt_at: now,
+                attempts_left: 10,
+            },
+        );
+    }
+
+    pub(super) fn process_pending_front_requests(&mut self, now: Instant) -> bool {
+        if self.windows_pending_front.is_empty() {
+            return false;
+        }
+
+        let pending = std::mem::take(&mut self.windows_pending_front);
+        let mut kept: HashMap<fret_core::AppWindowId, PendingFrontRequest> = HashMap::new();
+        let mut did_work = false;
+
+        for (window, mut req) in pending {
+            let Some(state) = self.windows.get(window) else {
+                continue;
+            };
+
+            if state.is_focused && req.attempts_left > 2 {
+                // Even after winit reports the window focused, the window ordering can still lag
+                // behind when the float was initiated from a tracked menu / drag sequence.
+                // Keep a couple more retries to ensure it actually surfaces.
+                req.attempts_left = 2;
+            }
+
+            if req.attempts_left == 0 {
+                macos_window_log(format_args!(
+                    "[front-done] target={:?} panel={:?} focused={} age_ms={} now={:?}",
+                    window,
+                    req.panel.as_ref().map(|p| &p.kind.0),
+                    state.is_focused,
+                    now.saturating_duration_since(req.created_at).as_millis(),
+                    now,
+                ));
+                continue;
+            }
+
+            if now >= req.next_attempt_at {
+                macos_window_log(format_args!(
+                    "[front-try] target={:?} panel={:?} source={:?} focused={} attempts_left={} age_ms={} now={:?}",
+                    window,
+                    req.panel.as_ref().map(|p| &p.kind.0),
+                    req.source_window,
+                    state.is_focused,
+                    req.attempts_left,
+                    now.saturating_duration_since(req.created_at).as_millis(),
+                    now,
+                ));
+                let sender = req
+                    .source_window
+                    .and_then(|id| self.windows.get(id))
+                    .map(|w| w.window.as_ref());
+                let _ = bring_window_to_front(state.window.as_ref(), sender);
+                state.window.request_redraw();
+                req.attempts_left = req.attempts_left.saturating_sub(1);
+                req.next_attempt_at = now + Duration::from_millis(60);
+                did_work = true;
+            }
+
+            kept.insert(window, req);
+        }
+
+        self.windows_pending_front = kept;
+        did_work
+    }
+
+    pub(super) fn next_pending_front_deadline(&self) -> Option<Instant> {
+        self.windows_pending_front
+            .values()
+            .filter(|r| r.attempts_left > 0)
+            .map(|r| r.next_attempt_at)
+            .min()
+    }
+
     pub(super) fn insert_window(
         &mut self,
         window: Arc<dyn Window>,
