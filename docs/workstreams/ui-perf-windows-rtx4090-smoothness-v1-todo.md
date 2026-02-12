@@ -37,6 +37,13 @@ Workstream note:
 - [ ] Investigate `ui-gallery-overlay-torture-steady` tail spikes (layout-heavy).
 - [ ] For each script, produce a “hitch class” note (top 3 metrics + top 3 hotspots from `diag stats`).
 
+## P1.5 - Diagnostics semantics policy (keep perf runs cheap)
+
+- [x] Stop forcing `UiTree::request_semantics_snapshot()` every frame in gallery/bootstrap render drivers; only request
+  semantics snapshots when diagnostics state wants them.
+- [ ] Tighten the “schema v2 intent step” semantics policy so multi-frame steps only request semantics when selector
+  resolution is needed (avoid semantics refresh churn during long drags).
+
 ## P2 - CPU vs GPU separation (only after CPU tail is clear)
 
 - [ ] Run worst-case scripts with `FRET_DIAG_RENDERER_PERF=1` to check whether any tail spikes correlate with renderer churn.
@@ -46,4 +53,3 @@ Workstream note:
 
 - [ ] Verify harness-only mode for hit-test torture and ensure the root `test_id` exists on the harness page.
 - [ ] Establish a Windows pointer-move gate (dispatch/hit-test thresholds) if it is stable and useful.
-

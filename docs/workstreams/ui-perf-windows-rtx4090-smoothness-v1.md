@@ -118,6 +118,33 @@ Editor resize probes (`ui-code-editor-resize-probes`) passed its committed basel
 
 - Out dir: `target/fret-diag-perf/ui-code-editor-resize-probes.windows-rtx4090.20260212-132923`
 
+### 3.1 Update (2026-02-12): semantics refresh was being forced every frame
+
+After adding layout phase breakdown to `diag stats` (see below) and triaging worst resize bundles, we identified an
+unexpected large cost inside layout: `layout_semantics_refresh_time_us` was sometimes dominating the entire frame.
+
+Root cause:
+
+- App render drivers were calling `UiTree::request_semantics_snapshot()` unconditionally (and again when diagnostics
+  was enabled), which forces `UiTree` to rebuild the semantics snapshot during layout.
+- This happened even when `FRET_DIAG_SEMANTICS=0` (which only disables exporting `debug.semantics` into bundles, but
+  does not implicitly disable semantics snapshot refresh).
+
+Fix summary (landed in this worktree):
+
+- Only request semantics snapshots when diagnostics state actually needs them.
+- Request semantics snapshots opportunistically from `accessibility_snapshot()` hooks to avoid a global “every frame”
+  cost when accessibility is inactive.
+
+Evidence (post-fix sample runs):
+
+- `ui-resize-probes` now passes the committed baseline (single-run sample):
+  - Out dir: `target/fret-diag-perf-samples/ui-resize-probes.windows-rtx4090.after-semantics-gate.20260212-153145`
+  - Worst bundle: `.../ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - `diag stats` shows `layout_semantics_refresh_time_us=0` in the worst frame.
+- `ui-code-editor-resize-probes` remains baseline-passing:
+  - Out dir: `target/fret-diag-perf-samples/ui-code-editor-resize-probes.windows-rtx4090.after-semantics-gate.20260212-160200`
+
 ---
 
 ## 4) Hitch class notes (what the worst bundles suggest)
@@ -155,6 +182,19 @@ Top frame breakdown (indicative):
 Interpretation: for drag-jitter, the “build roots” phase is not the only lever; we likely need broader
 layout invalidation + caching/quantization strategies to keep per-frame work bounded.
 
+### 4.3 Semantics refresh breakdown (for attribution)
+
+To make tail attribution repeatable, `diag stats --json` now exports a layout-phase breakdown so we can answer
+“what portion of layout time is actually solve vs request/build vs semantics vs view-cache repair”.
+
+Key exported fields include:
+
+- `layout_roots_time_us`
+- `layout_request_build_roots_time_us`
+- `layout_engine_solve_time_us`
+- `layout_view_cache_time_us`
+- `layout_semantics_refresh_time_us`
+
 ---
 
 ## 5) Workstream strategy (lowest-risk first)
@@ -175,4 +215,3 @@ See:
 
 - TODO tracker: `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1-todo.md`
 - Milestones: `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1-milestones.md`
-
