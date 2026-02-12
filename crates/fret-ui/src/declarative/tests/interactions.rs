@@ -15,6 +15,7 @@ fn attributed_plain(text: &str) -> fret_core::AttributedText {
 }
 
 mod dismissible;
+mod key_propagation;
 mod pointer_regions;
 mod pressable;
 mod resizable_panel_group;

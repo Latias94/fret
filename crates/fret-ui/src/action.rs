@@ -572,6 +572,7 @@ pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx)
 
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {
+    pub on_key_down_capture: Option<OnKeyDown>,
     pub on_key_down: Option<OnKeyDown>,
 }
 

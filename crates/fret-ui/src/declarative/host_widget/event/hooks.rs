@@ -139,7 +139,11 @@ pub(super) fn try_key_hook<H: UiHost>(
         window,
         this.element,
         crate::action::KeyActionHooks::default,
-        |hooks| hooks.on_key_down.clone(),
+        |hooks| match cx.input_ctx.dispatch_phase {
+            fret_runtime::InputDispatchPhase::Capture => hooks.on_key_down_capture.clone(),
+            fret_runtime::InputDispatchPhase::Preview
+            | fret_runtime::InputDispatchPhase::Bubble => hooks.on_key_down.clone(),
+        },
     );
 
     if let Some(h) = hook {
