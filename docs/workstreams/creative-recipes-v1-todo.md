@@ -101,7 +101,14 @@ diagnostics, not perfect CSS parity.
   - [x] `MagicCard`
   - [x] `BorderBeam`
   - [x] `Dock`
-- [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
+- [x] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
+  - Evidence (scripts):
+    - `tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
+  - Recommended invocation (example):
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --launch -- cargo run -p fret-ui-gallery`
 
 ## P1 — External texture imports (v1)
 

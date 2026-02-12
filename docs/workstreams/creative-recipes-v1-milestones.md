@@ -207,7 +207,12 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 - Next creative parity targets:
   - `SparklesText`
 - Verification:
-  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
+  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time): Landed
+    - Evidence:
+      - `tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
 
 ## M9 — External texture imports (v1)
 
