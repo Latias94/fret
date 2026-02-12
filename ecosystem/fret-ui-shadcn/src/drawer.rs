@@ -12,6 +12,7 @@ use fret_ui::element::{
     RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_headless::motion::friction::FrictionSimulation;
 use fret_ui_headless::motion::spring::SpringDescription;
 use fret_ui_headless::motion::tolerance::Tolerance;
 
@@ -761,9 +762,14 @@ impl Drawer {
                 let dy = global_y - start.y.0;
                 let next = Px((start_offset.0 + dy).max(0.0).min(window_height.0));
                 let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
-                let dt_ticks = mv.tick_id.0.saturating_sub(last_tick.0).max(1);
-                let dt_secs = dt_ticks as f32 / 60.0;
-                let velocity = (next.0 - last_offset.0) / dt_secs;
+                let velocity = mv.velocity_window.map(|v| v.y.0).unwrap_or_else(|| {
+                    let dt_ticks = mv.tick_id.0.saturating_sub(last_tick.0);
+                    if dt_ticks == 0 {
+                        return 0.0;
+                    }
+                    let dt_secs = dt_ticks as f32 / 60.0;
+                    (next.0 - last_offset.0) / dt_secs
+                });
                 let _ = host.models_mut().update(&runtime_for_move, |st| {
                     st.last_offset = next;
                     st.last_tick = mv.tick_id;
@@ -777,15 +783,19 @@ impl Drawer {
             let runtime_for_up = runtime.clone();
             let offset_for_up = offset_model.clone();
             let snap_points_for_up = snap_points.clone();
-            let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, _up| {
-                let dragging = host
+            let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, _cx, up| {
+                let Ok((dragging, stored_velocity)) = host
                     .models_mut()
-                    .read(&runtime_for_up, |st| st.dragging)
-                    .ok()
-                    .unwrap_or(false);
+                    .read(&runtime_for_up, |st| (st.dragging, st.velocity))
+                else {
+                    return false;
+                };
                 if !dragging {
                     return false;
                 }
+                let velocity_window = up.velocity_window.map(|v| v.y.0);
+                let velocity_is_measured = velocity_window.is_some();
+                let velocity = velocity_window.unwrap_or(stored_velocity);
 
                 host.release_pointer_capture();
                 let bounds = host.bounds();
@@ -795,6 +805,22 @@ impl Drawer {
                     .read(&offset_for_up, |v| *v)
                     .ok()
                     .unwrap_or(Px(0.0));
+
+                let projected_offset = if velocity_is_measured
+                    && velocity.abs() >= DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC
+                {
+                    let sim = FrictionSimulation::new(
+                        DRAWER_DRAG_FLING_DRAG,
+                        offset.0 as f64,
+                        velocity as f64,
+                        0.0,
+                        Tolerance::default(),
+                    );
+                    Px(sim.final_x() as f32)
+                } else {
+                    offset
+                };
+                let projected_offset = Px(projected_offset.0.clamp(0.0, window_height.0));
 
                 let has_snap_points = snap_points_for_up
                     .as_ref()
@@ -823,7 +849,7 @@ impl Drawer {
                         .map(|v| Px((drawer_h.0 - v.0 * 0.5).max(DRAWER_DRAG_DISMISS_MIN_PX)))
                         .unwrap_or_else(|| Px((drawer_h.0 * 0.25).max(DRAWER_DRAG_DISMISS_MIN_PX)));
 
-                    if offset.0 >= close_threshold.0 {
+                    if projected_offset.0 >= close_threshold.0 {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
@@ -831,8 +857,8 @@ impl Drawer {
                             .iter()
                             .copied()
                             .min_by(|a, b| {
-                                let da = (a.0 - offset.0).abs();
-                                let db = (b.0 - offset.0).abs();
+                                let da = (a.0 - projected_offset.0).abs();
+                                let db = (b.0 - projected_offset.0).abs();
                                 da.total_cmp(&db)
                             })
                             .unwrap_or(Px(0.0));
@@ -843,7 +869,7 @@ impl Drawer {
                             st.settle_to = nearest;
                             st.settle_tick = 0;
                             st.settle_seq = st.settle_seq.saturating_add(1).max(1);
-                            st.settle_velocity = st.velocity;
+                            st.settle_velocity = velocity;
                             st.settle_primed = false;
                             st.dragging = false;
                         });
@@ -852,11 +878,19 @@ impl Drawer {
                     }
                 } else {
                     let threshold = Px((drawer_h.0 * 0.25).max(DRAWER_DRAG_DISMISS_MIN_PX));
-                    let should_close = offset.0 >= threshold.0;
+                    let should_close = projected_offset.0 >= threshold.0;
                     if should_close {
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
-                        let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
+                        let _ = host.models_mut().update(&runtime_for_up, |st| {
+                            st.settling = true;
+                            st.settle_from = offset;
+                            st.settle_to = Px(0.0);
+                            st.settle_tick = 0;
+                            st.settle_seq = st.settle_seq.saturating_add(1).max(1);
+                            st.settle_velocity = velocity;
+                            st.settle_primed = false;
+                        });
                     }
                 }
 
@@ -895,6 +929,8 @@ impl Drawer {
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
+const DRAWER_DRAG_FLING_DRAG: f64 = 0.135;
+const DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC: f32 = 450.0;
 
 #[derive(Debug, Clone, Copy)]
 struct DrawerDragRuntime {
