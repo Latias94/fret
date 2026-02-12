@@ -63,6 +63,7 @@ impl ScriptV2Builder {
 
     pub fn click(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::Click {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -72,6 +73,7 @@ impl ScriptV2Builder {
 
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,

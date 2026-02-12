@@ -314,6 +314,47 @@ fn script_v2_roundtrip_set_cursor_in_window_last_seen_other() {
 }
 
 #[test]
+fn script_v2_roundtrip_click_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "click", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "drag_pointer", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" }, "delta_x": 10.0, "delta_y": 0.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_to_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_to",
+      "window": { "kind": "last_seen_other" },
+      "from": { "kind": "test_id", "id": "a" },
+      "to": { "kind": "test_id", "id": "b" }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_raise_window_last_seen_other() {
     assert_script_v2_roundtrip(
         r#"{

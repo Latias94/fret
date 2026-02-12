@@ -448,9 +448,9 @@ Supported selectors (v1 MVP):
 
 ## Supported scripted steps (v1 MVP)
 
-- `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
 - `move_pointer`
-- `drag_pointer` (optional `button`, `steps`)
+- `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
   `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
@@ -510,7 +510,7 @@ Supported intent steps (v2):
 - `type_text_into` (wait + click + type)
 - `menu_select` (wait + open menu + click item)
 - `menu_select_path` (wait + open nested menus + click final item)
-- `drag_to` (drag between two semantics targets)
+- `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
@@ -529,6 +529,10 @@ For window-targeted steps, the optional `window` field supports:
 - `{ "kind": "window_ffi", "window": 123 }`
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
+
+Note: window-targeted steps run against the target window's semantics snapshot. When a step targets
+a different window, the diagnostics runtime migrates the active script to that window; subsequent
+steps will execute there unless they specify another `window` target.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted

@@ -193,6 +193,8 @@ pub enum UiWindowTargetV1 {
 pub enum UiActionStepV2 {
     // v1-compatible steps
     Click {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -209,6 +211,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
     },
     DragPointer {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -336,6 +340,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     DragTo {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         from: UiSelectorV1,
         to: UiSelectorV1,
         #[serde(default)]
@@ -425,6 +431,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 button,
                 click_count,
             } => Self::Click {
+                window: None,
                 target,
                 button,
                 click_count,
@@ -439,6 +446,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 delta_y,
                 steps,
             } => Self::DragPointer {
+                window: None,
                 target,
                 button,
                 delta_x,
