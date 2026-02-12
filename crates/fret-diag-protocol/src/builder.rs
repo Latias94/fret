@@ -81,6 +81,44 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn pointer_down(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        })
+    }
+
+    pub fn pointer_down_with_modifiers(
+        self,
+        target: UiSelectorV1,
+        modifiers: UiKeyModifiersV1,
+    ) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: Some(modifiers),
+        })
+    }
+
+    pub fn pointer_move(self, delta_x: f32, delta_y: f32) -> Self {
+        self.push(UiActionStepV2::PointerMove {
+            window: None,
+            delta_x,
+            delta_y,
+            steps: 8,
+        })
+    }
+
+    pub fn pointer_up(self) -> Self {
+        self.push(UiActionStepV2::PointerUp {
+            window: None,
+            button: None,
+        })
+    }
+
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
             target,

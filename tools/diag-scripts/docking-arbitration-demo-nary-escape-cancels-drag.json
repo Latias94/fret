@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: Escape cancels a tab drag (n-ary)",
+    "tags": ["docking", "nary", "escape", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This script starts a tab drag, asserts the docking preview becomes active, then presses Escape mid-drag and asserts the drag session is no longer active."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+    { "type": "pointer_move", "delta_x": -245.0, "delta_y": 130.0, "steps": 24 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 60
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_up" },
+
+    { "type": "assert", "predicate": { "kind": "dock_graph_canonical_is", "canonical": true } },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-nary-escape-cancels-drag" }
+  ]
+}
+

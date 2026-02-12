@@ -450,6 +450,9 @@ Supported selectors (v1 MVP):
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
 - `move_pointer`
+- `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
+- `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
+- `pointer_up` (schema v2 only; optional `window` target; ends the `pointer_down` session)
 - `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
@@ -488,6 +491,7 @@ Recent additions:
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
 - `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
 
 Notes:
 

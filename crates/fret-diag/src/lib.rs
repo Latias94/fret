@@ -8572,7 +8572,7 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     ]
 }
 
-fn docking_arbitration_suite_scripts() -> [&'static str; 6] {
+fn docking_arbitration_suite_scripts() -> [&'static str; 7] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
@@ -8580,6 +8580,7 @@ fn docking_arbitration_suite_scripts() -> [&'static str; 6] {
         "tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json",
         "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
     ]
 }
 

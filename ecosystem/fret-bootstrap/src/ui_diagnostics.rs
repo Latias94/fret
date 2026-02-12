@@ -768,6 +768,7 @@ impl UiDiagnosticsService {
                     wait_until: None,
                     screenshot_wait: None,
                     v2_step_state: None,
+                    pointer_session: None,
                     last_reported_step: Some(0),
                     selector_resolution_trace: Vec::new(),
                     hit_test_trace: Vec::new(),
@@ -2231,6 +2232,375 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
+                }
+            }
+            UiActionStepV2::PointerDown {
+                window: target_window,
+                target,
+                button: button_ui,
+                modifiers,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
+                if active.pointer_session.is_some() {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_down-pointer-session-already-active"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("pointer_session_already_active".to_string());
+                    output.request_redraw = true;
+                }
+
+                if !stop_script {
+                    if let Some(target_window) =
+                        self.resolve_window_target(window, target_window.as_ref())
+                    {
+                        if target_window != window {
+                            if let Some(step_mut) = active.steps.get_mut(step_index) {
+                                if let UiActionStepV2::PointerDown { window, .. } = step_mut {
+                                    *window = None;
+                                }
+                            }
+                            handoff_to = Some(target_window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                        }
+                    } else if target_window.is_some() {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_down-window-not-found"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("window_target_unresolved".to_string());
+                        output.request_redraw = true;
+                    }
+                }
+
+                if stop_script {
+                    active.v2_step_state = None;
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                } else if handoff_to.is_some() {
+                    // Window-targeted: migrate to the target window before resolving semantics.
+                } else {
+                    let Some(snapshot) = semantics_snapshot else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_down-no-semantics"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("no_semantics_snapshot".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                        return output;
+                    };
+                    let Some(node) = select_semantics_node_with_trace(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &target,
+                        step_index as u32,
+                        self.cfg.redact_text,
+                        &mut active.selector_resolution_trace,
+                    ) else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_down-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("selector.not_found".to_string());
+                        output.request_redraw = true;
+                        return output;
+                    };
+
+                    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                    if let Some(ui) = ui {
+                        record_hit_test_trace_for_selector(
+                            &mut active.hit_test_trace,
+                            ui,
+                            Some(snapshot),
+                            &target,
+                            step_index as u32,
+                            pos,
+                            Some(node),
+                            Some("pointer_down"),
+                        );
+                    }
+
+                    let modifiers = core_modifiers_from_ui(modifiers);
+                    let pointer_id = PointerId(0);
+                    let pointer_type = PointerType::Mouse;
+                    let button = match button_ui {
+                        UiMouseButtonV1::Left => MouseButton::Left,
+                        UiMouseButtonV1::Right => MouseButton::Right,
+                        UiMouseButtonV1::Middle => MouseButton::Middle,
+                    };
+                    output.events.push(Event::Pointer(PointerEvent::Move {
+                        pointer_id,
+                        position: pos,
+                        buttons: MouseButtons::default(),
+                        modifiers,
+                        pointer_type,
+                    }));
+                    output.events.push(Event::Pointer(PointerEvent::Down {
+                        pointer_id,
+                        position: pos,
+                        button,
+                        modifiers,
+                        click_count: 1,
+                        pointer_type,
+                    }));
+
+                    active.pointer_session = Some(V2PointerSessionState {
+                        window,
+                        button: button_ui,
+                        modifiers,
+                        position: pos,
+                    });
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-pointer_down"));
+                    }
+                }
+            }
+            UiActionStepV2::PointerMove {
+                window: target_window,
+                delta_x,
+                delta_y,
+                steps,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
+                let Some(mut session) = active.pointer_session.clone() else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_move-no-session"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("pointer_session_missing".to_string());
+                    output.request_redraw = true;
+                    active.v2_step_state = None;
+                    return output;
+                };
+
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    if target_window != window {
+                        if target_window == session.window {
+                            if let Some(step_mut) = active.steps.get_mut(step_index) {
+                                if let UiActionStepV2::PointerMove { window, .. } = step_mut {
+                                    *window = None;
+                                }
+                            }
+                            handoff_to = Some(target_window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                        } else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_move-window-mismatch"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("pointer_session_cross_window_unsupported".to_string());
+                            output.request_redraw = true;
+                        }
+                    }
+                } else if target_window.is_some() {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_move-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                } else if session.window != window {
+                    // The script migrated away from the window that owns the pointer session.
+                    handoff_to = Some(session.window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(session.window));
+                    output.request_redraw = true;
+                }
+
+                if stop_script {
+                    active.v2_step_state = None;
+                } else if handoff_to.is_some() {
+                    // Window-targeted: migrate to the target window before continuing the session.
+                } else {
+                    let steps = steps.max(1);
+                    let start = session.position;
+                    let end = Point::new(
+                        fret_core::Px(start.x.0 + delta_x),
+                        fret_core::Px(start.y.0 + delta_y),
+                    );
+
+                    let pressed_buttons = match session.button {
+                        UiMouseButtonV1::Left => MouseButtons {
+                            left: true,
+                            ..Default::default()
+                        },
+                        UiMouseButtonV1::Right => MouseButtons {
+                            right: true,
+                            ..Default::default()
+                        },
+                        UiMouseButtonV1::Middle => MouseButtons {
+                            middle: true,
+                            ..Default::default()
+                        },
+                    };
+
+                    let pointer_id = PointerId(0);
+                    let pointer_type = PointerType::Mouse;
+                    for i in 1..=steps {
+                        let t = i as f32 / steps as f32;
+                        let x = start.x.0 + (end.x.0 - start.x.0) * t;
+                        let y = start.y.0 + (end.y.0 - start.y.0) * t;
+                        let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                        output.events.push(Event::Pointer(PointerEvent::Move {
+                            pointer_id,
+                            position,
+                            buttons: pressed_buttons,
+                            modifiers: session.modifiers,
+                            pointer_type,
+                        }));
+                        output
+                            .events
+                            .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                                pointer_id,
+                                position,
+                                kind: fret_core::InternalDragKind::Over,
+                                modifiers: session.modifiers,
+                            }));
+                    }
+
+                    session.position = end;
+                    active.pointer_session = Some(session);
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-pointer_move"));
+                    }
+                }
+            }
+            UiActionStepV2::PointerUp {
+                window: target_window,
+                button: want_button,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
+                let Some(session) = active.pointer_session.clone() else {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-pointer_up-no-session"));
+                    stop_script = true;
+                    failure_reason = Some("pointer_session_missing".to_string());
+                    output.request_redraw = true;
+                    active.v2_step_state = None;
+                    return output;
+                };
+
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    if target_window != window {
+                        if target_window == session.window {
+                            if let Some(step_mut) = active.steps.get_mut(step_index) {
+                                if let UiActionStepV2::PointerUp { window, .. } = step_mut {
+                                    *window = None;
+                                }
+                            }
+                            handoff_to = Some(target_window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(target_window));
+                            output.request_redraw = true;
+                        } else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_up-window-mismatch"
+                            ));
+                            stop_script = true;
+                            failure_reason =
+                                Some("pointer_session_cross_window_unsupported".to_string());
+                            output.request_redraw = true;
+                        }
+                    }
+                } else if target_window.is_some() {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_up-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                } else if session.window != window {
+                    // The script migrated away from the window that owns the pointer session.
+                    handoff_to = Some(session.window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(session.window));
+                    output.request_redraw = true;
+                }
+
+                if stop_script {
+                    active.v2_step_state = None;
+                } else if handoff_to.is_some() {
+                    // Window-targeted: migrate to the target window before releasing the session.
+                } else {
+                    if let Some(want) = want_button
+                        && want != session.button
+                    {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-button-mismatch"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("pointer_up_button_mismatch".to_string());
+                        output.request_redraw = true;
+                        active.v2_step_state = None;
+                        return output;
+                    }
+
+                    let pointer_id = PointerId(0);
+                    let pointer_type = PointerType::Mouse;
+                    let button = match session.button {
+                        UiMouseButtonV1::Left => MouseButton::Left,
+                        UiMouseButtonV1::Right => MouseButton::Right,
+                        UiMouseButtonV1::Middle => MouseButton::Middle,
+                    };
+
+                    output.events.push(Event::Pointer(PointerEvent::Up {
+                        pointer_id,
+                        position: session.position,
+                        button,
+                        modifiers: session.modifiers,
+                        is_click: false,
+                        click_count: 1,
+                        pointer_type,
+                    }));
+                    output
+                        .events
+                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                            pointer_id,
+                            position: session.position,
+                            kind: fret_core::InternalDragKind::Drop,
+                            modifiers: session.modifiers,
+                        }));
+
+                    active.pointer_session = None;
+                    active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up"));
+                    }
                 }
             }
             UiActionStepV2::DragPointer {
@@ -5151,6 +5521,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::MovePointer { .. }
+        | UiActionStepV2::PointerDown { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
@@ -5171,7 +5542,9 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
-        | UiActionStepV2::SetWindowOuterPosition { .. } => false,
+        | UiActionStepV2::SetWindowOuterPosition { .. }
+        | UiActionStepV2::PointerMove { .. }
+        | UiActionStepV2::PointerUp { .. } => false,
     }
 }
 
@@ -6310,6 +6683,7 @@ struct ActiveScript {
     wait_until: Option<WaitUntilState>,
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
+    pointer_session: Option<V2PointerSessionState>,
     last_reported_step: Option<usize>,
     selector_resolution_trace: Vec<UiSelectorResolutionTraceEntryV1>,
     hit_test_trace: Vec<UiHitTestTraceEntryV1>,
@@ -6378,6 +6752,14 @@ enum V2StepState {
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
+}
+
+#[derive(Debug, Clone)]
+struct V2PointerSessionState {
+    window: AppWindowId,
+    button: UiMouseButtonV1,
+    modifiers: Modifiers,
+    position: Point,
 }
 
 #[derive(Debug, Clone)]
@@ -12642,6 +13024,9 @@ fn eval_predicate(
             };
             drag.dragging && drag.current_window == target_window
         }
+        UiPredicateV1::DockDragActiveIs { active } => docking
+            .and_then(|d| d.dock_drag)
+            .is_some_and(|drag| drag.dragging == *active),
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let Some(preview) = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())

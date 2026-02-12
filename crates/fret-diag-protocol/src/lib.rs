@@ -210,6 +210,19 @@ pub enum UiActionStepV2 {
     MovePointer {
         target: UiSelectorV1,
     },
+    /// Move the pointer to a target and issue a pointer down, keeping the session active across
+    /// subsequent steps (until `pointer_up`).
+    ///
+    /// This is intended for scripted "drag + key" flows (e.g. press Escape while dragging).
+    PointerDown {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     DragPointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -220,6 +233,29 @@ pub enum UiActionStepV2 {
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
         steps: u32,
+    },
+    /// Move the pointer while a `pointer_down` session is active.
+    ///
+    /// This emits `PointerEvent::Move` with pressed buttons and also mirrors internal drag routing
+    /// by emitting `InternalDrag::Over` events (safe unless a cross-window internal-drag session is
+    /// active).
+    PointerMove {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+    },
+    /// Release an active `pointer_down` session.
+    ///
+    /// This emits `PointerEvent::Up` and mirrors internal drag routing by emitting
+    /// `InternalDrag::Drop`.
+    PointerUp {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        button: Option<UiMouseButtonV1>,
     },
     MovePointerSweep {
         target: UiSelectorV1,
@@ -702,6 +738,10 @@ pub enum UiPredicateV1 {
     /// matches `window`.
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
+    },
+    /// True when the latest docking diagnostics report an active dock drag session.
+    DockDragActiveIs {
+        active: bool,
     },
     /// True when the current docking drop preview kind matches `kind`.
     ///

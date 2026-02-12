@@ -355,6 +355,42 @@ fn script_v2_roundtrip_drag_to_window_target() {
 }
 
 #[test]
+fn script_v2_roundtrip_pointer_down_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_down", "window": { "kind": "last_seen_other" }, "target": { "kind": "test_id", "id": "x" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_pointer_move_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_move", "window": { "kind": "last_seen_other" }, "delta_x": 10.0, "delta_y": 0.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_pointer_up_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_up", "window": { "kind": "last_seen_other" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_wait_until_window_target() {
     assert_script_v2_roundtrip(
         r#"{
@@ -382,6 +418,18 @@ fn script_v2_roundtrip_assert_window_target() {
       "window": { "kind": "last_seen_other" },
       "predicate": { "kind": "known_window_count_ge", "n": 2 }
     }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_drag_active_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } }
   ]
 }"#,
     );
