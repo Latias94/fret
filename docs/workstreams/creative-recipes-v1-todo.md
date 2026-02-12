@@ -134,3 +134,7 @@ to `fret-ui` (ADR 0234).
   - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
         (capability-gated) with deterministic fallback
   - [ ] native: a decode path (software or hardware) with an explicit copy/zero-copy policy
+- [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
+- [ ] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
+      alpha semantics (`premul` vs `straight`), orientation/transform metadata, and frame timing hints
+      for diagnostics (ADR 0234 D4).

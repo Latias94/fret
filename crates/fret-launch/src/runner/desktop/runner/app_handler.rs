@@ -1191,11 +1191,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         self.tick_id,
                         self.frame_id,
                     );
+                    let EngineFrameUpdate {
+                        target_updates,
+                        command_buffers: engine_command_buffers,
+                        keepalive: engine_keepalive,
+                    } = engine_frame;
                     if let Some(started) = record_started {
                         hitch_record_ms = Some(started.elapsed().as_millis() as u64);
                     }
 
-                    for update in engine_frame.target_updates {
+                    for update in target_updates {
                         match update {
                             RenderTargetUpdate::Update { id, desc } => {
                                 if !renderer.update_render_target(id, desc) {
@@ -1264,7 +1269,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             );
                         }
 
-                        let mut cmd_buffers = engine_frame.command_buffers;
+                        let mut cmd_buffers = engine_command_buffers;
                         cmd_buffers.push(ui_cmd);
 
                         #[cfg(feature = "diag-screenshots")]
@@ -1302,6 +1307,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         context.queue.submit(cmd_buffers);
                         frame.present();
+                        drop(engine_keepalive);
 
                         #[cfg(feature = "diag-screenshots")]
                         if let (Some(diag), Some(inflight)) =

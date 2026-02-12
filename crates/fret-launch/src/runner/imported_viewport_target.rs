@@ -94,6 +94,21 @@ impl ImportedViewportRenderTarget {
         update.update_render_target(self.id, desc);
     }
 
+    /// Record an imported view update and a per-frame keepalive token.
+    ///
+    /// Use this when the imported view depends on an ephemeral external handle (e.g. a WebCodecs
+    /// `VideoFrame`) whose lifetime must be extended until submission.
+    pub fn push_update_with_keepalive<T: 'static>(
+        &self,
+        update: &mut EngineFrameUpdate,
+        view: wgpu::TextureView,
+        size: (u32, u32),
+        keepalive: T,
+    ) {
+        self.push_update(update, view, size);
+        update.push_keepalive(keepalive);
+    }
+
     /// Record an unregister request as a runner delta and clear the local id.
     pub fn push_unregister(&mut self, update: &mut EngineFrameUpdate) {
         if !self.is_registered() {

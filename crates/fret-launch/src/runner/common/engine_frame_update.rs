@@ -1,4 +1,19 @@
-use std::fmt;
+use std::{any::Any, fmt};
+
+/// A per-frame keepalive token carried from driver code to the runner submission boundary.
+///
+/// This exists to support truly-ephemeral imported resources (e.g. platform-backed external
+/// textures) whose validity may not be fully captured by a `wgpu::TextureView` handle alone.
+///
+/// The runner must keep these tokens alive until engine + UI command buffers have been submitted
+/// for the frame (ADR 0234 D3).
+pub struct EngineFrameKeepalive(Box<dyn Any>);
+
+impl EngineFrameKeepalive {
+    pub fn new<T: 'static>(value: T) -> Self {
+        Self(Box::new(value))
+    }
+}
 
 pub enum RenderTargetUpdate {
     Update {
@@ -43,11 +58,16 @@ impl fmt::Debug for RenderTargetUpdate {
 pub struct EngineFrameUpdate {
     pub target_updates: Vec<RenderTargetUpdate>,
     pub command_buffers: Vec<wgpu::CommandBuffer>,
+    pub keepalive: Vec<EngineFrameKeepalive>,
 }
 
 impl EngineFrameUpdate {
     pub fn push_command_buffer(&mut self, cb: wgpu::CommandBuffer) {
         self.command_buffers.push(cb);
+    }
+
+    pub fn push_keepalive<T: 'static>(&mut self, value: T) {
+        self.keepalive.push(EngineFrameKeepalive::new(value));
     }
 
     pub fn update_render_target(

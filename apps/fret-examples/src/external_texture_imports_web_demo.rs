@@ -363,9 +363,28 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
         Self::record_external_source_into_texture(state, context, secs);
 
         if let Some(view) = state.view.as_ref() {
-            state
-                .target
-                .push_update(&mut update, view.clone(), state.target_px_size);
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(ext) = state.external.as_ref() {
+                    state.target.push_update_with_keepalive(
+                        &mut update,
+                        view.clone(),
+                        state.target_px_size,
+                        ext.canvas.clone(),
+                    );
+                } else {
+                    state
+                        .target
+                        .push_update(&mut update, view.clone(), state.target_px_size);
+                }
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                state
+                    .target
+                    .push_update(&mut update, view.clone(), state.target_px_size);
+            }
         }
 
         app.push_effect(Effect::RequestAnimationFrame(window));
