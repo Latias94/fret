@@ -557,8 +557,21 @@ impl Carousel {
                                 item_layout =
                                     item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
                             } else {
-                                // Match shadcn/ui v4 `basis-full` default for both orientations.
-                                item_layout = item_layout.basis(LengthRefinement::Fill);
+                                // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
+                                //
+                                // For vertical tracks, the upstream demo uses `md:basis-1/2` and
+                                // relies on `min-height: auto` to clamp items to their content.
+                                // Since we don't have breakpoint-aware layout here, default to an
+                                // auto basis so vertical item geometry remains content-driven in
+                                // common layouts (matching our web goldens).
+                                item_layout = match track_direction {
+                                    fret_core::Axis::Horizontal => {
+                                        item_layout.basis(LengthRefinement::Fill)
+                                    }
+                                    fret_core::Axis::Vertical => {
+                                        item_layout.basis(LengthRefinement::Auto)
+                                    }
+                                };
                             }
 
                             let item_layout =
