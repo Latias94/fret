@@ -135,13 +135,20 @@ Evidence:
 - Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
 - Add UI gallery entries and `fretboard diag` scripts for each seed component.
 
-Status: Not started
+Status: In progress
 
 Evidence (planned):
 
 - `ecosystem/fret-ui-magic/` (crate surface + recipes)
 - `apps/fret-ui-gallery/` (entries)
 - `tools/diag-scripts/` (scripts)
+
+Evidence (partial):
+
+- `ecosystem/fret-ui-magic/src/marquee.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_marquee`)
+- `tools/diag-scripts/ui-gallery-magic-marquee-steady.json`
 
 ## M9 — External texture imports (v1)
 

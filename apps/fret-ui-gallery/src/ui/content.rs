@@ -470,6 +470,7 @@ fn page_preview(
         PAGE_TOOLTIP => preview_tooltip(cx),
         PAGE_SLIDER => preview_slider(cx),
         PAGE_ICONS => preview_icons(cx),
+        PAGE_MAGIC_MARQUEE => preview_magic_marquee(cx),
         PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => preview_overlay(
             cx,

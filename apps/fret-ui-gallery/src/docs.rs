@@ -53,6 +53,33 @@ let root = stack::hstack(
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_MARQUEE: &str = r#"
+## Marquee (fret-ui-magic)
+
+This page is an early **creative authoring** demo:
+
+- Drives time via the runner-owned frame clock (ADR 0240).
+- Requests continuous frames while animating (no hidden timers).
+- Respects reduced-motion preferences (deterministic fallback).
+
+Phase 0 intentionally keeps the API small and explicit: `wrap_width` is provided by the author
+instead of relying on dynamic measurement.
+"#;
+
+pub(crate) const USAGE_MAGIC_MARQUEE: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let props = magic::MarqueeProps {
+    wrap_width: Px(1200.0),
+    speed_px_per_s: 80.0,
+    ..Default::default()
+};
+
+let marquee = magic::marquee(cx, props, |cx| vec![/* repeated content */]);
+```
+"#;
+
 pub(crate) const DOC_VIEW_CACHE: &str = r#"
 ## View Cache (experimental)
 

@@ -77,14 +77,19 @@ Land a MagicUI-aligned ecosystem crate that composes the existing kernel primiti
 `fret-ui-kit` recipes. The goal is fast “creative baseline” parity with stable fallbacks and
 diagnostics, not perfect CSS parity.
 
-- [ ] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
+- [x] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
 - [ ] Implement 3–5 seed components (Phase 0):
   - [ ] `Lens`
   - [ ] `MagicCard`
   - [ ] `BorderBeam`
-  - [ ] `Marquee`
+  - [x] `Marquee`
   - [ ] `Dock`
-- [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component.
+- [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
+  - [x] `Marquee`
+  - [ ] `Lens`
+  - [ ] `MagicCard`
+  - [ ] `BorderBeam`
+  - [ ] `Dock`
 - [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
 
 ## P1 — External texture imports (v1)

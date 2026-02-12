@@ -44,7 +44,7 @@ fallbacks and diagnostics.
 - `crates/fret-render*`: renderer-owned implementations, budgets, conformance tests, telemetry.
 - `crates/fret-ui`: mechanism wrappers and derived inputs (pointer snapshots, frame clock reads).
 - `ecosystem/fret-ui-kit`: recipes/catalogs and stable developer-facing helpers.
-- `ecosystem/fret-ui-magic` (future): MagicUI-named wrappers that depend on `fret-ui-kit` recipes.
+- `ecosystem/fret-ui-magic`: MagicUI-named wrappers that depend on `fret-ui-kit` recipes.
 
 ## Worktree strategy (recommended)
 
@@ -105,5 +105,5 @@ Landed kernel primitives:
 
 Not yet landed (tracked in this workstream):
 
-1. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts
+1. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts (in progress)
 2. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)
