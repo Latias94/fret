@@ -12,6 +12,9 @@ param(
   [switch]$SkipIcons,
 
   [Parameter(Mandatory = $false)]
+  [switch]$SkipReleaseClosure,
+
+  [Parameter(Mandatory = $false)]
   [switch]$SkipDiffCheck
 )
 
@@ -67,6 +70,17 @@ Invoke-Checked `
     "-File",
     (Join-Path $repoRoot "tools/check_stringly_command_parsing.ps1")
   )
+
+if (-not $SkipReleaseClosure) {
+  Invoke-Checked `
+    "Release closure check" `
+    "python" `
+    @(
+      (Join-Path $repoRoot "tools/release_closure_check.py"),
+      "--write-order",
+      "docs/release/v0.1.0-publish-order.txt"
+    )
+}
 
 if (-not $SkipIcons) {
   $iconArgs = @(

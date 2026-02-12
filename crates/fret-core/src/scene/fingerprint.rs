@@ -38,6 +38,140 @@ fn mix_color(mut state: u64, c: Color) -> u64 {
     state
 }
 
+fn mix_paint(mut state: u64, p: Paint) -> u64 {
+    match p {
+        Paint::Solid(c) => {
+            state = mix_u64(state, 1);
+            mix_color(state, c)
+        }
+        Paint::LinearGradient(g) => {
+            state = mix_u64(state, 2);
+            state = mix_point(state, g.start);
+            state = mix_point(state, g.end);
+            state = mix_u64(
+                state,
+                match g.tile_mode {
+                    TileMode::Clamp => 1,
+                    TileMode::Repeat => 2,
+                    TileMode::Mirror => 3,
+                },
+            );
+            state = mix_u64(
+                state,
+                match g.color_space {
+                    ColorSpace::Srgb => 1,
+                    ColorSpace::Oklab => 2,
+                },
+            );
+            state = mix_u64(state, u64::from(g.stop_count));
+            let n = usize::from(g.stop_count).min(MAX_STOPS);
+            for i in 0..n {
+                state = mix_f32(state, g.stops[i].offset);
+                state = mix_color(state, g.stops[i].color);
+            }
+            state
+        }
+        Paint::RadialGradient(g) => {
+            state = mix_u64(state, 3);
+            state = mix_point(state, g.center);
+            state = mix_px(state, g.radius.width);
+            state = mix_px(state, g.radius.height);
+            state = mix_u64(
+                state,
+                match g.tile_mode {
+                    TileMode::Clamp => 1,
+                    TileMode::Repeat => 2,
+                    TileMode::Mirror => 3,
+                },
+            );
+            state = mix_u64(
+                state,
+                match g.color_space {
+                    ColorSpace::Srgb => 1,
+                    ColorSpace::Oklab => 2,
+                },
+            );
+            state = mix_u64(state, u64::from(g.stop_count));
+            let n = usize::from(g.stop_count).min(MAX_STOPS);
+            for i in 0..n {
+                state = mix_f32(state, g.stops[i].offset);
+                state = mix_color(state, g.stops[i].color);
+            }
+            state
+        }
+        Paint::Material { id, params } => {
+            state = mix_u64(state, 4);
+            state = mix_u64(state, id.data().as_ffi());
+            for v in params.vec4s {
+                for x in v {
+                    state = mix_f32(state, x);
+                }
+            }
+            state
+        }
+    }
+}
+
+fn mix_mask(mut state: u64, m: Mask) -> u64 {
+    match m {
+        Mask::LinearGradient(g) => {
+            state = mix_u64(state, 1);
+            state = mix_point(state, g.start);
+            state = mix_point(state, g.end);
+            state = mix_u64(
+                state,
+                match g.tile_mode {
+                    TileMode::Clamp => 1,
+                    TileMode::Repeat => 2,
+                    TileMode::Mirror => 3,
+                },
+            );
+            state = mix_u64(
+                state,
+                match g.color_space {
+                    ColorSpace::Srgb => 1,
+                    ColorSpace::Oklab => 2,
+                },
+            );
+            state = mix_u64(state, u64::from(g.stop_count));
+            let n = usize::from(g.stop_count).min(MAX_STOPS);
+            for i in 0..n {
+                state = mix_f32(state, g.stops[i].offset);
+                state = mix_color(state, g.stops[i].color);
+            }
+            state
+        }
+        Mask::RadialGradient(g) => {
+            state = mix_u64(state, 2);
+            state = mix_point(state, g.center);
+            state = mix_px(state, g.radius.width);
+            state = mix_px(state, g.radius.height);
+            state = mix_u64(
+                state,
+                match g.tile_mode {
+                    TileMode::Clamp => 1,
+                    TileMode::Repeat => 2,
+                    TileMode::Mirror => 3,
+                },
+            );
+            state = mix_u64(
+                state,
+                match g.color_space {
+                    ColorSpace::Srgb => 1,
+                    ColorSpace::Oklab => 2,
+                },
+            );
+            state = mix_u64(state, u64::from(g.stop_count));
+            let n = usize::from(g.stop_count).min(MAX_STOPS);
+            for i in 0..n {
+                state = mix_f32(state, g.stops[i].offset);
+                state = mix_color(state, g.stops[i].color);
+            }
+            state
+        }
+    }
+}
+
 fn mix_edges(mut state: u64, e: Edges) -> u64 {
     state = mix_px(state, e.top);
     state = mix_px(state, e.right);
@@ -86,6 +220,12 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             mix_corners(state, corner_radii)
         }
         SceneOp::PopClip => mix_u64(state, 2),
+        SceneOp::PushMask { bounds, mask } => {
+            let mut state = mix_u64(state, 108);
+            state = mix_rect(state, bounds);
+            mix_mask(state, mask)
+        }
+        SceneOp::PopMask => mix_u64(state, 109),
         SceneOp::PushEffect {
             bounds,
             mode,
@@ -131,6 +271,18 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         state = mix_f32(state, brightness);
                         mix_f32(state, contrast)
                     }
+                    EffectStep::ColorMatrix { m } => {
+                        let mut state = mix_u64(state, 5);
+                        for v in m {
+                            state = mix_f32(state, v);
+                        }
+                        state
+                    }
+                    EffectStep::AlphaThreshold { cutoff, soft } => {
+                        let mut state = mix_u64(state, 6);
+                        state = mix_f32(state, cutoff);
+                        mix_f32(state, soft)
+                    }
                     EffectStep::Pixelate { scale } => mix_u64(mix_u64(state, 3), u64::from(scale)),
                     EffectStep::Dither { mode } => mix_u64(
                         mix_u64(state, 4),
@@ -144,32 +296,64 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state
         }
         SceneOp::PopEffect => mix_u64(state, 107),
+        SceneOp::PushCompositeGroup { desc } => {
+            let mut state = mix_u64(state, 110);
+            state = mix_rect(state, desc.bounds);
+            state = mix_u64(
+                state,
+                match desc.mode {
+                    BlendMode::Over => 1,
+                    BlendMode::Add => 2,
+                    BlendMode::Multiply => 3,
+                    BlendMode::Screen => 4,
+                },
+            );
+            mix_u64(
+                state,
+                match desc.quality {
+                    EffectQuality::Auto => 1,
+                    EffectQuality::Low => 2,
+                    EffectQuality::Medium => 3,
+                    EffectQuality::High => 4,
+                },
+            )
+        }
+        SceneOp::PopCompositeGroup => mix_u64(state, 111),
         SceneOp::Quad {
             order,
             rect,
             background,
             border,
-            border_color,
+            border_paint,
             corner_radii,
         } => {
             let mut state = mix_u64(state, 3);
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
-            state = mix_color(state, background);
+            state = mix_paint(state, background);
             state = mix_edges(state, border);
-            state = mix_color(state, border_color);
+            state = mix_paint(state, border_paint);
             mix_corners(state, corner_radii)
         }
         SceneOp::Image {
             order,
             rect,
             image,
+            fit,
             opacity,
         } => {
             let mut state = mix_u64(state, 4);
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
             state = mix_u64(state, image.data().as_ffi());
+            state = mix_u64(
+                state,
+                match fit {
+                    crate::ViewportFit::Stretch => 1,
+                    crate::ViewportFit::Contain => 2,
+                    crate::ViewportFit::Cover => 3,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::ImageRegion {

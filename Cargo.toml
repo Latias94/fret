@@ -12,6 +12,8 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+# MSRV policy: keep this aligned with the minimum Rust version required
+# by the core GPU stack (currently wgpu 28).
 rust-version = "1.92"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -39,12 +41,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-tracy = { version = "0.11.4", default-features = false, features = ["enable", "callstack-inlines"] }
 web-time = "1"
+zbus = { version = "5.13.2", default-features = false, features = ["blocking"] }
 fluent-bundle = "0.16.0"
 fluent-fallback = "0.7.2"
 fluent-syntax = "0.12.0"
 unic-langid = "0.9"
-cosmic-text = "0.16.0"
 parley = "0.7.0"
+read-fonts = "0.35.0"
+swash = { version = "0.2.6", features = ["scale"] }
 unicode-script = "0.5.8"
 unicode-segmentation = "1.12.0"
 unicode-ident = "1.0.13"
@@ -53,7 +57,7 @@ arboard = "3.4.1"
 rfd = "0.17"
 webbrowser = "1.0.4"
 wgpu = "28.0.0"
-winit = "0.31.0-beta.2"
+winit = { version = "0.31.0-beta.2", features = ["android-native-activity"] }
 naga = "28.0.0"
 renderdog = "0.2.0"
 renderdog-automation = "0.2.0"
@@ -72,6 +76,7 @@ kurbo = "0.11"
 pulldown-cmark = "0.13"
 mdstream = "0.2.0"
 mathjax_svg = "3.2.0"
+merman = { path = "../merman/crates/merman", default-features = false }
 getrandom = "0.3"
 tree-sitter = "0.26.3"
 tree-sitter-highlight = "0.26.3"

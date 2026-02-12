@@ -68,7 +68,7 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 
 ## Crate Layout (Workspace)
 
-Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-backends-apps.md`.
+Crate boundaries are locked in ADR 0092: `docs/adr/0092-crate-structure-core-backends-apps.md`.
 
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
 - `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
@@ -237,7 +237,7 @@ References: `docs/adr/0006-text-system.md`, `docs/adr/0012-keyboard-ime-and-text
 - Default scheduling is event-driven (idle when nothing is dirty), with explicit continuous mode when requested.
 - Side effects are drained centrally in a bounded loop to keep multi-window behavior deterministic.
 
-References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0199-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0184-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Settings & Configuration (settings-ui-inspired)
 

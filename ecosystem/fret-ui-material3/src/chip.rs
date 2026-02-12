@@ -187,10 +187,9 @@ impl AssistChip {
         self.disabled
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
                 let focusable = match self.roving_tab_stop {
@@ -203,28 +202,35 @@ impl AssistChip {
                 }
 
                 let now_frame = cx.frame_id.0;
-                let corner_radii = chip_tokens::container_shape(&theme);
+                let (corner_radii, layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = chip_tokens::container_shape(theme);
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        chip_tokens::COMPONENT_PREFIX,
+                        corner_radii,
+                    );
+
+                    (corner_radii, layout, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
                     focusable,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),
                         test_id: self.test_id.clone(),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        chip_tokens::COMPONENT_PREFIX,
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -244,35 +250,118 @@ impl AssistChip {
                         let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
                         let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                        let label_color = chip_tokens::label_color(&theme, enabled, interaction);
-                        let label_color = resolve_override_slot_with(
-                            self.style.label_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || label_color,
-                        );
+                        let (
+                            height,
+                            label_style,
+                            leading_icon_size,
+                            label_color,
+                            leading_icon_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            background,
+                            shadow,
+                            outline,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let leading_icon_color =
-                            chip_tokens::leading_icon_color(&theme, enabled, interaction);
-                        let leading_icon_color = resolve_override_slot_with(
-                            self.style.leading_icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || leading_icon_color,
-                        );
+                            let height = chip_tokens::container_height(theme);
+                            let label_style = theme
+                                .text_style_by_key("md.sys.typescale.label-large")
+                                .unwrap_or_else(|| fret_core::TextStyle::default());
+                            let leading_icon_size = chip_tokens::leading_icon_size(theme);
 
-                        let state_layer_color = chip_tokens::state_layer_color(&theme, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                            let label_color = chip_tokens::label_color(theme, enabled, interaction);
+                            let label_color = resolve_override_slot_with(
+                                self.style.label_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || label_color,
+                            );
 
-                        let state_layer_target =
-                            chip_tokens::state_layer_opacity(&theme, interaction);
-                        let ripple_base_opacity = chip_tokens::pressed_state_layer_opacity(&theme);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let leading_icon_color =
+                                chip_tokens::leading_icon_color(theme, enabled, interaction);
+                            let leading_icon_color = resolve_override_slot_with(
+                                self.style.leading_icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || leading_icon_color,
+                            );
+
+                            let state_layer_color =
+                                chip_tokens::state_layer_color(theme, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let state_layer_target =
+                                chip_tokens::state_layer_opacity(theme, interaction);
+                            let ripple_base_opacity =
+                                chip_tokens::pressed_state_layer_opacity(theme);
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let (background, shadow, outline) = match self.variant {
+                                AssistChipVariant::Elevated => {
+                                    let bg =
+                                        chip_tokens::elevated_container_background(theme, enabled);
+                                    let bg = resolve_override_slot_with(
+                                        self.style.container_background.as_ref(),
+                                        states,
+                                        |color| color.resolve(theme),
+                                        || bg,
+                                    );
+                                    let elevation = chip_tokens::elevated_container_elevation(
+                                        theme,
+                                        enabled,
+                                        interaction,
+                                    );
+                                    let shadow_color =
+                                        chip_tokens::elevated_container_shadow_color(theme);
+                                    let surface = material_surface_style(
+                                        theme,
+                                        bg,
+                                        elevation,
+                                        Some(shadow_color),
+                                        corner_radii,
+                                    );
+                                    (Some(surface.background), surface.shadow, None)
+                                }
+                                AssistChipVariant::Flat => {
+                                    let outline =
+                                        chip_tokens::flat_outline(theme, enabled, interaction);
+                                    let outline = resolve_override_slot_opt_with(
+                                        self.style.outline_color.as_ref(),
+                                        states,
+                                        |color| color.resolve(theme),
+                                        || outline.map(|o| o.color),
+                                    )
+                                    .map(|color| chip_tokens::ChipOutline {
+                                        color,
+                                        width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
+                                    });
+                                    (None, None, outline)
+                                }
+                            };
+
+                            (
+                                height,
+                                label_style,
+                                leading_icon_size,
+                                label_color,
+                                leading_icon_color,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                                background,
+                                shadow,
+                                outline,
+                            )
+                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -288,58 +377,13 @@ impl AssistChip {
                             false,
                         );
 
-                        let height = chip_tokens::container_height(&theme);
-
-                        let (background, shadow, outline) =
-                            match self.variant {
-                                AssistChipVariant::Elevated => {
-                                    let bg =
-                                        chip_tokens::elevated_container_background(&theme, enabled);
-                                    let bg = resolve_override_slot_with(
-                                        self.style.container_background.as_ref(),
-                                        states,
-                                        |color| color.resolve(&theme),
-                                        || bg,
-                                    );
-                                    let elevation = chip_tokens::elevated_container_elevation(
-                                        &theme,
-                                        enabled,
-                                        interaction,
-                                    );
-                                    let shadow_color =
-                                        chip_tokens::elevated_container_shadow_color(&theme);
-                                    let surface = material_surface_style(
-                                        &theme,
-                                        bg,
-                                        elevation,
-                                        Some(shadow_color),
-                                        corner_radii,
-                                    );
-                                    (Some(surface.background), surface.shadow, None)
-                                }
-                                AssistChipVariant::Flat => {
-                                    let outline =
-                                        chip_tokens::flat_outline(&theme, enabled, interaction);
-                                    let outline = resolve_override_slot_opt_with(
-                                        self.style.outline_color.as_ref(),
-                                        states,
-                                        |color| color.resolve(&theme),
-                                        || outline.map(|o| o.color),
-                                    )
-                                    .map(|color| chip_tokens::ChipOutline {
-                                        color,
-                                        width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
-                                    });
-                                    (None, None, outline)
-                                }
-                            };
-
                         let content = assist_chip_content(
                             cx,
-                            &theme,
                             &self.label,
+                            label_style,
                             label_color,
                             self.leading_icon,
+                            leading_icon_size,
                             leading_icon_color,
                             height,
                         );
@@ -369,10 +413,11 @@ impl AssistChip {
 
 fn assist_chip_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: &Arc<str>,
+    label_style: fret_core::TextStyle,
     label_color: Color,
     leading_icon: Option<IconId>,
+    leading_icon_size: Px,
     leading_icon_color: Color,
     height: Px,
 ) -> AnyElement {
@@ -381,12 +426,8 @@ fn assist_chip_content<H: UiHost>(
     const ICON_LABEL_SPACE: Px = Px(8.0);
     const WITH_LEADING_ICON_LEADING_SPACE: Px = Px(8.0);
 
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut text = TextProps::new(label.clone());
-    text.style = Some(style);
+    text.style = Some(label_style);
     text.color = Some(label_color);
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Ellipsis;
@@ -419,8 +460,12 @@ fn assist_chip_content<H: UiHost>(
     cx.flex(props, move |cx| {
         let mut out = Vec::new();
         if let Some(icon) = leading_icon {
-            let size = chip_tokens::leading_icon_size(theme);
-            out.push(material_icon(cx, &icon, size, leading_icon_color));
+            out.push(material_icon(
+                cx,
+                &icon,
+                leading_icon_size,
+                leading_icon_color,
+            ));
         }
         out.push(label_el);
         out

@@ -2016,9 +2016,10 @@ impl Gizmo3dDemoDriver {
         let availability = WindowCommandAvailability {
             edit_can_undo,
             edit_can_redo,
+            ..Default::default()
         };
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
-            svc.set_snapshot(window, availability);
+            svc.set_edit_availability(window, edit_can_undo, edit_can_redo);
         });
         availability
     }
@@ -2825,7 +2826,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         } = context;
 
         // Prefer focused-surface command handling (e.g. local widget histories) before falling
-        // back to the window's active document undo stack (ADR 0136, ADR 0020).
+        // back to the window's active document undo stack (ADR 0125, ADR 0020).
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
@@ -4275,19 +4276,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(50_000),
                     rect: bg_rect,
-                    background: Color {
+                    background: fret_core::Paint::Solid(Color {
                         r: 0.08,
                         g: 0.08,
                         b: 0.09,
                         a: 0.78,
-                    },
+                    }),
                     border: Edges::all(Px(1.0)),
-                    border_color: Color {
+                    border_paint: fret_core::Paint::Solid(Color {
                         r: 0.35,
                         g: 0.35,
                         b: 0.40,
                         a: 0.85,
-                    },
+                    }),
                     corner_radii: Corners::all(Px(12.0)),
                 });
                 scene.push(SceneOp::Text {
@@ -4377,19 +4378,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(49_000),
                 rect: bg,
-                background: Color {
+                background: fret_core::Paint::Solid(Color {
                     r: 0.06,
                     g: 0.06,
                     b: 0.07,
                     a: 0.55,
-                },
+                }),
                 border: Edges::all(Px(1.0)),
-                border_color: Color {
+                border_paint: fret_core::Paint::Solid(Color {
                     r: label.color.r,
                     g: label.color.g,
                     b: label.color.b,
                     a: 0.85,
-                },
+                }),
                 corner_radii: Corners::all(Px(8.0)),
             });
 
@@ -4464,19 +4465,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(49_200),
                     rect: bg_rect,
-                    background: Color {
+                    background: fret_core::Paint::Solid(Color {
                         r: 0.06,
                         g: 0.06,
                         b: 0.07,
                         a: 0.62,
-                    },
+                    }),
                     border: Edges::all(Px(1.0)),
-                    border_color: Color {
+                    border_paint: fret_core::Paint::Solid(Color {
                         r: 0.35,
                         g: 0.35,
                         b: 0.40,
                         a: 0.85,
-                    },
+                    }),
                     corner_radii: Corners::all(Px(12.0)),
                 });
                 scene.push(SceneOp::Text {

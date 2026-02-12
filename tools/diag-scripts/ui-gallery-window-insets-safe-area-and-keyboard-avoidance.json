@@ -1,0 +1,150 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery window insets: safe-area + keyboard occlusion",
+    "required_capabilities": ["diag.window_insets_override", "diag.screenshot_png"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "set_window_insets",
+      "safe_area_insets": {
+        "kind": "set",
+        "insets_px": { "left_px": 0.0, "top_px": 44.0, "right_px": 0.0, "bottom_px": 34.0 }
+      },
+      "occlusion_insets": { "kind": "clear" }
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+        "padding_px": 12.0,
+        "padding_insets_px": {
+          "left_px": 0.0,
+          "top_px": 44.0,
+          "right_px": 0.0,
+          "bottom_px": 34.0
+        },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai chat" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 0.0,
+        "top_px": 44.0,
+        "right_px": 0.0,
+        "bottom_px": 34.0
+      },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+        "padding_px": 16.0,
+        "padding_insets_px": {
+          "left_px": 0.0,
+          "top_px": 44.0,
+          "right_px": 0.0,
+          "bottom_px": 34.0
+        },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "type_text", "text": "Hello from diag" },
+
+    {
+      "type": "set_window_insets",
+      "occlusion_insets": {
+        "kind": "set",
+        "insets_px": { "left_px": 0.0, "top_px": 0.0, "right_px": 0.0, "bottom_px": 260.0 }
+      }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+        "padding_px": 16.0,
+        "padding_insets_px": {
+          "left_px": 0.0,
+          "top_px": 44.0,
+          "right_px": 0.0,
+          "bottom_px": 294.0
+        },
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-safe-area-and-keyboard-avoidance" },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-safe-area-and-keyboard-avoidance",
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "set_window_insets",
+      "safe_area_insets": { "kind": "clear" },
+      "occlusion_insets": { "kind": "clear" }
+    }
+  ]
+}

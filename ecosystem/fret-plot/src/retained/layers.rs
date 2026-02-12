@@ -1425,9 +1425,11 @@ fn grid_heatmap_tile_ops(
                     Point::new(Px(left as f32 - tile_ox), Px(top as f32 - tile_oy)),
                     Size::new(Px((right - left) as f32), Px((bottom - top) as f32)),
                 ),
-                background: color,
+                background: fret_core::Paint::Solid(color),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(0.0)),
             });
         }

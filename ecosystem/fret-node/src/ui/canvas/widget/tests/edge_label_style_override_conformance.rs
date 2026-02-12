@@ -61,6 +61,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 }
 
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
@@ -187,7 +200,7 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         let SceneOp::Quad {
             order,
             background,
-            border_color,
+            border_paint,
             ..
         } = ops[ix]
         else {
@@ -196,10 +209,10 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != canvas.style.edge_label_background {
+        if background != fret_core::Paint::Solid(canvas.style.edge_label_background) {
             continue;
         }
-        if border_color != override_color {
+        if border_paint != fret_core::Paint::Solid(override_color) {
             continue;
         }
         if matches!(ops[ix + 1], SceneOp::Text { .. }) {

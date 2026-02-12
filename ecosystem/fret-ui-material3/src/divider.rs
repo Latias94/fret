@@ -3,9 +3,10 @@
 use std::sync::Arc;
 
 use fret_core::{Axis, Color, Px, SemanticsRole};
+use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, ContainerProps, Length, SemanticsProps};
 use fret_ui::elements::ElementContext;
-use fret_ui::{Theme, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
 use crate::tokens::divider as divider_tokens;
 
@@ -51,12 +52,15 @@ impl Divider {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let thickness = self
-            .thickness
-            .unwrap_or_else(|| divider_tokens::thickness(&theme));
-        let color = self.color.unwrap_or_else(|| divider_tokens::color(&theme));
+        let (thickness, color) = cx.with_theme(|theme| {
+            let thickness = self
+                .thickness
+                .unwrap_or_else(|| divider_tokens::thickness(theme));
+            let color = self.color.unwrap_or_else(|| divider_tokens::color(theme));
+            (thickness, color)
+        });
 
         let mut props = ContainerProps::default();
         props.background = Some(color);

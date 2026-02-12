@@ -7,152 +7,14 @@ use fret_core::{Scene, SceneOp, Transform2D};
 use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::tree::UiTree;
-use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 mod css_color;
 use css_color::{Rgba, color_to_rgba, parse_css_color};
 
-#[derive(Debug, Clone, Deserialize)]
-struct WebGolden {
-    themes: BTreeMap<String, WebGoldenTheme>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebGoldenTheme {
-    viewport: WebViewport,
-    root: WebNode,
-    #[serde(default)]
-    portals: Vec<WebNode>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebViewport {
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WebRect {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WebNode {
-    tag: String,
-    #[serde(default)]
-    #[serde(rename = "className")]
-    class_name: Option<String>,
-    #[serde(default)]
-    #[serde(rename = "computedStyle")]
-    computed_style: BTreeMap<String, String>,
-    #[serde(default)]
-    attrs: BTreeMap<String, String>,
-    rect: WebRect,
-    #[serde(default)]
-    text: Option<String>,
-    #[serde(default)]
-    children: Vec<WebNode>,
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
-}
-
-fn web_golden_path(name: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("shadcn-web")
-        .join("v4")
-        .join("new-york-v4")
-        .join(format!("{name}.json"))
-}
-
-fn read_web_golden(name: &str) -> WebGolden {
-    let path = web_golden_path(name);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
-        panic!(
-            "missing web golden: {}\nerror: {err}\n\nGenerate it via:\n  pnpm -C repo-ref/ui/apps/v4 golden:extract {name} --update\n\nDocs:\n  goldens/README.md\n  docs/shadcn-web-goldens.md",
-            path.display()
-        )
-    });
-    serde_json::from_str(&text).unwrap_or_else(|err| {
-        panic!(
-            "failed to parse web golden: {}\nerror: {err}",
-            path.display()
-        )
-    })
-}
-
-fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
-    golden
-        .themes
-        .get("light")
-        .or_else(|| golden.themes.get("dark"))
-        .expect("missing theme in web golden")
-}
-
-fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Option<&'a WebNode> {
-    if pred(node) {
-        return Some(node);
-    }
-    for child in &node.children {
-        if let Some(found) = find_first(child, pred) {
-            return Some(found);
-        }
-    }
-    None
-}
-
-fn find_all<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Vec<&'a WebNode> {
-    let mut out = Vec::new();
-    let mut stack = vec![node];
-    while let Some(n) = stack.pop() {
-        if pred(n) {
-            out.push(n);
-        }
-        for child in &n.children {
-            stack.push(child);
-        }
-    }
-    out
-}
-
-fn find_first_in_theme<'a>(
-    theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
-) -> Option<&'a WebNode> {
-    find_first(&theme.root, pred).or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
-}
-
-fn find_all_in_theme<'a>(
-    theme: &'a WebGoldenTheme,
-    pred: &impl Fn(&'a WebNode) -> bool,
-) -> Vec<&'a WebNode> {
-    let mut out = find_all(&theme.root, pred);
-    for portal in &theme.portals {
-        out.extend(find_all(portal, pred));
-    }
-    out
-}
-
-fn class_has_token(node: &WebNode, token: &str) -> bool {
-    node.class_name
-        .as_deref()
-        .unwrap_or("")
-        .split_whitespace()
-        .any(|t| t == token)
-}
+#[path = "support/web_golden_shadcn.rs"]
+mod web_golden_shadcn;
+use web_golden_shadcn::*;
 
 fn web_find_by_class_token<'a>(root: &'a WebNode, token: &str) -> Option<&'a WebNode> {
     find_first(root, &|n| class_has_token(n, token))
@@ -264,6 +126,19 @@ impl fret_core::SvgService for StyleAwareServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for StyleAwareServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -813,6 +688,9 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
+        let fret_core::Paint::Solid(background) = background else {
+            continue;
+        };
         if background.a <= 0.001 {
             continue;
         }
@@ -1234,7 +1112,8 @@ fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
         }
     }
 
-    let spacing = if theme.viewport.w >= 768.0 {
+    let md_min_width = fret_ui_kit::declarative::viewport_tailwind::MD.0;
+    let spacing = if theme.viewport.w >= md_min_width {
         md.or(base)
     } else {
         base
@@ -3638,15 +3517,25 @@ fn render_calendar_root_background_in_popover_scope(
             }
 
             let calendar = calendar.into_element(cx);
-            match &calendar.kind {
-                ElementKind::Container(props) => {
-                    let bg = props
-                        .background
-                        .expect("calendar root background (resolved)");
-                    calendar_bg.set(Some(bg));
+            let props = match &calendar.kind {
+                ElementKind::Container(props) => props,
+                ElementKind::LayoutQueryRegion(_) => {
+                    let child = calendar
+                        .children
+                        .first()
+                        .expect("calendar root LayoutQueryRegion child");
+                    match &child.kind {
+                        ElementKind::Container(props) => props,
+                        other => panic!("expected calendar root container, got {other:?}"),
+                    }
                 }
                 other => panic!("expected calendar root container, got {other:?}"),
-            }
+            };
+
+            let bg = props
+                .background
+                .expect("calendar root background (resolved)");
+            calendar_bg.set(Some(bg));
 
             fret_ui_shadcn::PopoverContent::new([calendar])
                 // shadcn/ui DatePicker demo uses `PopoverContent` with `w-auto p-0`.

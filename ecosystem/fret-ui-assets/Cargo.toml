@@ -13,12 +13,17 @@ documentation.workspace = true
 default = []
 # Optional integration helpers that wire `UiAssets` into `fret-app`-based applications.
 app-integration = ["dep:fret-app"]
+image-decode = ["dep:image"]
+image-metadata = ["dep:fret-ui-kit"]
 
 [dependencies]
 fret-asset-cache = { path = "../fret-asset-cache" }
+fret-executor = { path = "../fret-executor" }
 fret-app = { path = "../../crates/fret-app", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui-kit = { path = "../fret-ui-kit", optional = true }
+image = { workspace = true, optional = true }
 
 [dev-dependencies]
 slotmap.workspace = true

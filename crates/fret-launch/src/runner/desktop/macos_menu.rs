@@ -165,6 +165,8 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
@@ -213,6 +215,8 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 
@@ -707,6 +711,8 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
 

@@ -60,6 +60,19 @@ impl fret_core::SvgService for CaptureServices {
     }
 }
 
+impl fret_core::MaterialService for CaptureServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
+
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
@@ -98,7 +111,7 @@ fn extract_label_text_origin(scene: &Scene, style: &NodeGraphStyle) -> Option<Po
         let SceneOp::Quad {
             order,
             background,
-            border_color,
+            border_paint,
             ..
         } = ops[ix]
         else {
@@ -107,7 +120,9 @@ fn extract_label_text_origin(scene: &Scene, style: &NodeGraphStyle) -> Option<Po
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != style.edge_label_background || border_color != style.edge_label_border {
+        if background != fret_core::Paint::Solid(style.edge_label_background)
+            || border_paint != fret_core::Paint::Solid(style.edge_label_border)
+        {
             continue;
         }
         let SceneOp::Text { origin, .. } = ops[ix + 1] else {

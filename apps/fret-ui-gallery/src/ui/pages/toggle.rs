@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(480.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -59,7 +57,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-demo"));
+        .test_id("ui-gallery-toggle-demo");
 
         let body = centered(cx, row);
         section(cx, "Demo", body)
@@ -90,7 +88,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-outline"));
+        .test_id("ui-gallery-toggle-outline");
 
         let body = centered(cx, row);
         section(cx, "Outline", body)
@@ -112,7 +110,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-with-text"));
+        .test_id("ui-gallery-toggle-with-text");
 
         let body = centered(cx, row);
         section(cx, "With Text", body)
@@ -145,7 +143,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-size"));
+        .test_id("ui-gallery-toggle-size");
 
         let body = centered(cx, row);
         section(cx, "Size", body)
@@ -171,7 +169,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-disabled"));
+        .test_id("ui-gallery-toggle-disabled");
 
         let body = centered(cx, row);
         section(cx, "Disabled", body)
@@ -193,7 +191,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-rtl"));
+        .test_id("ui-gallery-toggle-rtl");
 
         let body = centered(cx, rtl_toggle);
         section(cx, "RTL", body)

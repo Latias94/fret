@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "popover-demo",
+      "web_name": "popover-demo",
+      "recipe": "popover_demo"
+    },
+    {
+      "id": "popover-demo.vp1440x240",
+      "web_name": "popover-demo.vp1440x240",
+      "recipe": "popover_demo"
+    },
+    {
+      "id": "popover-demo.vp375x240",
+      "web_name": "popover-demo.vp375x240",
+      "recipe": "popover_demo"
+    },
+    {
+      "id": "date-picker-demo",
+      "web_name": "date-picker-demo",
+      "recipe": "date_picker_demo"
+    },
+    {
+      "id": "date-picker-demo.vp375x240",
+      "web_name": "date-picker-demo.vp375x240",
+      "recipe": "date_picker_demo"
+    }
+  ]
+}

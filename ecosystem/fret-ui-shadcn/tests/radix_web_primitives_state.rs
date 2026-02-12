@@ -13,9 +13,14 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+
+#[path = "support/repo_root.rs"]
+mod repo_root;
+
+use repo_root::repo_root;
 
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
@@ -77,15 +82,6 @@ struct DomNode {
     text: Option<String>,
     #[serde(default)]
     children: Vec<DomNode>,
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
 }
 
 fn radix_web_path(file_stem: &str) -> PathBuf {
@@ -258,6 +254,19 @@ impl fret_core::SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }

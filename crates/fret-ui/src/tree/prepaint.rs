@@ -305,7 +305,7 @@ impl<H: UiHost> UiTree<H> {
                                 // don’t prefetch on every frame during slow scroll, while still keeping
                                 // each prefetch rerender bounded.
                                 let prefetch_step = if retained_host {
-                                    // Retained hosts (ADR 0192) can apply window shifts via reconcile
+                                    // Retained hosts (ADR 0177) can apply window shifts via reconcile
                                     // without rerendering a parent cache root, so prefer smaller, more
                                     // frequent prefetches. This bounds single-frame attach/detach bursts.
                                     //
@@ -323,7 +323,7 @@ impl<H: UiHost> UiTree<H> {
                                     //
                                     // For v1 (non-retained), reducing rerender frequency generally wins because
                                     // we cannot attach/detach rows on cache-hit frames without a retained host
-                                    // boundary (ADR 0192).
+                                    // boundary (ADR 0177).
                                     inputs.overscan.saturating_mul(8)
                                 }
                                 .max(prefetch_margin)
@@ -1302,7 +1302,7 @@ mod tests {
         let vlist_node = ui.create_node_for_element(element, NoopWidget);
         ui.add_child(cache_root, vlist_node);
 
-        // Mark this VirtualList as a retained host (ADR 0192) so prepaint applies window shifts via
+        // Mark this VirtualList as a retained host (ADR 0177) so prepaint applies window shifts via
         // reconcile rather than rerender.
         crate::elements::with_element_state(
             &mut app,

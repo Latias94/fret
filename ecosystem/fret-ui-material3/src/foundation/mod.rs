@@ -7,6 +7,7 @@
 //! - shared geometry helpers (ripple origin / max radius),
 //! - shared focus-ring style defaults.
 
+pub mod arc_str;
 pub mod content;
 pub mod context;
 pub mod elevation;

@@ -35,17 +35,17 @@ Status symbols:
 
 ### Data model & transform pipeline
 
-- `[x]` Dataset/field indirection + `encode` mapping (ADR 1128 / ADR 1140)
-- `[x]` Stable raw-index identity across transforms (`RowSelection`) (ADR 1137 / ADR 1140)
+- `[x]` Dataset/field indirection + `encode` mapping (ADR 0190 / ADR 0202)
+- `[x]` Stable raw-index identity across transforms (`RowSelection`) (ADR 0199 / ADR 0202)
 - `[~]` Minimal ECharts option JSON adapter (v1 subset) producing `ChartSpec` + datasets (not schema parity)
-- `[~]` DataZoom filter modes (`Filter`/`None`/`WeakFilter`/`Empty`) with a v1 multi-dim subset (ADR 1129 / ADR 1150)
+- `[~]` DataZoom filter modes (`Filter`/`None`/`WeakFilter`/`Empty`) with a v1 multi-dim subset (ADR 0191 / ADR 0211)
 - `[~]` Order-sensitive multi-dim filtering (ECharts “filter X then reset/filter Y”) (v1 subset; processor stage exists, parity incomplete)
 - `[~]` Transform graph scaffolding with cached derived outputs (partial; not yet a general node graph)
 - `[ ]` Dataset transform operators (filter/map/sort/aggregate) as first-class nodes (beyond dataZoom)
 
 ### Coordinate systems & layout
 
-- `[x]` Cartesian grid with multi-axis routing (ADR 1134)
+- `[x]` Cartesian grid with multi-axis routing (ADR 0196)
 - `[ ]` Multi-grid layout (multiple independent grids in one chart)
 - `[ ]` Polar coordinate system
 - `[ ]` Geo / map coordinate system
@@ -63,28 +63,28 @@ Status symbols:
 
 ### Components & interaction semantics
 
-- `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 1129 / ADR 1138)
+- `[x]` dataZoom X inside + slider UI (`fret-chart`) (ADR 0191 / ADR 0200)
   - v1 option adapter seeds initial windows via `dataZoom.startValue/endValue` (value windows) and `dataZoom.start/end` (percent windows via `Action::SetAxisWindowPercent`, derived by the engine to preserve ECharts-style order-sensitive semantics); supports `dataZoom.rangeMode` (homogeneous `percent`/`value`) for choosing which range props are active.
   - v1 subset: when no `xAxisIndex`/`yAxisIndex` is specified, auto-targets all parallel axes in the first grid by `orient` (`horizontal` -> all X axes in grid(0), `vertical` -> all Y axes in grid(0)).
-- `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 1136 / ADR 1150)
-- `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 1133)
-- `[~]` Tooltip formatting contract (structured rows + hooks; missing rich text/HTML parity) (ADR 1148)
+- `[~]` dataZoom Y + 2D zoom semantics (v1 boundary + opt-in filtering) (ADR 0198 / ADR 0211)
+- `[x]` AxisPointer (axis-trigger + item-trigger) baseline (ADR 0195)
+- `[~]` Tooltip formatting contract (structured rows + hooks; missing rich text/HTML parity) (ADR 0209)
   - Item-trigger defaults are ECharts-aligned (`TooltipSpecV1.item_axis_line=hide` by default; axis values are shown via axisPointer labels when enabled).
-- `[x]` Legend visibility and isolation semantics (`Action::SetSeriesVisible`) (ADR 1128; UX tracked by `docs/delinea-echarts-alignment.md`)
-- `[~]` Brush selection output + link events (ADR 1144 / ADR 1146; parity tests still sparse)
-- `[~]` VisualMap baseline (continuous + piecewise) (ADR 1147; channel coverage is incomplete)
+- `[x]` Legend visibility and isolation semantics (`Action::SetSeriesVisible`) (ADR 0190; UX tracked by `docs/delinea-echarts-alignment.md`)
+- `[~]` Brush selection output + link events (ADR 0205 / ADR 0207; parity tests still sparse)
+- `[~]` VisualMap baseline (continuous + piecewise) (ADR 0208; channel coverage is incomplete)
 - `[ ]` Toolbox / title / timeline components
 
 ### Styling & state model
 
-- `[~]` Token-driven chart styling (tracked in ADR 0142; UI adapter work)
+- `[~]` Token-driven chart styling (tracked in ADR 0131; UI adapter work)
 - `[ ]` ECharts-style emphasis / blur / downplay state model (including interaction-driven highlight policies)
 - `[ ]` Universal transitions and animation parity (series transitions, progressive animation)
 - `[ ]` Label layout and collision avoidance (including rich text)
 
 ### Performance & large data
 
-- `[x]` Budgeted progressive stepping (`WorkBudget`) (ADR 1132)
+- `[x]` Budgeted progressive stepping (`WorkBudget`) (ADR 0194)
 - `[~]` Large-data knobs parity (`large`, `progressive`, sampling indices) (subset implemented; more series coverage needed)
 - `[ ]` Incremental dataset updates and stable partial recompute (processor-level caches keyed by revision)
 

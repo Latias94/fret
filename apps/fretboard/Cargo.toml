@@ -12,4 +12,6 @@ publish = false
 
 [dependencies]
 fret-diag = { path = "../../crates/fret-diag" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-vscode-theme = { path = "../../ecosystem/fret-vscode-theme" }
 serde_json.workspace = true

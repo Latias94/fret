@@ -6,16 +6,28 @@ impl Renderer {
             return;
         }
         let new_capacity = needed.next_power_of_two().max(self.instance_capacity * 2);
-        self.instance_buffers = (0..self.instance_buffers.len())
-            .map(|i| {
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some(&format!("fret quad instances (resized) #{i}")),
-                    size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
-                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                })
-            })
-            .collect();
+        let mut new_buffers = Vec::with_capacity(self.instance_buffers.len());
+        let mut new_bind_groups = Vec::with_capacity(self.instance_buffers.len());
+        for i in 0..self.instance_buffers.len() {
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(&format!("fret quad instances (resized) #{i}")),
+                size: (new_capacity * std::mem::size_of::<QuadInstance>()) as u64,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some(&format!("fret quad instances bind group (resized) #{i}")),
+                layout: &self.quad_instance_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            new_buffers.push(buffer);
+            new_bind_groups.push(bind_group);
+        }
+        self.instance_buffers = new_buffers;
+        self.quad_instance_bind_groups = new_bind_groups;
         self.instance_buffer_index = 0;
         self.instance_capacity = new_capacity;
     }
@@ -123,6 +135,14 @@ impl Renderer {
                         size: None,
                     }),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.mask_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
             ],
         });
 
@@ -186,11 +206,72 @@ impl Renderer {
                         size: None,
                     }),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.mask_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
             ],
         });
 
         self.clip_buffer = clip_buffer;
         self.uniform_bind_group = uniform_bind_group;
         self.clip_capacity = new_capacity;
+    }
+
+    pub(super) fn ensure_mask_capacity(&mut self, device: &wgpu::Device, needed: usize) {
+        if needed <= self.mask_capacity {
+            return;
+        }
+
+        let new_capacity = needed
+            .next_power_of_two()
+            .max(self.mask_capacity.saturating_mul(2).max(1));
+        let mask_entry_size = std::mem::size_of::<MaskGradientUniform>() as u64;
+        let mask_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret mask stack buffer (resized)"),
+            size: mask_entry_size.saturating_mul(new_capacity as u64).max(4),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
+        let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret uniforms bind group (resized mask buffer)"),
+            layout: &self.uniform_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.uniform_buffer,
+                        offset: 0,
+                        size: Some(std::num::NonZeroU64::new(uniform_size).unwrap()),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.clip_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &mask_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+            ],
+        });
+
+        self.mask_buffer = mask_buffer;
+        self.uniform_bind_group = uniform_bind_group;
+        self.mask_capacity = new_capacity;
     }
 }

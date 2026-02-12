@@ -3,6 +3,7 @@ use fret_core::{
     AppWindowId, Event, FrameId, Modifiers, MouseButton, Point, PointerEvent, PointerId,
     PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
 };
+use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId};
 use fret_core::{SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -13,6 +14,19 @@ use std::sync::Arc;
 
 #[derive(Default)]
 struct FakeServices;
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        true
+    }
+}
 
 impl TextService for FakeServices {
     fn prepare(
@@ -136,6 +150,28 @@ fn dispatch_pointer_down(
     );
 }
 
+fn dispatch_pointer_up(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    button: MouseButton,
+    position: Point,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position,
+            button,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+}
+
 fn center(bounds: &Rect) -> Point {
     Point::new(
         Px(bounds.origin.x.0 + bounds.size.width.0 / 2.0),
@@ -172,12 +208,20 @@ fn tab_strip_right_and_middle_mouse_down_do_not_steal_focus() {
         .expect("tab node");
 
     assert_eq!(ui.focus(), None);
+    let focus_pos = center(&focus_target_bounds);
     dispatch_pointer_down(
         &mut ui,
         &mut app,
         &mut services,
         MouseButton::Left,
-        center(&focus_target_bounds),
+        focus_pos,
+    );
+    dispatch_pointer_up(
+        &mut ui,
+        &mut app,
+        &mut services,
+        MouseButton::Left,
+        focus_pos,
     );
     assert_eq!(ui.focus(), Some(focus_target_node));
 

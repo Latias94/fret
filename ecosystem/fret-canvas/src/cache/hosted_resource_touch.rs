@@ -128,6 +128,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for Services {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn touch_hosted_resources_in_scene_ops_aggregates_counts() {
         let mut services = Services::default();
@@ -185,9 +198,9 @@ mod tests {
             SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
-                background: Color::TRANSPARENT,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT),
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             },
         ];

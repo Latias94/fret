@@ -9,6 +9,7 @@ pub mod input;
 pub mod menu_list;
 pub mod pixelate;
 pub mod resizable;
+pub mod resolve;
 #[cfg(feature = "dnd")]
 pub mod sortable_dnd;
 pub mod surface;

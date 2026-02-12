@@ -53,7 +53,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - Floating UI: `repo-ref/floating-ui` (contract vocabulary; not a DOM implementation target)
 - **Related contract(s):**
   - Cross-frame anchor geometry for declarative elements: `crates/fret-ui/src/elements/mod.rs` (`bounds_for_element`, `root_bounds_for_element`)
-  - RenderTransform-aware anchoring: `docs/adr/0083-render-transform-hit-testing.md` + `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, `last_visual_bounds_for_element`)
+  - RenderTransform-aware anchoring: `docs/adr/0082-render-transform-hit-testing.md` + `crates/fret-ui/src/elements/mod.rs` (`visual_bounds_for_element`, `last_visual_bounds_for_element`)
   - Stable overlay owner identity for declarative triggers: `crates/fret-ui/src/elements/mod.rs` (`GlobalElementId`), consumed via `ecosystem/fret-ui-kit` (`OverlayOwnerId`)
 
 ### Declarative layout vocabulary (Tailwind/CSS semantics)
@@ -73,7 +73,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - `crates/fret-launch/src/runner/mod.rs`
   - `crates/fret-ui/src/elements/mod.rs`
 - **ADR(s):** `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
-- **Portability (execution/wake/timers):** Native: `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable`; wasm: `exec.background_work=cooperative`, `exec.wake=best_effort`, `exec.timers=best_effort`; mobile (future): `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable` (see `docs/adr/0199-execution-and-concurrency-surface-v1.md` and `docs/adr/0054-platform-capabilities-and-portability-matrix.md`).
+- **Portability (execution/wake/timers):** Native: `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable`; wasm: `exec.background_work=cooperative`, `exec.wake=best_effort`, `exec.timers=best_effort`; mobile (future): `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable` (see `docs/adr/0184-execution-and-concurrency-surface-v1.md` and `docs/adr/0054-platform-capabilities-and-portability-matrix.md`).
 - **Reference(s):**
   - GPUI/Zed `Window::refresh()` mental model: `repo-ref/zed/crates/gpui/src/window.rs`
 

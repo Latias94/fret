@@ -20,7 +20,7 @@ Related plan:
 - [x] Create `crates/fret-render-wgpu` (wgpu backend implementation).
 - [x] Keep `crates/fret-render` as a compatibility facade (re-exports / feature glue).
 - [x] Update `crates/fret-launch` to depend on `fret-render-wgpu` for native.
-- [x] Ensure `tools/check_layering.ps1` still passes.
+- [x] Ensure `tools/check_layering.py` still passes.
 
 ### M2 — Web runner becomes real (`fret-runner-web`)
 
@@ -63,7 +63,7 @@ Related plan:
 
 ## Validation checklist (run at each milestone)
 
-- [x] `pwsh -NoProfile -File tools/check_layering.ps1`
+- [x] `python3 tools/check_layering.py`
 - [x] `cargo fmt`
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings`
 - [x] `cargo nextest run` (or `cargo test --workspace` if nextest is unavailable)

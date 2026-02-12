@@ -198,6 +198,7 @@ impl DataGridCanvas {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -603,9 +604,9 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
         p.scene().push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: viewport,
-            background: data.bg,
+            background: fret_core::Paint::Solid(data.bg),
             border: Edges::default(),
-            border_color: Color::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT,
             corner_radii: Corners::default(),
         });
 
@@ -617,9 +618,9 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect,
-                background: data.grid,
+                background: fret_core::Paint::Solid(data.grid),
                 border: Edges::default(),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: Corners::default(),
             });
         }
@@ -629,9 +630,9 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect,
-                background: data.grid,
+                background: fret_core::Paint::Solid(data.grid),
                 border: Edges::default(),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
                 corner_radii: Corners::default(),
             });
         }

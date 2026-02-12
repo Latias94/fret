@@ -533,6 +533,49 @@ mod command_enabled_effect_tests {
     }
 }
 
+#[cfg(test)]
+mod global_lease_tests {
+    use super::*;
+
+    #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+    struct Counter(u32);
+
+    #[test]
+    fn with_global_mut_does_not_leak_lease_marker_after_panic() {
+        let mut app = App::new();
+        let _ = app.take_changed_globals();
+
+        let panicked = catch_unwind(AssertUnwindSafe(|| {
+            app.with_global_mut(Counter::default, |_counter, app| {
+                // Global access during a lease should panic (guardrail), but the lease marker
+                // must be removed before unwinding resumes.
+                let _ = app.global::<Counter>();
+            });
+        }))
+        .is_err();
+        assert!(panicked, "expected global re-entrant access to panic");
+
+        assert_eq!(app.global::<Counter>().copied(), Some(Counter(0)));
+    }
+
+    #[test]
+    fn with_global_mut_persists_user_mutations_and_restores_access_after_panic() {
+        let mut app = App::new();
+        let _ = app.take_changed_globals();
+
+        let panicked = catch_unwind(AssertUnwindSafe(|| {
+            app.with_global_mut(Counter::default, |counter, _app| {
+                counter.0 = 123;
+                panic!("boom");
+            });
+        }))
+        .is_err();
+        assert!(panicked, "expected user closure panic");
+
+        assert_eq!(app.global::<Counter>().copied(), Some(Counter(123)));
+    }
+}
+
 fn default_keymap_service() -> KeymapService {
     KeymapService {
         keymap: Keymap::from_v1(KeymapFileV1 {
@@ -709,7 +752,7 @@ fn default_keymap_service() -> KeymapService {
                         key: "KeyA".into(),
                     },
                 },
-                // Document/window-level undo/redo (ADR 0136).
+                // Document/window-level undo/redo (ADR 0127).
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("windows".into()),
@@ -961,6 +1004,8 @@ mod tests {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
 

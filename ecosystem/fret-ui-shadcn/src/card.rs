@@ -127,20 +127,24 @@ impl Card {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let chrome = card_chrome(&theme, size).merge(self.chrome);
-            let mut props = decl_style::container_props(&theme, chrome, self.layout);
-            let radius = props.corner_radii.top_left;
-            props.shadow = Some(decl_style::shadow_sm(&theme, radius));
-            let children = self.children;
+            let (props, gap) = {
+                let theme = Theme::global(&*cx.app);
+                let chrome = card_chrome(theme, size).merge(self.chrome);
+                let mut props = decl_style::container_props(theme, chrome, self.layout);
+                let radius = props.corner_radii.top_left;
+                props.shadow = Some(decl_style::shadow_sm(theme, radius));
 
-            let gap = match size {
-                CardSize::Default => Space::N6,
-                CardSize::Sm => Space::N4,
+                let gap = match size {
+                    CardSize::Default => Space::N6,
+                    CardSize::Sm => Space::N4,
+                };
+                (props, gap)
             };
+            let children = self.children;
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
@@ -189,19 +193,22 @@ impl CardHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
 
         let mut action: Option<AnyElement> = None;
         let mut left: Vec<AnyElement> = Vec::with_capacity(self.children.len());
@@ -266,14 +273,16 @@ impl CardAction {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default().merge(self.layout),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().merge(self.layout),
+            )
+        };
 
         let children = self.children;
         let el = cx.container(props, move |cx| {
@@ -296,7 +305,7 @@ impl CardAction {
 mod tests {
     use super::*;
 
-    use fret_ui::element::{ContainerProps, SemanticsDecoration, SemanticsProps};
+    use fret_ui::element::{ContainerProps, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
 
     #[test]
@@ -306,7 +315,7 @@ mod tests {
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .attach_semantics(SemanticsDecoration::default().test_id(CARD_ACTION_TEST_ID));
+        .test_id(CARD_ACTION_TEST_ID);
 
         assert!(is_card_action_marker(&el));
     }
@@ -332,7 +341,7 @@ mod tests {
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("not-a-card-action"));
+        .test_id("not-a-card-action");
 
         assert!(!is_card_action_marker(&el));
     }
@@ -349,19 +358,22 @@ impl CardContent {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
         let children = self.children;
         with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
             shadcn_layout::container_vstack(
@@ -385,19 +397,22 @@ impl CardFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
         let size = card_size_in_scope(cx);
         let px = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
-        let props = decl_style::container_props(
-            &theme,
-            // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(px),
-            LayoutRefinement::default().w_full(),
-        );
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
+                ChromeRefinement::default().px(px),
+                LayoutRefinement::default().w_full(),
+            )
+        };
         let children = self.children;
         shadcn_layout::container_hstack(
             cx,
@@ -420,18 +435,21 @@ impl CardTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("card-foreground");
-
-        let px = theme
-            .metric_by_key("component.card.title_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.card.title_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("card-foreground");
+            let px = theme
+                .metric_by_key("component.card.title_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.card.title_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .w_full()
@@ -455,18 +473,21 @@ impl CardDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-
-        let px = theme
-            .metric_by_key("component.card.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.card.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("muted-foreground");
+            let px = theme
+                .metric_by_key("component.card.description_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.card.description_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .w_full()

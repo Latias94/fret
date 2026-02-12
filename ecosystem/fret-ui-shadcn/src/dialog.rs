@@ -34,6 +34,41 @@ fn default_overlay_color() -> Color {
     }
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct DialogOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn dialog_open_change_events(
+    state: &mut DialogOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 /// shadcn/ui `Dialog` (v4).
 ///
 /// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager
@@ -52,6 +87,8 @@ pub struct Dialog {
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -64,6 +101,11 @@ impl std::fmt::Debug for Dialog {
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -78,6 +120,8 @@ impl Dialog {
             on_dismiss_request: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -99,6 +143,15 @@ impl Dialog {
 
     pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
         self.overlay_closable = overlay_closable;
+        self
+    }
+
+    /// Base UI-compatible alias.
+    ///
+    /// When `true`, outside pointer press does not dismiss the dialog.
+    /// This is equivalent to `overlay_closable(false)`.
+    pub fn disable_pointer_dismissal(mut self, disable: bool) -> Self {
+        self.overlay_closable = !disable;
         self
     }
 
@@ -133,6 +186,22 @@ impl Dialog {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -166,6 +235,19 @@ impl Dialog {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) = cx
+                .with_state(DialogOpenChangeCallbackState::default, |state| {
+                    dialog_open_change_events(state, is_open, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -198,9 +280,16 @@ impl Dialog {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
                 let on_open_auto_focus = self.on_open_auto_focus.clone();
-                let on_close_auto_focus = self.on_close_auto_focus.clone();
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_dialog::dialog_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        self.on_dismiss_request.clone(),
+                        self.on_close_auto_focus.clone(),
+                    );
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
@@ -229,7 +318,7 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
@@ -384,6 +473,7 @@ impl DialogContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -469,6 +559,7 @@ impl DialogClose {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -574,6 +665,7 @@ impl DialogHeader {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -597,6 +689,7 @@ impl DialogFooter {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
@@ -627,6 +720,7 @@ impl DialogTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -666,6 +760,7 @@ impl DialogDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
@@ -753,6 +848,46 @@ mod tests {
         });
     }
 
+    #[test]
+    fn dialog_disable_pointer_dismissal_alias_maps_overlay_closable() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let a = Dialog::new(open.clone()).disable_pointer_dismissal(true);
+        assert!(!a.overlay_closable);
+
+        let b = Dialog::new(open).disable_pointer_dismissal(false);
+        assert!(b.overlay_closable);
+    }
+
+    #[test]
+    fn dialog_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = DialogOpenChangeCallbackState::default();
+
+        let (changed, completed) = dialog_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn dialog_open_change_events_complete_without_animation() {
+        let mut state = DialogOpenChangeCallbackState::default();
+
+        let _ = dialog_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -793,6 +928,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -2053,6 +2201,92 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn dialog_escape_closes_by_default_when_handler_allows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
+            Rc::new(Cell::new(None));
+        let dismiss_reason_cell = dismiss_reason.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .on_dismiss_request(Some(handler.clone()))
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            DialogContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            dismiss_reason.get(),
+            Some(fret_ui::action::DismissReason::Escape)
+        );
     }
 
     #[test]

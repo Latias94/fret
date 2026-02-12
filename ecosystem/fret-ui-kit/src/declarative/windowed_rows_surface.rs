@@ -1,7 +1,7 @@
 //! Windowed row surface helpers.
 //!
 //! This module provides an ecosystem-level building block for “prepaint-windowed virtual
-//! surfaces” (ADR 0190) in the subset of cases where:
+//! surfaces” (ADR 0175) in the subset of cases where:
 //!
 //! - the surface can be modeled as a single scrollable region, and
 //! - per-row UI does not need to be represented as a fully composable declarative subtree.

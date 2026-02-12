@@ -68,7 +68,7 @@ These hooks must be:
 Follow-up (tooling contract, non-normative):
 
 - The concrete, versioned “diagnostics bundle” shape and scripted interaction test harness are defined in
-  `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`.
+  `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`.
 
 ### 4) Renderer metrics are standardized
 

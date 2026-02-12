@@ -12,6 +12,7 @@ pub enum SemanticsRole {
     AlertDialog,
     Alert,
     Button,
+    Link,
     Checkbox,
     Switch,
     Slider,

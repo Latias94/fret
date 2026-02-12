@@ -178,6 +178,88 @@ pub fn anchored_panel_layout_ex(
     finalize_layout(outer, anchor, chosen, chosen_side, align, options)
 }
 
+/// Like [`anchored_panel_layout_ex`], but also returns a debug trace describing solver decisions.
+///
+/// This is intended for diagnostics evidence and MUST NOT be used as a normative contract surface.
+pub fn anchored_panel_layout_ex_with_trace(
+    outer: Rect,
+    anchor: Rect,
+    content: Size,
+    side_offset: Px,
+    preferred_side: Side,
+    align: Align,
+    options: AnchoredPanelOptions,
+) -> (AnchoredPanelLayout, AnchoredPanelLayoutTrace) {
+    let outer_input = outer;
+    let outer = apply_collision_options(outer, options.collision);
+    let desired = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
+    let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
+
+    let preferred_origin = anchored_origin_ex(anchor, desired, gap, preferred_side, align, options);
+    let preferred = Rect::new(preferred_origin, desired);
+    let preferred_fits_without_main_clamp =
+        side_fits_without_clamp(outer, preferred, preferred_side);
+
+    let flipped_side = opposite_side(preferred_side);
+    let flipped_origin = anchored_origin_ex(anchor, desired, gap, flipped_side, align, options);
+    let flipped = Rect::new(flipped_origin, desired);
+    let flipped_fits_without_main_clamp = side_fits_without_clamp(outer, flipped, flipped_side);
+
+    let preferred_available_main_px = available_main_for_side(outer, anchor, gap, preferred_side);
+    let flipped_available_main_px = available_main_for_side(outer, anchor, gap, flipped_side);
+
+    let (chosen_side, chosen) = if preferred_fits_without_main_clamp {
+        (preferred_side, preferred)
+    } else if flipped_fits_without_main_clamp {
+        (flipped_side, flipped)
+    } else {
+        // Neither side fits cleanly on the main axis. Choose the candidate that minimizes main-axis
+        // overflow, breaking ties by total overflow, then clamp into `outer`.
+        let preferred_overflow = overflow_amount(outer, preferred);
+        let flipped_overflow = overflow_amount(outer, flipped);
+
+        let preferred_main = main_axis_overflow(preferred_overflow, preferred_side);
+        let flipped_main = main_axis_overflow(flipped_overflow, flipped_side);
+
+        let preferred_total = total_overflow(preferred_overflow);
+        let flipped_total = total_overflow(flipped_overflow);
+
+        if (flipped_main, flipped_total) < (preferred_main, preferred_total) {
+            (flipped_side, flipped)
+        } else {
+            (preferred_side, preferred)
+        }
+    };
+
+    let (layout, rect_after_shift, shift_delta) =
+        finalize_layout_with_trace(outer, anchor, chosen, chosen_side, align, options);
+
+    let trace = AnchoredPanelLayoutTrace {
+        outer_input,
+        outer_collision: outer,
+        anchor,
+        desired,
+        side_offset,
+        preferred_side,
+        align,
+        options,
+        gap,
+        preferred_rect: preferred,
+        flipped_rect: flipped,
+        preferred_fits_without_main_clamp,
+        flipped_fits_without_main_clamp,
+        preferred_available_main_px,
+        flipped_available_main_px,
+        chosen_side,
+        chosen_rect: chosen,
+        rect_after_shift,
+        shift_delta,
+        layout,
+    };
+
+    (layout, trace)
+}
+
 /// Like [`anchored_panel_layout_ex`], but clamps the panel `Size` to available space (see ADR 0064).
 pub fn anchored_panel_layout_sized_ex(
     outer: Rect,
@@ -264,6 +346,106 @@ pub fn anchored_panel_layout_sized_ex(
         align,
         options,
     )
+}
+
+/// Like [`anchored_panel_layout_sized_ex`], but also returns a debug trace describing solver decisions.
+///
+/// This is intended for diagnostics evidence and MUST NOT be used as a normative contract surface.
+pub fn anchored_panel_layout_sized_ex_with_trace(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    side_offset: Px,
+    preferred_side: Side,
+    align: Align,
+    options: AnchoredPanelOptions,
+) -> (AnchoredPanelLayout, AnchoredPanelLayoutTrace) {
+    let outer_input = outer;
+    let outer = apply_collision_options(outer, options.collision);
+    let desired = Size::new(Px(desired.width.0.max(0.0)), Px(desired.height.0.max(0.0)));
+    let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
+
+    let preferred_unclamped_origin =
+        anchored_origin_ex(anchor, desired, gap, preferred_side, align, options);
+    let preferred_unclamped = Rect::new(preferred_unclamped_origin, desired);
+    let preferred_fits_without_main_clamp =
+        side_fits_without_clamp(outer, preferred_unclamped, preferred_side);
+
+    let flipped_side = opposite_side(preferred_side);
+    let flipped_unclamped_origin =
+        anchored_origin_ex(anchor, desired, gap, flipped_side, align, options);
+    let flipped_unclamped = Rect::new(flipped_unclamped_origin, desired);
+    let flipped_fits_without_main_clamp =
+        side_fits_without_clamp(outer, flipped_unclamped, flipped_side);
+
+    let preferred_available_main_px = available_main_for_side(outer, anchor, gap, preferred_side);
+    let flipped_available_main_px = available_main_for_side(outer, anchor, gap, flipped_side);
+
+    let (chosen_side, chosen_rect) = if preferred_fits_without_main_clamp {
+        let size = clamp_size_for_side(outer, anchor, desired, gap, preferred_side);
+        let origin = anchored_origin_ex(anchor, size, gap, preferred_side, align, options);
+        (preferred_side, Rect::new(origin, size))
+    } else if flipped_fits_without_main_clamp {
+        let size = clamp_size_for_side(outer, anchor, desired, gap, flipped_side);
+        let origin = anchored_origin_ex(anchor, size, gap, flipped_side, align, options);
+        (flipped_side, Rect::new(origin, size))
+    } else {
+        // Neither side fits on the main axis given the desired size. Prefer the side with more
+        // available main-axis space (Floating UI `flip` best-fit behavior), breaking ties by the
+        // overflow heuristic used by the unsized solver.
+        let chosen_side = if flipped_available_main_px > preferred_available_main_px {
+            flipped_side
+        } else if preferred_available_main_px > flipped_available_main_px {
+            preferred_side
+        } else {
+            let preferred_overflow = overflow_amount(outer, preferred_unclamped);
+            let flipped_overflow = overflow_amount(outer, flipped_unclamped);
+
+            let preferred_main = main_axis_overflow(preferred_overflow, preferred_side);
+            let flipped_main = main_axis_overflow(flipped_overflow, flipped_side);
+
+            let preferred_total = total_overflow(preferred_overflow);
+            let flipped_total = total_overflow(flipped_overflow);
+
+            if (flipped_main, flipped_total) < (preferred_main, preferred_total) {
+                flipped_side
+            } else {
+                preferred_side
+            }
+        };
+
+        let size = clamp_size_for_side(outer, anchor, desired, gap, chosen_side);
+        let origin = anchored_origin_ex(anchor, size, gap, chosen_side, align, options);
+        (chosen_side, Rect::new(origin, size))
+    };
+
+    let (layout, rect_after_shift, shift_delta) =
+        finalize_layout_with_trace(outer, anchor, chosen_rect, chosen_side, align, options);
+
+    let trace = AnchoredPanelLayoutTrace {
+        outer_input,
+        outer_collision: outer,
+        anchor,
+        desired,
+        side_offset,
+        preferred_side,
+        align,
+        options,
+        gap,
+        preferred_rect: preferred_unclamped,
+        flipped_rect: flipped_unclamped,
+        preferred_fits_without_main_clamp,
+        flipped_fits_without_main_clamp,
+        preferred_available_main_px,
+        flipped_available_main_px,
+        chosen_side,
+        chosen_rect,
+        rect_after_shift,
+        shift_delta,
+        layout,
+    };
+
+    (layout, trace)
 }
 
 fn opposite_side(side: Side) -> Side {
@@ -513,6 +695,49 @@ fn apply_collision_options(outer: Rect, collision: CollisionOptions) -> Rect {
         outer
     };
     inset_rect(outer, collision.padding)
+}
+
+fn finalize_layout_with_trace(
+    outer: Rect,
+    anchor: Rect,
+    rect: Rect,
+    side: Side,
+    align: Align,
+    options: AnchoredPanelOptions,
+) -> (AnchoredPanelLayout, Rect, Point) {
+    let rect_after_shift =
+        shift_rect_with_sticky(outer, anchor, rect, side, options.sticky, options.shift);
+    let shift_delta = Point::new(
+        Px(rect_after_shift.origin.x.0 - rect.origin.x.0),
+        Px(rect_after_shift.origin.y.0 - rect.origin.y.0),
+    );
+
+    let mut final_rect = rect_after_shift;
+    let arrow = options.arrow.map(|arrow| {
+        apply_arrow_layout(
+            ArrowLayoutArgs {
+                outer,
+                anchor,
+                placement_side: side,
+                align,
+                sticky: options.sticky,
+                shift: options.shift,
+                arrow,
+            },
+            &mut final_rect,
+        )
+    });
+
+    (
+        AnchoredPanelLayout {
+            rect: final_rect,
+            side,
+            align,
+            arrow,
+        },
+        rect_after_shift,
+        shift_delta,
+    )
 }
 
 fn finalize_layout(

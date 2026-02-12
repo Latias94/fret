@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Async execution and task orchestration helpers for Fret."
 
 [features]
 default = []
@@ -15,8 +16,8 @@ tokio = ["dep:tokio"]
 wasm = ["dep:wasm-bindgen-futures"]
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 tokio = { version = "1", optional = true, default-features = false, features = ["rt"] }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 

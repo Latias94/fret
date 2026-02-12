@@ -165,10 +165,9 @@ impl Button {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
 
@@ -178,13 +177,43 @@ impl Button {
 
                 let now_frame = cx.frame_id.0;
                 let pressed = enabled && st.pressed;
-                let (corner_radii, corner_want_frames) =
-                    animated_button_corner_radii(cx, &theme, pressable_id, now_frame, pressed);
-                let size_tokens = button_size_tokens(&theme, self.size);
+                let (base_radius, pressed_radius, corner_spring, size_tokens, label_style) = {
+                    let theme = Theme::global(&*cx.app);
+                    let base_radius = button_shape_radius(theme);
+                    let pressed_radius = button_pressed_shape_radius(theme);
+                    let scheme_spring =
+                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                    let corner_spring = button_pressed_corner_spring(theme, scheme_spring);
+                    let size_tokens = button_size_tokens(theme, self.size);
+                    let label_style = button_label_style(theme);
+                    (
+                        base_radius,
+                        pressed_radius,
+                        corner_spring,
+                        size_tokens,
+                        label_style,
+                    )
+                };
+
+                let (corner_radii, corner_want_frames) = animated_button_corner_radii(
+                    cx,
+                    pressable_id,
+                    now_frame,
+                    pressed,
+                    base_radius,
+                    pressed_radius,
+                    corner_spring,
+                );
+
+                let focus_ring = {
+                    let theme = Theme::global(&*cx.app);
+                    material_focus_ring_for_component(theme, "md.comp.button", corner_radii)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
+                    key_activation: Default::default(),
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::Button),
                         label: Some(self.label.clone()),
@@ -197,11 +226,7 @@ impl Button {
                         l.overflow = Overflow::Visible;
                         l
                     },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        "md.comp.button",
-                        corner_radii,
-                    )),
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -234,42 +259,77 @@ impl Button {
                         });
 
                         let states = WidgetStates::from_pressable(cx, st, enabled);
-                        let label_color = resolve_override_slot_with(
-                            self.style.label_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || button_tokens::label_color(&theme, self.variant, enabled),
-                        );
-                        let container_bg = button_tokens::container_background(
-                            &theme,
-                            self.variant,
-                            enabled,
+
+                        let (
                             label_color,
-                        );
-                        let container_bg = resolve_override_slot_opt_with(
-                            self.style.container_background.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || container_bg,
-                        );
-                        let state_layer_color = button_tokens::state_layer_color(
-                            &theme,
-                            self.variant,
-                            label_color,
-                            token_interaction,
-                        );
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
-                        let state_layer_target = token_interaction
-                            .map(|i| button_tokens::state_layer_opacity(&theme, self.variant, i))
-                            .unwrap_or(0.0);
-                        let ripple_base_opacity =
-                            button_tokens::pressed_state_layer_opacity(&theme, self.variant);
-                        let config = material_pressable_indication_config(&theme, None);
+                            container_bg,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            outline,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
+
+                            let label_color = resolve_override_slot_with(
+                                self.style.label_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || button_tokens::label_color(theme, self.variant, enabled),
+                            );
+                            let container_bg = button_tokens::container_background(
+                                theme,
+                                self.variant,
+                                enabled,
+                                label_color,
+                            );
+                            let container_bg = resolve_override_slot_opt_with(
+                                self.style.container_background.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || container_bg,
+                            );
+                            let state_layer_color = button_tokens::state_layer_color(
+                                theme,
+                                self.variant,
+                                label_color,
+                                token_interaction,
+                            );
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+                            let state_layer_target = token_interaction
+                                .map(|i| button_tokens::state_layer_opacity(theme, self.variant, i))
+                                .unwrap_or(0.0);
+                            let ripple_base_opacity =
+                                button_tokens::pressed_state_layer_opacity(theme, self.variant);
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let outline = button_outline(theme, self.variant, enabled);
+                            let outline = outline.map(|mut outline| {
+                                outline.color = resolve_override_slot_with(
+                                    self.style.outline_color.as_ref(),
+                                    states,
+                                    |color| color.resolve(theme),
+                                    || outline.color,
+                                );
+                                outline
+                            });
+
+                            (
+                                label_color,
+                                container_bg,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                                outline,
+                            )
+                        };
+
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -284,19 +344,10 @@ impl Button {
                             corner_want_frames,
                         );
 
-                        let label = material_button_label(cx, &theme, &self.label, label_color);
+                        let label =
+                            material_button_label(cx, label_style, &self.label, label_color);
                         let content = material_button_content(cx, size_tokens, label);
 
-                        let outline = button_outline(&theme, self.variant, enabled);
-                        let outline = outline.map(|mut outline| {
-                            outline.color = resolve_override_slot_with(
-                                self.style.outline_color.as_ref(),
-                                states,
-                                |color| color.resolve(&theme),
-                                || outline.color,
-                            );
-                            outline
-                        });
                         let chrome = material_button_chrome(
                             cx,
                             container_bg,
@@ -339,16 +390,10 @@ fn material_button_chrome<H: UiHost>(
 
 fn material_button_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    style: fret_core::TextStyle,
     label: &Arc<str>,
     color: Color,
 ) -> AnyElement {
-    let style = theme
-        .text_style_by_key("md.comp.button.label-text")
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-        .or_else(|| theme.text_style_by_key("text_style.button"))
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut props = TextProps::new(label.clone());
     props.style = Some(style);
     props.color = Some(color);
@@ -390,6 +435,14 @@ struct ButtonCornerRuntime {
     spring: SpringAnimator,
 }
 
+fn button_label_style(theme: &Theme) -> fret_core::TextStyle {
+    theme
+        .text_style_by_key("md.comp.button.label-text")
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
+        .or_else(|| theme.text_style_by_key("text_style.button"))
+        .unwrap_or_else(|| fret_core::TextStyle::default())
+}
+
 fn button_shape_radius(theme: &Theme) -> f32 {
     theme
         .metric_by_key("md.comp.button.container.shape.round")
@@ -424,22 +477,19 @@ fn button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> S
 
 fn animated_button_corner_radii<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     pressable_id: fret_ui::elements::GlobalElementId,
     now_frame: u64,
     pressed: bool,
+    base_radius: f32,
+    pressed_radius: f32,
+    spring: SpringSpec,
 ) -> (Corners, bool) {
-    let base = button_shape_radius(theme);
-    let pressed_radius = button_pressed_shape_radius(theme);
-    let target = if pressed { pressed_radius } else { base };
-
-    let scheme_spring = sys_spring_in_scope(cx, theme, MotionSchemeKey::FastSpatial);
-    let spring = button_pressed_corner_spring(theme, scheme_spring);
+    let target = if pressed { pressed_radius } else { base_radius };
 
     cx.with_state_for(pressable_id, ButtonCornerRuntime::default, |rt| {
         if !rt.spring.is_initialized() {
             // Initialize lazily with the default radius to avoid an animated "pop" on first frame.
-            rt.spring.reset(now_frame, base);
+            rt.spring.reset(now_frame, base_radius);
         }
 
         rt.spring.set_target(now_frame, target, spring);

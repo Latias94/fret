@@ -2,7 +2,8 @@ use fret_core::{Point, Rect};
 
 use crate::{
     AutoScrollConfig, AutoScrollRequest, CollisionStrategy, DndCollision, DndItemId,
-    RegistrySnapshot, closest_center_collisions, compute_autoscroll, pointer_within_collisions,
+    RegistrySnapshot, closest_center_collisions, closest_center_over, compute_autoscroll,
+    pointer_within_collisions, pointer_within_over,
 };
 
 #[derive(Debug, Clone)]
@@ -10,6 +11,17 @@ pub struct DndFrameOutput {
     pub collisions: Vec<DndCollision>,
     pub over: Option<DndItemId>,
     pub autoscroll: Option<AutoScrollRequest>,
+}
+
+pub fn compute_dnd_over(
+    snapshot: &RegistrySnapshot,
+    pointer: Point,
+    collision_strategy: CollisionStrategy,
+) -> Option<DndItemId> {
+    match collision_strategy {
+        CollisionStrategy::PointerWithin => pointer_within_over(snapshot, pointer),
+        CollisionStrategy::ClosestCenter => closest_center_over(snapshot, pointer),
+    }
 }
 
 pub fn compute_dnd_frame(
@@ -72,5 +84,33 @@ mod tests {
 
         assert_eq!(out.over, Some(DndItemId(2)));
         assert_eq!(out.collisions.first().map(|c| c.id), Some(DndItemId(2)));
+    }
+
+    #[test]
+    fn compute_dnd_over_matches_pointer_within_topmost() {
+        let snapshot = RegistrySnapshot {
+            draggables: vec![],
+            droppables: vec![
+                crate::Droppable {
+                    id: DndItemId(1),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+                crate::Droppable {
+                    id: DndItemId(2),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 10,
+                },
+            ],
+        };
+
+        let over = compute_dnd_over(
+            &snapshot,
+            Point::new(Px(5.0), Px(5.0)),
+            CollisionStrategy::PointerWithin,
+        );
+        assert_eq!(over, Some(DndItemId(2)));
     }
 }

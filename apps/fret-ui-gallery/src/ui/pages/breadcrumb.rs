@@ -4,8 +4,6 @@ pub(super) fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
     _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -28,17 +26,17 @@ pub(super) fn preview_breadcrumb(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -58,7 +56,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-demo"));
+        .test_id("ui-gallery-breadcrumb-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = shadcn::Breadcrumb::new()
@@ -68,7 +66,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-basic"));
+        .test_id("ui-gallery-breadcrumb-basic");
     let basic = section_card(cx, "Basic", basic_content);
 
     let custom_separator_content = shadcn::Breadcrumb::new()
@@ -79,9 +77,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-separator"),
-        );
+        .test_id("ui-gallery-breadcrumb-separator");
     let custom_separator = section_card(cx, "Custom Separator", custom_separator_content);
 
     let dropdown_content = shadcn::Breadcrumb::new()
@@ -92,7 +88,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-dropdown"));
+        .test_id("ui-gallery-breadcrumb-dropdown");
     let dropdown = section_card(cx, "Dropdown", dropdown_content);
 
     let collapsed_content = shadcn::Breadcrumb::new()
@@ -104,9 +100,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-collapsed"),
-        );
+        .test_id("ui-gallery-breadcrumb-collapsed");
     let collapsed = section_card(cx, "Collapsed", collapsed_content);
 
     let link_component_content = shadcn::Breadcrumb::new()
@@ -118,7 +112,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-link"));
+        .test_id("ui-gallery-breadcrumb-link");
     let link_component = section_card(cx, "Link Component", link_component_content);
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
@@ -135,7 +129,7 @@ pub(super) fn preview_breadcrumb(
                 .into_element(cx)
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-rtl"));
+    .test_id("ui-gallery-breadcrumb-rtl");
     let rtl = section_card(cx, "RTL", rtl_content);
 
     let preview_hint = shadcn::typography::muted(
@@ -161,9 +155,7 @@ pub(super) fn preview_breadcrumb(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-breadcrumb-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -15,8 +15,9 @@ use fret_runtime::{FrameId, TickId};
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
-use fret_ui::{ElementContext, Invalidation, Theme, UiFrameCx, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::primitives::dialog as dialog_prim;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
@@ -72,7 +73,7 @@ type RecordEngineFrameHookFn<S> = fn(
 /// - conservative hot reload reset (Subsecond-friendly)
 ///
 /// This driver intentionally uses `fn` pointers (not captured closures) to keep dev hotpatch behavior
-/// predictable (ADR 0107).
+/// predictable (ADR 0105).
 pub struct UiAppDriver<S> {
     root_name: &'static str,
     init_window: fn(&mut App, AppWindowId) -> S,
@@ -87,6 +88,7 @@ pub struct UiAppDriver<S> {
     on_hot_reload_window: Option<HotReloadHookFn<S>>,
     on_model_changes: Option<ModelChangesHookFn<S>>,
     on_global_changes: Option<GlobalChangesHookFn<S>>,
+    on_global_changes_middleware: Option<GlobalChangesHookFn<S>>,
 
     window_create_spec:
         Option<fn(&mut App, &fret_app::CreateWindowRequest) -> Option<WindowCreateSpec>>,
@@ -122,6 +124,7 @@ impl<S> UiAppDriver<S> {
             on_hot_reload_window: None,
             on_model_changes: None,
             on_global_changes: None,
+            on_global_changes_middleware: None,
             window_create_spec: None,
             window_created: None,
             before_close_window: None,
@@ -150,7 +153,7 @@ impl<S> UiAppDriver<S> {
     /// caches from the event pipeline.
     ///
     /// This makes `ImageAssetCache` work out-of-the-box in golden-path apps without additional
-    /// boilerplate (ADR 0108 / ADR 0112).
+    /// boilerplate (ADR 0106 / ADR 0110).
     #[cfg(feature = "ui-assets")]
     pub fn drive_ui_assets(mut self, enabled: bool) -> Self {
         self.drive_ui_assets = enabled;
@@ -192,6 +195,15 @@ impl<S> UiAppDriver<S> {
 
     pub fn on_global_changes(mut self, f: GlobalChangesHookFn<S>) -> Self {
         self.on_global_changes = Some(f);
+        self
+    }
+
+    /// Register a global-changes middleware hook that runs before `on_global_changes`.
+    ///
+    /// This is intended for framework-level integration seams that should not override app-owned
+    /// global-changes handling (e.g. ecosystem policy helpers that react to `WindowMetricsService`).
+    pub fn on_global_changes_middleware(mut self, f: GlobalChangesHookFn<S>) -> Self {
+        self.on_global_changes_middleware = Some(f);
         self
     }
 
@@ -571,7 +583,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
         return;
     }
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = cx.theme_snapshot();
     let pad = theme.metric_by_key("metric.padding.md").unwrap_or(Px(16.0));
     let pad_sm = theme.metric_by_key("metric.padding.sm").unwrap_or(Px(12.0));
     let radius = theme.metric_by_key("metric.radius.md").unwrap_or(Px(8.0));
@@ -1385,6 +1397,10 @@ fn ui_app_handle_global_command<S>(
                 return;
             }
         }
+        fret_app::core_commands::TEXT_RESCAN_SYSTEM_FONTS => {
+            app.push_effect(Effect::TextRescanSystemFonts);
+            return;
+        }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;
@@ -1468,6 +1484,20 @@ fn ui_app_handle_global_changes<S>(
     if !changed.is_empty() {
         app.request_redraw(window);
     }
+
+    if let Some(f) = driver.on_global_changes_middleware {
+        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+        {
+            let mut hot = subsecond::HotFn::current(f);
+            hot.call((app, window, &mut state.ui, &mut state.state, changed));
+        }
+
+        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+        {
+            f(app, window, &mut state.ui, &mut state.state, changed);
+        }
+    }
+
     if let Some(f) = driver.on_global_changes {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -1487,6 +1517,12 @@ struct FrameHitchConfig {
     hitch_ms: u64,
 }
 
+#[cfg(target_arch = "wasm32")]
+fn frame_hitch_config() -> Option<FrameHitchConfig> {
+    None
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn frame_hitch_config() -> Option<FrameHitchConfig> {
     static CONFIG: OnceLock<Option<FrameHitchConfig>> = OnceLock::new();
     *CONFIG.get_or_init(|| {
@@ -1504,6 +1540,7 @@ fn frame_hitch_config() -> Option<FrameHitchConfig> {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     let mut paths = Vec::new();
     paths.push(std::path::Path::new(".fret").join("frame_hitches.log"));
@@ -1515,16 +1552,19 @@ fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct FrameHitchLogWriter {
     file: std::io::BufWriter<std::fs::File>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 struct FrameHitchLogState {
     writers: Vec<FrameHitchLogWriter>,
     writes_since_flush: u32,
-    last_flush: std::time::Instant,
+    last_flush: Instant,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FrameHitchLogState {
     fn new() -> Self {
         let mut writers = Vec::new();
@@ -1546,7 +1586,7 @@ impl FrameHitchLogState {
         Self {
             writers,
             writes_since_flush: 0,
-            last_flush: std::time::Instant::now(),
+            last_flush: Instant::now(),
         }
     }
 
@@ -1571,11 +1611,15 @@ impl FrameHitchLogState {
                 let _ = w.file.flush();
             }
             self.writes_since_flush = 0;
-            self.last_flush = std::time::Instant::now();
+            self.last_flush = Instant::now();
         }
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+fn write_frame_hitch_log(_line: &str) {}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn write_frame_hitch_log(line: &str) {
     let ts = fret_core::time::SystemTime::now()
         .duration_since(fret_core::time::UNIX_EPOCH)
@@ -1940,7 +1984,7 @@ fn ui_app_render<S>(
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
     }
-    let mut layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
+    let layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
@@ -1980,7 +2024,7 @@ fn ui_app_render<S>(
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
+                Some(&state.ui),
                 semantics_snapshot,
                 element_runtime,
             )
@@ -2619,4 +2663,86 @@ fn reset_ui_tree_for_hotpatch(app: &mut App, window: AppWindowId, ui: &mut UiTre
 
 fn hotpatch_drop_old_state() -> bool {
     std::env::var_os("FRET_HOTPATCH_DROP_OLD_STATE").is_some_and(|v| !v.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::any::TypeId;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static SEQ: AtomicUsize = AtomicUsize::new(0);
+    static MIDDLEWARE_SEQ: AtomicUsize = AtomicUsize::new(0);
+    static USER_SEQ: AtomicUsize = AtomicUsize::new(0);
+
+    fn init_window(app: &mut App, window: AppWindowId) -> u8 {
+        let _ = (app, window);
+        0
+    }
+
+    fn view(_cx: &mut ElementContext<'_, App>, _st: &mut u8) -> ViewElements {
+        ViewElements::default()
+    }
+
+    fn middleware(
+        app: &mut App,
+        window: AppWindowId,
+        ui: &mut UiTree<App>,
+        st: &mut u8,
+        changed: &[TypeId],
+    ) {
+        let _ = (app, window, ui, st, changed);
+        let idx = SEQ.fetch_add(1, Ordering::SeqCst) + 1;
+        MIDDLEWARE_SEQ.store(idx, Ordering::SeqCst);
+    }
+
+    fn user_hook(
+        app: &mut App,
+        window: AppWindowId,
+        ui: &mut UiTree<App>,
+        st: &mut u8,
+        changed: &[TypeId],
+    ) {
+        let _ = (app, window, ui, st, changed);
+        let idx = SEQ.fetch_add(1, Ordering::SeqCst) + 1;
+        USER_SEQ.store(idx, Ordering::SeqCst);
+    }
+
+    #[test]
+    fn global_changes_middleware_runs_before_user_hook() {
+        SEQ.store(0, Ordering::SeqCst);
+        MIDDLEWARE_SEQ.store(0, Ordering::SeqCst);
+        USER_SEQ.store(0, Ordering::SeqCst);
+
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let mut state = UiAppWindowState {
+            ui: UiTree::default(),
+            root: None,
+            state: 0,
+            pending_invalidation: PendingInvalidationBatch::default(),
+        };
+
+        let mut driver = UiAppDriver::new("test", init_window, view)
+            .on_global_changes_middleware(middleware)
+            .on_global_changes(user_hook);
+
+        let changed = [TypeId::of::<fret_core::WindowMetricsService>()];
+        ui_app_handle_global_changes(
+            &mut driver,
+            WinitWindowContext {
+                app: &mut app,
+                window,
+                state: &mut state,
+            },
+            &changed,
+        );
+
+        let middleware_seq = MIDDLEWARE_SEQ.load(Ordering::SeqCst);
+        let user_seq = USER_SEQ.load(Ordering::SeqCst);
+        assert_ne!(middleware_seq, 0);
+        assert_ne!(user_seq, 0);
+        assert!(middleware_seq < user_seq);
+    }
 }

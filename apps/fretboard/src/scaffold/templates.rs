@@ -181,7 +181,6 @@ struct TodoItem {
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
-    router: MessageRouter<Msg>,
     next_id: u64,
 }
 
@@ -217,14 +216,37 @@ struct TodoDerivedDeps {
     done_revs: Vec<u64>,
 }
 
+struct TodoProgram;
+
+impl MvuProgram for TodoProgram {
+    type State = TodoState;
+    type Message = Msg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+        init_window(app, window)
+    }
+
+    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+        update(app, state, message);
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, state, msg)
+    }
+}
+
 fn main() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<TodoProgram>("todo")?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
+fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     let done_1 = app.models_mut().insert(false);
     let done_2 = app.models_mut().insert(true);
     let todos = app.models_mut().insert(vec![
@@ -240,29 +262,28 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
         },
     ]);
 
-    let prefix = format!("todo.{window:?}.");
     TodoState {
         todos,
         draft: app.models_mut().insert(String::new()),
-        router: MessageRouter::new(prefix),
         next_id: 3,
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut TodoState,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
     let todos = cx
         .watch_model(&st.todos)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
     let draft_value = cx
         .watch_model(&st.draft)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
 
-    let theme = Theme::global(&*cx.app).clone();
-    st.router.clear();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let (done_count, total_count) = cx.use_selector(
         |cx| {
@@ -319,8 +340,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let tip_state = cx
         .watch_model(tip_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(|| QueryState::<TipData>::default());
+        .cloned_or_else(QueryState::<TipData>::default);
 
     let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
         QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
@@ -341,6 +361,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
             (text, "muted-foreground")
         }
     };
+
+    let add_enabled = !draft_value.trim().is_empty();
+    let add_cmd = msg.cmd(Msg::Add);
+    let clear_done_cmd = msg.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
 
     let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
         .variant(shadcn::BadgeVariant::Secondary)
@@ -366,10 +391,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
         .into_element(cx);
 
-    let add_enabled = !draft_value.trim().is_empty();
-    let add_cmd = st.router.cmd(Msg::Add);
-    let clear_done_cmd = st.router.cmd(Msg::ClearDone);
-    let refresh_tip_cmd = st.router.cmd(Msg::RefreshTip);
 __ADD_BTN_DEF__
 
     let input = shadcn::Input::new(st.draft.clone())
@@ -385,8 +406,8 @@ __ADD_BTN_DEF__
 
     let rows = ui::v_flex_build(cx, |cx, out| {
         for t in &todos {
-            let remove_cmd = st.router.cmd(Msg::Remove(t.id));
-            out.push(cx.keyed(t.id, |cx| todo_row(cx, &theme, t, remove_cmd.clone())));
+            let remove_cmd = msg.cmd(Msg::Remove(t.id));
+            out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())));
         }
     })
         .gap(Space::N3)
@@ -432,20 +453,19 @@ __ADD_BTN_DEF__
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
+    theme: ThemeSnapshot,
     item: &TodoItem,
     remove_cmd: CommandId,
 ) -> AnyElement {
     let done = cx
         .watch_model(&item.done)
         .layout()
-        .copied()
-        .unwrap_or(false);
+        .copied_or_default();
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
 __REMOVE_BTN_DEF__
@@ -485,18 +505,7 @@ __REMOVE_BTN_DEF__
         .into_element(cx)
 }
 
-fn on_command(
-    app: &mut App,
-    _services: &mut dyn UiServices,
-    window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    state: &mut TodoState,
-    cmd: &CommandId,
-) {
-    let Some(msg) = state.router.try_take(cmd) else {
-        return;
-    };
-
+fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
     match msg {
         Msg::Add => {
             let draft = app
@@ -524,7 +533,6 @@ fn on_command(
             let _ = app.models_mut().update(&state.draft, |s| {
                 s.clear();
             });
-            app.request_redraw(window);
         }
         Msg::ClearDone => {
             let snapshot = app
@@ -544,19 +552,16 @@ fn on_command(
             let _ = app.models_mut().update(&state.todos, |todos| {
                 *todos = keep;
             });
-            app.request_redraw(window);
         }
         Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
             });
-            app.request_redraw(window);
         }
         Msg::Remove(id) => {
             let _ = app.models_mut().update(&state.todos, |todos| {
                 todos.retain(|t| t.id != id);
             });
-            app.request_redraw(window);
         }
     }
 }
@@ -580,46 +585,57 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     format!(
         r#"use fret_kit::prelude::*;
 
-const CMD_CLICK: &str = "hello.click";
+#[derive(Debug, Clone)]
+enum Msg {{
+    Click,
+}}
+
+struct HelloProgram;
+
+impl MvuProgram for HelloProgram {{
+    type State = ();
+    type Message = Msg;
+
+    fn init(_app: &mut App, _window: AppWindowId) -> Self::State {{}}
+
+    fn update(_app: &mut App, _state: &mut Self::State, message: Self::Message) {{
+        match message {{
+            Msg::Click => {{
+                println!("Clicked!");
+            }}
+        }}
+    }}
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        _state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {{
+        let click_cmd = msg.cmd(Msg::Click);
+
+        ui::v_flex(cx, |cx| {{
+            [
+                shadcn::Label::new("Hello, world!").into_element(cx),
+                shadcn::Button::new("Click me")
+                    .on_click(click_cmd)
+                    .into_element(cx),
+__PALETTE_BUTTON__
+            ]
+        }})
+        .size_full()
+        .gap(Space::N4)
+        .items_center()
+        .justify_center()
+        .into_element(cx)
+        .into()
+    }}
+}}
 
 fn main() -> anyhow::Result<()> {{
-    fret_kit::app_with_hooks("{package_name}", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<HelloProgram>("{package_name}")?
         .with_main_window("{package_name}", (560.0, 360.0))
         .run()?;
     Ok(())
-}}
-
-fn init_window(_app: &mut App, _window: AppWindowId) {{}}
-
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> ViewElements {{
-    vec![ui::v_flex(cx, |cx| {{
-        [
-            shadcn::Label::new("Hello, world!").into_element(cx),
-            shadcn::Button::new("Click me")
-                .on_click(CMD_CLICK)
-                .into_element(cx),
-__PALETTE_BUTTON__
-        ]
-    }})
-    .size_full()
-    .gap(Space::N4)
-    .items_center()
-    .justify_center()
-    .into_element(cx)]
-    .into()
-}}
-
-fn on_command(
-    _app: &mut App,
-    _services: &mut dyn UiServices,
-    _window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    _st: &mut (),
-    cmd: &CommandId,
-) {{
-    if cmd.as_str() == CMD_CLICK {{
-        println!("Clicked!");
-    }}
 }}
 "#
     )
@@ -710,7 +726,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::app_with_hooks` golden path (ADR 0107 / 0112).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `fret_kit::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
 "#
     )
 }

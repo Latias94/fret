@@ -1,0 +1,104 @@
+# Shadcn Extras (`fret-ui-shadcn::extras`) — TODO Tracker
+
+This document tracks executable TODOs for adding a small “extras” surface to `fret-ui-shadcn`.
+
+Narrative + boundaries: `docs/workstreams/shadcn-extras.md`  
+Milestones (one-screen): `docs/workstreams/shadcn-extras-milestones.md`
+
+## Non-goals (keep this explicit)
+
+- Do not change `crates/fret-ui` public contracts for extras; propose ADRs separately if needed.
+- Do not duplicate shadcn/ui v4 components already present in `fret-ui-shadcn` root modules.
+- Do not move AI-native / policy-heavy surfaces into extras. Those are owned by `ecosystem/fret-ui-ai`
+  (`docs/workstreams/ai-elements-port.md`).
+
+## M0 — Extras skeleton + gates
+
+- [x] Add `ecosystem/fret-ui-shadcn/src/extras/mod.rs` with module docs and export policy.
+- [x] Add `pub mod extras;` to `ecosystem/fret-ui-shadcn/src/lib.rs` (no root re-exports).
+- [x] Add snapshot coverage for at least one extras root (new snapshot file under
+      `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`).
+- [x] Add a small “component template” section to `docs/workstreams/shadcn-extras.md` (or a dedicated
+      appendix) that standardizes:
+      - controlled/uncontrolled pattern (use `fret-ui-kit::declarative::controllable_state`),
+      - semantics roles + labels,
+      - `test_id` conventions,
+      - and required gates.
+
+Landed snapshot gates (in-tree):
+
+- `extras_announcement_default.json`
+- `extras_avatar_stack_default.json`
+- `extras_avatar_stack_overflow_default.json`
+- `extras_banner_default.json`
+- `extras_kanban_custom_cards.json`
+- `extras_kanban_default.json`
+- `extras_marquee_default.json`
+- `extras_marquee_right_default.json`
+- `extras_marquee_static_default.json`
+- `extras_marquee_cycle_width_default.json`
+- `extras_rating_default.json`
+- `extras_ticker_default.json`
+- `extras_tags_default.json`
+- `extras_relative_time_default.json`
+
+Landed behavior gates (in-tree):
+
+- `ecosystem/fret-ui-shadcn/tests/extras_rating_keyboard.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_motion.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_pause_on_hover.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
+- `tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json`
+
+Landed perf gates (in-tree):
+
+- `tools/diag-scripts/extras-marquee-steady.json`
+- `tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json`
+- `tools/perf/diag_extras_marquee_gate.sh`
+- `tools/perf/diag_extras_marquee_gate.ps1`
+- `tools/perf/diag_extras_marquee_gate.py`
+- `docs/workstreams/perf-baselines/policies/extras-marquee-steady.v1.json`
+- `docs/workstreams/perf-baselines/extras-marquee-steady.windows-rtx4090.v1.json`
+
+## Candidate components (staged)
+
+Legend:
+
+- **Source**: upstream inspiration (local snapshots under `repo-ref/` when available)
+- **Owner**: target layer for the state machine/policy split
+- **Gate**: minimum regression gate required for landing
+
+### M1: Low-risk composition blocks
+
+| Component | Source | Owner split | Gate |
+| --- | --- | --- | --- |
+| `Banner` | `repo-ref/kibo/packages/banner` (MIT) | policy in extras, uses `Button` from shadcn | snapshot |
+| `Announcement` | `repo-ref/kibo/packages/announcement` (MIT) | pure composition over `Badge` | snapshot |
+| `Tags` (static list) | (choose permissive source) | pure composition over `Badge/Button` | snapshot |
+| `Rating` | `repo-ref/kibo/packages/rating` (MIT) | headless bits may move to `fret-ui-headless` later | snapshot + scripted keyboard |
+| `RelativeTime` (display-only) | `repo-ref/kibo/packages/relative-time` (MIT) | no timers in M1 | snapshot |
+
+### M2: Medium complexity
+
+| Component | Source | Owner split | Gate |
+| --- | --- | --- | --- |
+| `AvatarStack` | `repo-ref/kibo/packages/avatar-stack` (MIT) | composition; avoid web-only mask tricks | snapshot |
+| `Snippet` / `CodeBlock` | AI Elements + markdown fences | owned by `fret-code-view` + `fret-markdown`; AI message-part policy in `fret-ui-ai` | diag script + existing crate tests |
+
+### M3: Scheduling/animation-heavy
+
+| Component | Source | Owner split | Gate |
+| --- | --- | --- | --- |
+| `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | Rust test + perf note |
+| `Marquee` | `repo-ref/kibo/packages/marquee` (MIT) | continuous frames lease | scripted + perf suite (`extras-marquee-steady`) |
+| `Ticker` | `repo-ref/kibo/packages/ticker` (MIT) | pure composition | snapshot |
+
+## Per-component checklist (copy/paste into PRs)
+
+- [ ] Clear API name and module path under `extras`.
+- [ ] Controlled vs uncontrolled story is explicit (models, defaults).
+- [ ] Semantics role/label is present and stable (selectors for diag scripts).
+- [ ] `test_id` hooks exist for key parts when needed.
+- [ ] At least one regression gate lands (snapshot or diag script).
+- [ ] No new runtime contract changes; no platform deps.
+- [ ] Rustdoc includes upstream inspiration + license note (short).

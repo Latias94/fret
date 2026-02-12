@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "navigation-menu-demo.panel_chrome", "web_name": "navigation-menu-demo", "recipe": "panel_chrome" },
+
+    { "id": "navigation-menu-demo.light.content_surface_colors", "web_name": "navigation-menu-demo", "theme": "light", "recipe": "content_surface_colors" },
+    { "id": "navigation-menu-demo.dark.content_surface_colors", "web_name": "navigation-menu-demo", "theme": "dark", "recipe": "content_surface_colors" },
+
+    { "id": "navigation-menu-demo-indicator.light.viewport_surface_colors", "web_name": "navigation-menu-demo-indicator", "theme": "light", "recipe": "viewport_surface_colors" },
+    { "id": "navigation-menu-demo-indicator.dark.viewport_surface_colors", "web_name": "navigation-menu-demo-indicator", "theme": "dark", "recipe": "viewport_surface_colors" },
+
+    { "id": "navigation-menu-demo-indicator.light.viewport_shadow_insets", "web_name": "navigation-menu-demo-indicator", "theme": "light", "recipe": "viewport_shadow_insets" },
+    { "id": "navigation-menu-demo-indicator.dark.viewport_shadow_insets", "web_name": "navigation-menu-demo-indicator", "theme": "dark", "recipe": "viewport_shadow_insets" },
+
+    { "id": "navigation-menu-demo.light.home_trigger_surface_colors", "web_name": "navigation-menu-demo", "theme": "light", "recipe": "trigger_surface_colors", "trigger_label": "Home", "trigger_id": "home", "list_label": "List" },
+    { "id": "navigation-menu-demo.dark.home_trigger_surface_colors", "web_name": "navigation-menu-demo", "theme": "dark", "recipe": "trigger_surface_colors", "trigger_label": "Home", "trigger_id": "home", "list_label": "List" },
+    { "id": "navigation-menu-demo.components.light.components_trigger_surface_colors", "web_name": "navigation-menu-demo.components", "theme": "light", "recipe": "trigger_surface_colors", "trigger_label": "Components", "trigger_id": "components", "list_label": "List" },
+    { "id": "navigation-menu-demo.components.dark.components_trigger_surface_colors", "web_name": "navigation-menu-demo.components", "theme": "dark", "recipe": "trigger_surface_colors", "trigger_label": "Components", "trigger_id": "components", "list_label": "List" },
+
+    { "id": "navigation-menu-demo-indicator.light.indicator_shadow_insets", "web_name": "navigation-menu-demo-indicator", "theme": "light", "recipe": "indicator_shadow_insets" },
+    { "id": "navigation-menu-demo-indicator.dark.indicator_shadow_insets", "web_name": "navigation-menu-demo-indicator", "theme": "dark", "recipe": "indicator_shadow_insets" }
+  ]
+}
+

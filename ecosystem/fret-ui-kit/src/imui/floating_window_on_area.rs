@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use fret_authoring::UiWriter as _;
 use fret_core::{Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size};
-use fret_runtime::DragPhase;
+use fret_interaction::runtime_drag::{DragMoveOutcome, update_immediate_move};
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps, ScrollAxis,
+    ScrollProps,
 };
 
 pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
@@ -73,6 +74,12 @@ where
         let collapsed = cx
             .read_model(&collapsed_model, fret_ui::Invalidation::Paint, |_app, v| *v)
             .unwrap_or(false);
+
+        let scale_factor = cx
+            .app
+            .global::<fret_core::window::WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(cx.window))
+            .unwrap_or(1.0);
 
         let (
             position_after_resize,
@@ -195,6 +202,9 @@ where
                     st.last_resize_position = None;
                 }
 
+                st.size = super::snap_size_to_device_pixels(scale_factor, st.size);
+                position = super::snap_point_to_device_pixels(scale_factor, position);
+
                 (
                     position,
                     st.size,
@@ -242,7 +252,6 @@ where
         };
 
         let mut window_props = ContainerProps::default();
-        window_props.layout.overflow = Overflow::Visible;
         if resizable_layout {
             window_props.layout.size.width = Length::Px(size.width);
             if !collapsed {
@@ -259,14 +268,29 @@ where
 
         let window = cx.container(window_props, move |cx| {
             let mut col = ColumnProps::default();
-            col.layout.size.width = Length::Auto;
-            col.layout.size.height = Length::Auto;
+            col.layout.size.width = if resizable_layout {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
+            col.layout.size.height = if resizable_layout && !collapsed {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
 
             let title_bar = cx.container(
                 {
                     let mut props = ContainerProps::default();
-                    props.layout.size.width = Length::Fill;
+                    props.layout.size.width = if resizable_layout {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
                     props.layout.size.height = Length::Px(Px(24.0));
+                    // Prevent multi-line title text from painting into the content area at
+                    // non-1.0 DPI when the layout engine probes min-content widths.
+                    props.layout.overflow = Overflow::Clip;
                     props.padding = Edges {
                         left: Px(8.0),
                         right: Px(6.0),
@@ -291,9 +315,14 @@ where
                 },
                 move |cx| {
                     let mut row = RowProps::default();
-                    row.layout.size.width = Length::Fill;
+                    row.layout.size.width = if resizable_layout {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
                     row.layout.size.height = Length::Fill;
                     row.gap = Px(6.0);
+                    row.align = fret_ui::element::CrossAlign::Center;
 
                     let title = title_for_window.clone();
                     let title_bar_test_id = title_bar_test_id.clone();
@@ -324,8 +353,21 @@ where
                         PointerRegionProps {
                             layout: {
                                 let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
+                                layout.size.width = if resizable_layout {
+                                    Length::Fill
+                                } else {
+                                    Length::Auto
+                                };
                                 layout.size.height = Length::Fill;
+                                if resizable_layout {
+                                    // Ensure the drag surface claims remaining row space (and can
+                                    // shrink) instead of being measured in min-content mode (which
+                                    // can force wrapped titles like "Window" + "A").
+                                    layout.flex.grow = 1.0;
+                                    layout.flex.shrink = 1.0;
+                                    layout.flex.basis = Length::Px(Px(0.0));
+                                    layout.size.min_width = Some(Px(0.0));
+                                }
                                 layout
                             },
                             enabled: can_interact,
@@ -333,6 +375,7 @@ where
                         },
                         on_left_double_click,
                         can_move,
+                        options.activate_on_click,
                         move |cx, region_id| {
                             cx.key_clear_on_key_down_for(region_id);
                             if can_close && let Some(open) = open_for_key {
@@ -353,7 +396,21 @@ where
                         },
                         move |ui| {
                             let element = ui.with_cx_mut(|cx| {
-                                cx.text(title.clone()).attach_semantics(
+                                let mut props = fret_ui::element::TextProps::new(title.clone());
+                                props.layout.size.width = if resizable_layout {
+                                    Length::Fill
+                                } else {
+                                    Length::Auto
+                                };
+                                if resizable_layout {
+                                    props.layout.size.min_width = Some(Px(0.0));
+                                    props.layout.flex.grow = 1.0;
+                                    props.layout.flex.shrink = 1.0;
+                                    props.layout.flex.basis = Length::Px(Px(0.0));
+                                }
+                                props.wrap = fret_core::TextWrap::None;
+                                props.overflow = fret_core::TextOverflow::Ellipsis;
+                                cx.text_props(props).attach_semantics(
                                     fret_ui::element::SemanticsDecoration::default()
                                         .test_id(title_bar_test_id.clone()),
                                 )
@@ -375,6 +432,7 @@ where
                             };
                             props.layout.size.width = Length::Px(Px(20.0));
                             props.layout.size.height = Length::Px(Px(20.0));
+                            props.layout.flex.shrink = 0.0;
                             cx.pressable(props, move |cx, _state| {
                                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                                     let _ = host.update_model(&open, |v: &mut bool| {
@@ -398,32 +456,66 @@ where
 
             let content = {
                 let content_container = |cx: &mut ElementContext<'_, H>| {
-                    cx.container(
-                        {
-                            let mut props = ContainerProps::default();
-                            props.padding = Edges::all(Px(8.0));
-                            props
+                    let handle =
+                        cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+                    let mut scroll_layout = LayoutStyle::default();
+                    if resizable_layout {
+                        scroll_layout.size.width = Length::Fill;
+                        scroll_layout.size.height = Length::Fill;
+                    } else {
+                        scroll_layout.size.width = Length::Auto;
+                        scroll_layout.size.height = Length::Auto;
+                    }
+                    scroll_layout.overflow = Overflow::Clip;
+
+                    cx.scroll(
+                        ScrollProps {
+                            layout: scroll_layout,
+                            axis: ScrollAxis::Y,
+                            scroll_handle: Some(handle),
+                            ..Default::default()
                         },
                         move |cx| {
-                            let mut out = Vec::new();
-                            let mut ui = super::ImUiFacade {
-                                cx,
-                                out: &mut out,
-                                build_focus: None,
-                            };
-                            build(&mut ui);
-                            out
+                            vec![cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = if resizable_layout {
+                                        Length::Fill
+                                    } else {
+                                        Length::Auto
+                                    };
+                                    props.padding = Edges::all(Px(8.0));
+                                    props
+                                },
+                                move |cx| {
+                                    let mut out = Vec::new();
+                                    let mut ui = super::ImUiFacade {
+                                        cx,
+                                        out: &mut out,
+                                        build_focus: None,
+                                    };
+                                    build(&mut ui);
+                                    out
+                                },
+                            )]
                         },
                     )
                 };
 
-                if options.inputs_enabled && options.activate_on_click {
+                if options.inputs_enabled && (options.activate_on_click || options.focus_on_click) {
                     let layout = {
                         let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
+                        if resizable_layout {
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                        } else {
+                            layout.size.width = Length::Auto;
+                            layout.size.height = Length::Auto;
+                        }
                         layout
                     };
+                    let focus_on_click = options.focus_on_click;
+                    let activate_on_click = options.activate_on_click;
                     cx.pointer_region(
                         PointerRegionProps {
                             layout,
@@ -431,14 +523,25 @@ where
                         },
                         move |cx| {
                             let region_id = cx.root_id();
-                            super::float_layer_bring_to_front_if_activated(
-                                cx, region_id, window_id,
-                            );
+                            super::float_layer_bring_to_front_if_activated(cx, window_id);
+                            // Make the surface focusable so `request_focus(...)` is effective even
+                            // when the click lands on a non-focusable background area.
+                            cx.key_on_key_down_for(region_id, Arc::new(|_host, _acx, _down| false));
 
                             cx.pointer_region_clear_on_pointer_down();
                             cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, _down| {
-                                host.request_focus(acx.target);
-                                host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                                if focus_on_click {
+                                    host.request_focus(acx.target);
+                                }
+                                if activate_on_click {
+                                    host.record_transient_event(
+                                        fret_ui::action::ActionCx {
+                                            window: acx.window,
+                                            target: window_id,
+                                        },
+                                        super::KEY_FLOAT_WINDOW_ACTIVATE,
+                                    );
+                                }
                                 host.notify(acx);
                                 false
                             }));
@@ -456,6 +559,29 @@ where
             } else {
                 cx.column(col, move |_cx| vec![title_bar, content])
             };
+
+            let clipped_body = cx.container(
+                {
+                    let mut props = ContainerProps::default();
+                    // Clip window contents to the window bounds (ImGui-style): items should not paint outside
+                    // the window chrome even when they don't wrap. Keep this as an inner clip container so
+                    // resize handles can still receive hits near rounded corners.
+                    props.layout.overflow = Overflow::Clip;
+                    props.layout.size.width = if resizable_layout {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
+                    props.layout.size.height = if resizable_layout && !collapsed {
+                        Length::Fill
+                    } else {
+                        Length::Auto
+                    };
+                    props.corner_radii = Corners::all(Px(8.0));
+                    props
+                },
+                move |_cx| vec![body],
+            );
 
             let blocker = (!options.inputs_enabled).then(|| {
                 let mut layout = LayoutStyle::default();
@@ -489,11 +615,12 @@ where
 
             if !resizable_layout || collapsed || !resize_enabled {
                 if let Some(blocker) = blocker {
-                    return vec![cx.stack(move |_cx| vec![body, blocker])];
+                    return vec![cx.stack(move |_cx| vec![clipped_body, blocker])];
                 }
-                return vec![body];
+                return vec![clipped_body];
             }
 
+            let enable_activation = options.activate_on_click;
             let mut resize_handle = |handle: super::FloatWindowResizeHandle, test_id: Arc<str>| {
                 let (cursor, layout) = match handle {
                     super::FloatWindowResizeHandle::Left => {
@@ -605,8 +732,8 @@ where
                         ..Default::default()
                     },
                     move |cx| {
-                        let region_id = cx.root_id();
-                        super::float_layer_bring_to_front_if_activated(cx, region_id, window_id);
+                        let _region_id = cx.root_id();
+                        super::float_layer_bring_to_front_if_activated(cx, window_id);
 
                         cx.pointer_region_clear_on_pointer_down();
                         cx.pointer_region_clear_on_pointer_move();
@@ -628,7 +755,15 @@ where
                                     down.position,
                                 );
                             }
-                            host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                            if enable_activation {
+                                host.record_transient_event(
+                                    fret_ui::action::ActionCx {
+                                        window: acx.window,
+                                        target: window_id,
+                                    },
+                                    super::KEY_FLOAT_WINDOW_ACTIVATE,
+                                );
+                            }
                             host.notify(acx);
                             false
                         }));
@@ -643,13 +778,13 @@ where
                                 return false;
                             }
 
-                            drag.current_window = acx.window;
-                            drag.position = mv.position;
-                            drag.dragging = true;
-                            drag.phase = DragPhase::Dragging;
-
-                            if !mv.buttons.left {
-                                drag.phase = DragPhase::Canceled;
+                            let outcome = update_immediate_move(
+                                drag,
+                                acx.window,
+                                mv.position,
+                                mv.buttons.left,
+                            );
+                            if outcome == DragMoveOutcome::Canceled {
                                 host.cancel_drag(mv.pointer_id);
                                 host.release_pointer_capture();
                                 host.notify(acx);
@@ -675,13 +810,11 @@ where
                         Vec::new()
                     },
                 )
-                .attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(test_id.clone()),
-                )
+                .test_id(test_id.clone())
             };
 
             let mut stacked: Vec<AnyElement> = Vec::new();
-            stacked.push(body);
+            stacked.push(clipped_body);
 
             stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::Left,

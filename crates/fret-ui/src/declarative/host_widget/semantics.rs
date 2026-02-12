@@ -257,6 +257,7 @@ impl ElementHostWidget {
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
+            | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::RovingFlex(_)
             | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.

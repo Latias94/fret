@@ -6,7 +6,7 @@ use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
     fmt,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
@@ -17,8 +17,9 @@ mod hotpatch;
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
-    Rect, Scene, Size, UiServices, ViewportInputEvent, WindowMetricsService,
+    ColorScheme, ContrastPreference, Event, ExternalDragEvent, ExternalDragKind, ForcedColorsMode,
+    InternalDragEvent, InternalDragKind, Point, Px, Rect, Scene, Size, UiServices,
+    ViewportInputEvent, WindowMetricsService,
 };
 use fret_platform_native::clipboard::NativeClipboard;
 use fret_platform_native::external_drop::NativeExternalDrop;
@@ -55,6 +56,8 @@ mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
+#[cfg(target_os = "ios")]
+mod ios_keyboard;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -1118,15 +1121,22 @@ struct WindowRuntime<S> {
     window: Arc<dyn Window>,
     accessibility: Option<accessibility::WinitAccessibility>,
     last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
-    surface: SurfaceState<'static>,
+    surface: Option<SurfaceState<'static>>,
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
+    #[cfg(target_os = "android")]
+    android_bottom_inset_baseline: Option<fret_core::Px>,
     /// Coalesced resizes awaiting application at the next frame boundary.
     ///
     /// During interactive window resize, platforms may emit multiple size updates per vblank.
     /// We keep only the latest physical size and apply it once per `RedrawRequested` to avoid
     /// reconfiguring the surface and recomputing layout more often than we can present.
     pending_surface_resize: Option<winit::dpi::PhysicalSize<u32>>,
+    /// Last delivered (quantized) logical size for `Event::WindowResized`.
+    ///
+    /// This mirrors GPUI's `set_frame_size` guard (`old_size == new_size`) and helps reduce
+    /// float-noise churn in window-metrics consumers during interactive resize.
+    last_delivered_window_resized: Option<(u32, u32)>,
     is_focused: bool,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
@@ -1151,11 +1161,15 @@ pub struct WinitRunner<D: WinitAppDriver> {
     dispatcher: DesktopDispatcher,
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
+    is_suspended: bool,
 
     renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
     renderer_caps: Option<fret_render::RendererCapabilities>,
+    system_font_rescan_result: Arc<Mutex<Option<fret_render::SystemFontRescanResult>>>,
+    system_font_rescan_in_flight: bool,
+    system_font_rescan_pending: bool,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
     #[cfg(feature = "webview-wry")]
@@ -1166,6 +1180,11 @@ pub struct WinitRunner<D: WinitAppDriver> {
     main_window: Option<fret_core::AppWindowId>,
     menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
+    /// Best-effort z-order for windows (most recently focused last).
+    ///
+    /// This is used as a tie-breaker when multiple windows overlap the cursor and the platform
+    /// cannot provide reliable z-order/hover routing.
+    windows_z_order: Vec<fret_core::AppWindowId>,
 
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
     /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
@@ -1176,11 +1195,18 @@ pub struct WinitRunner<D: WinitAppDriver> {
     tick_id: TickId,
     frame_id: FrameId,
 
+    next_environment_poll_at: Instant,
+
+    #[cfg(target_os = "linux")]
+    linux_portal_settings_listener_started: bool,
+
     raf_windows: HashSet<fret_core::AppWindowId>,
     timers: HashMap<fret_runtime::TimerToken, TimerEntry>,
     clipboard: NativeClipboard,
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
+    #[cfg(target_os = "ios")]
+    ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,
@@ -1201,6 +1227,586 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     #[cfg(feature = "diag-screenshots")]
     diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DesktopEnvironmentSnapshot {
+    color_scheme: Option<ColorScheme>,
+    prefers_reduced_motion: Option<bool>,
+    text_scale_factor: Option<f32>,
+    prefers_reduced_transparency: Option<bool>,
+    accent_color: Option<fret_core::Color>,
+    contrast_preference: Option<ContrastPreference>,
+    forced_colors_mode: Option<ForcedColorsMode>,
+}
+
+#[cfg(target_os = "linux")]
+mod linux_portal_settings {
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+
+    use zbus::blocking::{Connection, Proxy};
+    use zbus::zvariant::OwnedValue;
+
+    const SETTINGS_SERVICE: &str = "org.freedesktop.portal.Desktop";
+    const SETTINGS_PATH: &str = "/org/freedesktop/portal/desktop";
+    const SETTINGS_INTERFACE: &str = "org.freedesktop.portal.Settings";
+
+    pub const APPEARANCE_NAMESPACE: &str = "org.freedesktop.appearance";
+
+    struct PortalCache {
+        connection: Option<Connection>,
+        next_retry_at: Instant,
+    }
+
+    static CACHE: OnceLock<Mutex<PortalCache>> = OnceLock::new();
+
+    fn with_settings_proxy<T>(f: impl FnOnce(&Proxy<'_>) -> zbus::Result<T>) -> Option<T> {
+        let cache_lock = CACHE.get_or_init(|| {
+            Mutex::new(PortalCache {
+                connection: None,
+                next_retry_at: Instant::now(),
+            })
+        });
+
+        let mut cache = cache_lock.lock().ok()?;
+        let now = Instant::now();
+
+        if cache.connection.is_none() && now < cache.next_retry_at {
+            return None;
+        }
+
+        if cache.connection.is_none() {
+            match Connection::session() {
+                Ok(connection) => cache.connection = Some(connection),
+                Err(_) => {
+                    cache.next_retry_at = now + Duration::from_secs(5);
+                    return None;
+                }
+            }
+        }
+
+        let connection = cache.connection.as_ref()?;
+        drop(cache);
+
+        let proxy = Proxy::new(
+            connection,
+            SETTINGS_SERVICE,
+            SETTINGS_PATH,
+            SETTINGS_INTERFACE,
+        )
+        .ok()?;
+        f(&proxy).ok()
+    }
+
+    fn read_owned_value(namespace: &str, key: &str) -> Option<OwnedValue> {
+        with_settings_proxy(|proxy| proxy.call("Read", &(namespace, key)))
+    }
+
+    pub fn read_u32(namespace: &str, key: &str) -> Option<u32> {
+        let value = read_owned_value(namespace, key)?;
+
+        if let Ok(v) = u32::try_from(&value) {
+            return Some(v);
+        }
+        if let Ok(v) = i32::try_from(&value) {
+            return u32::try_from(v).ok();
+        }
+        if let Ok(v) = bool::try_from(&value) {
+            return Some(if v { 1 } else { 0 });
+        }
+
+        None
+    }
+
+    pub fn read_f64(namespace: &str, key: &str) -> Option<f64> {
+        let value = read_owned_value(namespace, key)?;
+
+        if let Ok(v) = f64::try_from(&value) {
+            return Some(v);
+        }
+        if let Ok(v) = f32::try_from(&value) {
+            return Some(v as f64);
+        }
+        if let Ok(v) = u32::try_from(&value) {
+            return Some(v as f64);
+        }
+        if let Ok(v) = i32::try_from(&value) {
+            return Some(v as f64);
+        }
+
+        None
+    }
+
+    pub fn read_bool(namespace: &str, key: &str) -> Option<bool> {
+        let value = read_owned_value(namespace, key)?;
+
+        if let Ok(v) = bool::try_from(&value) {
+            return Some(v);
+        }
+        if let Ok(v) = u32::try_from(&value) {
+            return Some(v != 0);
+        }
+        if let Ok(v) = i32::try_from(&value) {
+            return Some(v != 0);
+        }
+
+        None
+    }
+}
+
+#[cfg(target_os = "linux")]
+static LINUX_PORTAL_ENV_DIRTY: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn read_desktop_environment_snapshot(window: &dyn Window) -> DesktopEnvironmentSnapshot {
+    DesktopEnvironmentSnapshot {
+        color_scheme: read_desktop_color_scheme(window),
+        prefers_reduced_motion: read_desktop_prefers_reduced_motion(),
+        text_scale_factor: read_desktop_text_scale_factor(),
+        prefers_reduced_transparency: read_desktop_prefers_reduced_transparency(),
+        accent_color: read_desktop_accent_color(),
+        contrast_preference: read_desktop_contrast_preference(),
+        forced_colors_mode: read_desktop_forced_colors_mode(),
+    }
+}
+
+fn read_desktop_color_scheme(window: &dyn Window) -> Option<ColorScheme> {
+    let from_window = window.theme().map(|theme| match theme {
+        winit::window::Theme::Light => ColorScheme::Light,
+        winit::window::Theme::Dark => ColorScheme::Dark,
+    });
+
+    #[cfg(target_os = "linux")]
+    {
+        from_window.or_else(read_linux_portal_color_scheme)
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        from_window
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_linux_portal_color_scheme() -> Option<ColorScheme> {
+    // Best-effort fallback for compositors/toolkits where `winit::window::Window::theme()` is
+    // unavailable (`None`). The portal uses an enum-like integer value.
+    //
+    // - 0: no preference / unknown
+    // - 1: prefer dark
+    // - 2: prefer light
+    let value = linux_portal_settings::read_u32(
+        linux_portal_settings::APPEARANCE_NAMESPACE,
+        "color-scheme",
+    )?;
+
+    match value {
+        1 => Some(ColorScheme::Dark),
+        2 => Some(ColorScheme::Light),
+        _ => None,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SPI_GETCLIENTAREAANIMATION, SystemParametersInfoW,
+    };
+    use windows_sys::core::BOOL;
+
+    unsafe {
+        let mut enabled: BOOL = 0;
+        let ok = SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION,
+            0,
+            std::ptr::addr_of_mut!(enabled) as *mut _,
+            0,
+        );
+        (ok != 0).then_some(enabled == 0)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    use cocoa::base::id;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSWorkspace") else {
+            return None;
+        };
+        let workspace: id = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return None;
+        }
+        let selector = sel!(accessibilityDisplayShouldReduceMotion);
+        let responds: bool = msg_send![workspace, respondsToSelector: selector];
+        if !responds {
+            return None;
+        }
+        let value: bool = msg_send![workspace, accessibilityDisplayShouldReduceMotion];
+        Some(value)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    // Best-effort mapping of portal appearance preference to the web vocabulary:
+    // `prefers-reduced-motion`.
+    //
+    // Portal keys differ across versions; try both spellings.
+    linux_portal_settings::read_bool(linux_portal_settings::APPEARANCE_NAMESPACE, "reduce-motion")
+        .or_else(|| {
+            linux_portal_settings::read_bool(
+                linux_portal_settings::APPEARANCE_NAMESPACE,
+                "reduced-motion",
+            )
+        })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn read_desktop_prefers_reduced_motion() -> Option<bool> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_text_scale_factor() -> Option<f32> {
+    // Best-effort mapping to the web vocabulary used by `textScaleFactor`.
+    //
+    // Windows exposes a user-controlled "Text size" slider under Accessibility. It is stored as a
+    // percentage value (e.g. 100, 125, 150).
+    let pct = read_windows_reg_dword_hkcu(r"Software\Microsoft\Accessibility", "TextScaleFactor")?;
+    if pct == 0 {
+        return None;
+    }
+    Some((pct as f32 / 100.0).max(0.1))
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
+    // Best-effort mapping to the web vocabulary: `prefers-reduced-transparency`.
+    //
+    // When Transparency Effects are disabled, interpret it as "prefers reduced transparency".
+    let enabled = read_windows_reg_dword_hkcu(
+        r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+        "EnableTransparency",
+    )?;
+    Some(enabled == 0)
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_accent_color() -> Option<fret_core::Color> {
+    // Best-effort accent color; Windows provides a "colorization" color through DWM.
+    use windows_sys::Win32::Graphics::Dwm::DwmGetColorizationColor;
+    use windows_sys::core::BOOL;
+
+    unsafe {
+        let mut argb: u32 = 0;
+        let mut opaque: BOOL = 0;
+        let hr =
+            DwmGetColorizationColor(std::ptr::addr_of_mut!(argb), std::ptr::addr_of_mut!(opaque));
+        if hr != 0 {
+            return None;
+        }
+
+        let a = ((argb >> 24) & 0xFF) as f32 / 255.0;
+        let r = ((argb >> 16) & 0xFF) as f32 / 255.0;
+        let g = ((argb >> 8) & 0xFF) as f32 / 255.0;
+        let b = (argb & 0xFF) as f32 / 255.0;
+        Some(fret_core::Color { r, g, b, a })
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn read_windows_reg_dword_hkcu(subkey: &str, value: &str) -> Option<u32> {
+    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+    use windows_sys::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
+
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    unsafe {
+        let subkey_w = wide(subkey);
+        let value_w = wide(value);
+
+        let mut out: u32 = 0;
+        let mut out_len = std::mem::size_of::<u32>() as u32;
+        let status = RegGetValueW(
+            HKEY_CURRENT_USER,
+            subkey_w.as_ptr(),
+            value_w.as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            std::ptr::addr_of_mut!(out) as *mut _,
+            std::ptr::addr_of_mut!(out_len),
+        );
+        (status == ERROR_SUCCESS).then_some(out)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_text_scale_factor() -> Option<f32> {
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
+    use cocoa::base::id;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSWorkspace") else {
+            return None;
+        };
+        let workspace: id = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return None;
+        }
+        let selector = sel!(accessibilityDisplayShouldReduceTransparency);
+        let responds: bool = msg_send![workspace, respondsToSelector: selector];
+        if !responds {
+            return None;
+        }
+        let value: bool = msg_send![workspace, accessibilityDisplayShouldReduceTransparency];
+        Some(value)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_accent_color() -> Option<fret_core::Color> {
+    use cocoa::base::{id, nil};
+    use cocoa::foundation::NSAutoreleasePool;
+    use cocoa::foundation::NSString;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+    use std::ffi::CStr;
+    use std::os::raw::c_char;
+
+    unsafe {
+        let Some(class) = Class::get("NSUserDefaults") else {
+            return None;
+        };
+        let defaults: id = msg_send![class, standardUserDefaults];
+        if defaults.is_null() {
+            return None;
+        }
+
+        let key: id = NSString::alloc(nil)
+            .init_str("AppleHighlightColor")
+            .autorelease();
+        let value: id = msg_send![defaults, stringForKey: key];
+        if value.is_null() {
+            return None;
+        }
+        let c_str: *const c_char = msg_send![value, UTF8String];
+        if c_str.is_null() {
+            return None;
+        }
+        let s = CStr::from_ptr(c_str).to_string_lossy();
+        parse_macos_highlight_color(&s)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn parse_macos_highlight_color(raw: &str) -> Option<fret_core::Color> {
+    // `AppleHighlightColor` typically looks like:
+    // "0.968627 0.831373 1.000000 Purple"
+    let mut parts = raw.split_whitespace();
+    let r: f32 = parts.next()?.parse().ok()?;
+    let g: f32 = parts.next()?.parse().ok()?;
+    let b: f32 = parts.next()?.parse().ok()?;
+    Some(fret_core::Color {
+        r: r.clamp(0.0, 1.0),
+        g: g.clamp(0.0, 1.0),
+        b: b.clamp(0.0, 1.0),
+        a: 1.0,
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_text_scale_factor() -> Option<f32> {
+    // Linux does not have a single canonical source. When available, prefer portal settings.
+    //
+    // Portal keys differ across versions; try a couple of common spellings.
+    let value = linux_portal_settings::read_f64(
+        linux_portal_settings::APPEARANCE_NAMESPACE,
+        "text-scaling-factor",
+    )
+    .or_else(|| {
+        linux_portal_settings::read_f64(
+            linux_portal_settings::APPEARANCE_NAMESPACE,
+            "text-scale-factor",
+        )
+    })?;
+    (value.is_finite() && value > 0.0).then_some(value as f32)
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
+    // Best-effort mapping to `prefers-reduced-transparency`.
+    //
+    // Portal keys differ across versions; try both spellings.
+    linux_portal_settings::read_bool(
+        linux_portal_settings::APPEARANCE_NAMESPACE,
+        "reduce-transparency",
+    )
+    .or_else(|| {
+        linux_portal_settings::read_bool(
+            linux_portal_settings::APPEARANCE_NAMESPACE,
+            "reduced-transparency",
+        )
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_accent_color() -> Option<fret_core::Color> {
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn read_desktop_text_scale_factor() -> Option<f32> {
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn read_desktop_accent_color() -> Option<fret_core::Color> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    use windows_sys::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SPI_GETHIGHCONTRAST, SystemParametersInfoW};
+
+    unsafe {
+        let mut hc = HIGHCONTRASTW {
+            cbSize: std::mem::size_of::<HIGHCONTRASTW>() as u32,
+            dwFlags: 0,
+            lpszDefaultScheme: std::ptr::null_mut(),
+        };
+        let ok = SystemParametersInfoW(
+            SPI_GETHIGHCONTRAST,
+            hc.cbSize,
+            std::ptr::addr_of_mut!(hc) as *mut _,
+            0,
+        );
+        if ok == 0 {
+            return None;
+        }
+        if (hc.dwFlags & HCF_HIGHCONTRASTON) != 0 {
+            Some(ContrastPreference::More)
+        } else {
+            Some(ContrastPreference::NoPreference)
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    use cocoa::base::id;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSWorkspace") else {
+            return None;
+        };
+        let workspace: id = msg_send![class, sharedWorkspace];
+        if workspace.is_null() {
+            return None;
+        }
+        let selector = sel!(accessibilityDisplayShouldIncreaseContrast);
+        let responds: bool = msg_send![workspace, respondsToSelector: selector];
+        if !responds {
+            return None;
+        }
+        let value: bool = msg_send![workspace, accessibilityDisplayShouldIncreaseContrast];
+        Some(if value {
+            ContrastPreference::More
+        } else {
+            ContrastPreference::NoPreference
+        })
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    // Best-effort mapping to the web vocabulary: `prefers-contrast`.
+    //
+    // We intentionally keep this runner-owned and optional; when unavailable we return `None`.
+    let value =
+        linux_portal_settings::read_u32(linux_portal_settings::APPEARANCE_NAMESPACE, "contrast")?;
+
+    Some(match value {
+        0 => ContrastPreference::NoPreference,
+        1 => ContrastPreference::More,
+        2 => ContrastPreference::Less,
+        3 => ContrastPreference::Custom,
+        _ => return None,
+    })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    use windows_sys::Win32::UI::Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SPI_GETHIGHCONTRAST, SystemParametersInfoW};
+
+    unsafe {
+        let mut hc = HIGHCONTRASTW {
+            cbSize: std::mem::size_of::<HIGHCONTRASTW>() as u32,
+            dwFlags: 0,
+            lpszDefaultScheme: std::ptr::null_mut(),
+        };
+        let ok = SystemParametersInfoW(
+            SPI_GETHIGHCONTRAST,
+            hc.cbSize,
+            std::ptr::addr_of_mut!(hc) as *mut _,
+            0,
+        );
+        if ok == 0 {
+            return None;
+        }
+        Some(if (hc.dwFlags & HCF_HIGHCONTRASTON) != 0 {
+            ForcedColorsMode::Active
+        } else {
+            ForcedColorsMode::None
+        })
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    // Best-effort mapping to the web vocabulary: `forced-colors`.
+    //
+    // Linux doesn't have a single canonical source. We currently infer it from portal appearance
+    // contrast when available.
+    let Some(contrast) = read_desktop_contrast_preference() else {
+        return None;
+    };
+
+    Some(match contrast {
+        ContrastPreference::More | ContrastPreference::Custom => ForcedColorsMode::Active,
+        ContrastPreference::NoPreference | ContrastPreference::Less => ForcedColorsMode::None,
+    })
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn read_desktop_forced_colors_mode() -> Option<ForcedColorsMode> {
+    None
 }
 
 struct UploadedImageEntry {
@@ -2298,6 +2904,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
+        let now = Instant::now();
         let requested = match app.global::<PlatformCapabilities>().cloned() {
             Some(caps) => caps,
             None => {
@@ -2315,8 +2922,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let dispatcher = DesktopDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
-        #[cfg(feature = "hotpatch-subsecond")]
-        let now = Instant::now();
         Self {
             config,
             app,
@@ -2324,10 +2929,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
+            is_suspended: false,
             renderdoc: None,
             context: None,
             renderer: None,
             renderer_caps: None,
+            system_font_rescan_result: Arc::new(Mutex::new(None)),
+            system_font_rescan_in_flight: false,
+            system_font_rescan_pending: false,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             #[cfg(feature = "webview-wry")]
@@ -2337,16 +2946,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             main_window: None,
             menu_bar: None,
             windows_pending_front: HashMap::new(),
+            windows_z_order: Vec::new(),
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
+            next_environment_poll_at: now,
+            #[cfg(target_os = "linux")]
+            linux_portal_settings_listener_started: false,
             raf_windows: HashSet::new(),
             timers: HashMap::new(),
             clipboard: NativeClipboard::default(),
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
+            #[cfg(target_os = "ios")]
+            ios_keyboard: None,
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),
@@ -2401,7 +3016,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                 // Wayland compositors do not provide a reliable "window under cursor" contract and
                 // may ignore programmatic window positioning/z-level hints. Prefer a predictable
-                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0084).
+                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0083).
                 if linux_is_wayland_session() {
                     caps.ui.window_tear_off = false;
                     caps.ui.window_hover_detection =
@@ -2482,7 +3097,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
             caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
-            caps.clipboard.text = true;
+            caps.clipboard.text = false;
             caps.clipboard.files = false;
 
             caps.dnd.external = false;
@@ -2495,7 +3110,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.fs.real_paths = false;
             caps.fs.file_dialogs = false;
 
-            caps.shell.open_url = true;
+            caps.shell.open_url = false;
 
             caps.gfx.native_gpu = true;
             caps.gfx.webgpu = false;
@@ -2573,6 +3188,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ///
     /// Without a proxy, the runner falls back to synchronous delivery for platform effects.
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
+        #[cfg(target_os = "linux")]
+        let linux_settings_waker = proxy.clone();
+
         #[cfg(feature = "hotpatch-subsecond")]
         if let Some(hotpatch) = self.hotpatch.as_ref() {
             hotpatch.set_event_loop_proxy(proxy.clone());
@@ -2583,6 +3201,62 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
+
+        #[cfg(target_os = "linux")]
+        self.maybe_start_linux_portal_settings_listener(linux_settings_waker);
+    }
+
+    #[cfg(target_os = "linux")]
+    fn maybe_start_linux_portal_settings_listener(&mut self, waker: EventLoopProxy) {
+        if self.linux_portal_settings_listener_started {
+            return;
+        }
+        self.linux_portal_settings_listener_started = true;
+
+        std::thread::spawn(move || {
+            use zbus::blocking::{Connection, Proxy};
+
+            const SETTINGS_SERVICE: &str = "org.freedesktop.portal.Desktop";
+            const SETTINGS_PATH: &str = "/org/freedesktop/portal/desktop";
+            const SETTINGS_INTERFACE: &str = "org.freedesktop.portal.Settings";
+
+            let Ok(connection) = Connection::session() else {
+                return;
+            };
+            let Ok(proxy) = Proxy::new(
+                &connection,
+                SETTINGS_SERVICE,
+                SETTINGS_PATH,
+                SETTINGS_INTERFACE,
+            ) else {
+                return;
+            };
+            let Ok(signals) = proxy.receive_signal("SettingChanged") else {
+                return;
+            };
+
+            for msg in signals {
+                let Ok((namespace, key, _value)) =
+                    msg.body()
+                        .deserialize::<(String, String, zbus::zvariant::OwnedValue)>()
+                else {
+                    continue;
+                };
+                if namespace != linux_portal_settings::APPEARANCE_NAMESPACE {
+                    continue;
+                }
+                if !matches!(
+                    key.as_str(),
+                    "color-scheme" | "contrast" | "reduce-motion" | "reduced-motion"
+                ) {
+                    continue;
+                }
+                if LINUX_PORTAL_ENV_DIRTY.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                    continue;
+                }
+                waker.wake_up();
+            }
+        });
     }
 
     fn spawn_platform_completion_task<F>(&self, window: fret_core::AppWindowId, task: F) -> bool
@@ -2684,6 +3358,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Ensure pending queued work does not cross the reload boundary.
         self.dispatcher.hot_reload_boundary();
+        self.system_font_rescan_in_flight = false;
+        self.system_font_rescan_pending = false;
+        if let Ok(mut slot) = self.system_font_rescan_result.lock() {
+            *slot = None;
+        }
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
         {
@@ -2909,7 +3588,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window,
                 accessibility,
                 last_accessibility_snapshot: None,
-                surface,
+                surface: Some(surface),
                 scene: Scene::default(),
                 platform: fret_runner_winit::WinitPlatform {
                     wheel: fret_runner_winit::WheelConfig {
@@ -2918,7 +3597,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     },
                     ..Default::default()
                 },
+                #[cfg(target_os = "android")]
+                android_bottom_inset_baseline: None,
                 pending_surface_resize: None,
+                last_delivered_window_resized: None,
                 is_focused: false,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
@@ -2946,9 +3628,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 &Event::WindowScaleFactorChanged(state.window.scale_factor() as f32),
             );
         }
+        let window_ref = self.windows.get(id).map(|s| s.window.clone());
+        if let Some(window_ref) = window_ref {
+            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
+                self.app.request_redraw(id);
+            }
+        }
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
+        self.bump_window_z_order(id);
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -2978,6 +3667,99 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         Ok(id)
     }
 
+    fn update_window_environment_for_window_ref(
+        &mut self,
+        window: fret_core::AppWindowId,
+        winit_window: &dyn Window,
+    ) -> bool {
+        let snapshot = read_desktop_environment_snapshot(winit_window);
+        let metrics = self.app.global::<WindowMetricsService>();
+
+        let needs_scheme = !metrics.is_some_and(|svc| svc.color_scheme_is_known(window))
+            || metrics.and_then(|svc| svc.color_scheme(window)) != snapshot.color_scheme;
+        let needs_motion = !metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_motion(window))
+                != snapshot.prefers_reduced_motion;
+        let needs_text_scale = !metrics.is_some_and(|svc| svc.text_scale_factor_is_known(window))
+            || metrics.and_then(|svc| svc.text_scale_factor(window)) != snapshot.text_scale_factor;
+        let needs_transparency = !metrics
+            .is_some_and(|svc| svc.prefers_reduced_transparency_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_transparency(window))
+                != snapshot.prefers_reduced_transparency;
+        let needs_accent = !metrics.is_some_and(|svc| svc.accent_color_is_known(window))
+            || metrics.and_then(|svc| svc.accent_color(window)) != snapshot.accent_color;
+        let needs_contrast = !metrics.is_some_and(|svc| svc.contrast_preference_is_known(window))
+            || metrics.and_then(|svc| svc.contrast_preference(window))
+                != snapshot.contrast_preference;
+        let needs_forced = !metrics.is_some_and(|svc| svc.forced_colors_mode_is_known(window))
+            || metrics.and_then(|svc| svc.forced_colors_mode(window))
+                != snapshot.forced_colors_mode;
+
+        if !(needs_scheme
+            || needs_motion
+            || needs_text_scale
+            || needs_transparency
+            || needs_accent
+            || needs_contrast
+            || needs_forced)
+        {
+            return false;
+        }
+
+        self.app
+            .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                if needs_scheme {
+                    svc.set_color_scheme(window, snapshot.color_scheme);
+                }
+                if needs_motion {
+                    svc.set_prefers_reduced_motion(window, snapshot.prefers_reduced_motion);
+                }
+                if needs_text_scale {
+                    svc.set_text_scale_factor(window, snapshot.text_scale_factor);
+                }
+                if needs_transparency {
+                    svc.set_prefers_reduced_transparency(
+                        window,
+                        snapshot.prefers_reduced_transparency,
+                    );
+                }
+                if needs_accent {
+                    svc.set_accent_color(window, snapshot.accent_color);
+                }
+                if needs_contrast {
+                    svc.set_contrast_preference(window, snapshot.contrast_preference);
+                }
+                if needs_forced {
+                    svc.set_forced_colors_mode(window, snapshot.forced_colors_mode);
+                }
+            });
+
+        true
+    }
+
+    fn poll_window_environment_if_due(&mut self, now: Instant) {
+        #[cfg(target_os = "linux")]
+        let linux_dirty = LINUX_PORTAL_ENV_DIRTY.swap(false, std::sync::atomic::Ordering::SeqCst);
+        #[cfg(not(target_os = "linux"))]
+        let linux_dirty = false;
+
+        if now < self.next_environment_poll_at && !linux_dirty {
+            return;
+        }
+        self.next_environment_poll_at = now + Duration::from_millis(500);
+
+        let windows: Vec<(fret_core::AppWindowId, Arc<dyn Window>)> = self
+            .windows
+            .iter()
+            .map(|(id, state)| (id, state.window.clone()))
+            .collect();
+        for (id, window_ref) in windows {
+            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
+                self.app.request_redraw(id);
+            }
+        }
+    }
+
     fn resize_surface(&mut self, window: fret_core::AppWindowId, width: u32, height: u32) {
         let Some(context) = self.context.as_ref() else {
             return;
@@ -2985,11 +3767,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
-        let (cur_w, cur_h) = state.surface.size();
+        let Some(surface) = state.surface.as_mut() else {
+            return;
+        };
+        let (cur_w, cur_h) = surface.size();
         if cur_w == width.max(1) && cur_h == height.max(1) {
             return;
         }
-        state.surface.resize(&context.device, width, height);
+        surface.resize(&context.device, width, height);
     }
 
     fn close_window(&mut self, window: fret_core::AppWindowId) -> bool {
@@ -3086,6 +3871,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.remove(window) else {
             return false;
         };
+        self.windows_z_order.retain(|w| *w != window);
         #[cfg(windows)]
         windows_menu::unregister_window(state.window.as_ref());
         #[cfg(target_os = "macos")]
@@ -3495,6 +4281,132 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         fired_any
     }
 
+    fn system_font_rescan_async_enabled() -> bool {
+        static FLAG: OnceLock<bool> = OnceLock::new();
+        *FLAG.get_or_init(|| {
+            if cfg!(any(target_os = "ios", target_os = "android")) {
+                return false;
+            }
+            std::env::var("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC")
+                .ok()
+                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
+                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_RESCAN_ASYNC").is_none()
+        })
+    }
+
+    fn system_font_catalog_startup_async_enabled() -> bool {
+        static FLAG: OnceLock<bool> = OnceLock::new();
+        *FLAG.get_or_init(|| {
+            if cfg!(any(target_os = "ios", target_os = "android")) {
+                return false;
+            }
+            std::env::var("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC")
+                .ok()
+                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0")
+                || std::env::var_os("FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC").is_none()
+        })
+    }
+
+    fn request_redraw_all_windows(&self) {
+        for (_id, state) in self.windows.iter() {
+            state.window.request_redraw();
+        }
+    }
+
+    fn request_system_font_rescan(&mut self) {
+        if !Self::system_font_rescan_async_enabled() {
+            self.rescan_system_fonts_sync();
+            return;
+        }
+
+        if self.system_font_rescan_in_flight {
+            self.system_font_rescan_pending = true;
+            return;
+        }
+
+        let Some(seed) = self
+            .renderer
+            .as_mut()
+            .and_then(|renderer| renderer.system_font_rescan_seed())
+        else {
+            return;
+        };
+
+        if let Ok(mut slot) = self.system_font_rescan_result.lock() {
+            *slot = None;
+        }
+        self.system_font_rescan_in_flight = true;
+
+        let result_slot = self.system_font_rescan_result.clone();
+        let dispatcher = self.dispatcher.handle();
+        let dispatcher_for_wake = dispatcher.clone();
+        dispatcher.dispatch_background(
+            Box::new(move || {
+                let result = seed.run();
+                if let Ok(mut slot) = result_slot.lock() {
+                    *slot = Some(result);
+                }
+                dispatcher_for_wake.wake(None);
+            }),
+            fret_runtime::DispatchPriority::Low,
+        );
+    }
+
+    fn rescan_system_fonts_sync(&mut self) {
+        let Some(renderer) = self.renderer.as_mut() else {
+            return;
+        };
+
+        if !renderer.rescan_system_fonts() {
+            return;
+        }
+
+        // Font catalog refresh trigger (ADR 0258): explicit system font rescan.
+        super::font_catalog::apply_renderer_font_catalog_update(
+            &mut self.app,
+            renderer,
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
+        self.request_redraw_all_windows();
+    }
+
+    fn apply_pending_system_font_rescan_result(&mut self) -> bool {
+        let result = self
+            .system_font_rescan_result
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take());
+        let Some(result) = result else {
+            return false;
+        };
+
+        self.system_font_rescan_in_flight = false;
+
+        let Some(renderer) = self.renderer.as_mut() else {
+            return true;
+        };
+
+        if !renderer.apply_system_font_rescan_result(result) {
+            return true;
+        }
+
+        // Font catalog refresh trigger (ADR 0258): explicit system font rescan (async).
+        super::font_catalog::apply_renderer_font_catalog_update(
+            &mut self.app,
+            renderer,
+            fret_runtime::FontFamilyDefaultsPolicy::None,
+        );
+        self.request_redraw_all_windows();
+
+        let should_restart = self.system_font_rescan_pending;
+        self.system_font_rescan_pending = false;
+        if should_restart {
+            self.request_system_font_rescan();
+        }
+
+        true
+    }
+
     fn drain_effects(&mut self, event_loop: &dyn ActiveEventLoop) {
         const MAX_EFFECT_DRAIN_TURNS: usize = 8;
 
@@ -3502,6 +4414,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let now = Instant::now();
             let mut did_work = self.dispatcher.drain_turn(now);
             did_work |= self.drain_inboxes(None);
+            did_work |= self.apply_pending_system_font_rescan_result();
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
@@ -3576,6 +4489,50 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             }
                             if state.platform.set_ime_cursor_area(rect) {
                                 window_state_dirty.insert(window);
+                            }
+                        }
+                    }
+                    Effect::WindowMetricsSetInsets {
+                        window,
+                        safe_area_insets,
+                        occlusion_insets,
+                    } => {
+                        let mut changed = false;
+                        self.app.with_global_mut(
+                            fret_core::WindowMetricsService::default,
+                            |svc, _app| {
+                                if let Some(value) = safe_area_insets {
+                                    let current = svc.safe_area_insets(window);
+                                    let current_known = svc.safe_area_insets_is_known(window);
+                                    let needs_set = if value.is_none() {
+                                        !current_known || current.is_some()
+                                    } else {
+                                        !current_known || current != value
+                                    };
+                                    if needs_set {
+                                        svc.set_safe_area_insets(window, value);
+                                        changed = true;
+                                    }
+                                }
+                                if let Some(value) = occlusion_insets {
+                                    let current = svc.occlusion_insets(window);
+                                    let current_known = svc.occlusion_insets_is_known(window);
+                                    let needs_set = if value.is_none() {
+                                        !current_known || current.is_some()
+                                    } else {
+                                        !current_known || current != value
+                                    };
+                                    if needs_set {
+                                        svc.set_occlusion_insets(window, value);
+                                        changed = true;
+                                    }
+                                }
+                            },
+                        );
+                        if changed {
+                            if let Some(state) = self.windows.get(window) {
+                                state.window.request_redraw();
+                                self.raf_windows.insert(window);
                             }
                         }
                     }
@@ -3808,7 +4765,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::ExternalDropRelease { token } => {
                         self.external_drop.release(token);
                     }
-                    Effect::OpenUrl { url } => {
+                    Effect::OpenUrl { url, .. } => {
                         let caps = self
                             .app
                             .global::<PlatformCapabilities>()
@@ -3938,21 +4895,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let _ = fret_runtime::apply_font_catalog_update(
+                        // Font catalog refresh trigger (ADR 0258): `Effect::TextAddFonts`.
+                        super::font_catalog::apply_renderer_font_catalog_update(
                             &mut self.app,
-                            renderer.all_font_names(),
+                            renderer,
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
-                        if let Some(config) = self.app.global::<fret_core::TextFontFamilyConfig>() {
-                            let _ = renderer.set_text_font_families(config);
-                        }
-                        self.app.set_global::<fret_runtime::TextFontStackKey>(
-                            fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
-                        );
-
-                        for (_id, state) in self.windows.iter() {
-                            state.window.request_redraw();
-                        }
+                        self.request_redraw_all_windows();
+                    }
+                    Effect::TextRescanSystemFonts => {
+                        self.request_system_font_rescan();
                     }
                     Effect::ImageRegisterRgba8 {
                         window,
@@ -4635,6 +5587,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
+        if changed.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>())
+            && let Some(renderer) = self.renderer.as_mut()
+        {
+            let locale = self
+                .app
+                .global::<fret_runtime::fret_i18n::I18nService>()
+                .and_then(|service| service.preferred_locales().first())
+                .map(|locale| locale.to_string());
+            if renderer.set_text_locale(locale.as_deref()) {
+                let new_key = renderer.text_font_stack_key();
+                let old_key = self
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0);
+                if old_key != Some(new_key) {
+                    self.app.set_global::<fret_runtime::TextFontStackKey>(
+                        fret_runtime::TextFontStackKey(new_key),
+                    );
+                }
+
+                for (_id, state) in self.windows.iter() {
+                    state.window.request_redraw();
+                }
+            }
+        }
+
         for (window, runtime) in self.windows.iter_mut() {
             self.driver.handle_global_changes(
                 WinitWindowContext {
@@ -5123,7 +6101,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
         let mut fallback: Option<fret_core::AppWindowId> = None;
+        for &w in self.windows_z_order.iter().rev() {
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
+            let size = state.window.surface_size();
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        // Fallback if the z-order list has drifted.
         for w in self.windows.keys() {
+            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+                continue;
+            }
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
@@ -5149,6 +6156,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
         fallback
+    }
+
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        if self.windows.get(window).is_none() {
+            return;
+        }
+        self.windows_z_order.retain(|w| *w != window);
+        self.windows_z_order.push(window);
+
+        #[cfg(target_os = "macos")]
+        {
+            self.enqueue_window_front(window, None, None, Instant::now());
+        }
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {

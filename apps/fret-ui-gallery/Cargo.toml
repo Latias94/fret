@@ -14,16 +14,18 @@ default-run = "fret-ui-gallery"
 [features]
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
-webview-wry = ["dep:fret-webview", "fret-launch/webview-wry", "fret-ui-ai/webview"]
 
 [dependencies]
 anyhow.workspace = true
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-fonts = { path = "../../crates/fret-fonts" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
+fret-render = { path = "../../crates/fret-render" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["image-decode", "image-metadata"] }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
@@ -46,10 +48,10 @@ tracing-subscriber.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 winit.workspace = true
+image.workspace = true
 fret-node = { path = "../../ecosystem/fret-node" }
 
 [dev-dependencies]
-fret-render = { path = "../../crates/fret-render" }
 pollster.workspace = true
 slotmap.workspace = true
 stacksafe.workspace = true
@@ -63,5 +65,4 @@ web-sys = { version = "0.3", features = ["Window", "Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
-fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust"] }
-fret-webview = { path = "../../crates/fret-webview", optional = true }
+fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust", "syntax-markdown"] }

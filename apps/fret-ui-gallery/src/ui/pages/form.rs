@@ -7,8 +7,6 @@ pub(super) fn preview_forms(
     checkbox: Model<bool>,
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -31,17 +29,17 @@ pub(super) fn preview_forms(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(840.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -105,7 +103,7 @@ pub(super) fn preview_forms(
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-demo"));
+        .test_id("ui-gallery-form-demo");
 
         section_card(cx, "Demo", content)
     };
@@ -116,7 +114,7 @@ pub(super) fn preview_forms(
             .placeholder("name@example.com")
             .refine_layout(max_w_md.clone())
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-input"));
+            .test_id("ui-gallery-form-input");
 
         section_card(cx, "Input", content)
     };
@@ -130,7 +128,7 @@ pub(super) fn preview_forms(
                     .merge(LayoutRefinement::default().h_px(Px(96.0))),
             )
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-textarea"));
+            .test_id("ui-gallery-form-textarea");
 
         section_card(cx, "Textarea", content)
     };
@@ -171,7 +169,7 @@ pub(super) fn preview_forms(
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-controls"));
+        .test_id("ui-gallery-form-controls");
 
         section_card(cx, "Checkbox + Switch", content)
     };
@@ -211,7 +209,7 @@ pub(super) fn preview_forms(
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-fieldset"));
+        .test_id("ui-gallery-form-fieldset");
 
         section_card(cx, "Fieldset", content)
     };
@@ -246,7 +244,7 @@ pub(super) fn preview_forms(
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-rtl"));
+        .test_id("ui-gallery-form-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -272,8 +270,7 @@ pub(super) fn preview_forms(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-form-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-form-component");
 
     let code_stack = stack::vstack(
         cx,

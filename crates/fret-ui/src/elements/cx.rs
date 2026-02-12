@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, Px, Rect};
+use fret_core::input::PointerType;
+use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
+use fret_core::{AppWindowId, Color, Edges, EffectChain, EffectMode, NodeId, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -22,17 +24,20 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
-    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
-    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
+    FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
+    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, OpacityProps, PointerRegionProps,
+    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
+    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
+    SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
     VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
+use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
+use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
 pub struct ElementContext<'a, H: UiHost> {
@@ -282,6 +287,33 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Runs `f` and then restores the current callsite counters to their previous state.
+    ///
+    /// This is useful when you need to "probe-render" a subtree (e.g. to compute derived
+    /// information like `focus_within`) without consuming callsite slots and disturbing
+    /// subsequent element identity in the real render pass.
+    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let prev_stack = self.stack.clone();
+        let prev_counters = self.callsite_counters.clone();
+
+        let out = f(self);
+
+        debug_assert_eq!(
+            self.stack.len(),
+            prev_stack.len(),
+            "element stack depth must be balanced"
+        );
+        debug_assert_eq!(
+            self.callsite_counters.len(),
+            prev_counters.len(),
+            "callsite counters stack depth must be balanced"
+        );
+
+        self.stack = prev_stack;
+        self.callsite_counters = prev_counters;
+        out
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this after mutating state/models to schedule a repaint.
@@ -464,6 +496,216 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             return;
         }
         list.push((global, invalidation));
+    }
+
+    fn observe_environment_query(&mut self, key: EnvironmentQueryKey, invalidation: Invalidation) {
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
+        let list = self
+            .window_state
+            .observed_environment_next
+            .entry(id)
+            .or_default();
+        if list
+            .iter()
+            .any(|(k, inv)| *k == key && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((key, invalidation));
+    }
+
+    pub fn observe_layout_query_region(
+        &mut self,
+        region: GlobalElementId,
+        invalidation: Invalidation,
+    ) {
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
+        let list = self
+            .window_state
+            .observed_layout_queries_next
+            .entry(id)
+            .or_default();
+        if list
+            .iter()
+            .any(|(r, inv)| *r == region && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((region, invalidation));
+    }
+
+    pub fn layout_query_bounds(
+        &mut self,
+        region: GlobalElementId,
+        invalidation: Invalidation,
+    ) -> Option<Rect> {
+        self.observe_layout_query_region(region, invalidation);
+        self.last_bounds_for_element(region)
+    }
+
+    pub fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> Rect {
+        self.observe_environment_query(EnvironmentQueryKey::ViewportSize, invalidation);
+        self.window_state.committed_viewport_bounds()
+    }
+
+    pub fn environment_viewport_width(&mut self, invalidation: Invalidation) -> Px {
+        self.environment_viewport_bounds(invalidation).size.width
+    }
+
+    pub fn environment_viewport_height(&mut self, invalidation: Invalidation) -> Px {
+        self.environment_viewport_bounds(invalidation).size.height
+    }
+
+    pub fn environment_scale_factor(&mut self, invalidation: Invalidation) -> f32 {
+        self.observe_environment_query(EnvironmentQueryKey::ScaleFactor, invalidation);
+        self.window_state.committed_scale_factor()
+    }
+
+    pub fn environment_color_scheme(&mut self, invalidation: Invalidation) -> Option<ColorScheme> {
+        self.observe_environment_query(EnvironmentQueryKey::ColorScheme, invalidation);
+        self.window_state.committed_color_scheme()
+    }
+
+    pub fn environment_prefers_reduced_motion(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<bool> {
+        self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
+        self.window_state.committed_prefers_reduced_motion()
+    }
+
+    pub fn environment_text_scale_factor(&mut self, invalidation: Invalidation) -> Option<f32> {
+        self.observe_environment_query(EnvironmentQueryKey::TextScaleFactor, invalidation);
+        self.window_state.committed_text_scale_factor()
+    }
+
+    pub fn environment_prefers_reduced_transparency(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<bool> {
+        self.observe_environment_query(
+            EnvironmentQueryKey::PrefersReducedTransparency,
+            invalidation,
+        );
+        self.window_state.committed_prefers_reduced_transparency()
+    }
+
+    pub fn environment_accent_color(&mut self, invalidation: Invalidation) -> Option<Color> {
+        self.observe_environment_query(EnvironmentQueryKey::AccentColor, invalidation);
+        self.window_state.committed_accent_color()
+    }
+
+    pub fn environment_prefers_contrast(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ContrastPreference> {
+        self.observe_environment_query(EnvironmentQueryKey::PrefersContrast, invalidation);
+        self.window_state.committed_contrast_preference()
+    }
+
+    pub fn environment_forced_colors_mode(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<ForcedColorsMode> {
+        self.observe_environment_query(EnvironmentQueryKey::ForcedColorsMode, invalidation);
+        self.window_state.committed_forced_colors_mode()
+    }
+
+    pub fn environment_safe_area_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
+        self.observe_environment_query(EnvironmentQueryKey::SafeAreaInsets, invalidation);
+        self.window_state.committed_safe_area_insets()
+    }
+
+    pub fn environment_occlusion_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
+        self.observe_environment_query(EnvironmentQueryKey::OcclusionInsets, invalidation);
+        self.window_state.committed_occlusion_insets()
+    }
+
+    pub fn environment_primary_pointer_type(&mut self, invalidation: Invalidation) -> PointerType {
+        self.observe_environment_query(EnvironmentQueryKey::PrimaryPointerType, invalidation);
+        self.window_state.committed_primary_pointer_type()
+    }
+
+    pub fn environment_primary_pointer_can_hover(
+        &mut self,
+        invalidation: Invalidation,
+        default_when_unknown: bool,
+    ) -> bool {
+        match self.environment_primary_pointer_type(invalidation) {
+            PointerType::Touch => false,
+            PointerType::Unknown => default_when_unknown,
+            PointerType::Mouse | PointerType::Pen => true,
+        }
+    }
+
+    pub fn environment_primary_pointer_is_coarse(
+        &mut self,
+        invalidation: Invalidation,
+        default_when_unknown: bool,
+    ) -> bool {
+        match self.environment_primary_pointer_type(invalidation) {
+            PointerType::Touch => true,
+            PointerType::Unknown => default_when_unknown,
+            PointerType::Mouse | PointerType::Pen => false,
+        }
+    }
+
+    pub fn diagnostics_record_overlay_placement_anchored_panel(
+        &mut self,
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        trace: AnchoredPanelLayoutTrace,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_anchored_panel(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            trace,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (overlay_root_name, anchor_element, content_element, trace);
+    }
+
+    pub fn diagnostics_record_overlay_placement_placed_rect(
+        &mut self,
+        overlay_root_name: Option<&str>,
+        anchor_element: Option<GlobalElementId>,
+        content_element: Option<GlobalElementId>,
+        outer: Rect,
+        anchor: Rect,
+        placed: Rect,
+        side: Option<Side>,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        self.window_state.record_overlay_placement_placed_rect(
+            self.frame_id,
+            overlay_root_name.map(Arc::<str>::from),
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
+        #[cfg(not(feature = "diagnostics"))]
+        let _ = (
+            overlay_root_name,
+            anchor_element,
+            content_element,
+            outer,
+            anchor,
+            placed,
+            side,
+        );
     }
 
     pub fn theme(&mut self) -> &Theme {
@@ -710,7 +952,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .global::<WindowMetricsService>()
                 .and_then(|svc| svc.scale_factor(cx.window))
                 .unwrap_or(1.0);
-            let key = stable_hash(&(theme_revision, scale_factor.to_bits(), props.cache_key));
+
+            // View-cache keys must incorporate any "external" dependencies that can affect the
+            // cached subtree without triggering a normal invalidation walk (e.g. environment
+            // queries, layout queries).
+            //
+            // When reusing, depend on the previously-recorded deps for this cache root. When
+            // re-rendering, the key is refreshed from `*_next` after the closure runs.
+            let scale_bits = scale_factor.to_bits();
+            let deps_key_rendered = if should_reuse {
+                (
+                    cx.window_state.environment_deps_fingerprint_rendered(id),
+                    cx.window_state.layout_query_deps_fingerprint_rendered(id),
+                )
+            } else {
+                (0, 0)
+            };
+            let key = stable_hash(&(
+                theme_revision,
+                scale_bits,
+                props.cache_key,
+                deps_key_rendered.0,
+                deps_key_rendered.1,
+            ));
 
             let key_matches = if should_reuse {
                 let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
@@ -731,13 +995,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .touch_observed_models_for_element_if_recorded(id);
                 cx.window_state
                     .touch_observed_globals_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_environment_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_layout_queries_for_element_if_recorded(id);
                 Vec::new()
             } else {
-                cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
                 let built = f(cx);
                 let children = cx.collect_children(built);
                 cx.window_state.end_view_cache_scope(id);
+
+                let deps_key_next = (
+                    cx.window_state.environment_deps_fingerprint_next(id),
+                    cx.window_state.layout_query_deps_fingerprint_next(id),
+                );
+                let key = stable_hash(&(
+                    theme_revision,
+                    scale_bits,
+                    props.cache_key,
+                    deps_key_next.0,
+                    deps_key_next.1,
+                ));
+                cx.window_state.set_view_cache_key(id, key);
                 children
             };
             cx.new_any_element(id, ElementKind::ViewCache(props), children)
@@ -759,6 +1039,39 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
+    }
+
+    #[track_caller]
+    pub fn layout_query_region_with_id<I>(
+        &mut self,
+        props: LayoutQueryRegionProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let name = props.name.clone();
+            cx.with_state_for(id, LayoutQueryRegionMarker::default, |marker| {
+                marker.name = name.clone();
+            });
+            let built = f(cx, id);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::LayoutQueryRegion(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn layout_query_region<I>(
+        &mut self,
+        props: LayoutQueryRegionProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.layout_query_region_with_id(props, |cx, _id| f(cx))
     }
 
     /// Creates a `Semantics` layout wrapper around the subtree and passes its element id.
@@ -1010,6 +1323,72 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn hit_test_gate<I>(&mut self, hit_test: bool, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.hit_test_gate_props(
+            HitTestGateProps {
+                hit_test,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn hit_test_gate_props<I>(
+        &mut self,
+        props: HitTestGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::HitTestGate(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn focus_traversal_gate<I>(
+        &mut self,
+        traverse: bool,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.focus_traversal_gate_props(
+            FocusTraversalGateProps {
+                traverse,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn focus_traversal_gate_props<I>(
+        &mut self,
+        props: FocusTraversalGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::FocusTraversalGate(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn pressable<I>(
         &mut self,
         props: PressableProps,
@@ -1021,6 +1400,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1029,6 +1411,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1050,6 +1434,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1058,6 +1445,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1079,6 +1468,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1088,6 +1480,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },

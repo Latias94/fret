@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_app::App;
+use fret_diag::transport::DiagTransportKind;
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
     DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1, UiSemanticsNodeGetAckV1,
-    UiSemanticsNodeGetV1,
 };
 
 use crate::{State, is_abs_path, pack, push_log};
@@ -28,7 +28,7 @@ pub(crate) fn require_session_selected(app: &mut App, st: &State) -> bool {
 }
 
 pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
-    while let Some(msg) = st.client.try_recv() {
+    while let Some(msg) = st.devtools.try_recv() {
         let ty = msg.r#type.clone();
         let compact = match msg.session_id.as_deref() {
             Some(s) => format!("type={ty} session_id={s}"),
@@ -74,6 +74,26 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                 }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_pick_json, |v| *v = text);
+                }
+            }
+            "inspect.hover" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_inspect_hover_json, |v| *v = text);
+                }
+            }
+            "inspect.focus" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_inspect_focus_json, |v| *v = text);
                 }
             }
             "script.result" => {
@@ -255,7 +275,7 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
         return;
     }
 
-    st.client
+    st.devtools
         .set_default_session_id(selected.as_ref().map(|s| s.to_string()));
     st.applied_session_id = selected;
 
@@ -279,6 +299,10 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
 }
 
 pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {
+    if st.devtools.client().kind() != DiagTransportKind::WebSocket {
+        return;
+    }
+
     let live_enabled = app
         .models()
         .read(&st.semantics_live_enabled, |v| *v)
@@ -341,21 +365,9 @@ pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State
     st.live_semantics_last_sent_unix_ms = Some(now);
     st.live_semantics_last_force_nonce = force_nonce;
 
-    let request_id = st.next_transport_request_id;
-    st.next_transport_request_id = st.next_transport_request_id.saturating_add(1);
-
-    st.client.send(DiagTransportMessageV1 {
-        schema_version: 1,
-        r#type: "semantics.node.get".to_string(),
-        session_id: None,
-        request_id: Some(request_id),
-        payload: serde_json::to_value(UiSemanticsNodeGetV1 {
-            schema_version: 1,
-            window: window_ffi,
-            node_id: selected_node_id,
-        })
-        .unwrap_or(serde_json::Value::Null),
-    });
+    let _ = st
+        .devtools
+        .semantics_node_get(None, window_ffi, selected_node_id);
 }
 
 fn unix_ms_now() -> u64 {

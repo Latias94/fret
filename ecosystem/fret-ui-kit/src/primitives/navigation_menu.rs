@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{Effect, Model, TimerToken};
-use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
@@ -534,6 +534,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     presence: OverlayPresence,
     selected_value: Option<&str>,
     args: NavigationMenuViewportOverlayRequestArgs,
+    on_pointer_move: Option<OnDismissiblePointerMove>,
     render: impl FnOnce(
         &mut ElementContext<'_, H>,
         NavigationMenuViewportOverlayLayout,
@@ -596,7 +597,11 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             );
         }
 
-        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin);
+        let outer = overlay::outer_bounds_with_window_margin_for_environment(
+            cx,
+            fret_ui::Invalidation::Layout,
+            args.window_margin,
+        );
         let popper_layout = popper::popper_content_layout_unclamped(
             outer,
             placement_anchor,
@@ -643,7 +648,6 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     });
 
     let open_model_for_request = open_model.clone();
-    let open_model_for_dismiss = open_model.clone();
     let mut request = OverlayRequest::dismissible_popover(
         root_id,
         root_id,
@@ -652,13 +656,29 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         overlay_children,
     );
     request.root_name = Some(overlay_root_name);
-    request.dismissible_on_dismiss_request = Some(Arc::new({
-        let open_model = open_model_for_dismiss;
-        move |host, _cx, _reason| {
-            let _ = host.models_mut().update(&open_model, |v| *v = false);
+    request.dismissible_on_pointer_move = on_pointer_move;
+    let clear_value_on_dismiss: fret_ui::action::OnDismissRequest = Arc::new({
+        let value_model = value_model.clone();
+        move |host: &mut dyn fret_ui::action::UiActionHost,
+              _cx: fret_ui::action::ActionCx,
+              _req: &mut fret_ui::action::DismissRequestCx| {
             let _ = host.models_mut().update(&value_model, |v| *v = None);
         }
-    }));
+    });
+    let policy = crate::primitives::popover::PopoverCloseAutoFocusGuardPolicy::for_variant(
+        crate::primitives::popover::PopoverVariant::NonModal,
+        false,
+    );
+    let (on_dismiss_request, on_close_auto_focus) =
+        crate::primitives::popover::popover_close_auto_focus_guard_hooks(
+            cx,
+            policy,
+            open_model.clone(),
+            Some(clear_value_on_dismiss),
+            None,
+        );
+    request.dismissible_on_dismiss_request = on_dismiss_request;
+    request.on_close_auto_focus = on_close_auto_focus;
     OverlayController::request(cx, request);
 
     computed_layout

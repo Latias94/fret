@@ -6,7 +6,7 @@ This document defines the **stable contract** for the built-in node graph add-on
 - `NodeGraphControlsOverlay`
 
 These add-ons are **UI-only overlays**: they are not serialized into the graph document, and they
-are hosted outside the canvas render transform (ADR 0135) so they can use regular UI
+are hosted outside the canvas render transform (ADR 0126) so they can use regular UI
 infrastructure (focus, pointer capture, semantics).
 
 ## Composition model

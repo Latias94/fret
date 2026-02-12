@@ -467,7 +467,7 @@ pub fn run() -> anyhow::Result<()> {
             }
             "--help" | "-h" => {
                 try_println!(
-                    "Usage: plot_stress_demo [--points N] [--series N] [--frames N]\n\nThis is a minimal stress harness aligned with ADR 0096 conventions (deterministic scene generation, periodic perf prints)."
+                    "Usage: plot_stress_demo [--points N] [--series N] [--frames N]\n\nThis is a minimal stress harness aligned with ADR 0094 conventions (deterministic scene generation, periodic perf prints)."
                 );
                 return Ok(());
             }

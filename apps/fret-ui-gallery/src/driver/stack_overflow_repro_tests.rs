@@ -51,6 +51,19 @@ impl SvgService for FakeUiServices {
     }
 }
 
+impl fret_core::MaterialService for FakeUiServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 fn run_datatable_layout(configure_stacksafe: bool) {
     if configure_stacksafe {
         stacksafe::set_minimum_stack_size(2 * 1024 * 1024);
@@ -68,7 +81,7 @@ fn run_datatable_layout(configure_stacksafe: bool) {
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1280.0), Px(720.0)),
     );
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
 
     UiGalleryDriver::render_ui(&mut app, &mut services, window, &mut state, bounds);
 

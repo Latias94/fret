@@ -22,7 +22,7 @@ impl Default for DocId {
 /// A URI-like document identity for workspace shells.
 ///
 /// This is intentionally a thin wrapper; normalization and scheme decisions are left to the
-/// workspace layer.
+/// workspace layer. See ADR 0185 for the v1 contract.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DocUri(String);
 

@@ -36,6 +36,9 @@ fn y_percent_extents_cache_hits_and_invalidates() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![

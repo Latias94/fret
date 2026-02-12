@@ -1,5 +1,4 @@
 use fret_core::{Color, Corners, Edges, Px};
-use fret_ui::Theme;
 use fret_ui::element::{
     ContainerProps, LayoutStyle, Length, MarginEdge, RingPlacement, RingStyle, ShadowLayerStyle,
     ShadowStyle,
@@ -7,23 +6,23 @@ use fret_ui::element::{
 
 use crate::style::{
     ChromeRefinement, CornerRadiiRefinement, InsetRefinement, LayoutRefinement, LengthRefinement,
-    MarginRefinement, PaddingRefinement, ShadowPreset, SizeRefinement,
+    MarginRefinement, PaddingRefinement, ShadowPreset, SizeRefinement, ThemeTokenRead,
 };
 use crate::{ColorRef, MetricRef, Radius, Space};
 
-pub fn space(theme: &Theme, space: Space) -> Px {
+pub fn space<T: ThemeTokenRead + ?Sized>(theme: &T, space: Space) -> Px {
     MetricRef::space(space).resolve(theme)
 }
 
-pub fn radius(theme: &Theme, radius: Radius) -> Px {
+pub fn radius<T: ThemeTokenRead + ?Sized>(theme: &T, radius: Radius) -> Px {
     MetricRef::radius(radius).resolve(theme)
 }
 
-pub fn color(theme: &Theme, color: ColorRef) -> Color {
+pub fn color<T: ThemeTokenRead + ?Sized>(theme: &T, color: ColorRef) -> Color {
     color.resolve(theme)
 }
 
-fn resolve_length(theme: &Theme, l: &LengthRefinement) -> Length {
+fn resolve_length<T: ThemeTokenRead + ?Sized>(theme: &T, l: &LengthRefinement) -> Length {
     match l {
         LengthRefinement::Auto => Length::Auto,
         LengthRefinement::Fill => Length::Fill,
@@ -31,7 +30,10 @@ fn resolve_length(theme: &Theme, l: &LengthRefinement) -> Length {
     }
 }
 
-fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> Edges {
+fn resolve_padding<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
+    padding: Option<&PaddingRefinement>,
+) -> Edges {
     let Some(p) = padding else {
         return Edges::all(Px(0.0));
     };
@@ -52,7 +54,7 @@ fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> Edges 
 }
 
 fn resolve_corner_radii(
-    theme: &Theme,
+    theme: &impl ThemeTokenRead,
     radii: Option<&CornerRadiiRefinement>,
     fallback_radius: Px,
 ) -> Corners {
@@ -91,14 +93,17 @@ fn max_corner_radius(corners: Corners) -> Px {
     Px(max)
 }
 
-pub fn layout_style(theme: &Theme, refinement: LayoutRefinement) -> LayoutStyle {
+pub fn layout_style<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
+    refinement: LayoutRefinement,
+) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     apply_layout_refinement(theme, refinement, &mut layout);
     layout
 }
 
-pub fn apply_layout_refinement(
-    theme: &Theme,
+pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
     refinement: LayoutRefinement,
     layout: &mut LayoutStyle,
 ) {
@@ -187,7 +192,7 @@ pub fn apply_layout_refinement(
 }
 
 pub fn container_props(
-    theme: &Theme,
+    theme: &impl ThemeTokenRead,
     chrome: ChromeRefinement,
     layout_refinement: LayoutRefinement,
 ) -> ContainerProps {
@@ -239,7 +244,7 @@ pub fn container_props(
     }
 }
 
-pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
+pub fn focus_ring(theme: &impl ThemeTokenRead, radius: Px) -> RingStyle {
     let width = theme
         .metric_by_key("component.ring.width")
         .unwrap_or(Px(2.0));
@@ -264,7 +269,7 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
     }
 }
 
-fn shadow_color(theme: &Theme, fallback_alpha: f32) -> Color {
+fn shadow_color(theme: &impl ThemeTokenRead, fallback_alpha: f32) -> Color {
     let base = theme.color_by_key("shadow").unwrap_or(Color {
         r: 0.0,
         g: 0.0,
@@ -277,12 +282,12 @@ fn shadow_color(theme: &Theme, fallback_alpha: f32) -> Color {
     }
 }
 
-fn shadow_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
+fn shadow_metric(theme: &impl ThemeTokenRead, key: &'static str, fallback: Px) -> Px {
     theme.metric_by_key(key).unwrap_or(fallback)
 }
 
 fn shadow_layer_style(
-    theme: &Theme,
+    theme: &impl ThemeTokenRead,
     offset_x_key: &'static str,
     offset_y_key: &'static str,
     spread_key: &'static str,
@@ -305,7 +310,7 @@ fn shadow_layer_style(
     }
 }
 
-pub fn shadow(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow`):
     // `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)`
     let primary_color = shadow_color(theme, 0.10);
@@ -337,7 +342,7 @@ pub fn shadow(theme: &Theme, radius: Px) -> ShadowStyle {
     }
 }
 
-pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow_xs(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow-xs`): `0 1px 2px 0 rgba(0,0,0,0.05)`.
     let color = shadow_color(theme, 0.05);
     let primary = shadow_layer_style(
@@ -356,7 +361,7 @@ pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
     }
 }
 
-pub fn shadow_sm(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow_sm(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     let color = shadow_color(theme, 0.14);
     let primary = shadow_layer_style(
         theme,
@@ -374,7 +379,7 @@ pub fn shadow_sm(theme: &Theme, radius: Px) -> ShadowStyle {
     }
 }
 
-pub fn shadow_md(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow_md(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow-md`):
     // `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)`
     let color = shadow_color(theme, 0.10);
@@ -404,7 +409,7 @@ pub fn shadow_md(theme: &Theme, radius: Px) -> ShadowStyle {
     }
 }
 
-pub fn shadow_lg(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow_lg(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow-lg`):
     // `0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)`
     let color = shadow_color(theme, 0.10);
@@ -434,7 +439,7 @@ pub fn shadow_lg(theme: &Theme, radius: Px) -> ShadowStyle {
     }
 }
 
-pub fn shadow_xl(theme: &Theme, radius: Px) -> ShadowStyle {
+pub fn shadow_xl(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow-xl`):
     // `0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)`
     let color = shadow_color(theme, 0.10);

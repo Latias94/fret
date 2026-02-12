@@ -122,12 +122,16 @@ pub fn text_nowrap<H: UiHost>(
 /// Themes can override this via:
 /// - `component.text.sm_px`
 /// - `component.text.sm_line_height`
+#[track_caller]
 pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_style(theme)
+    };
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
-        style: Some(text_sm_style(&theme)),
+        style: Some(style),
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
@@ -139,12 +143,16 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
 /// Themes can override this via:
 /// - `component.text.xs_px`
 /// - `component.text.xs_line_height`
+#[track_caller]
 pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_xs_style(theme)
+    };
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
-        style: Some(text_xs_style(&theme)),
+        style: Some(style),
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
@@ -160,11 +168,14 @@ pub fn text_base<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_base_style(theme)
+    };
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
-        style: Some(text_base_style(&theme)),
+        style: Some(style),
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
@@ -179,11 +190,14 @@ pub fn text_prose<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
-        style: Some(text_prose_style(&theme)),
+        style: Some(style),
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
@@ -195,8 +209,10 @@ pub fn text_prose_bold<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let mut style = text_prose_style(&theme);
+    let mut style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
     style.weight = fret_core::FontWeight::BOLD;
 
     cx.text_props(TextProps {
@@ -238,11 +254,14 @@ pub fn text_prose_nowrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
     cx.text_props(TextProps {
         layout: LayoutStyle::default(),
         text: text.into(),
-        style: Some(text_prose_style(&theme)),
+        style: Some(style),
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
@@ -254,8 +273,10 @@ pub fn text_prose_bold_nowrap<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let mut style = text_prose_style(&theme);
+    let mut style = {
+        let theme = Theme::global(&*cx.app);
+        text_prose_style(theme)
+    };
     style.weight = fret_core::FontWeight::BOLD;
 
     cx.text_props(TextProps {

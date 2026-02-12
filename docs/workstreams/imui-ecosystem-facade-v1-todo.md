@@ -10,7 +10,7 @@ This tracker covers the work described in:
 Related:
 
 - `docs/workstreams/imui-authoring-facade-v2.md` (implemented; authoring frontend baseline)
-- `docs/adr/0175-unified-authoring-builder-surface-v1.md` (patch vocabulary)
+- `docs/adr/0160-unified-authoring-builder-surface-v1.md` (patch vocabulary)
 - Docking parity: `docs/workstreams/docking-multiwindow-imgui-parity.md`
 - Overlays policy split: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 

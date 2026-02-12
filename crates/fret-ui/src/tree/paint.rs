@@ -43,6 +43,19 @@ impl<H: UiHost> UiTree<H> {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
+        // `paint_node` can run multiple times within the same runner `FrameId` in tests and
+        // diagnostics scenarios. Use a tree-local paint pass token to avoid conflating distinct
+        // invocations when tracking "bounds were already updated this pass" markers.
+        self.paint_pass = self.paint_pass.saturating_add(1);
+
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            app.with_global_mut_untracked(
+                fret_core::WindowFrameClockService::default,
+                |svc, _host| svc.record_frame(window, frame_id),
+            );
+        }
+
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.begin_debug_frame_if_needed(app.frame_id());
@@ -123,6 +136,16 @@ impl<H: UiHost> UiTree<H> {
                     .and_then(|svc| svc.snapshot(window))
                     .map(|s| s.edit_can_redo)
                     .unwrap_or(true),
+                router_can_back: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.router_can_back)
+                    .unwrap_or(false),
+                router_can_forward: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.router_can_forward)
+                    .unwrap_or(false),
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(mode) = app
@@ -296,8 +319,10 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_nodes = self.debug_stats.paint_nodes.saturating_add(1);
         }
 
+        let prev_bounds_origin = self.nodes.get(node).map(|n| n.bounds.origin);
         if let Some(n) = self.nodes.get_mut(node) {
             n.bounds = bounds;
+            n.bounds_written_paint_pass = self.paint_pass;
         }
 
         let local_transform = self.node_render_transform(node);
@@ -387,6 +412,10 @@ impl<H: UiHost> UiTree<H> {
             if let Some(prev) = prev_cache
                 && prev.generation == self.paint_cache.source_generation
                 && prev.key == key
+                && prev_bounds_origin.is_some_and(|origin| {
+                    (origin.x.0 - prev.origin.x.0).abs() <= 0.01
+                        && (origin.y.0 - prev.origin.y.0).abs() <= 0.01
+                })
             {
                 let start = scene.ops_len();
                 let range = prev.start as usize..prev.end as usize;
@@ -473,6 +502,7 @@ impl<H: UiHost> UiTree<H> {
                         let translate_started = self.debug_enabled.then(Instant::now);
                         let mut translated_nodes: u32 = 0;
                         let window = self.window;
+                        let paint_pass = self.paint_pass;
                         let mut stack = self.take_scratch_node_stack();
                         stack.clear();
                         let mut i = 0usize;
@@ -493,11 +523,20 @@ impl<H: UiHost> UiTree<H> {
                             let Some(n) = self.nodes.get_mut(id) else {
                                 continue;
                             };
+                            if n.bounds_written_paint_pass == paint_pass {
+                                continue;
+                            }
                             translated_nodes = translated_nodes.saturating_add(1);
                             n.bounds.origin = Point::new(
                                 n.bounds.origin.x + delta.x,
                                 n.bounds.origin.y + delta.y,
                             );
+                            n.bounds_written_paint_pass = paint_pass;
+                            if let Some(mut cache) = n.paint_cache {
+                                cache.origin =
+                                    Point::new(cache.origin.x + delta.x, cache.origin.y + delta.y);
+                                n.paint_cache = Some(cache);
+                            }
                             if let Some(window) = window
                                 && let Some(element) = n.element
                             {

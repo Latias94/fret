@@ -8,8 +8,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "UI-oriented app integration layer for wiring Fret app and UI surfaces."
 
 [dependencies]
-fret-app = { path = "../fret-app" }
-fret-core = { path = "../fret-core" }
-fret-ui = { path = "../fret-ui" }
+fret-app = { version = "0.1.0", path = "../fret-app" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-ui = { version = "0.1.0", path = "../fret-ui" }

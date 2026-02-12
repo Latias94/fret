@@ -127,7 +127,13 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
+    let (muted, muted_foreground, destructive) = cx.with_theme(|theme| {
+        (
+            theme.color_required("muted"),
+            theme.color_required("muted-foreground"),
+            theme.color_required("destructive"),
+        )
+    });
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -151,17 +157,17 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -178,7 +184,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .length(6)
             .refine_layout(otp_width.clone())
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-otp-demo"));
+            .test_id("ui-gallery-input-otp-demo");
         section_card(cx, "Demo", content)
     };
 
@@ -189,9 +195,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .group_size(Some(6))
             .refine_layout(otp_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-input-otp-pattern"),
-            );
+            .test_id("ui-gallery-input-otp-pattern");
         section_card(cx, "Pattern", content)
     };
 
@@ -201,9 +205,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .group_size(Some(2))
             .refine_layout(otp_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-input-otp-separator"),
-            );
+            .test_id("ui-gallery-input-otp-separator");
         section_card(cx, "Separator", content)
     };
 
@@ -221,15 +223,11 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                         .group_size(Some(3))
                         .refine_style(
                             ChromeRefinement::default()
-                                .bg(ColorRef::Color(theme.color_required("muted")))
-                                .text_color(ColorRef::Color(
-                                    theme.color_required("muted-foreground"),
-                                )),
+                                .bg(ColorRef::Color(muted))
+                                .text_color(ColorRef::Color(muted_foreground)),
                         )
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-input-otp-disabled"),
-                        ),
+                        .test_id("ui-gallery-input-otp-disabled"),
                     shadcn::typography::muted(
                         cx,
                         "Current API has no true disabled state yet; this section is visual-only approximation.",
@@ -289,13 +287,10 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                         .length(6)
                         .group_size(Some(2))
                         .refine_style(
-                            ChromeRefinement::default()
-                                .border_color(ColorRef::Color(theme.color_required("destructive"))),
+                            ChromeRefinement::default().border_color(ColorRef::Color(destructive)),
                         )
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-input-otp-invalid"),
-                        ),
+                        .test_id("ui-gallery-input-otp-invalid"),
                     shadcn::typography::muted(
                         cx,
                         "Invalid is approximated with destructive border style on all slots.",
@@ -312,9 +307,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .numeric_only(true)
             .refine_layout(otp_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-input-otp-four-digits"),
-            );
+            .test_id("ui-gallery-input-otp-four-digits");
         section_card(cx, "Four Digits", content)
     };
 
@@ -325,9 +318,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             .group_size(Some(3))
             .refine_layout(otp_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-input-otp-alphanumeric"),
-            );
+            .test_id("ui-gallery-input-otp-alphanumeric");
         section_card(cx, "Alphanumeric", content)
     };
 
@@ -355,9 +346,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                             .slot_corner_mode(shadcn::input_otp::InputOtpSlotCornerMode::All)
                             .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx)
-                            .attach_semantics(
-                                SemanticsDecoration::default().test_id("ui-gallery-input-otp-form"),
-                            ),
+                            .test_id("ui-gallery-input-otp-form"),
                         shadcn::Button::new("Verify").into_element(cx),
                     ]
                 },
@@ -381,7 +370,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-otp-rtl"));
+        .test_id("ui-gallery-input-otp-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -411,8 +400,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-otp-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-input-otp-component");
 
     let code_panel_body = stack::vstack(
         cx,

@@ -9,13 +9,13 @@ As of 2026-02-03, the tracked v2 consolidation milestones (M0–M5) are implemen
 document remains as the design narrative and rationale for the current shape.
 
 The motivating idea: **imui should remain an authoring frontend**, not a second runtime, and it should not grow into a
-parallel ecosystem surface that competes with the unified patch chain (`ui()` / `UiBuilder<T>`) introduced by ADR 0175.
+parallel ecosystem surface that competes with the unified patch chain (`ui()` / `UiBuilder<T>`) introduced by ADR 0160.
 
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-authoring-facade-v2-todo.md`
 - v1 baseline: `docs/workstreams/imui-authoring-facade-v1.md`
-- Unified patch chain ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- Unified patch chain ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Unified builder workstream: `docs/workstreams/unified-authoring-builder-v1.md`
 - Fluent builder ergonomics audit: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
 - Architecture baseline: `docs/architecture.md`
@@ -37,7 +37,7 @@ v1 `imui` proved that immediate-mode ergonomics can coexist with Fret’s retain
 
 However, the ecosystem is also converging on a separate “golden path” authoring interface for styling/layout patches:
 
-- `ui()` / `UiBuilder<T>` (ADR 0175)
+- `ui()` / `UiBuilder<T>` (ADR 0160)
 
 If we continue expanding `imui` *and* expanding `ui()` as separate authoring worlds, we will incur:
 

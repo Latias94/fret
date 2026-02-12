@@ -1,0 +1,109 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "shadcn_extras" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-shadcn-extras" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 300
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-shadcn-extras" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-shadcn-extras" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 30 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-shadcn-extras-kanban" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-shadcn-extras-kanban" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "shadcn-extras.kanban.card-card-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "shadcn-extras.kanban.column-in-progress" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "shadcn-extras.kanban.card-card-1" },
+      "delta_x": 340.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": { "kind": "test_id", "id": "shadcn-extras.kanban.card-card-1" },
+        "b": { "kind": "test_id", "id": "shadcn-extras.kanban.column-in-progress" },
+        "eps_px": 1.0
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-shadcn-extras-kanban-dnd" },
+    { "type": "capture_screenshot", "label": "ui-gallery-shadcn-extras-kanban-dnd" }
+  ]
+}

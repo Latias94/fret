@@ -232,6 +232,7 @@ impl ScrollAreaRoot {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -634,6 +635,7 @@ impl ScrollArea {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
         if let Some(test_id) = self.viewport_test_id {
@@ -685,7 +687,7 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -733,6 +735,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -949,7 +964,7 @@ mod tests {
     }
 
     #[test]
-    fn scroll_area_scroll_type_shows_while_scrolling_then_hides() {
+    fn scroll_area_touch_pan_updates_scroll_handle_offset() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -964,14 +979,14 @@ mod tests {
             &mut services,
             window,
             bounds(),
-            "sa-scroll",
+            "sa_touch_pan",
             |cx| {
                 vec![
-                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
+                    ScrollArea::new([cx.column(ColumnProps::default(), |cx| {
+                        (0..80).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
-                    .type_(ScrollAreaType::Scroll)
-                    .scroll_hide_delay_ticks(4)
+                    .axis(ScrollAxis::Y)
+                    .type_(ScrollAreaType::Auto)
                     .scroll_handle(handle.clone())
                     .into_element(cx),
                 ]
@@ -979,6 +994,98 @@ mod tests {
         );
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        assert!(
+            handle.offset().y.0 <= 0.01,
+            "expected initial offset at top"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(200.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(120.0)),
+                buttons: MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        assert!(
+            handle.offset().y.0 > 0.01,
+            "expected touch pan to scroll content (offset={:?})",
+            handle.offset()
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(40.0), Px(120.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+    }
+
+    #[test]
+    fn scroll_area_scroll_type_shows_while_scrolling_then_hides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let handle = ScrollHandle::default();
+        let bounds = bounds();
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "sa-scroll",
+                |cx| {
+                    vec![
+                        ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                            (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
+                        })])
+                        .type_(ScrollAreaType::Scroll)
+                        .scroll_hide_delay_ticks(4)
+                        .scroll_handle(handle.clone())
+                        .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        };
+
+        let root = render_frame(&mut ui, &mut app, &mut services);
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
@@ -998,27 +1105,7 @@ mod tests {
         handle.set_offset(Point::new(Px(0.0), Px(10.0)));
         app.set_tick_id(TickId(1));
 
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds(),
-            "sa-scroll",
-            |cx| {
-                vec![
-                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
-                    })])
-                    .type_(ScrollAreaType::Scroll)
-                    .scroll_hide_delay_ticks(4)
-                    .scroll_handle(handle.clone())
-                    .into_element(cx),
-                ]
-            },
-        );
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+        let root = render_frame(&mut ui, &mut app, &mut services);
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
@@ -1037,50 +1124,10 @@ mod tests {
         // Keep rendering without scroll input; after debounce + hide delay it should disappear.
         for n in 0..12 {
             app.set_tick_id(TickId(2 + n));
-            let root = fret_ui::declarative::render_root(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds(),
-                "sa-scroll",
-                |cx| {
-                    vec![
-                        ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                            (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
-                        })])
-                        .type_(ScrollAreaType::Scroll)
-                        .scroll_hide_delay_ticks(4)
-                        .scroll_handle(handle.clone())
-                        .into_element(cx),
-                    ]
-                },
-            );
-            ui.set_root(root);
-            ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+            let _ = render_frame(&mut ui, &mut app, &mut services);
         }
 
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds(),
-            "sa-scroll",
-            |cx| {
-                vec![
-                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
-                    })])
-                    .type_(ScrollAreaType::Scroll)
-                    .scroll_hide_delay_ticks(4)
-                    .scroll_handle(handle.clone())
-                    .into_element(cx),
-                ]
-            },
-        );
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+        let root = render_frame(&mut ui, &mut app, &mut services);
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];

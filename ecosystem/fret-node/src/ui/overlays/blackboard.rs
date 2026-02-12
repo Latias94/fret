@@ -1,6 +1,6 @@
 //! Blackboard (symbols) overlay (UI-only).
 //!
-//! This is a window-space overlay hosted outside the canvas render transform (ADR 0135).
+//! This is a window-space overlay hosted outside the canvas render transform (ADR 0126).
 
 use std::collections::BTreeMap;
 
@@ -624,9 +624,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_900),
             rect: layout.panel,
-            background: bg,
+            background: fret_core::Paint::Solid(bg),
+
             border: Edges::all(Px(1.0)),
-            border_color: border,
+            border_paint: fret_core::Paint::Solid(border),
+
             corner_radii: Corners::all(Px(corner)),
         });
 
@@ -669,9 +671,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(20_901),
                 rect: layout.add_button,
-                background: button_bg,
+                background: fret_core::Paint::Solid(button_bg),
+
                 border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT,
+
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
@@ -711,9 +715,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(20_901),
                         rect,
-                        background: button_bg,
+                        background: fret_core::Paint::Solid(button_bg),
+
                         border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT,
+
                         corner_radii: Corners::all(Px(corner.max(4.0))),
                     });
 

@@ -79,6 +79,7 @@ impl Pagination {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let layout = decl_style::layout_style(&theme, self.layout);
@@ -110,6 +111,7 @@ impl PaginationContent {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
@@ -140,6 +142,7 @@ impl PaginationItem {
         Self { child }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.child
     }
@@ -186,6 +189,7 @@ impl PaginationLink {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -365,6 +369,7 @@ impl PaginationPrevious {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let dir = direction_prim::use_direction_in_scope(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
@@ -428,6 +433,7 @@ impl PaginationNext {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let dir = direction_prim::use_direction_in_scope(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
@@ -468,6 +474,7 @@ impl PaginationEllipsis {
         Self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let s = icon_size(&theme);

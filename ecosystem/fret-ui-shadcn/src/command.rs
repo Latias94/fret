@@ -41,6 +41,39 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use crate::layout as shadcn_layout;
 use crate::{Dialog, DialogContent, ScrollArea};
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnOpenChangeWithReason =
+    Arc<dyn Fn(bool, CommandDialogOpenChangeReason) + Send + Sync + 'static>;
+
+/// Open-change reasons aligned with Base UI dialog semantics for command dialog usage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandDialogOpenChangeReason {
+    TriggerPress,
+    OutsidePress,
+    ItemPress,
+    EscapeKey,
+    FocusOut,
+    None,
+}
+
+fn command_dialog_open_change_reason_from_dismiss_reason(
+    reason: fret_ui::action::DismissReason,
+) -> CommandDialogOpenChangeReason {
+    match reason {
+        fret_ui::action::DismissReason::Escape => CommandDialogOpenChangeReason::EscapeKey,
+        fret_ui::action::DismissReason::OutsidePress { .. } => {
+            CommandDialogOpenChangeReason::OutsidePress
+        }
+        fret_ui::action::DismissReason::FocusOutside => CommandDialogOpenChangeReason::FocusOut,
+        fret_ui::action::DismissReason::Scroll => CommandDialogOpenChangeReason::None,
+    }
+}
+
+#[derive(Default)]
+struct CommandDialogState {
+    open_change_reason: Option<Arc<std::sync::Mutex<Option<CommandDialogOpenChangeReason>>>>,
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CommandCatalogOptions {
     /// When `true`, commands that fail their `when` gating are excluded from the palette instead of
@@ -64,6 +97,8 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     }
 }
@@ -260,10 +295,11 @@ fn command_text_input<H: UiHost>(
     height: Px,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let theme = &theme;
 
     let fg = theme.color_required("foreground");
     let placeholder_fg = theme.color_required("muted-foreground");
-    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
+    let pad_y = MetricRef::space(Space::N3).resolve(theme);
 
     let mut chrome = TextInputStyle::from_theme(theme.snapshot());
     // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
@@ -290,7 +326,7 @@ fn command_text_input<H: UiHost>(
     props.active_descendant = active_descendant;
     props.expanded = expanded;
     props.chrome = chrome;
-    props.text_style = item_text_style(&theme);
+    props.text_style = item_text_style(theme);
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(height),
@@ -336,8 +372,7 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into_element(cx);
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-    let muted_fg = theme.color_required("muted-foreground");
+    let muted_fg = Theme::global(&*cx.app).color_required("muted-foreground");
 
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
@@ -494,10 +529,12 @@ impl CommandShortcut {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let theme = &theme;
         let fg = theme.color_required("muted-foreground");
-        let style = shortcut_text_style(&theme);
+        let style = shortcut_text_style(theme);
         let mut text = ui::text(cx, self.text)
             .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
             .text_size_px(style.size)
@@ -553,20 +590,21 @@ impl Command {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let base = ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .merge(
-                ChromeRefinement::default()
-                    .border_width(Px(1.0))
-                    .border_color(ColorRef::Color(border(&theme)))
-                    .bg(ColorRef::Color(bg(&theme))),
-            )
-            .merge(self.chrome);
-
-        let props = decl_style::container_props(&theme, base, self.layout);
+        let props = {
+            let theme = Theme::global(&*cx.app);
+            let base = ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .merge(
+                    ChromeRefinement::default()
+                        .border_width(Px(1.0))
+                        .border_color(ColorRef::Color(border(theme)))
+                        .bg(ColorRef::Color(bg(theme))),
+                )
+                .merge(self.chrome);
+            decl_style::container_props(theme, base, self.layout)
+        };
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }
@@ -630,12 +668,14 @@ impl CommandInput {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
             cx.watch_model(&self.model).observe();
+            let theme = Theme::global(&*cx.app).clone();
+            let theme = &theme;
 
-            let border = border(&theme);
+            let border = border(theme);
             let disabled = self.disabled;
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
@@ -657,28 +697,30 @@ impl CommandInput {
             let border_w = chrome
                 .border_width
                 .as_ref()
-                .map(|m| m.resolve(&theme))
+                .map(|m| m.resolve(theme))
                 .unwrap_or(Px(1.0));
             let border_color = chrome
                 .border_color
                 .as_ref()
-                .map(|c| c.resolve(&theme))
+                .map(|c| c.resolve(theme))
                 .unwrap_or(border);
-            let background = chrome.background.as_ref().map(|c| c.resolve(&theme));
+            let background = chrome.background.as_ref().map(|c| c.resolve(theme));
             let radius = chrome
                 .radius
                 .as_ref()
-                .map(|m| m.resolve(&theme))
+                .map(|m| m.resolve(theme))
                 .unwrap_or(Px(0.0));
 
             let padding = chrome.padding.clone().unwrap_or_default();
-            let pad_top = padding.top.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
-            let pad_right = padding.right.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
-            let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(Px(0.0));
-            let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
+            let pad_top = padding.top.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+            let pad_right = padding.right.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+            let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
+            let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+
+            let icon_fg = theme.color_required("muted-foreground");
 
             let mut wrapper = decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default(),
                 self.layout.merge(LayoutRefinement::default().w_full()),
             );
@@ -707,7 +749,6 @@ impl CommandInput {
                     .clone()
                     .unwrap_or_else(|| Arc::from("Command input"));
                 let placeholder = self.placeholder.clone();
-                let icon_fg = theme.color_required("muted-foreground");
 
                 let icon = decl_icon::icon_with(
                     cx,
@@ -770,6 +811,7 @@ pub struct CommandItem {
     keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
+    test_id: Option<Arc<str>>,
     shortcut: Option<Arc<str>>,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
@@ -785,6 +827,7 @@ impl std::fmt::Debug for CommandItem {
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("shortcut", &self.shortcut.as_ref().map(|s| s.as_ref()))
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
@@ -803,6 +846,7 @@ impl CommandItem {
             keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
+            test_id: None,
             shortcut: None,
             command: None,
             on_select: None,
@@ -842,6 +886,11 @@ impl CommandItem {
     pub fn checkmark(mut self, checked: bool) -> Self {
         self.checked = checked;
         self.show_checkmark = true;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 
@@ -931,10 +980,14 @@ impl CommandEmpty {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_required("muted-foreground");
-        let text_style = item_text_style(&theme);
+        let (fg, text_style) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("muted-foreground");
+            let text_style = item_text_style(theme);
+            (fg, text_style)
+        };
         cx.container(
             ContainerProps {
                 layout: {
@@ -1071,9 +1124,9 @@ impl CommandList {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
             let disabled = self.disabled;
             let items = self.items;
             let highlight_query = self.highlight_query;
@@ -1107,20 +1160,34 @@ impl CommandList {
                 ..Default::default()
             };
 
-            let row_h = MetricRef::space(Space::N8).resolve(&theme);
-            let row_gap = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
-            let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-            let ring = decl_style::focus_ring(&theme, radius);
-            let bg_hover = item_bg_hover(&theme);
-            let fg = theme.color_required("foreground");
-            let text_style = item_text_style(&theme);
-            let item_layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
-            );
+            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) = {
+                let theme = Theme::global(&*cx.app);
+                let row_h = MetricRef::space(Space::N8).resolve(theme);
+                let row_gap = MetricRef::space(Space::N2).resolve(theme);
+                let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
+                let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
+                let radius = MetricRef::radius(Radius::Sm).resolve(theme);
+                let ring = decl_style::focus_ring(theme, radius);
+                let bg_hover = item_bg_hover(theme);
+                let fg = theme.color_required("foreground");
+                let text_style = item_text_style(theme);
+                let item_layout = decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
+                );
+                (
+                    row_gap,
+                    pad_x,
+                    pad_y,
+                    radius,
+                    ring,
+                    bg_hover,
+                    fg,
+                    text_style,
+                    item_layout,
+                )
+            };
 
             let scroll = self.scroll.w_full().min_w_0();
 
@@ -1156,6 +1223,7 @@ impl CommandList {
                         let query_for_row = query_for_render.clone();
                         let value_key = item.value.clone();
                         let label = item.label.clone();
+                        let test_id = item.test_id.clone();
                         let command = item.command;
                         let on_select = item.on_select.clone();
                         let children = item.children;
@@ -1171,6 +1239,7 @@ impl CommandList {
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
+                                        test_id: test_id.clone(),
                                         ..Default::default()
                                     },
                                     ..Default::default()
@@ -1610,6 +1679,7 @@ impl CommandPalette {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Clone)]
         struct PaletteEntry {
@@ -1901,6 +1971,7 @@ impl CommandPalette {
                             let value = item.value.clone();
                             let checked = item.checked;
                             let show_checkmark = item.show_checkmark;
+                            let test_id = item.test_id.clone();
                             let shortcut = item.shortcut.clone();
                             let command = item.command;
                             let on_select = item.on_select.clone();
@@ -1926,6 +1997,7 @@ impl CommandPalette {
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
+                                        test_id: test_id.clone(),
                                         selected,
                                         ..Default::default()
                                     }
@@ -2393,6 +2465,9 @@ pub struct CommandDialog {
     wrap: bool,
     close_on_select: bool,
     empty_text: Arc<str>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for CommandDialog {
@@ -2406,6 +2481,15 @@ impl std::fmt::Debug for CommandDialog {
             .field("wrap", &self.wrap)
             .field("close_on_select", &self.close_on_select)
             .field("empty_text", &self.empty_text.as_ref())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_with_reason",
+                &self.on_open_change_with_reason.is_some(),
+            )
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -2425,6 +2509,9 @@ impl CommandDialog {
             wrap: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
+            on_open_change: None,
+            on_open_change_with_reason: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -2461,6 +2548,9 @@ impl CommandDialog {
             wrap: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
+            on_open_change: None,
+            on_open_change_with_reason: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -2500,6 +2590,31 @@ impl CommandDialog {
         self
     }
 
+    /// Called when the dialog open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when the dialog open state changes with reason metadata.
+    pub fn on_open_change_with_reason(
+        mut self,
+        on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    ) -> Self {
+        self.on_open_change_with_reason = on_open_change_with_reason;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -2509,86 +2624,148 @@ impl CommandDialog {
         let open_model = open.clone();
         let query = self.query;
         let query_model = query.clone();
+        let open_change_reason_cell = {
+            let existing = cx.with_state(CommandDialogState::default, |st| {
+                st.open_change_reason.clone()
+            });
+            if let Some(cell) = existing {
+                cell
+            } else {
+                let cell = Arc::new(std::sync::Mutex::new(None));
+                cx.with_state(CommandDialogState::default, |st| {
+                    st.open_change_reason = Some(cell.clone())
+                });
+                cell
+            }
+        };
         let entries = self.entries;
         let a11y_label = self.a11y_label;
         let disabled = self.disabled;
         let wrap = self.wrap;
         let close_on_select = self.close_on_select;
         let empty_text = self.empty_text;
+        let on_open_change = self.on_open_change;
+        let on_open_change_with_reason = self.on_open_change_with_reason;
+        let on_open_change_complete = self.on_open_change_complete;
 
-        Dialog::new(open).into_element(cx, trigger, move |cx| {
-            // shadcn/ui v4: command dialog list is `max-h-[300px]` and is allowed to overflow the
-            // viewport (the web implementation does not clamp it to the viewport height).
-            let list_h = Px(300.0);
+        let on_open_change_with_reason_for_dialog = on_open_change_with_reason.clone();
+        let open_change_reason_cell_for_open_change = open_change_reason_cell.clone();
+        let on_open_change_for_dialog = on_open_change.clone();
 
-            let entries = if close_on_select {
-                let close_action: fret_ui::action::OnActivate = Arc::new({
-                    let open_model = open_model.clone();
-                    let query_model = query_model.clone();
-                    move |host, action_cx, _reason| {
-                        let _ = host.models_mut().update(&open_model, |v| *v = false);
-                        let _ = host.models_mut().update(&query_model, |v| v.clear());
-                        host.request_redraw(action_cx.window);
+        let dialog_on_open_change: Option<OnOpenChange> = if on_open_change_for_dialog.is_none()
+            && on_open_change_with_reason_for_dialog.is_none()
+        {
+            None
+        } else {
+            Some(Arc::new(move |is_open| {
+                if let Some(handler) = on_open_change_for_dialog.as_ref() {
+                    handler(is_open);
+                }
+                if let Some(handler) = on_open_change_with_reason_for_dialog.as_ref() {
+                    let mut reason = CommandDialogOpenChangeReason::None;
+                    if let Ok(mut slot) = open_change_reason_cell_for_open_change.lock() {
+                        if let Some(stored) = slot.take() {
+                            reason = stored;
+                        }
                     }
-                });
+                    if is_open && reason == CommandDialogOpenChangeReason::None {
+                        reason = CommandDialogOpenChangeReason::TriggerPress;
+                    }
+                    handler(is_open, reason);
+                }
+            }))
+        };
 
-                entries
-                    .into_iter()
-                    .map(|entry| match entry {
-                        CommandEntry::Item(mut item) => {
-                            item.on_select = Some(match item.on_select.take() {
-                                Some(prev) => {
-                                    let close_action = close_action.clone();
-                                    Arc::new(move |host, cx, reason| {
-                                        prev(host, cx, reason);
-                                        close_action(host, cx, reason);
+        Dialog::new(open)
+            .on_open_change(dialog_on_open_change)
+            .on_open_change_complete(on_open_change_complete)
+            .on_dismiss_request(Some(Arc::new({
+                let open_change_reason_cell = open_change_reason_cell.clone();
+                move |_host, _cx, req| {
+                    if let Ok(mut slot) = open_change_reason_cell.lock() {
+                        *slot = Some(command_dialog_open_change_reason_from_dismiss_reason(
+                            req.reason,
+                        ));
+                    }
+                }
+            })))
+            .into_element(cx, trigger, move |cx| {
+                // shadcn/ui v4: command dialog list is `max-h-[300px]` and is allowed to overflow the
+                // viewport (the web implementation does not clamp it to the viewport height).
+                let list_h = Px(300.0);
+
+                let entries = if close_on_select {
+                    let close_action: fret_ui::action::OnActivate = Arc::new({
+                        let open_model = open_model.clone();
+                        let query_model = query_model.clone();
+                        let open_change_reason_cell = open_change_reason_cell.clone();
+                        move |host, action_cx, _reason| {
+                            if let Ok(mut slot) = open_change_reason_cell.lock() {
+                                *slot = Some(CommandDialogOpenChangeReason::ItemPress);
+                            }
+                            let _ = host.models_mut().update(&open_model, |v| *v = false);
+                            let _ = host.models_mut().update(&query_model, |v| v.clear());
+                            host.request_redraw(action_cx.window);
+                        }
+                    });
+
+                    entries
+                        .into_iter()
+                        .map(|entry| match entry {
+                            CommandEntry::Item(mut item) => {
+                                item.on_select = Some(match item.on_select.take() {
+                                    Some(prev) => {
+                                        let close_action = close_action.clone();
+                                        Arc::new(move |host, cx, reason| {
+                                            prev(host, cx, reason);
+                                            close_action(host, cx, reason);
+                                        })
+                                    }
+                                    None => close_action.clone(),
+                                });
+                                CommandEntry::Item(item)
+                            }
+                            CommandEntry::Group(mut group) => {
+                                group.items = group
+                                    .items
+                                    .into_iter()
+                                    .map(|mut item| {
+                                        item.on_select = Some(match item.on_select.take() {
+                                            Some(prev) => {
+                                                let close_action = close_action.clone();
+                                                Arc::new(move |host, cx, reason| {
+                                                    prev(host, cx, reason);
+                                                    close_action(host, cx, reason);
+                                                })
+                                            }
+                                            None => close_action.clone(),
+                                        });
+                                        item
                                     })
-                                }
-                                None => close_action.clone(),
-                            });
-                            CommandEntry::Item(item)
-                        }
-                        CommandEntry::Group(mut group) => {
-                            group.items = group
-                                .items
-                                .into_iter()
-                                .map(|mut item| {
-                                    item.on_select = Some(match item.on_select.take() {
-                                        Some(prev) => {
-                                            let close_action = close_action.clone();
-                                            Arc::new(move |host, cx, reason| {
-                                                prev(host, cx, reason);
-                                                close_action(host, cx, reason);
-                                            })
-                                        }
-                                        None => close_action.clone(),
-                                    });
-                                    item
-                                })
-                                .collect();
-                            CommandEntry::Group(group)
-                        }
-                        CommandEntry::Separator(sep) => CommandEntry::Separator(sep),
-                    })
-                    .collect()
-            } else {
-                entries
-            };
+                                    .collect();
+                                CommandEntry::Group(group)
+                            }
+                            CommandEntry::Separator(sep) => CommandEntry::Separator(sep),
+                        })
+                        .collect()
+                } else {
+                    entries
+                };
 
-            let palette = CommandPalette::new(query, Vec::new())
-                .command_dialog_defaults()
-                .entries(entries)
-                .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
-                .disabled(disabled)
-                .wrap(wrap)
-                .empty_text(empty_text)
-                .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
-                .into_element(cx);
+                let palette = CommandPalette::new(query, Vec::new())
+                    .command_dialog_defaults()
+                    .entries(entries)
+                    .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
+                    .disabled(disabled)
+                    .wrap(wrap)
+                    .empty_text(empty_text)
+                    .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
+                    .into_element(cx);
 
-            DialogContent::new(vec![palette])
-                .refine_style(ChromeRefinement::default().p(Space::N0))
-                .into_element(cx)
-        })
+                DialogContent::new(vec![palette])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .into_element(cx)
+            })
     }
 }
 
@@ -2618,7 +2795,7 @@ mod tests {
         SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{
         CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
     };
@@ -2671,6 +2848,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -2728,6 +2918,122 @@ mod tests {
             assert_eq!(dialog.open, open);
             assert_eq!(dialog.query, query);
         });
+    }
+
+    #[test]
+    fn command_dialog_open_change_builders_set_handlers() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let dialog = CommandDialog::new(open, query, Vec::new())
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_with_reason(Some(Arc::new(|_open, _reason| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(dialog.on_open_change.is_some());
+        assert!(dialog.on_open_change_with_reason.is_some());
+        assert!(dialog.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn command_dialog_open_change_reason_maps_dismiss_reasons() {
+        use fret_ui::action::DismissReason;
+
+        assert_eq!(
+            command_dialog_open_change_reason_from_dismiss_reason(DismissReason::Escape),
+            CommandDialogOpenChangeReason::EscapeKey
+        );
+        assert_eq!(
+            command_dialog_open_change_reason_from_dismiss_reason(DismissReason::OutsidePress {
+                pointer: None,
+            }),
+            CommandDialogOpenChangeReason::OutsidePress
+        );
+        assert_eq!(
+            command_dialog_open_change_reason_from_dismiss_reason(DismissReason::FocusOutside),
+            CommandDialogOpenChangeReason::FocusOut
+        );
+        assert_eq!(
+            command_dialog_open_change_reason_from_dismiss_reason(DismissReason::Scroll),
+            CommandDialogOpenChangeReason::None
+        );
+    }
+
+    #[test]
+    fn command_dialog_open_change_with_reason_reports_item_press_when_close_on_select() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("al"));
+        let reasons: Arc<std::sync::Mutex<Vec<(bool, CommandDialogOpenChangeReason)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+
+        let items = vec![CommandItem::new("Alpha")];
+
+        let bounds = bounds();
+        let mut services = FakeServices::default();
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+            crate::shadcn_themes::apply_shadcn_new_york_v4(
+                app,
+                crate::shadcn_themes::ShadcnBaseColor::Neutral,
+                crate::shadcn_themes::ShadcnColorScheme::Light,
+            );
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "cmdk-dialog-reason",
+                |cx| {
+                    vec![
+                        CommandDialog::new(open.clone(), query.clone(), items.clone())
+                            .close_on_select(true)
+                            .on_open_change_with_reason(Some(Arc::new({
+                                let reasons = reasons.clone();
+                                move |is_open, reason| {
+                                    reasons
+                                        .lock()
+                                        .expect("reasons lock")
+                                        .push((is_open, reason));
+                                }
+                            })))
+                            .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Alpha"))
+            .map(|n| n.bounds)
+            .expect("Alpha option bounds");
+        click(&mut ui, &mut app, &mut services, rect_center(alpha));
+
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let captured = reasons.lock().expect("reasons lock").clone();
+        assert!(
+            captured.iter().any(|(is_open, reason)| !*is_open
+                && *reason == CommandDialogOpenChangeReason::ItemPress)
+        );
     }
 
     #[test]

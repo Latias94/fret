@@ -20,7 +20,7 @@ pub const VIEW_STATE_VERSION: u32 = 1;
 
 /// Default project-scoped view-state path for a graph.
 ///
-/// This follows ADR 0135's recommended `.fret/` layout.
+/// This follows ADR 0126's recommended `.fret/` layout.
 pub fn default_project_view_state_path(graph_id: GraphId) -> PathBuf {
     PathBuf::from(".fret/node_graph/view_state").join(format!("{graph_id}.json"))
 }
@@ -1211,7 +1211,7 @@ impl NodeGraphViewStateFileV1 {
     /// Loads a JSON file.
     ///
     /// Backward compatibility: accepts both the wrapped form and a plain `NodeGraphViewState` root
-    /// object when the `graph_id` is supplied out-of-band (ADR 0135).
+    /// object when the `graph_id` is supplied out-of-band (ADR 0126).
     pub fn load_json(
         path: impl AsRef<Path>,
         graph_id: GraphId,

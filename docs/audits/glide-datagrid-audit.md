@@ -109,7 +109,7 @@ Implementation: `ecosystem/fret-ui-shadcn/src/data_grid_canvas.rs`
 Benchmark harness:
 
 - Demo: `cargo run -p fret-demo --bin canvas_datagrid_stress_demo --release`
-- Script: `tools/bench_canvas_datagrid.ps1`
+- Script: `tools/bench_canvas_datagrid.py`
 - Env: `FRET_CANVAS_GRID_AUTO_SCROLL=1`, `FRET_CANVAS_GRID_EXIT_AFTER_FRAMES=600`, `FRET_CANVAS_GRID_STATS_WINDOW=240`
 
 Environment (sample run):

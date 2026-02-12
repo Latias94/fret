@@ -122,9 +122,12 @@ impl ItemGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let layout = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::layout_style(theme, self.layout)
+        };
         let gap = self.gap.unwrap_or(Px(0.0));
         let children = self.children;
 
@@ -165,17 +168,21 @@ impl ItemSeparator {
         Self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let border = theme
-            .color_by_key("border")
-            .unwrap_or_else(|| theme.color_required("border"));
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(1.0))),
-        );
+        let (border, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let border = theme
+                .color_by_key("border")
+                .unwrap_or_else(|| theme.color_required("border"));
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(Px(1.0))),
+            );
+            (border, layout)
+        };
         cx.container(
             ContainerProps {
                 layout,
@@ -220,52 +227,58 @@ impl ItemMedia {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let (size, chrome) = match self.variant {
-            ItemMediaVariant::Default => (None, ChromeRefinement::default()),
-            ItemMediaVariant::Icon => {
-                let bg = theme
-                    .color_by_key("muted")
-                    .unwrap_or_else(|| theme.color_required("muted.background"));
-                let border = theme
-                    .color_by_key("border")
-                    .unwrap_or_else(|| theme.color_required("border"));
-                let chrome = ChromeRefinement::default()
-                    .rounded(Radius::Sm)
-                    .border_1()
-                    .bg(ColorRef::Color(bg))
-                    .border_color(ColorRef::Color(border));
-                (Some(MetricRef::space(Space::N8).resolve(&theme)), chrome)
-            }
-            ItemMediaVariant::Image => {
-                let chrome = ChromeRefinement::default().rounded(Radius::Sm);
-                (Some(MetricRef::space(Space::N10).resolve(&theme)), chrome)
-            }
-        };
-
-        let mut layout = LayoutRefinement::default()
-            .merge(self.layout)
-            .flex_none()
-            .flex_shrink_0();
-        if let Some(s) = size {
-            layout = layout.w_px(MetricRef::Px(s)).h_px(MetricRef::Px(s));
-        }
-
-        let mut props = decl_style::container_props(&theme, chrome, layout);
-        if self.variant == ItemMediaVariant::Image {
-            props.layout.overflow = fret_ui::element::Overflow::Clip;
-        }
-
+        let variant = self.variant;
+        let user_layout = self.layout;
         let children = self.children;
-        cx.container(props, move |cx| {
-            let inner_layout = if size.is_some() {
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full())
-            } else {
-                decl_style::layout_style(&theme, LayoutRefinement::default())
+        let (props, inner_layout, gap) = {
+            let theme = Theme::global(&*cx.app);
+
+            let (size, chrome) = match variant {
+                ItemMediaVariant::Default => (None, ChromeRefinement::default()),
+                ItemMediaVariant::Icon => {
+                    let bg = theme
+                        .color_by_key("muted")
+                        .unwrap_or_else(|| theme.color_required("muted.background"));
+                    let border = theme
+                        .color_by_key("border")
+                        .unwrap_or_else(|| theme.color_required("border"));
+                    let chrome = ChromeRefinement::default()
+                        .rounded(Radius::Sm)
+                        .border_1()
+                        .bg(ColorRef::Color(bg))
+                        .border_color(ColorRef::Color(border));
+                    (Some(MetricRef::space(Space::N8).resolve(theme)), chrome)
+                }
+                ItemMediaVariant::Image => {
+                    let chrome = ChromeRefinement::default().rounded(Radius::Sm);
+                    (Some(MetricRef::space(Space::N10).resolve(theme)), chrome)
+                }
             };
-            let gap = MetricRef::space(Space::N2).resolve(&theme);
+
+            let mut layout = LayoutRefinement::default()
+                .merge(user_layout)
+                .flex_none()
+                .flex_shrink_0();
+            if let Some(s) = size {
+                layout = layout.w_px(MetricRef::Px(s)).h_px(MetricRef::Px(s));
+            }
+
+            let mut props = decl_style::container_props(theme, chrome, layout);
+            if variant == ItemMediaVariant::Image {
+                props.layout.overflow = fret_ui::element::Overflow::Clip;
+            }
+
+            let inner_layout = if size.is_some() {
+                decl_style::layout_style(theme, LayoutRefinement::default().size_full())
+            } else {
+                decl_style::layout_style(theme, LayoutRefinement::default())
+            };
+            let gap = MetricRef::space(Space::N2).resolve(theme);
+            (props, inner_layout, gap)
+        };
+        cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {
                     layout: inner_layout,
@@ -326,12 +339,16 @@ impl ItemContent {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = self
-            .gap
-            .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(&theme));
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = self
+                .gap
+                .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(theme));
+            let layout = decl_style::layout_style(theme, self.layout);
+            (gap, layout)
+        };
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -368,10 +385,14 @@ impl ItemActions {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = MetricRef::space(Space::N2).resolve(theme);
+            let layout = decl_style::layout_style(theme, self.layout);
+            (gap, layout)
+        };
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -410,10 +431,14 @@ impl ItemHeader {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = MetricRef::space(Space::N2).resolve(theme);
+            let layout = decl_style::layout_style(theme, self.layout);
+            (gap, layout)
+        };
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -452,10 +477,14 @@ impl ItemFooter {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = MetricRef::space(Space::N2).resolve(theme);
+            let layout = decl_style::layout_style(theme, self.layout);
+            (gap, layout)
+        };
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -482,19 +511,23 @@ impl ItemTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
-        let px = theme
-            .metric_by_key("component.item.title_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.item.title_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme
+                .color_by_key("foreground")
+                .unwrap_or_else(|| theme.color_required("foreground"));
+            let px = theme
+                .metric_by_key("component.item.title_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.item.title_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -516,20 +549,24 @@ impl ItemDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted.foreground"));
-        let px = theme
-            .metric_by_key("component.item.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.item.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme
+                .color_by_key("muted.foreground")
+                .or_else(|| theme.color_by_key("muted-foreground"))
+                .unwrap_or_else(|| theme.color_required("muted.foreground"));
+            let px = theme
+                .metric_by_key("component.item.description_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.item.description_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -635,27 +672,47 @@ impl Item {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
         let variant = self.variant;
         let size = self.size;
-        let gap = item_gap(&theme, size);
-
-        let border_color = base_item_border_color(&theme, variant).unwrap_or(Color::TRANSPARENT);
-        let base_bg = base_item_background(&theme, variant);
-
-        let accent = theme
-            .color_by_key("accent")
-            .unwrap_or_else(|| theme.color_required("accent"));
-        let hover_bg = alpha(accent, 0.5);
-        let pressed_bg = alpha(accent, 0.7);
-
         let layout = self.layout;
-        let pressable_layout = decl_style::layout_style(&theme, layout.clone());
-
-        let radius = item_radius(&theme);
-        let focus_ring = decl_style::focus_ring(&theme, radius);
+        let (
+            gap,
+            border_color,
+            base_bg,
+            hover_bg,
+            pressed_bg,
+            pressable_layout,
+            pressable_size,
+            radius,
+            focus_ring,
+        ) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = item_gap(theme, size);
+            let border_color = base_item_border_color(theme, variant).unwrap_or(Color::TRANSPARENT);
+            let base_bg = base_item_background(theme, variant);
+            let accent = theme
+                .color_by_key("accent")
+                .unwrap_or_else(|| theme.color_required("accent"));
+            let hover_bg = alpha(accent, 0.5);
+            let pressed_bg = alpha(accent, 0.7);
+            let pressable_layout = decl_style::layout_style(theme, layout.clone());
+            let pressable_size = pressable_layout.size;
+            let radius = item_radius(theme);
+            let focus_ring = decl_style::focus_ring(theme, radius);
+            (
+                gap,
+                border_color,
+                base_bg,
+                hover_bg,
+                pressed_bg,
+                pressable_layout,
+                pressable_size,
+                radius,
+                focus_ring,
+            )
+        };
 
         let children = std::rc::Rc::new(self.children);
         let enabled = self.enabled;
@@ -706,12 +763,15 @@ impl Item {
                     }
                     chrome = chrome.merge(user_chrome.clone());
 
-                    let mut props =
-                        decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-                    props.layout.size = pressable_layout.size;
-
-                    let inner_layout =
-                        decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+                    let (props, inner_layout) = {
+                        let theme = Theme::global(&*cx.app);
+                        let mut props =
+                            decl_style::container_props(theme, chrome, LayoutRefinement::default());
+                        props.layout.size = pressable_size;
+                        let inner_layout =
+                            decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+                        (props, inner_layout)
+                    };
 
                     let children = children.clone();
                     vec![cx.container(props, move |cx| {
@@ -746,11 +806,16 @@ impl Item {
             }
             chrome = chrome.merge(user_chrome);
 
-            let props = decl_style::container_props(&theme, chrome, layout);
+            let props = {
+                let theme = Theme::global(&*cx.app);
+                decl_style::container_props(theme, chrome, layout)
+            };
 
             cx.container(props, move |cx| {
-                let inner_layout =
-                    decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+                let inner_layout = {
+                    let theme = Theme::global(&*cx.app);
+                    decl_style::layout_style(theme, LayoutRefinement::default().w_full())
+                };
                 vec![cx.flex(
                     FlexProps {
                         layout: inner_layout,

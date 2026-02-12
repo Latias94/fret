@@ -28,6 +28,7 @@ mod row_pinning;
 mod row_selection;
 mod sorting;
 mod state;
+mod tanstack_auto_reset;
 mod tanstack_memo;
 mod tanstack_options;
 mod tanstack_state;
@@ -38,7 +39,7 @@ pub use aggregation_fns::{
     AggregationFn, AggregationFnSpec, BuiltInAggregationFn, apply_builtin_aggregation,
     resolve_auto_aggregation,
 };
-pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
+pub use cells::{CellContextSnapshot, CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
     FilterFnWithMeta, FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec,
@@ -59,8 +60,9 @@ pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};
 pub use core_model::{
-    ColumnCapabilitySnapshot, ColumnNodeSnapshot, CoreModelSnapshot, CoreRowsSnapshot,
-    HeaderSizingSnapshot, LeafColumnsSnapshot, RowModelIdSnapshot,
+    ColumnAfterSnapshot, ColumnCapabilitySnapshot, ColumnNodeSnapshot, ColumnSizingSnapshot,
+    ColumnStartSnapshot, CoreModelSnapshot, CoreRowsSnapshot, FlatColumnsSnapshot,
+    HeaderSizingSnapshot, LeafColumnSizingSnapshot, LeafColumnsSnapshot, RowModelIdSnapshot,
 };
 pub use faceting::{
     FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,
@@ -110,8 +112,11 @@ pub use sorting::{
     toggle_sorting_state_tanstack, toggle_sorting_tanstack,
 };
 pub use state::TableState;
+pub use tanstack_auto_reset::TanStackAutoResetQueue;
 pub use tanstack_memo::{
-    FlatRowOrderEntry, TanStackSortedFlatRowOrderCache, TanStackSortedFlatRowOrderDeps,
+    FlatRowOrderEntry, TanStackRowModelOrderSnapshot, TanStackSortedFlatRowOrderCache,
+    TanStackSortedFlatRowOrderDeps, TanStackUngroupedRowModelOrderCache,
+    TanStackUngroupedRowModelOrderDeps,
 };
 pub use tanstack_options::TanStackTableOptions;
 pub use tanstack_state::{

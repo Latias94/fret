@@ -1,22 +1,26 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::Transform2D;
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, PointerType, Px, Rect, SemanticsRole,
+    TextStyle,
+};
 use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, Model, Platform, PlatformCapabilities,
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
-    VisualTransformProps,
+    AnyElement, ContainerProps, Elements, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length,
+    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle,
+    StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
@@ -43,6 +47,8 @@ fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     }
 }
@@ -86,6 +92,64 @@ fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
         .unwrap_or(Px(16.0))
+}
+
+const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
+
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct NavigationMenuValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn navigation_menu_value_change_event(
+    state: &mut NavigationMenuValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
+        return None;
+    }
+
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
+    }
+
+    None
+}
+
+#[derive(Default)]
+struct NavigationMenuOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn navigation_menu_open_change_complete_event(
+    state: &mut NavigationMenuOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> Option<bool> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        return Some(open);
+    }
+
+    None
 }
 
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
@@ -413,6 +477,7 @@ pub struct NavigationMenuItem {
     label: Arc<str>,
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -428,8 +493,14 @@ impl NavigationMenuItem {
             label: label.into(),
             content,
             trigger: None,
+            trigger_test_id: None,
             disabled: false,
         }
+    }
+
+    pub fn trigger_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(test_id.into());
+        self
     }
 
     pub fn trigger_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
@@ -526,10 +597,18 @@ pub struct NavigationMenu {
     disabled: bool,
     viewport: bool,
     indicator: bool,
+    /// Optional override for which query region drives responsive variants (ADR 0231).
+    ///
+    /// When unset, the component uses its own internal region wrapper. When set, the caller must
+    /// ensure the id refers to a `LayoutQueryRegion`, otherwise changes will not participate in
+    /// invalidation.
+    query_region: Option<GlobalElementId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
+    on_value_change: Option<OnValueChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for NavigationMenu {
@@ -542,6 +621,11 @@ impl std::fmt::Debug for NavigationMenu {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
+            .field("on_value_change", &self.on_value_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -555,10 +639,13 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -570,10 +657,13 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -589,6 +679,15 @@ impl NavigationMenu {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Overrides which query region drives responsive variants (ADR 0231).
+    ///
+    /// This is primarily intended for editor-grade layouts where the navigation menu lives inside
+    /// a resizable panel/dock split and should adapt to the local container width.
+    pub fn container_query_region(mut self, region: GlobalElementId) -> Self {
+        self.query_region = Some(region);
         self
     }
 
@@ -638,6 +737,58 @@ impl NavigationMenu {
         self
     }
 
+    /// Sets the hover-open delay window (Base UI `delay`).
+    pub fn delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.delay_duration = duration;
+        self
+    }
+
+    /// Sets the hover-open delay in milliseconds (Base UI `delay`).
+    pub fn delay_ms(mut self, millis: u64) -> Self {
+        self.config.delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
+    /// Sets the delayed-close window (Base UI `closeDelay`).
+    pub fn close_delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.close_delay_duration = duration;
+        self
+    }
+
+    /// Sets the delayed-close window in milliseconds (Base UI `closeDelay`).
+    pub fn close_delay_ms(mut self, millis: u64) -> Self {
+        self.config.close_delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
+    /// Sets the skip-delay window used after close (Base UI `skipDelayDuration`).
+    pub fn skip_delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.skip_delay_duration = duration;
+        self
+    }
+
+    /// Sets the skip-delay window in milliseconds (Base UI `skipDelayDuration`).
+    pub fn skip_delay_ms(mut self, millis: u64) -> Self {
+        self.config.skip_delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
+    /// Called when selected value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -645,10 +796,13 @@ impl NavigationMenu {
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
+        let query_region_override = self.query_region;
         let chrome = self.chrome;
         let layout = self.layout;
         let style = self.style;
         let cfg = self.config;
+        let on_value_change = self.on_value_change;
+        let on_open_change_complete = self.on_open_change_complete;
 
         let value_model =
             radix_navigation_menu::navigation_menu_use_value_model(cx, controlled_model, || {
@@ -683,7 +837,6 @@ impl NavigationMenu {
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
-        let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
@@ -716,7 +869,21 @@ impl NavigationMenu {
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
-        cx.container(root_props, move |cx| {
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
+
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.navigation_menu",
+            region_props,
+            move |cx, region_id| {
+                let region_id_for_queries = query_region_override.unwrap_or(region_id);
+                vec![cx.container(root_props, move |cx| {
             let root_id = cx.root_id();
             let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
                 .config(cfg)
@@ -734,6 +901,14 @@ impl NavigationMenu {
                 last_selected: Option<Arc<str>>,
             }
 
+            #[derive(Default)]
+            struct SafeCorridorState {
+                last_pointer: Option<Point>,
+                trigger_anchor: Option<Rect>,
+                viewport_panel: Option<Rect>,
+                pointer_in_corridor: bool,
+            }
+
             let open_model =
                 cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
             let open_model = if let Some(model) = open_model {
@@ -748,6 +923,20 @@ impl NavigationMenu {
 
             let selected: Option<Arc<str>> =
                 cx.watch_model(&value_model).layout().cloned().flatten();
+            if let Some(handler) = on_value_change.as_ref() {
+                let changed = cx.with_state(
+                    NavigationMenuValueChangeCallbackState::default,
+                    |state| navigation_menu_value_change_event(state, selected.clone()),
+                );
+                if let Some(value) = changed {
+                    handler(value);
+                }
+            }
+            let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
+                root_id,
+                || Arc::new(Mutex::new(SafeCorridorState::default())),
+                |st| st.clone(),
+            );
             let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
                 let changed = selected != st.last_selected;
                 if changed {
@@ -762,6 +951,22 @@ impl NavigationMenu {
                     .app
                     .models_mut()
                     .update(&open_model, |v| *v = selected.is_some());
+                if selected.is_none() {
+                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.pointer_in_corridor = false;
+                    safe.viewport_panel = None;
+                    safe.trigger_anchor = None;
+                }
+            }
+
+            if selected.is_some() {
+                let should_keep_open = {
+                    let safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.pointer_in_corridor
+                };
+                if should_keep_open {
+                    let _ = cx.app.models_mut().update(&open_model, |v| *v = true);
+                }
             }
 
             let open: bool = cx
@@ -826,7 +1031,14 @@ impl NavigationMenu {
                 &values,
             );
 
-            let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+            let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                cx,
+                region_id_for_queries,
+                Invalidation::Layout,
+                false,
+                &[(fret_ui_kit::declarative::container_queries::tailwind::MD, true)],
+                fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+            );
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -855,6 +1067,7 @@ impl NavigationMenu {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
+                        let trigger_test_id = item.trigger_test_id.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -871,6 +1084,7 @@ impl NavigationMenu {
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(label.clone()),
+                                test_id: trigger_test_id.clone(),
                                 ..Default::default()
                             };
 
@@ -1113,6 +1327,26 @@ impl NavigationMenu {
                 present: motion.present && has_content,
                 interactive: is_open,
             };
+            let open_change_complete =
+                cx.with_state(NavigationMenuOpenChangeCallbackState::default, |state| {
+                    navigation_menu_open_change_complete_event(
+                        state,
+                        is_open,
+                        overlay_presence.present,
+                        motion.animating,
+                    )
+                });
+            if let (Some(open), Some(handler)) =
+                (open_change_complete, on_open_change_complete.as_ref())
+            {
+                handler(open);
+            }
+
+            if !overlay_presence.present {
+                let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                safe.viewport_panel = None;
+                safe.pointer_in_corridor = false;
+            }
 
             let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
                 .map(|sw| {
@@ -1145,6 +1379,17 @@ impl NavigationMenu {
                         )
                     })
                     .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size));
+
+                if let Some(selected_value) = selected_local.as_deref()
+                    && let Some(trigger_id) =
+                        radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, selected_value)
+                    && let Some(trigger_anchor) = cx
+                        .last_visual_bounds_for_element(trigger_id)
+                        .or_else(|| cx.last_bounds_for_element(trigger_id))
+                {
+                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.trigger_anchor = Some(trigger_anchor);
+                }
                 if viewport_enabled {
                     if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
                         radix_navigation_menu::navigation_menu_register_viewport_size(
@@ -1157,7 +1402,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let mut content_size = if viewport_enabled {
+                let content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,
@@ -1243,6 +1488,35 @@ impl NavigationMenu {
                 let scale = scale;
                 let selected_value_for_content_id = selected_local.clone();
                 let selected_for_overlay = selected_local.clone();
+                let safe_corridor_for_overlay_pointer_move = safe_corridor.clone();
+                let safe_corridor_for_overlay_layout = safe_corridor.clone();
+                let safe_corridor_for_content_hover = safe_corridor.clone();
+                let on_pointer_move: fret_ui::action::OnDismissiblePointerMove = Arc::new(
+                    move |_host: &mut dyn fret_ui::action::UiActionHost,
+                          _acx: fret_ui::action::ActionCx,
+                          mv: fret_ui::action::PointerMoveCx| {
+                        if mv.pointer_type == PointerType::Touch {
+                            return false;
+                        }
+                        let mut safe = safe_corridor_for_overlay_pointer_move
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        safe.last_pointer = Some(mv.position);
+                        safe.pointer_in_corridor = safe
+                            .trigger_anchor
+                            .zip(safe.viewport_panel)
+                            .is_some_and(|(trigger_anchor, viewport_panel)| {
+                                safe_hover::safe_hover_contains(
+                                    mv.position,
+                                    trigger_anchor,
+                                    viewport_panel,
+                                    NAV_MENU_SAFE_CORRIDOR_BUFFER,
+                                )
+                            });
+                        false
+                    },
+                );
+                let on_pointer_move = Some(on_pointer_move);
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
                     cx,
                     root_id,
@@ -1251,7 +1525,14 @@ impl NavigationMenu {
                     overlay_presence,
                     selected_for_overlay.as_deref(),
                     args,
+                    on_pointer_move,
                     move |cx, layout| {
+                        {
+                            let mut safe = safe_corridor_for_overlay_layout
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            safe.viewport_panel = Some(layout.placed);
+                        }
                         let Some(selected_value_key) =
                             selected_value_for_content_id.as_deref()
                         else {
@@ -1286,6 +1567,12 @@ impl NavigationMenu {
                                 let value_for_hover = value_for_hover.clone();
                                 cx.pressable_on_hover_change(Arc::new(
                                     move |host, action_cx, hovered| {
+                                        if hovered {
+                                            let mut safe = safe_corridor_for_content_hover
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            safe.pointer_in_corridor = false;
+                                        }
                                         let mut root = root_state_for_hover
                                             .lock()
                                             .unwrap_or_else(|e| e.into_inner());
@@ -1486,6 +1773,7 @@ impl NavigationMenu {
                                         focusable: false,
                                         focus_ring: None,
                                         focus_ring_bounds: None,
+                                        key_activation: Default::default(),
                                         a11y: PressableA11y::default(),
                                     },
                                     children,
@@ -1615,7 +1903,9 @@ impl NavigationMenu {
             }
 
             vec![list]
-        })
+        })]
+            },
+        )
     }
 }
 
@@ -1722,6 +2012,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
@@ -1750,6 +2053,138 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn navigation_menu_delay_aliases_update_config() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model)
+            .delay_ms(120)
+            .close_delay_ms(80)
+            .skip_delay_ms(360);
+
+        assert_eq!(
+            menu.config.delay_duration,
+            std::time::Duration::from_millis(120)
+        );
+        assert_eq!(
+            menu.config.close_delay_duration,
+            std::time::Duration::from_millis(80)
+        );
+        assert_eq!(
+            menu.config.skip_delay_duration,
+            std::time::Duration::from_millis(360)
+        );
+    }
+
+    #[test]
+    fn navigation_menu_duration_aliases_update_config() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model)
+            .delay_duration(std::time::Duration::from_millis(10))
+            .close_delay_duration(std::time::Duration::from_millis(20))
+            .skip_delay_duration(std::time::Duration::from_millis(30));
+
+        assert_eq!(
+            menu.config.delay_duration,
+            std::time::Duration::from_millis(10)
+        );
+        assert_eq!(
+            menu.config.close_delay_duration,
+            std::time::Duration::from_millis(20)
+        );
+        assert_eq!(
+            menu.config.skip_delay_duration,
+            std::time::Duration::from_millis(30)
+        );
+    }
+
+    #[test]
+    fn navigation_menu_on_open_change_complete_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model).on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(menu.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model).on_value_change(Some(Arc::new(|_value| {})));
+
+        assert!(menu.on_value_change.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_value_change_event_emits_only_on_state_change() {
+        let mut state = NavigationMenuValueChangeCallbackState::default();
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, None);
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("components")
+        );
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(changed, None);
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("docs")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("docs")
+        );
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, Some(None));
+    }
+
+    #[test]
+    fn navigation_menu_open_change_complete_event_emits_after_settle() {
+        let mut state = NavigationMenuOpenChangeCallbackState::default();
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, true);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, Some(true));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, true, true);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, Some(false));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, None);
+    }
+
+    #[test]
+    fn navigation_menu_open_change_complete_event_completes_without_animation() {
+        let mut state = NavigationMenuOpenChangeCallbackState::default();
+
+        let _ = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, Some(true));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, Some(false));
     }
 
     #[test]
@@ -2228,6 +2663,193 @@ mod tests {
     }
 
     #[test]
+    fn navigation_menu_keeps_open_while_pointer_moves_through_safe_corridor() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let nav_cfg = radix_navigation_menu::NavigationMenuConfig::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_tick_id(TickId(frame));
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+                let model_for_render = model.clone();
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "navigation-menu-safe-corridor",
+                    move |cx| {
+                        let nav_cfg_for_render = nav_cfg;
+                        let items = vec![
+                            NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                            NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                        ];
+                        vec![
+                            NavigationMenu::new(model_for_render.clone())
+                                .config(nav_cfg_for_render)
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let alpha_bounds = alpha_btn.bounds;
+        let trigger_center = center(alpha_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let open_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after == nav_cfg.delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-open timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: open_token },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let overlay_stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let root_id = overlay_stack
+            .topmost_popover
+            .expect("expected navigation menu viewport overlay root id");
+        let viewport_panel_id = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "navigation-menu-safe-corridor",
+            |cx| radix_navigation_menu::navigation_menu_viewport_panel_id(cx, root_id),
+        )
+        .expect("viewport panel id");
+        let viewport_panel =
+            fret_ui::elements::bounds_for_element(&mut app, window, viewport_panel_id)
+                .expect("viewport panel bounds");
+
+        let transit_point = Point::new(
+            Px(alpha_bounds.origin.x.0 + alpha_bounds.size.width.0 * 0.5),
+            Px(alpha_bounds.origin.y.0 + alpha_bounds.size.height.0 + 2.0),
+        );
+        assert!(
+            !alpha_bounds.contains(transit_point),
+            "transit point should be outside trigger bounds"
+        );
+        assert!(
+            !viewport_panel.contains(transit_point),
+            "transit point should be outside viewport panel bounds"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: transit_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 4);
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(760.0), Px(560.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 5);
+        render_frame(&mut ui, &mut app, &mut services, 6);
+
+        let close_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after == nav_cfg.close_delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-close timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: close_token },
+        );
+        render_frame(&mut ui, &mut app, &mut services, 7);
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected, None);
+    }
+
+    #[test]
     fn navigation_menu_viewport_align_start_respects_direction_provider() {
         fn run(dir: LayoutDirection) -> (Rect, Rect) {
             let window = AppWindowId::default();
@@ -2243,55 +2865,80 @@ mod tests {
             );
             let mut services = FakeServices::default();
 
-            let render_frame = |ui: &mut UiTree<App>,
-                                app: &mut App,
-                                services: &mut FakeServices| {
-                bump_frame(app);
-                OverlayController::begin_frame(app, window);
-                let model_for_render = model.clone();
-                let root = fret_ui::declarative::render_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    "navigation-menu-dir",
-                    move |cx| {
-                        direction_prim::with_direction_provider(cx, dir, |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    padding: Edges {
-                                        top: Px(100.0),
-                                        right: Px(0.0),
-                                        bottom: Px(0.0),
-                                        left: Px(500.0),
+            let render_frame =
+                |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+                    bump_frame(app);
+                    OverlayController::begin_frame(app, window);
+                    let model_for_render = model.clone();
+                    let root = fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "navigation-menu-dir",
+                        move |cx| {
+                            direction_prim::with_direction_provider(cx, dir, |cx| {
+                                let theme = Theme::global(&*cx.app).clone();
+                                let region_props = LayoutQueryRegionProps {
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().w_full().min_w_0(),
+                                    ),
+                                    name: None,
+                                };
+
+                                vec![cx.layout_query_region_with_id(
+                                    region_props,
+                                    move |cx, region_id| {
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle {
+                                                    size: SizeStyle {
+                                                        width: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                padding: Edges {
+                                                    top: Px(100.0),
+                                                    right: Px(0.0),
+                                                    bottom: Px(0.0),
+                                                    left: Px(500.0),
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                let items = vec![
+                                                    NavigationMenuItem::new(
+                                                        "alpha",
+                                                        "Alpha",
+                                                        vec![cx.text("A")],
+                                                    ),
+                                                    NavigationMenuItem::new(
+                                                        "beta",
+                                                        "Beta",
+                                                        vec![cx.text("B")],
+                                                    ),
+                                                ];
+                                                vec![
+                                                    NavigationMenu::new(model_for_render.clone())
+                                                        .container_query_region(region_id)
+                                                        .items(items)
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        )]
                                     },
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    let items = vec![
-                                        NavigationMenuItem::new(
-                                            "alpha",
-                                            "Alpha",
-                                            vec![cx.text("A")],
-                                        ),
-                                        NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
-                                    ];
-                                    vec![
-                                        NavigationMenu::new(model_for_render.clone())
-                                            .items(items)
-                                            .into_element(cx),
-                                    ]
-                                },
-                            )]
-                        })
-                    },
-                );
-                ui.set_root(root);
-                OverlayController::render(ui, app, services, window, bounds);
-                ui.request_semantics_snapshot();
-                ui.layout_all(app, services, bounds, 1.0);
-            };
+                                )]
+                            })
+                        },
+                    );
+                    ui.set_root(root);
+                    OverlayController::render(ui, app, services, window, bounds);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                };
 
             // Three frames:
             // - frame 1 establishes trigger/root bounds,

@@ -9,8 +9,9 @@ use fret_launch::{
     WinitRunnerConfig,
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
+use fret_ui::UiTree;
 use fret_ui::declarative;
-use fret_ui::{Theme, UiTree};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -66,7 +67,7 @@ impl CjkConformanceDriver {
             bounds,
         )
         .render_root("cjk-conformance", |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = cx.theme_snapshot();
 
             let available_fonts = cx
                 .app

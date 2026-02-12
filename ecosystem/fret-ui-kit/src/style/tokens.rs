@@ -1,10 +1,11 @@
 use fret_core::{Color, Px};
-use fret_ui::Theme;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
 }
+
+use super::ThemeTokenRead;
 
 /// Tailwind-like spacing scale for component libraries.
 ///
@@ -94,7 +95,7 @@ pub enum MetricFallback {
 }
 
 impl MetricFallback {
-    pub(super) fn resolve(&self, theme: &Theme) -> Px {
+    pub(super) fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Px {
         match *self {
             Self::Px(px) => px,
             Self::ThemeRadiusSm => theme.metric_required("metric.radius.sm"),
@@ -130,7 +131,7 @@ pub enum ColorFallback {
 }
 
 impl ColorFallback {
-    pub(super) fn resolve(&self, theme: &Theme) -> Color {
+    pub(super) fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Color {
         match *self {
             Self::Color(c) => c,
             Self::ThemeSurfaceBackground => theme.color_required("background"),

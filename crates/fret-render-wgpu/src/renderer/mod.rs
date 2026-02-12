@@ -63,6 +63,11 @@ pub struct Renderer {
     uniform_capacity: usize,
     clip_buffer: wgpu::Buffer,
     clip_capacity: usize,
+    mask_buffer: wgpu::Buffer,
+    mask_capacity: usize,
+
+    material_catalog_texture: wgpu::Texture,
+    material_catalog_uploaded: bool,
 
     quad_pipeline_format: Option<wgpu::TextureFormat>,
     quad_pipeline: Option<wgpu::RenderPipeline>,
@@ -73,6 +78,8 @@ pub struct Renderer {
     viewport_sampler: wgpu::Sampler,
 
     instance_buffers: Vec<wgpu::Buffer>,
+    quad_instance_bind_group_layout: wgpu::BindGroupLayout,
+    quad_instance_bind_groups: Vec<wgpu::BindGroup>,
     instance_buffer_index: usize,
     instance_capacity: usize,
 
@@ -104,8 +111,8 @@ pub struct Renderer {
     path_msaa_pipeline_sample_count: Option<u32>,
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
-    composite_pipeline: Option<wgpu::RenderPipeline>,
-    composite_mask_pipeline: Option<wgpu::RenderPipeline>,
+    composite_pipelines: [Option<wgpu::RenderPipeline>; 4],
+    composite_mask_pipelines: [Option<wgpu::RenderPipeline>; 4],
     composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     clip_mask_pipeline: Option<wgpu::RenderPipeline>,
@@ -144,6 +151,22 @@ pub struct Renderer {
     color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_adjust_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_adjust_param_buffer: wgpu::Buffer,
+
+    color_matrix_pipeline_format: Option<wgpu::TextureFormat>,
+    color_matrix_pipeline: Option<wgpu::RenderPipeline>,
+    color_matrix_masked_pipeline: Option<wgpu::RenderPipeline>,
+    color_matrix_mask_pipeline: Option<wgpu::RenderPipeline>,
+    color_matrix_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_matrix_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_matrix_param_buffer: wgpu::Buffer,
+
+    alpha_threshold_pipeline_format: Option<wgpu::TextureFormat>,
+    alpha_threshold_pipeline: Option<wgpu::RenderPipeline>,
+    alpha_threshold_masked_pipeline: Option<wgpu::RenderPipeline>,
+    alpha_threshold_mask_pipeline: Option<wgpu::RenderPipeline>,
+    alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    alpha_threshold_param_buffer: wgpu::Buffer,
 
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
@@ -210,6 +233,17 @@ pub struct Renderer {
     scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
     scene_encoding_cache: SceneEncoding,
     scene_encoding_scratch: SceneEncoding,
+
+    materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
+    materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
+    material_paint_budget_per_frame: u64,
+    material_distinct_budget_per_frame: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MaterialEntry {
+    desc: fret_core::MaterialDescriptor,
+    refs: u32,
 }
 
 pub struct RenderSceneParams<'a> {

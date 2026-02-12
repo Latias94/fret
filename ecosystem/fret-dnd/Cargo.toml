@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Headless drag-and-drop primitives for Fret component ecosystems."
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 
 [dev-dependencies]
 serde.workspace = true

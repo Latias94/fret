@@ -1,4 +1,6 @@
-use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size, Transform2D};
+use fret_core::{
+    Color, Corners, DrawOrder, Edges, Paint, Point, Px, Rect, SceneOp, Size, Transform2D,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum ClipKind {
@@ -79,8 +81,12 @@ impl Interpreter {
             }
             SceneOp::PushLayer { .. }
             | SceneOp::PopLayer
+            | SceneOp::PushMask { .. }
+            | SceneOp::PopMask
             | SceneOp::PushEffect { .. }
             | SceneOp::PopEffect
+            | SceneOp::PushCompositeGroup { .. }
+            | SceneOp::PopCompositeGroup
             | SceneOp::Quad { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }
@@ -98,9 +104,9 @@ fn quad(rect: Rect) -> SceneOp {
     SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Color::TRANSPARENT,
+        background: Paint::Solid(Color::TRANSPARENT),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: Paint::Solid(Color::TRANSPARENT),
         corner_radii: Corners::all(Px(0.0)),
     }
 }

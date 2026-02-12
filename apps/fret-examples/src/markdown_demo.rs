@@ -17,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::GlobalWatchExt as _;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, Space, ui};
 use fret_ui_shadcn as shadcn;
@@ -344,7 +344,7 @@ $$
         let refresh_remote_images_cmd = router.borrow_mut().cmd(Msg::RefreshRemoteImages);
 
         components.image = Some(Arc::new(move |cx, info| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = cx.theme_snapshot();
 
             let size_px = Px(96.0);
             let mut size = LayoutStyle::default();
@@ -383,7 +383,7 @@ $$
                             .unwrap_or_else(|| String::from("unknown error"));
                         return render_image_placeholder(
                             cx,
-                            &theme,
+                            theme,
                             on_link_activate.clone(),
                             markdown::LinkInfo {
                                 href: info.src.clone(),
@@ -463,7 +463,7 @@ $$
                 }
                 _ => render_image_placeholder(
                     cx,
-                    &theme,
+                    theme,
                     on_link_activate.clone(),
                     markdown::LinkInfo {
                         href: info.src.clone(),
@@ -479,9 +479,7 @@ $$
 
         let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
             .render_root("markdown-demo", |cx| {
-                cx.watch_global::<Theme>().layout().observe();
-
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = cx.theme_snapshot();
                 let padding_md = theme.metric_required("metric.padding.md");
 
                 let content = ui::v_flex(cx, |cx| {
@@ -588,7 +586,7 @@ fn checkerboard_rgba8(width: u32, height: u32) -> Vec<u8> {
 
 fn render_image_placeholder<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     on_link_activate: Option<markdown::OnLinkActivate>,
     link: markdown::LinkInfo,
 ) -> AnyElement {

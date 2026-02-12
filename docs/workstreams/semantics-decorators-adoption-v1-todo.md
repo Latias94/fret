@@ -1,12 +1,12 @@
-# Semantics Decorators Adoption (ADR 1161) — TODO Tracker
+# Semantics Decorators Adoption (ADR 0222) — TODO Tracker
 
 Status: Active (workstream tracker; keep updated as migrations land)
 
 This document tracks the migration from layout-affecting `Semantics` wrappers (used only for
 stamping `test_id` / a11y labels) to the layout-transparent `attach_semantics` decorators
-introduced by ADR 1161.
+introduced by ADR 0222.
 
-- ADR: `docs/adr/1161-semantics-decorators-and-attach-semantics-v1.md`
+- ADR: `docs/adr/0222-semantics-decorators-and-attach-semantics-v1.md`
 - API: `crates/fret-ui/src/element.rs::AnyElement::attach_semantics`
 
 Tracking format:
@@ -26,7 +26,7 @@ Tracking format:
 - causes subtle geometry regressions (e.g. slider range/fill collapsing, text truncation drift),
 - makes tests brittle (heuristics-based node picking instead of `test_id` selectors).
 
-ADR 1161 introduces `attach_semantics` to stamp semantics on an existing element without changing
+ADR 0222 introduces `attach_semantics` to stamp semantics on an existing element without changing
 layout. This workstream is about making that the default across ecosystem code.
 
 ---

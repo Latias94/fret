@@ -8,7 +8,7 @@
 
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
-use fret_core::{Axis, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
@@ -480,16 +480,19 @@ impl TopAppBar {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
-            let expanded_height = top_app_bar_tokens::container_height(&theme, self.variant);
-            let collapsed_height = match self.variant {
-                TopAppBarVariant::Medium | TopAppBarVariant::Large => {
-                    top_app_bar_tokens::container_height(&theme, TopAppBarVariant::Small)
-                }
-                _ => expanded_height,
+            let (expanded_height, collapsed_height) = {
+                let theme = Theme::global(&*cx.app);
+                let expanded_height = top_app_bar_tokens::container_height(theme, self.variant);
+                let collapsed_height = match self.variant {
+                    TopAppBarVariant::Medium | TopAppBarVariant::Large => {
+                        top_app_bar_tokens::container_height(theme, TopAppBarVariant::Small)
+                    }
+                    _ => expanded_height,
+                };
+                (expanded_height, collapsed_height)
             };
 
             let layout = self
@@ -503,12 +506,49 @@ impl TopAppBar {
                 .map_or(expanded_height, |l| l.container_height);
             let collapsed_fraction = layout.as_ref().map_or(0.0, |l| l.collapsed_fraction);
             let top_row_height = Px(container_height.0.min(collapsed_height.0));
-            let background =
-                top_app_bar_tokens::container_background(&theme, self.variant, scrolled);
-            let elevation = top_app_bar_tokens::container_elevation(&theme, self.variant, scrolled);
-            let corner_radii = top_app_bar_tokens::container_shape(&theme, self.variant);
+            let (
+                surface,
+                corner_radii,
+                leading_icon_color,
+                trailing_icon_color,
+                title_style,
+                title_color,
+                collapsed_title_style,
+                collapsed_title_color,
+            ) = {
+                let theme = Theme::global(&*cx.app);
+                let background =
+                    top_app_bar_tokens::container_background(theme, self.variant, scrolled);
+                let elevation =
+                    top_app_bar_tokens::container_elevation(theme, self.variant, scrolled);
+                let corner_radii = top_app_bar_tokens::container_shape(theme, self.variant);
+                let surface =
+                    material_surface_style(theme, background, elevation, None, corner_radii);
 
-            let surface = material_surface_style(&theme, background, elevation, None, corner_radii);
+                let leading_icon_color =
+                    top_app_bar_tokens::leading_icon_color(theme, self.variant);
+                let trailing_icon_color =
+                    top_app_bar_tokens::trailing_icon_color(theme, self.variant);
+
+                let title_style = top_app_bar_tokens::headline_text_style(theme, self.variant);
+                let title_color = top_app_bar_tokens::headline_color(theme, self.variant);
+
+                let collapsed_title_style =
+                    top_app_bar_tokens::headline_text_style(theme, TopAppBarVariant::Small);
+                let collapsed_title_color =
+                    top_app_bar_tokens::headline_color(theme, TopAppBarVariant::Small);
+
+                (
+                    surface,
+                    corner_radii,
+                    leading_icon_color,
+                    trailing_icon_color,
+                    title_style,
+                    title_color,
+                    collapsed_title_style,
+                    collapsed_title_color,
+                )
+            };
 
             let mut container = ContainerProps::default();
             container.background = Some(surface.background);
@@ -534,13 +574,25 @@ impl TopAppBar {
             cx.semantics(sem, move |cx| {
                 vec![cx.container(container, move |cx| match self.variant {
                     TopAppBarVariant::Small | TopAppBarVariant::SmallCentered => {
-                        vec![top_app_bar_single_row(cx, &theme, &self)]
+                        vec![top_app_bar_single_row(
+                            cx,
+                            &self,
+                            leading_icon_color,
+                            trailing_icon_color,
+                            title_style.clone(),
+                            title_color,
+                        )]
                     }
                     TopAppBarVariant::Medium | TopAppBarVariant::Large => {
                         vec![top_app_bar_two_rows(
                             cx,
-                            &theme,
                             &self,
+                            leading_icon_color,
+                            trailing_icon_color,
+                            title_style.clone(),
+                            title_color,
+                            collapsed_title_style.clone(),
+                            collapsed_title_color,
                             top_row_height,
                             collapsed_fraction,
                         )]
@@ -854,13 +906,10 @@ fn slot_container<H: UiHost>(
 
 fn top_app_bar_title_element_for_variant<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     title: Arc<str>,
-    variant: TopAppBarVariant,
+    style: fret_core::TextStyle,
+    color: Color,
 ) -> AnyElement {
-    let style = top_app_bar_tokens::headline_text_style(theme, variant);
-    let color = top_app_bar_tokens::headline_color(theme, variant);
-
     let mut props = fret_ui::element::TextProps::new(title);
     props.style = Some(style);
     props.color = Some(color);
@@ -871,12 +920,12 @@ fn top_app_bar_title_element_for_variant<H: UiHost>(
 
 fn top_app_bar_single_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     bar: &TopAppBar,
+    leading_color: Color,
+    trailing_color: Color,
+    title_style: fret_core::TextStyle,
+    title_color: Color,
 ) -> AnyElement {
-    let leading_color = top_app_bar_tokens::leading_icon_color(theme, bar.variant);
-    let trailing_color = top_app_bar_tokens::trailing_icon_color(theme, bar.variant);
-
     let leading = bar
         .navigation_icon
         .as_ref()
@@ -888,7 +937,8 @@ fn top_app_bar_single_row<H: UiHost>(
         .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
         .collect();
 
-    let title = top_app_bar_title_element_for_variant(cx, theme, bar.title.clone(), bar.variant);
+    let title =
+        top_app_bar_title_element_for_variant(cx, bar.title.clone(), title_style, title_color);
 
     match bar.variant {
         TopAppBarVariant::SmallCentered => {
@@ -981,14 +1031,16 @@ fn top_app_bar_single_row<H: UiHost>(
 
 fn top_app_bar_two_rows<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     bar: &TopAppBar,
+    leading_color: Color,
+    trailing_color: Color,
+    expanded_title_style: fret_core::TextStyle,
+    expanded_title_color: Color,
+    collapsed_title_style: fret_core::TextStyle,
+    collapsed_title_color: Color,
     top_row_height: Px,
     collapsed_fraction: f32,
 ) -> AnyElement {
-    let leading_color = top_app_bar_tokens::leading_icon_color(theme, bar.variant);
-    let trailing_color = top_app_bar_tokens::trailing_icon_color(theme, bar.variant);
-
     let leading = bar
         .navigation_icon
         .as_ref()
@@ -1000,13 +1052,17 @@ fn top_app_bar_two_rows<H: UiHost>(
         .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
         .collect();
 
-    let expanded_title =
-        top_app_bar_title_element_for_variant(cx, theme, bar.title.clone(), bar.variant);
+    let expanded_title = top_app_bar_title_element_for_variant(
+        cx,
+        bar.title.clone(),
+        expanded_title_style,
+        expanded_title_color,
+    );
     let collapsed_title = top_app_bar_title_element_for_variant(
         cx,
-        theme,
         bar.title.clone(),
-        TopAppBarVariant::Small,
+        collapsed_title_style,
+        collapsed_title_color,
     );
 
     let mut column = FlexProps::default();

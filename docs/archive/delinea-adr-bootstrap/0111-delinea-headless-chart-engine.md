@@ -8,17 +8,17 @@ Fret already has the rendering substrate needed for charts and plots:
 
 - `SceneOp::Path` + `PathService` tessellation and caching (ADR 0080).
 - `SceneOp::Text` + `TextService` for axes, ticks, labels, tooltips (ADR 0006 / ADR 0029).
-- Portable clip/transform stacks and layering (ADR 0078, ADR 0082).
+- Portable clip/transform stacks and layering (ADR 0078, ADR 0081).
 
 We also already have a retained, ImPlot-like plot surface in the ecosystem layer (`ecosystem/fret-plot`)
-with a documented architecture and performance baseline (ADR 0097 / ADR 0099).
+with a documented architecture and performance baseline (ADR 0096 / ADR 0098).
 
 Separately, we want to support “application charts” that resemble Apache ECharts: rich chart taxonomy,
 dataset-driven configuration, and high-level components (legend, tooltip, axis pointer, data zoom, etc.).
 We do not want to embed ECharts itself (JS runtime) or rely on DOM/web rendering, because:
 
 - Fret targets a non-DOM runtime and wants consistent behavior across desktop and wasm.
-- We want deterministic, testable headless logic like our table headless engine (ADR 0101).
+- We want deterministic, testable headless logic like our table headless engine (ADR 0100).
 - We want stable performance on large datasets without per-frame reallocation or full geometry rebuilds.
 
 Therefore we introduce a Fret-native, headless chart engine that is **inspired by ECharts concepts**
@@ -27,12 +27,12 @@ and tailored to Fret’s retained and cache-driven model.
 
 ## Relationship to Existing ADRs
 
-- ADR 0097 / ADR 0099 define plot crate placement and a retained plot architecture.
+- ADR 0096 / ADR 0098 define plot crate placement and a retained plot architecture.
   `delinea` is not a replacement for `fret-plot`. It is a headless engine that can power higher-level
   charts and potentially share some math/LOD helpers in the future.
-- ADR 0101 is the precedent for “headless engine + UI recipes” in Fret’s ecosystem.
+- ADR 0100 is the precedent for “headless engine + UI recipes” in Fret’s ecosystem.
 - ADR 0080 is the contract for vector paths and caching used by UI-facing chart/plot widgets.
-- ADR 0098 describes the 3D route (viewport surfaces). This ADR keeps `delinea` 2D-only in v1.
+- ADR 0097 describes the 3D route (viewport surfaces). This ADR keeps `delinea` 2D-only in v1.
 
 ## Decision
 
@@ -63,7 +63,7 @@ But we do not mirror ECharts APIs 1:1. We keep the surface small and evolvable.
 ### 3) Keep 2D and 3D separated by contract
 
 `delinea` v1 targets 2D charts rendered via portable scene primitives.
-If we add “real 3D”, it should follow the viewport surface route (ADR 0098) and live in a separate crate
+If we add “real 3D”, it should follow the viewport surface route (ADR 0097) and live in a separate crate
 (e.g. `fret-chart3d` or a dedicated engine module behind a feature).
 
 ## Goals
@@ -160,7 +160,7 @@ In `delinea`, this becomes:
 
 - Headless engine: `ecosystem/delinea` (crate: `delinea`)
 - UI bridge: `ecosystem/fret-chart` (crate: `fret-chart`)
-- Low-level plot surface remains: `ecosystem/fret-plot` (ADR 0097)
+- Low-level plot surface remains: `ecosystem/fret-plot` (ADR 0096)
 
 This avoids mixing “framework kernel” responsibilities into `crates/`, and keeps the ecosystem extractable.
 
@@ -225,7 +225,7 @@ P1 (ECharts-inspired expansion):
   - scheduler/task/progressive rendering: `repo-ref/echarts/src/core/Scheduler.ts`
   - source formats and encode semantics: `repo-ref/echarts/src/data/Source.ts`
 - Charming (ECharts JSON builder, reference only): `repo-ref/charming`
-- Plot crate placement: `docs/adr/0097-plot-widgets-and-crate-placement.md`
-- Plot architecture baseline: `docs/adr/0099-plot-architecture-and-performance.md`
-- Headless engine precedent (tables): `docs/adr/0101-headless-table-engine.md`
+- Plot crate placement: `docs/adr/0096-plot-widgets-and-crate-placement.md`
+- Plot architecture baseline: `docs/adr/0098-plot-architecture-and-performance.md`
+- Headless engine precedent (tables): `docs/adr/0100-headless-table-engine.md`
 - Vector path contract: `docs/adr/0080-vector-path-contract.md`

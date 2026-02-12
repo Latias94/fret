@@ -180,7 +180,6 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -201,17 +200,17 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         )
     };
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(900.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
     let section_card =
         |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
@@ -247,7 +246,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-input"));
+        .test_id("ui-gallery-field-input");
         section_card(cx, "Input", content)
     };
 
@@ -265,7 +264,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-textarea"));
+        .test_id("ui-gallery-field-textarea");
         section_card(cx, "Textarea", content)
     };
     let select = {
@@ -285,7 +284,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-select"));
+        .test_id("ui-gallery-field-select");
         section_card(cx, "Select", content)
     };
 
@@ -301,7 +300,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-slider"));
+        .test_id("ui-gallery-field-slider");
         section_card(cx, "Slider", content)
     };
 
@@ -354,7 +353,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-fieldset"));
+        .test_id("ui-gallery-field-fieldset");
         section_card(cx, "Fieldset", content)
     };
 
@@ -388,7 +387,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .into_element(cx)])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-checkbox"));
+        .test_id("ui-gallery-field-checkbox");
         section_card(cx, "Checkbox", content)
     };
 
@@ -415,7 +414,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-radio"));
+        .test_id("ui-gallery-field-radio");
         section_card(cx, "Radio", content)
     };
 
@@ -436,7 +435,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .orientation(shadcn::FieldOrientation::Horizontal)
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-switch"));
+        .test_id("ui-gallery-field-switch");
         section_card(cx, "Switch", content)
     };
 
@@ -479,7 +478,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-choice-card"));
+        .test_id("ui-gallery-field-choice-card");
         section_card(cx, "Choice Card", content)
     };
 
@@ -522,7 +521,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(max_w_md.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-group"));
+        .test_id("ui-gallery-field-group");
         section_card(cx, "Field Group", content)
     };
     let rtl = {
@@ -557,7 +556,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-rtl"));
+        .test_id("ui-gallery-field-rtl");
         section_card(cx, "RTL", content)
     };
 
@@ -610,7 +609,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-responsive"));
+        .test_id("ui-gallery-field-responsive");
         section_card(cx, "Responsive Layout", content)
     };
 
@@ -641,8 +640,7 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-field-component");
 
     let code_stack = stack::vstack(
         cx,

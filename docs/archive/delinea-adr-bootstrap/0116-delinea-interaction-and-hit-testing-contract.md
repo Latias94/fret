@@ -24,7 +24,7 @@ engine (`delinea`) owns the interaction model, and the UI adapter (`fret-chart`)
 - ADR 0129: transform pipeline, `dataZoom` ordering, axis pointer baseline.
 - ADR 0130: axis mapping contract (required for correct hit testing and axis-trigger tooltip).
 - ADR 0131: stable identity and marks output contract.
-- ADR 0099: plot input mapping (ImPlot-like); chart interaction is higher-level and dataset-driven.
+- ADR 0098: plot input mapping (ImPlot-like); chart interaction is higher-level and dataset-driven.
 
 ## Decision
 
@@ -121,6 +121,6 @@ P1:
 
 ## References
 
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0109: `docs/archive/delinea-adr-bootstrap/0190-delinea-headless-chart-engine.md`
+- ADR 0110: `docs/archive/delinea-adr-bootstrap/0191-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`

@@ -64,6 +64,11 @@ P2:
 - `ecosystem/fret-ui-kit`: reusable infra (tokens/recipes/headless helpers).
 - `crates/fret-ui`: runtime substrate (contracts/mechanisms only).
 
+Related (out-of-scope for v4 parity tracking):
+
+- Shadcn-styled “blocks/recipes” that are not part of the v4 taxonomy live under
+  `fret-ui-shadcn::extras` and are tracked separately in `docs/workstreams/shadcn-extras.md`.
+
 ## Layering & Ownership
 
 This repo intentionally splits responsibilities across three layers (similar to Tailwind + headless + Radix/RSC composition, but in Rust):
@@ -115,7 +120,7 @@ Implementation anchors:
 
 - Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
-- ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
 - TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
 

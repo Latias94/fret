@@ -42,6 +42,8 @@ pub fn on_link_activate_open_url() -> OnLinkActivate {
         }
         host.push_effect(Effect::OpenUrl {
             url: link.href.to_string(),
+            target: None,
+            rel: None,
         });
     })
 }

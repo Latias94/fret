@@ -43,6 +43,41 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct SelectOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn select_open_change_events(
+    state: &mut SelectOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 fn select_list_desired_height(
     item_height: Px,
     item_count: usize,
@@ -621,10 +656,13 @@ pub struct Select {
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
+    mouse_policies: radix_select::SelectMousePolicies,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: SelectStyle,
@@ -650,10 +688,13 @@ impl Select {
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
+            mouse_policies: radix_select::SelectMousePolicies::default(),
             trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
             on_dismiss_request: None,
+            on_open_change: None,
+            on_open_change_complete: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: SelectStyle::default(),
@@ -721,6 +762,11 @@ impl Select {
         self
     }
 
+    pub fn mouse_policies(mut self, policies: radix_select::SelectMousePolicies) -> Self {
+        self.mouse_policies = policies;
+        self
+    }
+
     pub fn entry(mut self, entry: impl Into<SelectEntry>) -> Self {
         self.entries.push(entry.into());
         self
@@ -765,6 +811,21 @@ impl Select {
     /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
         self
     }
 
@@ -862,6 +923,7 @@ impl Select {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         select_impl(
             cx,
@@ -871,10 +933,13 @@ impl Select {
             &self.entries,
             self.placeholder,
             self.disabled,
+            self.mouse_policies,
             self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
             self.on_dismiss_request,
+            self.on_open_change,
+            self.on_open_change_complete,
             self.chrome,
             self.layout,
             self.style,
@@ -912,9 +977,12 @@ pub fn select<H: UiHost>(
         &entries,
         placeholder,
         disabled,
+        radix_select::SelectMousePolicies::default(),
         None,
         a11y_label,
         false,
+        None,
+        None,
         None,
         ChromeRefinement::default(),
         layout,
@@ -943,10 +1011,13 @@ fn select_impl<H: UiHost>(
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
+    mouse_policies: radix_select::SelectMousePolicies,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: SelectStyle,
@@ -1002,7 +1073,9 @@ fn select_impl<H: UiHost>(
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let enabled = !disabled;
+        let model_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let is_open = model_open && enabled;
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
@@ -1012,6 +1085,18 @@ fn select_impl<H: UiHost>(
             1.0,
             overlay_motion::shadcn_ease,
         );
+        let (open_change, open_change_complete) =
+            cx.with_state(SelectOpenChangeCallbackState::default, |state| {
+                select_open_change_events(state, is_open, motion.present, motion.animating)
+            });
+        if let (Some(open), Some(on_open_change)) = (open_change, on_open_change.as_ref()) {
+            on_open_change(open);
+        }
+        if let (Some(open), Some(on_open_change_complete)) =
+            (open_change_complete, on_open_change_complete.as_ref())
+        {
+            on_open_change_complete(open);
+        }
         let overlay_present = motion.present;
         let overlay_presence = OverlayPresence {
             present: motion.present,
@@ -1097,7 +1182,6 @@ fn select_impl<H: UiHost>(
         let style_for_trigger = style.clone();
         let style_for_options = style;
 
-        let enabled = !disabled;
         let item_len = count_items(entries);
 
         #[derive(Debug)]
@@ -1219,6 +1303,12 @@ fn select_impl<H: UiHost>(
                 || radix_select::select_mouse_open_guard(),
                 |g| g.clone(),
             );
+            let mouse_up_selection_gate: Arc<Mutex<radix_select::SelectMouseUpSelectionGateState>> =
+                cx.with_state_for(
+                    trigger_id,
+                    || Arc::new(Mutex::new(radix_select::SelectMouseUpSelectionGateState::default())),
+                    |g| g.clone(),
+                );
 
             if !overlay_present {
                 let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1235,13 +1325,17 @@ fn select_impl<H: UiHost>(
             }
 
             let state_for_timer = trigger_state.clone();
+            let mouse_up_selection_gate_for_timer = mouse_up_selection_gate.clone();
             cx.timer_on_timer_for(
                 trigger_id,
                 Arc::new(move |_host, _action_cx, token| {
                     let mut state = state_for_timer
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    state.trigger.on_timer(token) || state.content.on_timer(token)
+                    let mut gate = mouse_up_selection_gate_for_timer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    state.trigger.on_timer(token) || state.content.on_timer(token) || gate.on_timer(token)
                 }),
             );
 
@@ -1252,6 +1346,7 @@ fn select_impl<H: UiHost>(
             let disabled_for_key = typeahead_disabled.clone();
             let state_for_key = trigger_state.clone();
             let mouse_open_guard_for_key = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_key = mouse_up_selection_gate.clone();
             let on_value_change_for_key = on_value_change.clone();
             cx.key_on_key_down_for(
                 trigger_id,
@@ -1266,6 +1361,12 @@ fn select_impl<H: UiHost>(
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
                     radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_key);
+                    {
+                        let mut gate = mouse_up_selection_gate_for_key
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        gate.clear_and_cancel(host);
+                    }
                     let handled = state.trigger.handle_key_down_when_closed(
                         host,
                         action_cx.window,
@@ -1300,15 +1401,13 @@ fn select_impl<H: UiHost>(
             let open_for_pointer_down = open_for_trigger.clone();
             let state_for_pointer_down = trigger_state.clone();
             let mouse_open_guard_for_pointer_down = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_pointer_down = mouse_up_selection_gate.clone();
+            let mouse_policies_for_pointer_down = mouse_policies;
+            let model_for_pointer_down = model.clone();
+            let typeahead_values_for_pointer_down = typeahead_values.clone();
+            let typeahead_disabled_for_pointer_down = typeahead_disabled.clone();
             let enabled_for_pointer_down = enabled;
             cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                if !matches!(
-                    down.pointer_type,
-                    fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
-                ) {
-                    return fret_ui::action::PressablePointerDownResult::Continue;
-                }
-
                 let was_open = host
                     .models_mut()
                     .get_copied(&open_for_pointer_down)
@@ -1333,18 +1432,76 @@ fn select_impl<H: UiHost>(
                     .models_mut()
                     .get_copied(&open_for_pointer_down)
                     .unwrap_or(false);
-                radix_select::select_mouse_open_guard_record_if_opened(
-                    &mouse_open_guard_for_pointer_down,
-                    was_open,
-                    now_open,
-                    down.position,
-                );
+
+                if !was_open && now_open {
+                    radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_down);
+                    let has_selected_item_in_list = host
+                        .models_mut()
+                        .read(&model_for_pointer_down, |selected| {
+                            selected.as_ref().is_some_and(|selected_value| {
+                                typeahead_values_for_pointer_down
+                                    .iter()
+                                    .zip(typeahead_disabled_for_pointer_down.iter())
+                                    .any(
+                                    |(value, is_disabled)| {
+                                        !*is_disabled && value.as_ref() == selected_value.as_ref()
+                                    },
+                                )
+                            })
+                        })
+                        .ok()
+                        .unwrap_or(false);
+                    let mut gate = mouse_up_selection_gate_for_pointer_down
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    if let Some(policy) = mouse_policies_for_pointer_down.mouse_up_selection_gate {
+                        gate.arm_on_open_with_policy(
+                            host,
+                            action_cx.window,
+                            has_selected_item_in_list,
+                            policy,
+                        );
+                    } else {
+                        gate.clear_and_cancel(host);
+                    }
+                }
+
+                if mouse_policies_for_pointer_down.pointer_up_guard {
+                    radix_select::select_mouse_open_guard_record_if_opened(
+                        &mouse_open_guard_for_pointer_down,
+                        was_open,
+                        now_open,
+                        down.position,
+                    );
+                }
                 if !was_open && now_open {
                     state.opened_by_pointer = true;
                 }
                 state.trigger.clear_typeahead(host);
 
-                fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                if matches!(
+                    down.pointer_type,
+                    fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
+                ) {
+                    fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                } else {
+                    fret_ui::action::PressablePointerDownResult::Continue
+                }
+            }));
+
+            let state_for_pointer_move = trigger_state.clone();
+            cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                if !matches!(
+                    mv.pointer_type,
+                    fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                ) {
+                    return false;
+                }
+
+                let mut state = state_for_pointer_move
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                state.pointer.handle_pointer_move(host, action_cx, mv)
             }));
 
             // Radix opens on mouse `pointerdown` and installs a one-shot pointer-up guard so the
@@ -1355,7 +1512,66 @@ fn select_impl<H: UiHost>(
             // the trigger so it cannot "leak" into later pointer-up events (e.g. clicking outside
             // after scrolling), which would otherwise be misinterpreted as a drag-to-select.
             let mouse_open_guard_for_pointer_up = mouse_open_guard.clone();
-            cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
+            let state_for_pointer_up = trigger_state.clone();
+            let open_for_pointer_up = open_for_trigger.clone();
+            let mouse_up_selection_gate_for_pointer_up = mouse_up_selection_gate.clone();
+            let model_for_pointer_up = model.clone();
+            let typeahead_values_for_pointer_up = typeahead_values.clone();
+            let typeahead_disabled_for_pointer_up = typeahead_disabled.clone();
+            let enabled_for_pointer_up = enabled;
+            cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                if matches!(
+                    up.pointer_type,
+                    fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                ) {
+                    let was_open = host
+                        .models_mut()
+                        .get_copied(&open_for_pointer_up)
+                        .unwrap_or(false);
+                    let mut state = state_for_pointer_up
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    let handled = state.pointer.handle_pointer_up(
+                        host,
+                        action_cx,
+                        up,
+                        &open_for_pointer_up,
+                        enabled_for_pointer_up,
+                    );
+                    if handled {
+                        let now_open = host
+                            .models_mut()
+                            .get_copied(&open_for_pointer_up)
+                            .unwrap_or(false);
+                        if !was_open && now_open {
+                            radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_up);
+                            state.opened_by_pointer = true;
+                            let has_selected_item_in_list = host
+                                .models_mut()
+                                .read(&model_for_pointer_up, |selected| {
+                                    selected.as_ref().is_some_and(|selected_value| {
+                                        typeahead_values_for_pointer_up
+                                            .iter()
+                                            .zip(typeahead_disabled_for_pointer_up.iter())
+                                            .any(
+                                            |(value, is_disabled)| {
+                                                !*is_disabled
+                                                    && value.as_ref() == selected_value.as_ref()
+                                            },
+                                        )
+                                    })
+                                })
+                                .ok()
+                                .unwrap_or(false);
+                            let mut gate = mouse_up_selection_gate_for_pointer_up
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            gate.arm_on_open(host, action_cx.window, has_selected_item_in_list);
+                        }
+                    }
+                    return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                }
+
                 match radix_select::select_mouse_open_guard_pointer_up_decision_shared(
                     &mouse_open_guard_for_pointer_up,
                     up,
@@ -1377,6 +1593,7 @@ fn select_impl<H: UiHost>(
             let open_for_activate = open_for_trigger.clone();
             let state_for_activate = trigger_state.clone();
             let mouse_open_guard_for_activate = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_activate = mouse_up_selection_gate.clone();
             cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                 let mut state = state_for_activate
                     .lock()
@@ -1387,6 +1604,12 @@ fn select_impl<H: UiHost>(
                 }
 
                 radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_activate);
+                {
+                    let mut gate = mouse_up_selection_gate_for_activate
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    gate.clear_and_cancel(host);
+                }
                 state.trigger.clear_typeahead(host);
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
@@ -1473,13 +1696,14 @@ fn select_impl<H: UiHost>(
                         .unwrap_or(Px(24.0));
                     let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
 
+                    let window_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let outer_with_margin =
-                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                        overlay::outer_bounds_with_window_margin(window_bounds, window_margin);
                     // When the viewport is extremely short, applying the full window margin would
                     // reduce the listbox to an unusable height. Prefer allowing overflow so we can
                     // keep a reasonable minimum number of rows visible (Radix behavior under tight
                     // constraints).
-                    let force_no_margin = cx.bounds.size.height.0 <= 180.0;
+                    let force_no_margin = window_bounds.size.height.0 <= 180.0;
                     let outer = if position == SelectPosition::Popper {
                         // Radix Select uses `collisionPadding` (10px) on the popper substrate, but
                         // the listbox can still overflow when it is larger than the available
@@ -1487,9 +1711,9 @@ fn select_impl<H: UiHost>(
                         //
                         // Model this by using full window bounds for popper placement while keeping
                         // the window-margin inset available as a sizing hint.
-                        cx.bounds
+                        window_bounds
                     } else if force_no_margin || outer_with_margin.size.height.0 < min_list_h.0 {
-                        cx.bounds
+                        window_bounds
                     } else {
                         outer_with_margin
                     };
@@ -1571,9 +1795,11 @@ fn select_impl<H: UiHost>(
                                 .unwrap_or((false, false));
                             if debug_item_aligned {
                                 eprintln!("select item-aligned theme min_width={}", min_width.0);
+                                let window_bounds =
+                                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                                 eprintln!(
                                     "select item-aligned window bounds={:?} trigger={:?}",
-                                    cx.bounds, anchor
+                                    window_bounds, anchor
                                 );
                                 let dbg = |label: &str, id: GlobalElementId| {
                                     let b = overlay::anchor_bounds_for_element(cx, id);
@@ -1591,7 +1817,7 @@ fn select_impl<H: UiHost>(
                             }
                             Some(radix_select::SelectItemAlignedElementInputs {
                                 direction,
-                                window: cx.bounds,
+                                window: cx.environment_viewport_bounds(fret_ui::Invalidation::Layout),
                                 trigger: anchor,
                                 content_min_width: min_width,
                                 content_border_top: border_width,
@@ -1792,6 +2018,17 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+
+                    cx.diagnostics_record_overlay_placement_placed_rect(
+                        Some(overlay_root_name.as_str()),
+                        Some(trigger_id),
+                        None,
+                        outer,
+                        anchor,
+                        placed,
+                        Some(motion_side),
+                    );
+
                     if std::env::var("FRET_DEBUG_SELECT_PLACED")
                         .ok()
                         .is_some_and(|v| v == "1")
@@ -1843,6 +2080,8 @@ fn select_impl<H: UiHost>(
                     let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+                    let mouse_up_selection_gate_for_overlay = mouse_up_selection_gate.clone();
+                    let mouse_policies_for_overlay = mouse_policies;
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
@@ -1852,13 +2091,10 @@ fn select_impl<H: UiHost>(
                         let open_for_content = open_for_overlay.clone();
                         let open_for_barrier_children = open_for_overlay.clone();
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
-
-                        let model = model_for_overlay.clone();
-                        let selected = cx
-                            .watch_model(&model)
-                            .cloned()
-                            .unwrap_or_default();
-                        let on_value_change = on_value_change_for_overlay_children.clone();
+                        let mouse_up_selection_gate_for_overlay_opt = mouse_policies_for_overlay
+                            .mouse_up_selection_gate
+                            .is_some()
+                            .then_some(mouse_up_selection_gate_for_overlay.clone());
 
                         #[derive(Clone)]
                         enum SelectRow {
@@ -1880,6 +2116,13 @@ fn select_impl<H: UiHost>(
 
                         let mut rows: Vec<SelectRow> = Vec::new();
                         flatten_entries(&mut rows, entries);
+
+                        let model = model_for_overlay.clone();
+                        let selected = cx
+                            .watch_model(&model)
+                            .cloned()
+                            .unwrap_or_default();
+                        let on_value_change = on_value_change_for_overlay_children.clone();
 
                         let item_count = rows
                             .iter()
@@ -1919,24 +2162,29 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
 
-                            if is_open {
-                                if !state.was_open {
-                                    state.was_open = true;
-                                    state.content.reset_on_open(initial_active_row);
-                                    state.trigger.reset_typeahead_buffer();
-                                    state.pending_active_align_top_scroll = !state.opened_by_pointer;
-                            } else if state.content.active_row().is_none() {
-                                state.content.set_active_row(initial_active_row);
+                             if is_open {
+                                 if !state.was_open {
+                                     state.was_open = true;
+                                     state.content.reset_on_open(initial_active_row);
+                                     state.trigger.reset_typeahead_buffer();
+                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
+                                 }
+                             } else {
+                                 state.was_open = false;
+                                 state.content.set_active_row(None);
+                                 state.pending_active_align_top_scroll = false;
+                                state.opened_by_pointer = false;
                             }
-                        } else {
-                            state.was_open = false;
-                            state.content.set_active_row(None);
-                            state.pending_active_align_top_scroll = false;
-                            state.opened_by_pointer = false;
-                        }
 
-                        state.content.active_row()
-                    };
+                            state.content.active_row()
+                        };
+
+                        if !is_open
+                            && let Some(gate) = mouse_up_selection_gate_for_overlay_opt.as_ref()
+                        {
+                            let mut gate = gate.lock().unwrap_or_else(|e| e.into_inner());
+                            gate.reset_without_cancel();
+                        }
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
@@ -2063,12 +2311,13 @@ fn select_impl<H: UiHost>(
                                                 let before_active = state.content.active_row();
                                                 let handled = state.content.handle_key_down_when_open(
                                                     host,
-                                                    action_cx.window,
+                                                    action_cx,
                                                     &open_for_key,
                                                     &model_for_key,
                                                     values_by_row.as_ref(),
                                                     labels_for_key.as_ref(),
                                                     disabled_for_key.as_ref(),
+                                                    on_value_change_for_overlay_children.as_ref(),
                                                     it.key,
                                                     it.repeat,
                                                     loop_navigation_for_key,
@@ -2287,6 +2536,8 @@ fn select_impl<H: UiHost>(
                                                                             let row_idx_for_hover = row_idx;
                                                                             let mouse_open_guard_for_item_pointer_up =
                                                                                 mouse_open_guard_for_content.clone();
+                                                                            let mouse_up_selection_gate_for_item_pointer_up =
+                                                                                mouse_up_selection_gate_for_overlay_opt.clone();
 
                                                                             let value_key = item.value.clone();
                                                                             let style_for_item =
@@ -2334,73 +2585,30 @@ fn select_impl<H: UiHost>(
                                                                                     );
                                                                                     cx.pressable_set_bool(&open, false);
 
-                                                                                    // Commit selection on mouse `pointerup` even when the
-                                                                                    // platform does not classify the interaction as a click.
-                                                                                    //
-                                                                                    // This mirrors Radix's pointer-driven contract and avoids
-                                                                                    // regressions when `is_click=false` (e.g. after scrolling).
                                                                                     if !item_disabled {
-                                                                                        let open_for_pointer_up = open.clone();
-                                                                                        let model_for_pointer_up = model.clone();
-                                                                                        let item_value_for_pointer_up =
-                                                                                            item_value.clone();
-                                                                                        let mouse_open_guard_for_pointer_up =
-                                                                                            mouse_open_guard_for_item_pointer_up
-                                                                                                .clone();
-                                                                                        let on_value_change_for_pointer_up =
-                                                                                            on_value_change_for_item.clone();
+                                                                                            let handlers =
+                                                                                                radix_select::select_item_pressable_pointer_handlers_with_mouse_up_gate(
+                                                                                                    open.clone(),
+                                                                                                    model.clone(),
+                                                                                                    item_value.clone(),
+                                                                                                    item_disabled,
+                                                                                                    mouse_open_guard_for_item_pointer_up
+                                                                                                        .clone(),
+                                                                                                    is_selected,
+                                                                                                mouse_up_selection_gate_for_item_pointer_up
+                                                                                                    .clone(),
+                                                                                                    on_value_change_for_item.clone(),
+                                                                                                );
+                                                                                        cx.pressable_add_on_pointer_down(
+                                                                                            handlers.on_pointer_down,
+                                                                                        );
                                                                                         cx.pressable_add_on_pointer_up(
-                                                                                            Arc::new(
-                                                                                                move |host, action_cx, up| {
-                                                                                                    if up.button
-                                                                                                        != fret_core::MouseButton::Left
-                                                                                                    {
-                                                                                                        return fret_ui::action::PressablePointerUpResult::Continue;
-                                                                                                    }
-                                                                                                    if !matches!(
-                                                                                                        up.pointer_type,
-                                                                                                        fret_core::PointerType::Mouse
-                                                                                                            | fret_core::PointerType::Unknown
-                                                                                                    ) {
-                                                                                                        return fret_ui::action::PressablePointerUpResult::Continue;
-                                                                                                    }
-                                                                                                    if radix_select::select_mouse_open_guard_should_suppress_pointer_up_shared(
-                                                                                                        &mouse_open_guard_for_pointer_up,
-                                                                                                        up,
-                                                                                                    ) {
-                                                                                                        return fret_ui::action::PressablePointerUpResult::SkipActivate;
-                                                                                                    }
-
-                                                                                                    let _ = host
-                                                                                                        .models_mut()
-                                                                                                        .update(&model_for_pointer_up, |v| {
-                                                                                                            *v = Some(
-                                                                                                                item_value_for_pointer_up
-                                                                                                                    .clone(),
-                                                                                                            );
-                                                                                                        });
-                                                                                                    let _ = host
-                                                                                                        .models_mut()
-                                                                                                        .update(&open_for_pointer_up, |v| *v = false);
-                                                                                                    if let Some(on_value_change) =
-                                                                                                        on_value_change_for_pointer_up
-                                                                                                            .as_ref()
-                                                                                                    {
-                                                                                                        on_value_change(
-                                                                                                            host,
-                                                                                                            action_cx,
-                                                                                                            item_value_for_pointer_up
-                                                                                                                .clone(),
-                                                                                                        );
-                                                                                                    }
-                                                                                                    host.request_redraw(action_cx.window);
-                                                                                                    fret_ui::action::PressablePointerUpResult::SkipActivate
-                                                                                                },
-                                                                                            ),
+                                                                                            handlers.on_pointer_up,
                                                                                         );
                                                                                     }
 
                                                                                     if !item_disabled
+                                                                                        && !is_selected
                                                                                         && let Some(
                                                                                             on_value_change,
                                                                                         ) = on_value_change_for_item.clone()
@@ -2418,28 +2626,36 @@ fn select_impl<H: UiHost>(
                                                                                         );
                                                                                     }
 
-                                                                                    if !item_disabled {
-                                                                                        cx.pressable_add_on_hover_change(Arc::new(
-                                                                                            move |host, action_cx, hovered| {
-                                                                                                if !hovered {
-                                                                                                    return;
-                                                                                                }
-                                                                                                let mut state = state_for_hover
-                                                                                                    .lock()
-                                                                                                    .unwrap_or_else(|e| e.into_inner());
-                                                                                                if state.content.active_row()
-                                                                                                    != Some(row_idx_for_hover)
-                                                                                                {
-                                                                                                    state.content.set_active_row(
-                                                                                                        Some(row_idx_for_hover),
-                                                                                                    );
-                                                                                                    host.request_redraw(
-                                                                                                        action_cx.window,
-                                                                                                    );
-                                                                                                }
-                                                                                            },
-                                                                                        ));
-                                                                                    }
+                                                                                     if !item_disabled {
+                                                                                         cx.pressable_add_on_hover_change(Arc::new(
+                                                                                             move |host, action_cx, hovered| {
+                                                                                                 let mut state = state_for_hover
+                                                                                                     .lock()
+                                                                                                     .unwrap_or_else(|e| e.into_inner());
+                                                                                                 if hovered {
+                                                                                                     if state.content.active_row()
+                                                                                                         != Some(row_idx_for_hover)
+                                                                                                     {
+                                                                                                         state.content.set_active_row(
+                                                                                                             Some(row_idx_for_hover),
+                                                                                                         );
+                                                                                                         host.request_redraw(
+                                                                                                             action_cx.window,
+                                                                                                         );
+                                                                                                     }
+                                                                                                 } else if state.content.active_row()
+                                                                                                     == Some(row_idx_for_hover)
+                                                                                                 {
+                                                                                                     // Base UI clears the active index when the pointer leaves the
+                                                                                                     // popup so the highlight does not become "stuck" on the last
+                                                                                                     // hovered option. Mirror that behavior per-row by clearing when
+                                                                                                     // the active row stops being hovered.
+                                                                                                     state.content.set_active_row(None);
+                                                                                                     host.request_redraw(action_cx.window);
+                                                                                                 }
+                                                                                             },
+                                                                                         ));
+                                                                                     }
 
                                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
@@ -2534,28 +2750,11 @@ fn select_impl<H: UiHost>(
                                                                                             enabled: true,
                                                                                          },
                                                                                          move |cx| {
-                                                                                             let open_for_pointer_up = open.clone();
-                                                                                             let model_for_pointer_up = model.clone();
-                                                                                             let item_value_for_pointer_up = item_value.clone();
-                                                                                             let item_disabled_for_pointer_up = item_disabled;
-                                                                                             let mouse_open_guard_for_pointer_up =
-                                                                                                 mouse_open_guard_for_item_pointer_up.clone();
-
-                                                                                             cx.pointer_region_on_pointer_up(
-                                                                                                 radix_select::select_item_pointer_up_handler(
-                                                                                                     open_for_pointer_up,
-                                                                                                     model_for_pointer_up,
-                                                                                                     item_value_for_pointer_up,
-                                                                                                     item_disabled_for_pointer_up,
-                                                                                                     mouse_open_guard_for_pointer_up,
-                                                                                                 ),
-                                                                                             );
-
-                                                                                             vec![cx.container(
-                                                                                                ContainerProps {
-                                                                                                    layout: {
-                                                                                                        let mut layout =
-                                                                                                            LayoutStyle::default();
+                                                                                              vec![cx.container(
+                                                                                                 ContainerProps {
+                                                                                                     layout: {
+                                                                                                         let mut layout =
+                                                                                                             LayoutStyle::default();
                                                                                                         layout.size.width = Length::Fill;
                                                                                                         layout.size.height = Length::Fill;
                                                                                                         layout
@@ -2922,14 +3121,14 @@ fn select_impl<H: UiHost>(
                         .resolve(cx, cx.window);
                     radix_select::request_select(cx, request);
                 } else {
-                    let open_for_overlay = open_for_trigger.clone();
-                    let mouse_open_guard_for_overlay = mouse_open_guard.clone();
-                    let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
-                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                        let barrier = radix_select::select_modal_barrier_with_dismiss_handler(
-                            cx,
-                            open_for_overlay.clone(),
-                            true,
+            let open_for_overlay = open_for_trigger.clone();
+            let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+            let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
+            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                let barrier = radix_select::select_modal_barrier_with_dismiss_handler(
+                    cx,
+                    open_for_overlay.clone(),
+                    true,
                             on_dismiss_request_for_overlay_children.clone(),
                             std::iter::empty::<AnyElement>(),
                         );
@@ -3106,7 +3305,7 @@ mod tests {
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::{Effect, FrameId};
+    use fret_runtime::{Effect, FrameId, TimerToken};
     use fret_ui::tree::UiTree;
 
     #[test]
@@ -3162,6 +3361,34 @@ mod tests {
         });
     }
 
+    #[test]
+    fn select_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = SelectOpenChangeCallbackState::default();
+
+        let (changed, completed) = select_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = select_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = select_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn select_open_change_events_complete_without_animation() {
+        let mut state = SelectOpenChangeCallbackState::default();
+
+        let _ = select_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = select_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -3206,6 +3433,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn render_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3216,13 +3456,32 @@ mod tests {
         open: Model<bool>,
         items: Vec<SelectItem>,
     ) -> fret_core::NodeId {
+        render_frame_with_disabled(ui, app, services, window, bounds, model, open, items, false)
+    }
+
+    fn render_frame_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
         fret_ui_kit::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
-                vec![Select::new(model, open).items(items).into_element(cx)]
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .disabled(disabled)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
@@ -3631,7 +3890,7 @@ mod tests {
     }
 
     #[test]
-    fn select_pointer_open_first_click_commits_immediately() {
+    fn select_pointer_open_first_click_commits_with_item_pointer_down() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -3762,9 +4021,477 @@ mod tests {
         assert_eq!(
             selected.as_deref(),
             Some("banana"),
-            "expected first item click after pointer-open to commit immediately"
+            "expected first item click after pointer-open to commit when the row receives pointer-down"
         );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected list to close after pointer-up commit"
+        );
+    }
+
+    #[test]
+    fn select_pointer_open_click_commits_and_fires_on_value_change_once() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+        let on_value_change_count = app.models_mut().insert(0_u32);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
+            .expect("banana option node");
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("banana"));
         assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&on_value_change_count),
+            Some(1),
+            "expected exactly one `on_value_change` callback for an item click"
+        );
+    }
+
+    #[test]
+    fn select_clicking_selected_item_does_not_fire_on_value_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+        let on_value_change_count = app.models_mut().insert(0_u32);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let apple = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Apple"))
+            .expect("apple option node");
+        let apple_center = Point::new(
+            Px(apple.bounds.origin.x.0 + apple.bounds.size.width.0 * 0.5),
+            Px(apple.bounds.origin.y.0 + apple.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: apple_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: apple_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("apple"));
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&on_value_change_count),
+            Some(0),
+            "expected no `on_value_change` callback when selecting the already-selected value"
+        );
+    }
+
+    #[test]
+    fn select_mouse_hover_leave_clears_active_descendant() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
+            .expect("banana option node");
+        let listbox_id = listbox.id;
+        let listbox_bounds = listbox.bounds;
+        let banana_id = banana.id;
+
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox_after_hover = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == listbox_id)
+            .expect("listbox node after hover");
+        assert_eq!(
+            listbox_after_hover.active_descendant,
+            Some(banana_id),
+            "expected hovering an item to set `active_descendant`"
+        );
+
+        let outside = Point::new(
+            Px((listbox_bounds.origin.x.0 + 2.0).max(0.0)),
+            Px((listbox_bounds.origin.y.0 - 10.0).max(0.0)),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(1),
+                position: outside,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox_after_leave = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == listbox_id)
+            .expect("listbox node after leave");
+        assert_eq!(
+            listbox_after_leave.active_descendant, None,
+            "expected pointer leave to clear `active_descendant`"
+        );
     }
 
     #[test]
@@ -4468,7 +5195,7 @@ mod tests {
     }
 
     #[test]
-    fn select_mouse_drag_release_selects_item() {
+    fn select_mouse_drag_release_selects_item_after_mouse_up_gate_delay() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -4554,6 +5281,33 @@ mod tests {
                 || dy > radix_select::SELECT_TRIGGER_CLICK_SLOP_PX,
             "test expects a pointer-up delta larger than the Radix click slop"
         );
+
+        let mouse_up_gate_tokens: Vec<TimerToken> = app
+            .flush_effects()
+            .into_iter()
+            .filter_map(|effect| match effect {
+                Effect::SetTimer { token, after, .. }
+                    if after
+                        == Duration::from_millis(
+                            radix_select::SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+                        )
+                        || after
+                            == Duration::from_millis(
+                                radix_select::SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+                            ) =>
+                {
+                    Some(token)
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !mouse_up_gate_tokens.is_empty(),
+            "expected mouse-up gate timers to be armed on pointer-open"
+        );
+        for token in mouse_up_gate_tokens {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
 
         ui.dispatch_event(
             &mut app,
@@ -4699,6 +5453,182 @@ mod tests {
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("gamma"));
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn select_touch_pointer_down_and_up_opens_overlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(11),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "touch down should not open before touch up"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(11),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "touch up inside trigger should open"
+        );
+    }
+
+    #[test]
+    fn select_touch_drag_does_not_open_overlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+        let far_right = Point::new(Px(trigger_center.x.0 + 32.0), trigger_center.y);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(12),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(12),
+                position: far_right,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(12),
+                position: far_right,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "touch drag-release should not open"
+        );
     }
 
     #[test]
@@ -5030,6 +5960,43 @@ mod tests {
                 items.clone(),
             );
         }
+
+        let mouse_up_gate_tokens: Vec<TimerToken> = app
+            .flush_effects()
+            .into_iter()
+            .filter_map(|effect| match effect {
+                Effect::SetTimer { token, after, .. }
+                    if after
+                        == Duration::from_millis(
+                            radix_select::SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+                        )
+                        || after
+                            == Duration::from_millis(
+                                radix_select::SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+                            ) =>
+                {
+                    Some(token)
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !mouse_up_gate_tokens.is_empty(),
+            "expected mouse-up gate timers to be armed on open"
+        );
+        for token in mouse_up_gate_tokens {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let listbox = snap
@@ -5473,6 +6440,62 @@ mod tests {
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("beta"));
         assert!(app.models().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn select_disabled_hides_content_even_when_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![SelectItem::new("alpha", "Alpha")];
+
+        let _ = render_frame_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).unwrap_or(false);
+        assert!(
+            open_now,
+            "disabled select root should not mutate controlled open model"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .all(|n| !(n.role == SemanticsRole::ListBoxOption
+                    && n.label.as_deref() == Some("Alpha"))),
+            "disabled select should keep listbox options hidden"
+        );
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        assert!(
+            !trigger.flags.expanded,
+            "disabled select should not expose expanded trigger semantics"
+        );
     }
 
     #[test]

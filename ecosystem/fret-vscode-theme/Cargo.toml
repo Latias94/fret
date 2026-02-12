@@ -1,0 +1,17 @@
+[package]
+name = "fret-vscode-theme"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[dependencies]
+fret-syntax = { path = "../fret-syntax", default-features = false }
+fret-ui = { path = "../../crates/fret-ui" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

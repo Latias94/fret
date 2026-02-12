@@ -1,11 +1,11 @@
 # ADR 0025: Viewport Input Forwarding Contract
 
-Status: Superseded (replaced by ADR 0147)
+Status: Superseded (replaced by ADR 0132)
 
 ## Context
 
 Note: this ADR described a legacy forwarding shape that has been removed. The implemented contract
-is ADR 0147 (`ViewportInputEvent` with explicit units + mapping geometry).
+is ADR 0132 (`ViewportInputEvent` with explicit units + mapping geometry).
 
 Fret embeds engine viewports as `SceneOp::ViewportSurface` (ADR 0007). A real editor also needs to
 forward input from the UI viewport widget to the host app/engine:

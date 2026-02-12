@@ -107,6 +107,19 @@ impl fret_core::SvgService for FakeTextService {
     }
 }
 
+impl fret_core::MaterialService for FakeTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 #[derive(Default)]
 struct FillStack;
 
@@ -145,9 +158,11 @@ mod canvas;
 mod command_hooks;
 mod core;
 mod element_state_gc;
+mod environment_queries;
 mod identity;
 mod interactions;
 mod layout;
+mod layout_queries;
 mod selection_indices;
 mod semantics;
 mod text_cache;

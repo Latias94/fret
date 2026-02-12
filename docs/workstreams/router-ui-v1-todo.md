@@ -1,6 +1,6 @@
 # Router UI v1 (Desktop Adoption) (Tracking)
 
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 This file tracks concrete work for:
 
@@ -38,6 +38,7 @@ Status legend:
 - `[x]` Add a `RouterOutlet` element wrapper (optional sugar):
   - renders by leaf route id (match chain)
   - supports a `NotFound` fallback
+- `[x]` Add app-owned `pending/error` outlet composition sugar (`RouterLeafStatus`, `RouterOutlet::into_element_by_leaf_with_status`).
 - `[x]` Add diagnostics hooks:
   - optional `test_id` (`router_outlet_with_test_id`, `RouterOutlet::test_id`, `router_link_with_test_id`)
   - last transition is surfaced via `RouterUiSnapshot::last_transition`
@@ -65,4 +66,21 @@ Status legend:
 - `[x]` Adopt in one desktop app:
   - show match-driven outlet rendering
   - show typed navigation via `navigate_to_*` + typed search helpers
-- `[x]` Add a `fretboard diag` script for a basic navigation flow (`tools/diag-scripts/router-query-demo-basic-nav.json`).
+- `[x]` Add `fretboard diag` scripts for basic navigation flows:
+  - `tools/diag-scripts/router-query-demo-basic-nav.json`
+  - `tools/diag-scripts/router-query-demo-back-forward.json`
+- `[x]` Register recommended router commands (optional):
+  - `router.back`
+  - `router.forward`
+
+## Phase 5 - Link semantics conformance (ADR 0241)
+
+- `[x]` Define the minimal v1 Link semantics contract (ADR 0241).
+- `[x]` Add a `Pressable` configuration seam for activation key policy (Link = Enter-only).
+- `[x]` Update `fret-router-ui` link helpers to:
+  - stamp `SemanticsRole::Link`
+  - stamp `SemanticsNode.value = href` via `SemanticsDecoration.value(href)`
+  - use Link activation key policy
+- `[x]` Add unit tests covering:
+  - Link activation ignores Space
+  - Link activation works for Enter/NumpadEnter

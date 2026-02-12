@@ -1,23 +1,34 @@
 use crate::{
-    Px, SvgFit,
+    Px, SvgFit, ViewportFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
+mod composite;
 mod fingerprint;
+mod image_object_fit;
+mod mask;
+mod paint;
 mod replay;
 mod validate;
 
+pub use composite::{BlendMode, CompositeGroupDesc};
 use fingerprint::mix_scene_op;
+pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
+pub use mask::Mask;
+pub use paint::{
+    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
+    TileMode,
+};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DrawOrder(pub u32);
 
 // `DrawOrder` is intentionally non-semantic for compositing. Scene operation order is authoritative.
-// See `docs/adr/0082-draworder-is-non-semantic.md`.
+// See `docs/adr/0081-draworder-is-non-semantic.md`.
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Color {
@@ -46,7 +57,7 @@ pub enum EffectMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffectQuality {
-    /// Renderer-chosen quality within budgets (ADR 0120).
+    /// Renderer-chosen quality within budgets (ADR 0118).
     Auto,
     Low,
     Medium,
@@ -69,12 +80,39 @@ pub enum EffectStep {
         brightness: f32,
         contrast: f32,
     },
+    ColorMatrix {
+        m: [f32; 20],
+    },
+    AlphaThreshold {
+        cutoff: f32,
+        soft: f32,
+    },
     Pixelate {
         scale: u32,
     },
     Dither {
         mode: DitherMode,
     },
+}
+
+impl EffectStep {
+    pub fn sanitize(self) -> Self {
+        match self {
+            EffectStep::ColorMatrix { mut m } => {
+                for v in &mut m {
+                    if !v.is_finite() {
+                        *v = 0.0;
+                    }
+                }
+                EffectStep::ColorMatrix { m }
+            }
+            EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
+                cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
+                soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },
+            },
+            other => other,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -107,6 +145,14 @@ impl EffectChain {
 
     pub fn iter(&self) -> impl Iterator<Item = EffectStep> + '_ {
         self.steps.iter().copied().flatten()
+    }
+
+    pub fn sanitize(self) -> Self {
+        let mut out = self;
+        for step in &mut out.steps {
+            *step = step.map(EffectStep::sanitize);
+        }
+        out
     }
 }
 
@@ -149,7 +195,7 @@ impl SceneRecording {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 mut corner_radii,
             } => {
                 let max = rect.size.width.0.min(rect.size.height.0) * 0.5;
@@ -162,12 +208,23 @@ impl SceneRecording {
                 SceneOp::Quad {
                     order,
                     rect,
-                    background,
+                    background: background.sanitize(),
                     border,
-                    border_color,
+                    border_paint: border_paint.sanitize(),
                     corner_radii,
                 }
             }
+            SceneOp::PushEffect {
+                bounds,
+                mode,
+                chain,
+                quality,
+            } => SceneOp::PushEffect {
+                bounds,
+                mode,
+                chain: chain.sanitize(),
+                quality,
+            },
             other => other,
         };
 
@@ -219,6 +276,13 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_mask<T>(&mut self, bounds: Rect, mask: Mask, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push(SceneOp::PushMask { bounds, mask });
+        let out = f(self);
+        self.push(SceneOp::PopMask);
+        out
+    }
+
     pub fn with_effect<T>(
         &mut self,
         bounds: Rect,
@@ -235,6 +299,17 @@ impl SceneRecording {
         });
         let out = f(self);
         self.push(SceneOp::PopEffect);
+        out
+    }
+
+    pub fn with_composite_group<T>(
+        &mut self,
+        desc: CompositeGroupDesc,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushCompositeGroup { desc });
+        let out = f(self);
+        self.push(SceneOp::PopCompositeGroup);
         out
     }
 
@@ -303,8 +378,15 @@ pub enum SceneOp {
     },
     PopClip,
 
+    PushMask {
+        /// Computation bounds (not an implicit clip), see ADR 0239.
+        bounds: Rect,
+        mask: Mask,
+    },
+    PopMask,
+
     PushEffect {
-        /// Computation bounds (not an implicit clip), see ADR 0119.
+        /// Computation bounds (not an implicit clip), see ADR 0117.
         bounds: Rect,
         mode: EffectMode,
         chain: EffectChain,
@@ -312,12 +394,17 @@ pub enum SceneOp {
     },
     PopEffect,
 
+    PushCompositeGroup {
+        desc: CompositeGroupDesc,
+    },
+    PopCompositeGroup,
+
     Quad {
         order: DrawOrder,
         rect: Rect,
-        background: Color,
+        background: Paint,
         border: Edges,
-        border_color: Color,
+        border_paint: Paint,
         corner_radii: Corners,
     },
 
@@ -325,6 +412,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         image: ImageId,
+        fit: ViewportFit,
         opacity: f32,
     },
 
@@ -416,9 +504,9 @@ mod tests {
         let ops = [SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
-            background: Color::TRANSPARENT,
+            background: Paint::Solid(Color::TRANSPARENT),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         }];
 
@@ -572,9 +660,9 @@ mod tests {
                 Point::new(Px(f32::NAN), Px(0.0)),
                 Size::new(Px(10.0), Px(10.0)),
             ),
-            background: Color::TRANSPARENT,
+            background: Paint::Solid(Color::TRANSPARENT),
             border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
+            border_paint: Paint::Solid(Color::TRANSPARENT),
             corner_radii: Corners::all(Px(0.0)),
         });
         assert!(matches!(

@@ -67,8 +67,8 @@ This ADR adopts ADR 0044’s index representation:
 
 Geometry queries must not require rasterizing glyph images.
 
-Implementations are expected to compute caret/hit-test data from the shaping/layout results (e.g. `cosmic-text`
-layout glyph clusters), and cache them on the blob where appropriate.
+Implementations are expected to compute caret/hit-test data from the shaping/layout results (e.g. line layout clusters),
+and cache them on the blob where appropriate.
 
 ## API Shape (Core Contract)
 
@@ -100,7 +100,7 @@ Notes:
 ## Implementation Notes (Current Workspace)
 
 - Renderer provides geometry queries by caching caret stops on prepared blobs:
-  - `crates/fret-render-wgpu/src/text.rs`
+  - `crates/fret-render-wgpu/src/text/mod.rs`
   - `crates/fret-render-wgpu/src/renderer/mod.rs`
 - TextInput uses caret-stop tables for event hit-testing and uses `caret_x` for painting/cursor area:
   - `crates/fret-ui/src/text_input/mod.rs`

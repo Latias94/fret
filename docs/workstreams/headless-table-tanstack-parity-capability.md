@@ -19,7 +19,92 @@ Legend:
 - **Partial**: implemented, but lacks option/edge-case parity coverage.
 - **Missing**: no equivalent capability surface yet.
 
-Last updated: 2026-02-08
+Last updated: 2026-02-09
+
+---
+
+## Current status (capability, not API-shape)
+
+- All major feature outcomes for the baseline upstream stamp are fixture-gated under
+  `ecosystem/fret-ui-headless/tests/tanstack_v8_*` and (where relevant) UI-level diag scripts under
+  `tools/diag-scripts/ui-gallery-*-table-*.json`.
+- Items marked **Partial** in this document are typically **API-shape differences** (TanStack mutates instance objects;
+  Fret rebuilds a pure `Table` from `TableState` + `TableOptions`) or “edge-case breadth” that can be promoted to
+  **Aligned** by adding a focused fixture + gate when a consumer needs it.
+- Snapshot-first rule: when a capability is “UI query heavy” (widths/starts, pin-family splits), prefer adding it to
+  `CoreModelSnapshot` so UI consumers do not drift. Track new snapshot inventories under `HTP-core-041`.
+
+## Core instance surface (Table/Row/Column/Header/Cell)
+
+This section turns the upstream “core” public instance surfaces into an explicit capability
+checklist. The goal is to ensure Fret is **not weaker** than TanStack `table-core` even if we do not
+mirror the exact JS instance object model.
+
+Upstream source of truth:
+
+- `repo-ref/table/packages/table-core/src/core/table.ts`
+- `repo-ref/table/packages/table-core/src/core/row.ts`
+- `repo-ref/table/packages/table-core/src/core/column.ts`
+- `repo-ref/table/packages/table-core/src/core/headers.ts`
+- `repo-ref/table/packages/table-core/src/core/cell.ts`
+
+Mapping conventions:
+
+- When TanStack exposes instance methods on `table/row/column/header/cell`, Fret may express the
+  same capability via:
+  - a pure derived model (`RowModel`, header groups, column ordering),
+  - a snapshot (`CoreModelSnapshot`),
+  - or a targeted helper on `Table` that returns the observable outcome.
+- When the capability is “UI query heavy” (widths/starts, pin-family splits), prefer the
+  snapshot-style inventories to prevent consumers from re-computing and drifting.
+
+### Table core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `table.getAllColumns()` | `Table::{column_tree,column_tree_snapshot}` (nested `ColumnDef` tree + snapshot) | Aligned | `headers_inventory_deep.json` |
+| `table.getAllFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (helper) | Aligned | `visibility_ordering.json` + `tanstack_v8_visibility_ordering_parity.rs` |
+| `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
+| `table.getColumn(columnId)` | `Table::column_any(column_id)` (group or leaf) + `Table::column(column_id)` (leaf-only fast path) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_any`) |
+| `table.getCoreRowModel()` | `Table::core_row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRowModel()` | `Table::row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRow(rowId, searchAll?)` | `Table::row_by_id(row_id, search_all)` | Aligned | `row_id_lookup.json` + `tanstack_v8_row_id_lookup_parity.rs` |
+| `table.getState()` | `Table::state()` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
+| `table.options.renderFallbackValue` | `Table::render_fallback_value()` + `Table::cell_render_value(..)` | Aligned | `render_fallback.json` |
+| `table._queue(cb)` (auto-reset scheduling) | `TanStackAutoResetQueue` (explicit register-first + coalesced auto-reset queue) | Aligned | `auto_reset.json`, `auto_reset_queue.json` + `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` |
+| `table.getTotalSize()/getLeftTotalSize()/getCenterTotalSize()/getRightTotalSize()` | `CoreModelSnapshot.leaf_column_sizing.sizing.{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json` + `tanstack_v8_headers_cells_parity.rs`, `tanstack_v8_headers_inventory_deep_parity.rs`, `tanstack_v8_visibility_ordering_parity.rs` |
+
+### Row core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `row.id/index/depth/parentId/subRows` | `RowModel` arena fields | Aligned | `selection_tree.json` + `tanstack_v8_selection_tree_parity.rs` |
+| `row.getLeafRows()` | `RowModel::leaf_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getParentRow()/getParentRows()` | `RowModel::parent_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |
+| `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
+| `row.getAllCells()` | `CoreModelSnapshot.cells[row_id]` (preferred) + `Table::row_cells(row_key)` (helper) | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
+| `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |
+
+### Column core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `column.id/depth/parent/columns` | `CoreModelSnapshot.column_tree` (preferred) + `Table::column_tree()` | Aligned | `headers_inventory_deep.json` |
+| `column.getFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (table-level equivalent) | Aligned | `visibility_ordering.json` |
+| `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Aligned | `visibility_ordering.json` |
+| `column.getSize()/getStart()/getAfter()` | `CoreModelSnapshot.leaf_column_sizing` inventories keyed by **leaf column id** (`size`, `start`, `after`) | Aligned | `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json` + `tanstack_v8_headers_cells_parity.rs`, `tanstack_v8_headers_inventory_deep_parity.rs`, `tanstack_v8_visibility_ordering_parity.rs` |
+
+### Header + cell core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| Header groups (`getHeaderGroups`, pin-family variants) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
+| Flat/leaf/footer inventories | `Table::{flat_headers,leaf_headers,footer_groups}` (+ pin-family variants) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `header.getSize()/getStart()` | `CoreModelSnapshot.header_sizing` (versioned inventory by header id) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.id` | `CoreModelSnapshot.cells[*].{all,visible,left,center,right}[].id` | Aligned | `headers_cells.json` |
+| `cell.getIsGrouped/isPlaceholder/isAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.getValue()/renderValue()` | `Table::{cell_value,cell_render_value}` | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`, `render_fallback.json` |
 
 ---
 
@@ -38,13 +123,18 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
     Update: fold **header sizing** (`header.getSize/getStart`) into the core snapshot as a versioned inventory keyed
     by header id, so UI consumers do not re-compute starts/sizes and drift under pin-family splits.
     Parity gate: `headers_cells.json`, `headers_inventory_deep.json` (`core_model.header_sizing`).
+    Update: fold **leaf column sizing** (`column.getSize/getStart/getAfter` + `table.getTotalSize` pin-family variants)
+    into the core snapshot as a versioned inventory keyed by leaf column id, so UI consumers do not re-compute
+    leaf starts/afters and drift under pin-family splits.
+    Parity gate: `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json`
+    (`core_model.leaf_column_sizing`, `core_model.schema_version: 4`).
     Remaining: expand the same approach across header/cell capabilities (and decide the minimal row surface).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:
   - Closed (initial): a documented + gated integration pattern exists for “rebuild per frame, keep memo cache”
     for the filtered+sorted flat root-row ordering (plus a large-dataset guardrail test).
-  - Remaining: lift the same memo strategy across the full derived model pipeline (filtered/sorted/expanded/paginated).
-  - Tracking: `HTP-memo-010` (remaining scope).
+  - Closed (ungrouped pipeline): rebuild-each-frame guardrails cover filtered/sorted/expanded/paginated row ordering.
+  - Tracking: follow-up only if grouped row model needs the same memo guarantees.
 
 **P1 (should close to match upstream ergonomics without copying the JS API):**
 
@@ -59,18 +149,38 @@ Recently closed (no longer a gap):
 
 ---
 
-## Consumer-driven “must-have” surface (WIP)
+## Consumer-driven “must-have” surface
 
 Before we chase 1:1 instance method parity, we track what our current UI consumers *actually* need, so we can ensure
 we are not weaker than upstream while keeping the Rust surface idiomatic.
 
 - `fret-ui-kit` virtualized table: `ecosystem/fret-ui-kit/src/declarative/table.rs`
   - Uses the engine as a pure derived-model provider (build `Table`, read row models, compute rendering).
-  - Currently calls into: `Table::{core_row_model,pre_pagination_row_model,grouped_row_model,top_row_keys,center_row_keys,bottom_row_keys}`
-    plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
-- `fret-ui-shadcn` DataTable: (TODO) identify the minimal required engine surface once it is wired to `fret-ui-headless`.
-  - Note: current `fret-ui-shadcn` `DataTable*` recipes primarily mutate `TableState` directly
-    (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`) and rely on `fret-ui-kit` for rendering.
+  - Currently calls into:
+    - `Table::{core_row_model,row_model,pre_pagination_row_model,grouped_row_model}`
+    - `Table::{top_row_keys,center_row_keys,bottom_row_keys}` (row pinning display split)
+    - `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` (column pinning leaf splits)
+    - `pagination_bounds(..)` (pagination clamping)
+    - plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
+- `fret-ui-shadcn` DataTable (shadcn/ui-style “business table” integration surface):
+  - Implementation: `ecosystem/fret-ui-shadcn/src/data_table.rs` (renders via `fret-ui-kit::declarative::table::table_virtualized`)
+  - Recipes: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar`, `DataTablePagination`)
+  - Current must-have surfaces (what consumers rely on today):
+    - `TableState` semantics:
+      - `global_filter`: consumer-facing input normalizes whitespace and uses `None` for “empty”.
+      - `column_visibility`: omitted keys mean “visible”; storing `false` means “hidden”.
+      - `pagination.{page_index,page_size}`: filter/visibility changes reset `page_index` to `0`.
+      - `row_selection`: toolbar displays selected count (selection itself is gated by TanStack fixtures).
+      - `sorting`: header UI indicates asc/desc (sorting semantics are fixture-gated).
+      - `column_sizing` + `column_sizing_info`: resizing interactions (starts/after/total sizes) are fixture-gated.
+      - `column_pinning` + `row_pinning`: not yet exposed by the shadcn DataTable recipes, but already used by
+        `fret-ui-kit` and parity-gated (must remain available for future shadcn parity).
+    - `TableViewOutput.pagination`:
+      - produced by `fret-ui-kit`’s virtualized table and consumed by shadcn pagination controls
+        (`DataTablePagination` expects `page_count`, `can_prev/can_next`, and `page_index` bounds to be stable).
+  - Gate coverage:
+    - `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` unit tests lock down the consumer-driven page-reset rules.
+    - Headless engine fixtures gate the underlying interactions relied on by DataTable (sizing/pinning/sorting/filtering).
 
 ---
 
@@ -113,15 +223,15 @@ Source of truth:
 | `getCoreRowModel` | `Table::core_row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRowModel` | `Table::row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRow(id, searchAll?)` | `Table::row_by_id(..)` / `Table::row_key_for_id(..)` (+ `rows_by_id` parity gate) | Aligned | `tanstack_v8_row_id_lookup_parity.rs` |
-| `getState` | `TableState` passed into `Table::builder().state(..)` (engine is pure) | Partial | state roundtrip gates exist, but not a full instance-style API |
-| `reset/setState/setOptions` | Rust-native: build new `Table` with new `TableState`/`TableOptions` | Partial | N/A (API-shape differs by design) |
+| `getState` | `Table::state()` (engine is pure; state is externally owned) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
+| `reset/setState/setOptions` | Reset helpers (`Table::reset_*`) + rebuild `Table` with updated `TableState`/`TableOptions` | Aligned | `resets.json` + `tanstack_v8_resets_parity.rs` |
 
 ### Row (CoreRow)
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
-| `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
+| `getValue/getUniqueValues/renderValue` | `Table::{cell_value,row_unique_values,cell_render_value}` (+ `renderFallbackValue`) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`, `render_fallback.json` |
 | `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
@@ -129,14 +239,14 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `id/parent/depth/columns` | `ColumnDef` nested columns + `column_tree` snapshot | Partial | `tanstack_v8_headers_cells_parity.rs` |
-| `getFlatColumns/getLeafColumns` | `Table` core model snapshot leaf sets | Partial | `tanstack_v8_headers_cells_parity.rs` |
+| `id/parent/depth/columns` | `CoreModelSnapshot.column_tree` + `Table::column_tree_snapshot()` | Aligned | `headers_inventory_deep.json` |
+| `getFlatColumns/getLeafColumns` | `CoreModelSnapshot.flat_columns` + `CoreModelSnapshot.leaf_columns` | Aligned | `visibility_ordering.json`, `headers_inventory_deep.json` |
 
 ### Header / Cell (core)
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `getHeaderGroups` (+ pin variants) | `build_header_groups` + `Table::header_groups_snapshot`-style surfaces | Partial | `tanstack_v8_headers_cells_parity.rs` |
+| `getHeaderGroups` (+ pin variants) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | Header placeholder semantics | `HeaderSnapshot.is_placeholder/placeholder_id` | Aligned | `headers_cells.json` parity |
 | Cell id `${rowId}_${columnId}` | `CellSnapshot.id` | Aligned | `headers_cells.json` parity |
 
@@ -228,7 +338,7 @@ Source of truth:
 | `setPageIndex/setPageSize` | `Table::{set_page_index,set_page_size}` (+ updater variants) | Aligned | `pagination.json` |
 | `nextPage/previousPage/firstPage/lastPage` | `Table::{next_page,previous_page,first_page,last_page}` | Aligned | `pagination.json` |
 | `resetPageIndex/resetPageSize/resetPagination` | `Table::{reset_page_index,reset_page_size,reset_pagination}` | Aligned | `pagination.json` |
-| Auto-reset `_queue` behavior | modeled via state-transition parity gates (not a first-class runtime queue) | Partial | `auto_reset.json` |
+| Auto-reset `_queue` behavior | `TanStackAutoResetQueue` (explicit, pass-scoped flush) | Aligned | `auto_reset.json`, `auto_reset_queue.json` |
 
 ---
 
@@ -293,9 +403,9 @@ Source of truth:
 | --- | --- | --- | --- |
 | Column ordering state + reset | `Table::{column_order,reset_column_order,toggled_column_order_move}` | Aligned | `visibility_ordering.json`, `resets.json` |
 | Column visibility state + toggle + reset | `Table::{column_visibility,is_column_visible,toggled_column_visibility,toggled_all_columns_visible,reset_column_visibility}` | Aligned | `visibility_ordering.json`, `resets.json` |
-| Visible ordered columns | `Table::{ordered_columns,visible_columns,pinned_visible_columns}` | Partial | visibility+ordering+pinning are fixture-gated; expand API inventory as needed |
+| Visible ordered columns | Prefer snapshot inventories (`CoreModelSnapshot.leaf_columns.visible` + pin-family splits) and `Table::{ordered_columns,visible_columns,pinned_visible_columns}` helpers | Aligned | `visibility_ordering.json`, `column_pinning.json` |
 | Column sizing totals + start/after offsets | `Table::{total_size,left_total_size,center_total_size,right_total_size,column_start,column_after}` | Aligned | `column_sizing.json`, `visibility_ordering.json` |
-| Resize lifecycle (`onChange`/`onEnd`, RTL) | `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `columnSizingInfo` state | Partial | `column_sizing.json`, `column_resizing_group_headers.json` |
+| Resize lifecycle (`onChange`/`onEnd`, RTL) | `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `columnSizingInfo` state | Aligned | `column_sizing.json`, `column_sizing_interactions.json`, `column_resizing_group_headers.json` |
 
 ---
 
@@ -309,7 +419,62 @@ Source of truth:
 | Upstream capability | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `column.getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
-| “Global faceting” (`__global__`) surface | not first-class; current fixtures only assert empty/null globals (TanStack built-ins warn) | Partial | `faceting.json` |
+| “Global faceting” (`__global__`) surface | `Table::{global_faceted_row_model,global_faceted_unique_values,global_faceted_min_max_u64}` + builder overrides (`TableBuilder::get_global_faceted_*`) | Aligned | `faceting.json` + `tanstack_v8_faceting_parity.rs` |
+
+---
+
+## Reset + auto-reset (cross-feature obligations)
+
+Source of truth:
+
+- `table-core/src/core/table.ts` (reset wiring)
+- `table-core/src/features/*` (feature-specific `reset*` + `autoReset*` options)
+
+| Upstream API / behavior | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `resetSorting(defaultState?)` | `Table::reset_sorting(default_state)` | Aligned | `resets.json` + sorting fixtures |
+| `resetColumnFilters(defaultState?)` | `Table::reset_column_filters(default_state)` | Aligned | `resets.json` + filtering fixtures |
+| `resetGlobalFilter(defaultState?)` | `Table::reset_global_filter(default_state)` | Aligned | `resets.json` + filtering fixtures |
+| `resetGrouping(defaultState?)` | `Table::reset_grouping(default_state)` | Aligned | `resets.json` + `grouping.json` |
+| `resetExpanded(defaultState?)` | `Table::reset_expanded(default_state)` | Aligned | `resets.json` + `expanding.json` |
+| `resetPagination(defaultState?)` / `resetPageIndex` / `resetPageSize` | `Table::{reset_pagination,reset_page_index,reset_page_size}` | Aligned | `resets.json` + `pagination.json` |
+| `resetRowSelection(defaultState?)` | `Table::reset_row_selection(default_state)` | Aligned | `resets.json` + selection fixtures |
+| `resetRowPinning(defaultState?)` | `Table::reset_row_pinning(default_state)` | Aligned | `resets.json` + `pinning.json` |
+| `resetColumnPinning(defaultState?)` | `Table::reset_column_pinning(default_state)` | Aligned | `resets.json` + `column_pinning.json` |
+| `resetColumnVisibility(defaultState?)` | `Table::reset_column_visibility(default_state)` | Aligned | `resets.json` + `visibility_ordering.json` |
+| `resetColumnOrder(defaultState?)` | `Table::reset_column_order(default_state)` | Aligned | `resets.json` + `visibility_ordering.json` |
+| `resetColumnSizing(defaultState?)` / `resetColumnSize(columnId)` | `Table::{reset_column_sizing,reset_column_size}` | Aligned | `resets.json` + `column_sizing.json` |
+| `resetColumnSizingInfo(defaultState?)` | `Table::reset_header_size_info(default_state)` (TanStack `columnSizingInfo` mapping) | Aligned | `resets.json` + `column_sizing.json` |
+| Auto-reset scheduling (`autoResetAll`, `autoResetExpanded`, `autoResetPageIndex`, etc.) | `TanStackAutoResetQueue` + `Table::should_auto_reset_*` gates | Aligned | `auto_reset.json`, `auto_reset_queue.json` + `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` |
+
+### Observable internals (underscore-prefixed)
+
+These are not “public API” in the JS sense, but they correspond to user-observable behavior
+(reset coalescing, derived model override wiring, memo/perf drift). We track them explicitly so we
+stay capability-complete without copying the upstream object model.
+
+| Upstream internal | Observable obligation | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| `table._features` | internal plugin architecture (not observable if outcomes are gated) | Not mapped (Fret has no runtime feature plugin system) | N/A | N/A |
+| `table._getColumnDefs` | column-def inventory is a derived input to all features | `Table::column_tree()` / `CoreModelSnapshot.column_tree` | Aligned | `headers_inventory_deep.json`, `headers_cells.json` |
+| `table._getDefaultColumnDef` | default column def merge behavior (observable via column sizing/filter defaults) | Not mapped (Rust `ColumnDef` is explicit) | N/A | N/A |
+| `table._getAllFlatColumnsById` | by-id cache used to speed `getColumn`/flat header traversal | `Table::column_any(..)` (O(n)) + snapshot inventories (consumers can build a map if needed) | Aligned | `headers_inventory_deep.json`, `visibility_ordering.json` |
+| `table._getOrderColumnsFn` | stable column ordering function influences header + row model behaviors | `order_columns(..)` + grouping ordering helpers | Aligned | `visibility_ordering.json`, `headers_cells.json` |
+| `table._getRowId` | `getRowId` hook is observable via row-id-keyed state + lookups | `TableBuilder::get_row_id(..)` + row-id fixtures | Aligned | `row_id_lookup.json`, `row_id_state_ops.json` |
+| `table._getCoreRowModel` | core row model is a feature dependency root | `Table::core_row_model()` | Aligned | `demo_process.json` |
+| `table._getFilteredRowModel` | filtered model override wiring is observable via outcomes | `Table::filtered_row_model()` (and override markers) | Aligned | `filtering_fns.json` |
+| `table._getGroupedRowModel` | grouped model override wiring is observable via outcomes | `Table::grouped_row_model()` (and override markers) | Aligned | `grouping.json` |
+| `table._getSortedRowModel` | sorted model override wiring is observable via outcomes | `Table::sorted_row_model()` (and override markers) | Aligned | `sorting_manual.json`, `sorting_fns.json` |
+| `table._getExpandedRowModel` | expanded model override wiring is observable via outcomes | `Table::expanded_row_model()` (and override markers) | Aligned | `expanding.json` |
+| `table._getPaginationRowModel` | paginated model override wiring is observable via outcomes | `Table::row_model()` (and override markers) | Aligned | `pagination.json` |
+| `table._getPinnedRows` | pinned row partition is observable via `getTop/Center/BottomRows` | `Table::{top_row_keys,center_row_keys,bottom_row_keys}` | Aligned | `pinning.json`, `pinning_tree.json` |
+| `table._getGlobalFacetedRowModel/_getGlobalFacetedUniqueValues/_getGlobalFacetedMinMaxValues` | global faceting is observable when consumers rely on it | `Table::{global_faceted_row_model,global_faceted_unique_values,global_faceted_min_max_u64}` + builder overrides | Aligned | `faceting.json` + `tanstack_v8_faceting_parity.rs` |
+| `table._queue(cb)` | coalesced auto-reset flush semantics across feature triggers | `TanStackAutoResetQueue` (explicit pass-scoped flush) | Aligned | `auto_reset.json`, `auto_reset_queue.json` |
+| `table._autoResetExpanded` / `table._autoResetPageIndex` | option-driven reset scheduling is *observable* (state transitions) | `Table::{should_auto_reset_expanded,should_auto_reset_page_index}` + queue | Aligned | `auto_reset.json`, `auto_reset_queue.json`, `grouping.json` snapshots |
+| `memo`-driven derived model caches | rebuild-each-frame callers must not regress into “full recompute per frame” | `TanStackUngroupedRowModelOrderCache` + guardrail recompute-count gates | Aligned (ungrouped) | `tanstack_v8_memo_rebuild_each_frame_*_gate.rs` |
+| `column._getFacetedRowModel/_getFacetedUniqueValues/_getFacetedMinMaxValues` | faceting internal caches must match observable outputs | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
+| `row._valuesCache/_uniqueValuesCache/_groupingValuesCache` | internal memo caches (not observable if outputs are gated) | Not mapped (Rust derived models are pure; perf gated separately) | N/A | N/A |
+| `row._getAllVisibleCells` | visible cell splits must match pinned/visibility semantics | `RowCellsSnapshot` (core snapshot) + `Table::row_cells(row_key)` | Aligned | `headers_cells.json`, `column_pinning.json` |
 
 ---
 
@@ -318,9 +483,10 @@ Source of truth:
 This inventory is intentionally incomplete. Next expansions (tracked in `HTP-cap-010` / `HTP-base-004`):
 
 - Header/footer/flat/leaf header inventories under visibility + pinning + nested columns (deep nesting + edge cases).
-  - Next concrete: close `HTP-core-050` with fixture parity for flat/leaf/footer inventories.
 - Fill in missing “column/row instance method” helpers where consumers should not have to reimplement logic (e.g. `getCanFilter`-style gates).
 - Global faceting instance surface (`getGlobalFaceted*`) if/when consumers need it.
+- Classify the appendix inventory into **public** vs **observable internals**, and link each item to a checklist row
+  (or document why it is intentionally not mapped in Fret).
 
 ---
 
@@ -724,6 +890,9 @@ Legend:
 | `firstPage/previousPage/nextPage/lastPage` | `Table::{first_page,previous_page,next_page,last_page}` (pure `PaginationState` transitions) | Aligned | `pagination.json`, `tanstack_v8_pagination_parity.rs` |
 | `getCanPreviousPage/getCanNextPage` | `Table::{can_previous_page,can_next_page}` | Aligned | `pagination.json` |
 | `getPageCount/getRowCount/getPageOptions` | `Table::{page_count,row_count,page_options}` | Aligned | `pagination.json` |
+| `setPageIndex/setPageSize` | `Table::{set_page_index,set_page_size}` (pure `PaginationState` transitions; clamped by `options.pageCount`) | Aligned | `pagination.json`, `tanstack_v8_pagination_parity.rs` |
+| `setPagination` | mutate `TableState.pagination` (or apply `Updater<PaginationState>`) then rebuild | Partial | `pagination.json` (outcomes) |
+| `setPageCount` | rebuild with `TableOptions.page_count` | Partial | `pagination.json` (manualPagination surfaces) |
 | `getCoreRowModel/getPreFilteredRowModel/getFilteredRowModel` | `Table::{core_row_model,pre_filtered_row_model,filtered_row_model}` | Aligned | `demo_process.json`, `filtering_fns.json` |
 | `getPreSortedRowModel/getSortedRowModel` | `Table::{pre_sorted_row_model,sorted_row_model}` | Aligned | `sorting_fns.json`, `sort_undefined.json` |
 | `getPreExpandedRowModel/getExpandedRowModel` | `Table::{pre_expanded_row_model,expanded_row_model}` | Aligned | `expanding.json` |
@@ -731,35 +900,63 @@ Legend:
 | `getPreGroupedRowModel/getGroupedRowModel` | `Table::{pre_grouped_row_model,grouped_row_model}` | Aligned | `grouping.json` |
 | `getSelectedRowModel/getFilteredSelectedRowModel/getGroupedSelectedRowModel` | `Table::{selected_row_model,filtered_selected_row_model,grouped_selected_row_model}` | Aligned | `selection.json`, `selection_tree.json` |
 | `getPreSelectedRowModel` | `Table::pre_selected_row_model()` | Aligned | `selection.json`, `selection_tree.json` |
+| `getRow(rowId, searchAll?)` | `Table::row_by_id(row_id, search_all)` | Aligned | `row_id_lookup.json`, `tanstack_v8_row_id_lookup_parity.rs` |
 | `getIsAllRowsSelected/getIsSomeRowsSelected/getIsAllPageRowsSelected/getIsSomePageRowsSelected` | `Table::{is_all_rows_selected,is_some_rows_selected,is_all_page_rows_selected,is_some_page_rows_selected}` | Aligned | `selection.json`, `selection_tree.json` |
 | `toggleAllRowsSelected/toggleAllPageRowsSelected` | `Table::{toggled_all_rows_selected,toggled_all_page_rows_selected}` (state transitions) | Aligned | `selection.json`, `selection_tree.json` |
+| `getToggleAllRowsSelectedHandler/getToggleAllPageRowsSelectedHandler` | consumer-owned UI events + `Table::{toggled_all_rows_selected,toggled_all_page_rows_selected}` | Partial | selection fixtures gate outcomes |
 | `getIsAllRowsExpanded/getIsSomeRowsExpanded/getCanSomeRowsExpand` | `Table::{is_all_rows_expanded,is_some_rows_expanded,can_some_rows_expand}` | Aligned | `expanding.json` |
 | `toggleAllRowsExpanded` | `Table::toggled_all_rows_expanded(value)` | Aligned | `expanding.json` |
+| `getToggleAllRowsExpandedHandler` | consumer-owned UI events + `Table::toggled_all_rows_expanded(value)` | Partial | `expanding.json` (outcomes) |
 | `getExpandedDepth` | `Table::expanded_depth()` | Partial | unit gate: `row_expanding.rs` (`expanded_depth_tracks_max_depth_plus_one`) |
 | `getTopRows/getCenterRows/getBottomRows` | `Table::{top_row_keys,center_row_keys,bottom_row_keys}` + row lookup | Aligned | `pinning.json` |
 | `getIsSomeRowsPinned` | `Table::is_some_rows_pinned(position)` | Aligned | `pinning.json` |
-| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column_any}` (+ `column_tree_snapshot/column_node_snapshot`) | Aligned | `headers_inventory_deep.json`, `headers_cells.json` |
-| `getVisibleLeafColumns` (+ left/center/right) | `CoreModelSnapshot.leaf_columns.*` | Aligned | `headers_cells.json` |
-| `getLeft/Center/RightLeafColumns` | `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` | Aligned | `column_pinning.json` |
-| `getHeaderGroups` (+ left/center/right) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` |
-| `getFooterGroups` (+ left/center/right) | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Aligned | `headers_cells.json` |
-| `getFlatHeaders` (+ left/center/right) | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Aligned | `headers_cells.json` |
-| `getLeafHeaders` (+ left/center/right) | `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
-| `getTotalSize` (+ left/center/right) | `Table::{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `column_sizing.json` |
+| `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,all_flat_columns,ordered_columns,column_any}` (+ core snapshot inventories) | Aligned | `headers_inventory_deep.json`, `visibility_ordering.json` |
+| `getVisibleFlatColumns/getVisibleLeafColumns` | core snapshot inventories: `CoreModelSnapshot.flat_columns.visible` + `CoreModelSnapshot.leaf_columns.visible` | Aligned | `visibility_ordering.json`, `headers_cells.json` |
+| `getLeftLeafColumns/getCenterLeafColumns/getRightLeafColumns` | `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` (pin split; ignores visibility) | Aligned | `column_pinning.json` |
+| `getLeftVisibleLeafColumns/getCenterVisibleLeafColumns/getRightVisibleLeafColumns` | `CoreModelSnapshot.leaf_columns.{left_visible,center_visible,right_visible}` | Aligned | `headers_cells.json` |
+| `getHeaderGroups/getLeftHeaderGroups/getCenterHeaderGroups/getRightHeaderGroups` | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` |
+| `getFooterGroups/getLeftFooterGroups/getCenterFooterGroups/getRightFooterGroups` | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Aligned | `headers_cells.json` |
+| `getFlatHeaders/getLeftFlatHeaders/getCenterFlatHeaders/getRightFlatHeaders` | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Aligned | `headers_cells.json` |
+| `getLeafHeaders/getLeftLeafHeaders/getCenterLeafHeaders/getRightLeafHeaders` | `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
+| `getTotalSize/getLeftTotalSize/getCenterTotalSize/getRightTotalSize` | `Table::{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `column_sizing.json` |
 | `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
 | `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
-| `getVisibleFlatColumns/getAllFlatColumns` | `Table::{visible_flat_columns,all_flat_columns}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
+| `getToggleAllColumnsVisibilityHandler` | consumer-owned UI events + `Table::toggled_all_columns_visible(..)` (no JS handler surface) | Partial | `visibility_ordering.json` (outcomes) |
 | `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |
-| `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | currently not first-class; upstream built-ins often yield empty/null (fixture captures) | Partial | `faceting.json` |
+| `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | `Table::{global_faceted_row_model,global_faceted_unique_values,global_faceted_min_max_u64}` + builder overrides | Aligned | `faceting.json` + `tanstack_v8_faceting_parity.rs` |
 | `getState` | state is external (`TableState` owned by consumers) | Partial | state conversion + presence gates |
 | `initialState` | engine keeps `initial_state` to implement `reset_*`; not exposed as an instance property | Partial | reset fixtures (`resets.json`, feature fixtures) |
 | `options` | `Table::options()` returns `TableOptions` | Partial | smoke coverage; fixture gates cover behavior |
 | `rows` | `Table::row_model()` provides root/flat rows; no `table.rows` property | Partial | `demo_process.json` etc |
 | `setState/setOptions` | rebuild `Table` from `TableState`/`TableOptions` (pure engine design) | Partial | fixture gates exercise outcomes, not API shape |
-| `setSorting/setColumnFilters/setGlobalFilter/setPagination/...` | mutate `TableState` (or apply `Updater<T>`) then rebuild | Partial | fixtures gate derived outputs after state changes |
-| `resetSorting/resetColumnFilters/resetGlobalFilter/resetPagination/...` | `Table::reset_*` surfaces exist | Aligned | `resets.json` + feature fixtures |
+| `setSorting` | mutate `TableState.sorting` (or apply `Updater<SortingState>`) then rebuild | Partial | `demo_process.json`, `sorting_fns.json` |
+| `setColumnFilters` | mutate `TableState.column_filters` (or apply `Updater<ColumnFiltersState>`) then rebuild | Partial | `filtering_fns.json` |
+| `setGlobalFilter` | mutate `TableState.global_filter` (or apply `Updater<Option<Value>>`) then rebuild | Partial | `filtering_fns.json` |
+| `setExpanded` | mutate `TableState.expanding` (or apply `Updater<ExpandingState>`) then rebuild | Partial | `expanding.json` |
+| `setGrouping` | mutate `TableState.grouping` (or apply `Updater<GroupingState>`) then rebuild | Partial | `grouping.json` |
+| `setRowSelection` | mutate `TableState.row_selection` (or apply `Updater<RowSelectionState>`) then rebuild | Partial | `selection.json`, `selection_tree.json` |
+| `setRowPinning` | mutate `TableState.row_pinning` (or apply updater) then rebuild | Partial | `pinning.json`, `pinning_tree.json` |
+| `setColumnPinning` | mutate `TableState.column_pinning` (or apply updater) then rebuild | Partial | `column_pinning.json` |
+| `setColumnVisibility` | mutate `TableState.column_visibility` (or apply updater) then rebuild | Partial | `visibility_ordering.json` |
+| `setColumnOrder` | mutate `TableState.column_order` (or apply updater) then rebuild | Partial | `visibility_ordering.json` |
+| `setColumnSizing` | mutate `TableState.column_sizing` (or apply updater) then rebuild | Partial | `column_sizing.json` |
+| `setColumnSizingInfo` | mutate `TableState.column_sizing_info` (or apply updater) then rebuild | Partial | `column_sizing.json` |
+| `resetSorting` | `Table::reset_sorting(default_state)` | Aligned | `resets.json`, sorting fixtures |
+| `resetColumnFilters` | `Table::reset_column_filters(default_state)` | Aligned | `resets.json`, filtering fixtures |
+| `resetGlobalFilter` | `Table::reset_global_filter(default_state)` | Aligned | `resets.json`, filtering fixtures |
+| `resetGrouping` | `Table::reset_grouping(default_state)` | Aligned | `resets.json`, `grouping.json` |
+| `resetExpanded` | `Table::reset_expanded(default_state)` | Aligned | `resets.json`, `expanding.json` |
+| `resetPagination/resetPageIndex/resetPageSize` | `Table::{reset_pagination,reset_page_index,reset_page_size}` | Aligned | `resets.json`, `pagination.json` |
+| `resetRowSelection` | `Table::reset_row_selection(default_state)` | Aligned | `resets.json`, selection fixtures |
+| `resetRowPinning` | `Table::reset_row_pinning(default_state)` | Aligned | `resets.json`, `pinning.json` |
+| `resetColumnPinning` | `Table::reset_column_pinning(default_state)` | Aligned | `resets.json`, `column_pinning.json` |
+| `resetColumnVisibility` | `Table::reset_column_visibility(default_state)` | Aligned | `resets.json`, `visibility_ordering.json` |
+| `resetColumnOrder` | `Table::reset_column_order(default_state)` | Aligned | `resets.json`, `visibility_ordering.json` |
+| `resetColumnSizing` | `Table::reset_column_sizing(default_state)` | Aligned | `resets.json`, `column_sizing.json` |
+| `resetHeaderSizeInfo` | `Table::reset_header_size_info(default_state)` | Aligned | `resets.json`, `column_sizing.json` |
 | `toggleColumnSorting` | `Table::{toggled_column_sorting_tanstack,toggled_column_sorting_handler_tanstack}` (engine-owned policy helpers) | Aligned | `demo_process.json`, `tanstack_v8_parity.rs` |
+| `setRowType` | Not mapped (framework integration surface; no parity impact when outcomes are gated) | N/A | N/A |
 
 ### Column instance (public, non-underscore)
 
@@ -890,4 +1087,4 @@ and does not need to preserve method names, but the **capability must exist**.
 | `getIsGrouped/getIsPlaceholder/getIsAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `grouping_cells.json` |
 | `getValue` | `Table::cell_value(row_key, column_id)` | Partial | gated indirectly via sorting/filtering fixtures |
 | `renderValue` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
-| `getContext` | not modeled (Rust-native UI integration provides context separately) | Missing | N/A |
+| `getContext` | `Table::cell_context(row_key, column_id)` (snapshot: ids + keys) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |

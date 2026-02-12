@@ -245,6 +245,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 
                 let popover_open = models.popover_open.clone();
                 let dialog_open = models.dialog_open.clone();
+                let sonner = shadcn::Sonner::global(&mut *cx.app);
                 let popover_is_open = cx
                     .app
                     .models()
@@ -290,6 +291,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                             .into_element(cx)
                     },
                     |cx| {
+                        let sonner_for_dialog = sonner.clone();
                         let mut layout = fret_ui::element::LayoutStyle::default();
                         layout.size.width = fret_ui::element::Length::Fill;
                         layout.size.height = fret_ui::element::Length::Fill;
@@ -310,6 +312,21 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                         .into_element(cx),
                                     ])
                                     .into_element(cx),
+                                    shadcn::Button::new("Trigger toast (Sonner)")
+                                        .variant(shadcn::ButtonVariant::Secondary)
+                                        .test_id("dock-arb-sonner-trigger")
+                                        .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                            sonner_for_dialog.toast(
+                                                host,
+                                                action_cx.window,
+                                                shadcn::ToastRequest::new(
+                                                    "Toast while modal is open",
+                                                )
+                                                .duration(None)
+                                                .test_id("dock-arb-sonner-toast"),
+                                            );
+                                        }))
+                                        .into_element(cx),
                                     shadcn::DialogFooter::new(vec![
                                         shadcn::Button::new("Close")
                                             .variant(shadcn::ButtonVariant::Secondary)
@@ -392,6 +409,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                             .test_id("dock-arb-underlay-probe")
                             .into_element(cx),
                     );
+                    rows.push(shadcn::Toaster::new().into_element(cx));
                     rows.push(cx.text("Layers (paint order):"));
                     for line in layer_lines.iter().cloned() {
                         rows.push(cx.text(line));
@@ -432,9 +450,10 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),
             rect: draw_rect,
-            background: Color::TRANSPARENT,
+            background: fret_core::Paint::TRANSPARENT,
+
             border: Edges::all(Px(2.0)),
-            border_color,
+            border_paint: fret_core::Paint::Solid(border_color),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -1467,7 +1486,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
+                Some(&state.ui),
                 semantics_snapshot,
                 element_runtime,
             )
@@ -1546,13 +1565,14 @@ impl WinitAppDriver for DockingArbitrationDriver {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(10_000),
                 rect,
-                background: if synth.pressed {
+                background: fret_core::Paint::Solid(if synth.pressed {
                     Color { a: 0.25, ..red }
                 } else {
                     Color::TRANSPARENT
-                },
+                }),
                 border: Edges::all(Px(2.0)),
-                border_color: red,
+                border_paint: fret_core::Paint::Solid(red),
+
                 corner_radii: Corners::all(Px(2.0)),
             });
         }

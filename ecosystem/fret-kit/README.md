@@ -37,7 +37,7 @@ use fret_kit::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     fret_kit::run("hello", |_app, _window| (), |cx, _st| {
-        vec![shadcn::Label::new("Hello from Fret!").into_element(cx)].into()
+        shadcn::Label::new("Hello from Fret!").into_element(cx).into()
     })?;
     Ok(())
 }
@@ -81,4 +81,4 @@ Mapping (rough):
 - `fret_kit::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
-hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0107 / 0112).
+hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

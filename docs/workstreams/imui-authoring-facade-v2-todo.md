@@ -11,7 +11,7 @@ Related:
 
 - v1 baseline: `docs/workstreams/imui-authoring-facade-v1.md`
 - v1 tracker: `docs/workstreams/imui-authoring-facade-v1-todo.md`
-- unified patch chain ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- unified patch chain ADR: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - unified builder workstream: `docs/workstreams/unified-authoring-builder-v1.md`
 
 Legend:

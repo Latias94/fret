@@ -8,7 +8,7 @@ Contract references:
 - Typed token theming + theme resolution: `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - Baseline tokens + semantic alias bridge: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - Focus-visible + ring primitive semantics: `docs/adr/0061-focus-rings-and-focus-visible.md`
-- State-driven resolution (`WidgetStates`): `docs/adr/1158-state-driven-style-resolution-v1.md`
+- State-driven resolution (`WidgetStates`): `docs/adr/0219-state-driven-style-resolution-v1.md`
 - Style override surface patterns: `docs/shadcn-style-override-patterns.md`
 
 ## Goals

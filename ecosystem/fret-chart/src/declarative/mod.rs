@@ -4,9 +4,7 @@
 //! declarative `Canvas` element while wiring input through the `fret-ui-kit` canvas tool router.
 
 mod legend_overlay;
-mod multi_grid;
 mod panel;
 mod tooltip_overlay;
 
-pub use multi_grid::*;
 pub use panel::*;

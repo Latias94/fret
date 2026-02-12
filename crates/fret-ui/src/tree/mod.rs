@@ -130,6 +130,7 @@ struct Node<H: UiHost> {
     parent: Option<NodeId>,
     children: Vec<NodeId>,
     bounds: Rect,
+    bounds_written_paint_pass: u64,
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
@@ -208,6 +209,7 @@ impl<H: UiHost> Node<H> {
             parent: None,
             children: Vec::new(),
             bounds: Rect::default(),
+            bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             measure_cache: None,
             invalidation: InvalidationFlags {
@@ -1576,6 +1578,7 @@ pub struct UiTree<H: UiHost> {
     measure_stack: Vec<MeasureStackKey>,
     measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
     frame_arena: FrameArenaScratch,
+    paint_pass: u64,
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
@@ -1739,7 +1742,7 @@ impl LayoutNodeProfileState {
             node,
             pass_kind,
             bounds,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1800,7 +1803,7 @@ struct LayoutNodeProfileStackEntry {
     node: NodeId,
     pass_kind: crate::layout_pass::LayoutPassKind,
     bounds: Rect,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -1871,7 +1874,7 @@ impl MeasureNodeProfileState {
         self.stack.push(MeasureNodeProfileStackEntry {
             node,
             constraints,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1928,7 +1931,7 @@ impl MeasureNodeProfileState {
 struct MeasureNodeProfileStackEntry {
     node: NodeId,
     constraints: crate::layout_constraints::LayoutConstraints,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -2016,6 +2019,7 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_stack: Vec::new(),
             measure_cache_this_frame: HashMap::new(),
             frame_arena: FrameArenaScratch::default(),
+            paint_pass: 0,
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
@@ -2552,6 +2556,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_hotspot(
         &mut self,
         node: NodeId,
@@ -2587,6 +2592,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_reasons(
         &mut self,
         blob_missing: bool,
@@ -2992,15 +2998,27 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
-        self.debug_layout_engine_solves
-            .push(UiDebugLayoutEngineSolve {
-                root,
-                solve_time,
-                measure_calls,
-                measure_cache_hits,
-                measure_time,
-                top_measures,
-            });
+        // Keep bundles bounded: barrier layouts may solve many child roots in a single frame.
+        const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
+        let record = UiDebugLayoutEngineSolve {
+            root,
+            solve_time,
+            measure_calls,
+            measure_cache_hits,
+            measure_time,
+            top_measures,
+        };
+
+        let idx = self
+            .debug_layout_engine_solves
+            .iter()
+            .position(|h| h.solve_time < record.solve_time)
+            .unwrap_or(self.debug_layout_engine_solves.len());
+        self.debug_layout_engine_solves.insert(idx, record);
+        if self.debug_layout_engine_solves.len() > MAX_LAYOUT_ENGINE_SOLVES {
+            self.debug_layout_engine_solves
+                .truncate(MAX_LAYOUT_ENGINE_SOLVES);
+        }
     }
 
     pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
@@ -3262,6 +3280,42 @@ impl<H: UiHost> UiTree<H> {
         });
     }
 
+    pub(crate) fn sync_hit_test_gate_widget(&mut self, node: NodeId, hit_test: bool) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_HIT_TEST_GATE_SYNC").is_some() {
+            eprintln!("sync_hit_test_gate_widget: node={node:?} hit_test={hit_test}");
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_hit_test_gate(hit_test);
+        });
+    }
+
+    pub(crate) fn sync_focus_traversal_gate_widget(&mut self, node: NodeId, traverse: bool) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_FOCUS_TRAVERSAL_GATE_SYNC").is_some() {
+            eprintln!("sync_focus_traversal_gate_widget: node={node:?} traverse={traverse}");
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_focus_traversal_gate(traverse);
+        });
+    }
+
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;
@@ -3299,11 +3353,15 @@ impl<H: UiHost> UiTree<H> {
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            n.view_cache = ViewCacheFlags {
+            let next = ViewCacheFlags {
                 enabled,
                 contained_layout,
                 layout_definite,
             };
+            if n.view_cache == next {
+                return;
+            }
+            n.view_cache = next;
         }
     }
 
@@ -3518,9 +3576,7 @@ impl<H: UiHost> UiTree<H> {
         wrap: fret_core::TextWrap,
         max_width: Option<fret_core::Px>,
     ) -> Option<fret_core::Px> {
-        let Some(max_width) = max_width else {
-            return None;
-        };
+        let max_width = max_width?;
         Some(self.maybe_bucket_text_wrap_width(wrap, max_width))
     }
 
@@ -3541,10 +3597,15 @@ impl<H: UiHost> UiTree<H> {
             // where we want accurate layout and can accept the one-off cost.
             //
             // The env knob still takes precedence; this is only a default for the common
-            // "drag jitter" class.
+            // "drag jitter" class. Treat small-step as symmetric (back-and-forth resizes should
+            // keep the same policy/caches enabled).
             let small_step = self
                 .interactive_resize_last_bounds_delta
-                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0);
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                });
             if !small_step {
                 return width;
             }
@@ -3567,6 +3628,17 @@ impl<H: UiHost> UiTree<H> {
             }
             fret_core::TextWrap::None => width,
         }
+    }
+
+    pub(crate) fn interactive_resize_is_small_step(&self) -> bool {
+        self.interactive_resize_active()
+            && self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
+                })
     }
 
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
@@ -6085,6 +6157,101 @@ impl<H: UiHost> UiTree<H> {
         t.inverse().is_some().then_some(t)
     }
 
+    fn apply_vector(t: Transform2D, v: Point) -> Point {
+        Point::new(Px(t.a * v.x.0 + t.c * v.y.0), Px(t.b * v.x.0 + t.d * v.y.0))
+    }
+
+    pub(crate) fn map_window_point_to_node_layout_space(
+        &self,
+        target: NodeId,
+        window_pos: Point,
+    ) -> Option<Point> {
+        self.map_window_point_and_vector_to_node_layout_space(target, window_pos, None)
+            .map(|(p, _)| p)
+    }
+
+    pub(crate) fn map_window_vector_to_node_layout_space(
+        &self,
+        target: NodeId,
+        window_vec: Point,
+    ) -> Option<Point> {
+        self.map_window_point_and_vector_to_node_layout_space(
+            target,
+            Point::new(Px(0.0), Px(0.0)),
+            Some(window_vec),
+        )
+        .map(|(_, v)| v.unwrap_or(window_vec))
+    }
+
+    fn map_window_point_and_vector_to_node_layout_space(
+        &self,
+        target: NodeId,
+        mut mapped_pos: Point,
+        mut mapped_vec: Option<Point>,
+    ) -> Option<(Point, Option<Point>)> {
+        // Build the chain from target -> root, then walk root -> target.
+        let mut chain: Vec<NodeId> = Vec::new();
+        let mut cur = Some(target);
+        while let Some(id) = cur {
+            chain.push(id);
+            cur = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        if chain.is_empty() {
+            return None;
+        }
+        chain.reverse();
+
+        for (idx, &node) in chain.iter().enumerate() {
+            let is_target = idx == chain.len().saturating_sub(1);
+
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+
+            if let Some(inv) = prepaint
+                .and_then(|p| p.render_transform_inv)
+                .or_else(|| self.node_render_transform(node).and_then(|t| t.inverse()))
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(v) = mapped_vec {
+                    mapped_vec = Some(Self::apply_vector(inv, v));
+                }
+            }
+
+            if is_target {
+                break;
+            }
+
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+            if let Some(inv) = prepaint
+                .and_then(|p| p.children_render_transform_inv)
+                .or_else(|| {
+                    self.node_children_render_transform(node)
+                        .and_then(|t| t.inverse())
+                })
+            {
+                mapped_pos = inv.apply_point(mapped_pos);
+                if let Some(v) = mapped_vec {
+                    mapped_vec = Some(Self::apply_vector(inv, v));
+                }
+            }
+        }
+
+        Some((mapped_pos, mapped_vec))
+    }
+
     fn point_in_rounded_rect(bounds: Rect, radii: Corners, position: Point) -> bool {
         if !bounds.contains(position) {
             return false;
@@ -7534,6 +7701,21 @@ fn text_wrap_width_small_step_bucket_px() -> u8 {
             .and_then(|v| v.parse::<u8>().ok())
             .unwrap_or(32)
             .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_max_dw_px() -> u8 {
+    static MAX_DW: OnceLock<u8> = OnceLock::new();
+    *MAX_DW.get_or_init(|| {
+        // Default: 64px. This defines what “small-step” means for the default interactive-resize
+        // wrap-width bucketing. Increasing this makes the bucketing kick in at higher live-resize
+        // speeds, at the cost of less accurate wrapping while the user is dragging.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(64)
+            .max(1)
+            .min(255)
     })
 }
 

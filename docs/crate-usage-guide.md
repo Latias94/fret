@@ -51,8 +51,8 @@ Keep the UI/runtime deterministic by treating `App`/`ModelStore` as main-thread 
 
 Recommended patterns:
 
-- **Portable default**: background producers send **data-only** messages into an inbox; the UI thread drains the inbox at a driver boundary and schedules redraw (ADR 0112, ADR 0190).
-- **Heavy apps**: run an external runtime (e.g. Tokio) on a dedicated thread, send results into an inbox, and `wake()` the runner to reach the next driver boundary promptly (ADR 0190).
+- **Portable default**: background producers send **data-only** messages into an inbox; the UI thread drains the inbox at a driver boundary and schedules redraw (ADR 0110, ADR 0175).
+- **Heavy apps**: run an external runtime (e.g. Tokio) on a dedicated thread, send results into an inbox, and `wake()` the runner to reach the next driver boundary promptly (ADR 0175).
 
 Portability notes (native vs wasm):
 
@@ -64,7 +64,7 @@ Portability notes (native vs wasm):
 
 Dependency guidance:
 
-- **Reusable ecosystem crates** SHOULD depend on portable surfaces only (`fret-core` / `fret-runtime` / `fret-ui`) and use the inbox/dispatcher surface (ADR 0113, ADR 0190).
+- **Reusable ecosystem crates** SHOULD depend on portable surfaces only (`fret-core` / `fret-runtime` / `fret-ui`) and use the inbox/dispatcher surface (ADR 0111, ADR 0175).
 - **Apps** may use `fret-bootstrap` (or `fret-kit`) to get the golden-path wiring so they do not need to hand-roll channels + timers + wake logic.
 
 ## Features (Cargo)
@@ -234,7 +234,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 **What it is:** portable background work helpers built on the `DispatcherHandle` contract:
 
 - spawn background tasks without assuming a specific async runtime,
-- deliver results through inboxes drained at a driver boundary (ADR 0190),
+- deliver results through inboxes drained at a driver boundary (ADR 0175),
 - propagate cancellation via `CancellationToken`.
 
 **Async adapters (optional):**
@@ -263,7 +263,7 @@ introducing “tick models” or storing every derived value in the model store.
 
 - cached resource state in `Model<QueryState<T>>` so UI can observe it,
 - background fetch via `fret-executor`,
-- completion marshaled back through `InboxDrainRegistry` (ADR 0190),
+- completion marshaled back through `InboxDrainRegistry` (ADR 0175),
 - invalidation + time-based GC.
 
 **Use it when:** you need loading/error/cache/invalidation semantics for remote resources or expensive
@@ -304,7 +304,7 @@ computations.
 
 **Start here:** `docs/gizmo-viewport-integration.md` (end-to-end reference: `apps/fret-examples/src/gizmo3d_demo.rs`).
 
-**Notes:** custom gizmos are supported via `GizmoPlugin` and host read-only domain values via `GizmoPropertySource` (ADR 0155/0167). For large-world picking stability, enable the optional `fret-gizmo/f64-math` feature (projection/unprojection runs in f64; public API stays f32).
+**Notes:** custom gizmos are supported via `GizmoPlugin` and host read-only domain values via `GizmoPropertySource` (ADR 0140/0152). For large-world picking stability, enable the optional `fret-gizmo/f64-math` feature (projection/unprojection runs in f64; public API stays f32).
 
 ### `fret-markdown` / `fret-code-view` / `fret-syntax`
 
@@ -338,5 +338,5 @@ These are runnable harnesses, dev tools, and stress tests. Libraries should not 
 ## Related docs
 
 - `docs/repo-structure.md` (core vs ecosystem vs apps)
-- `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`
-- `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
+- `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`

@@ -2,6 +2,7 @@ pub(super) use super::super::*;
 
 mod clip;
 mod draw;
+mod mask;
 mod ops;
 mod state;
 
@@ -27,6 +28,8 @@ impl Renderer {
             text_gamma_ratios,
             text_grayscale_enhanced_contrast,
             text_subpixel_enhanced_contrast,
+            self.material_paint_budget_per_frame,
+            self.material_distinct_budget_per_frame,
         );
 
         for op in scene.ops() {

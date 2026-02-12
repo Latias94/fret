@@ -81,8 +81,8 @@ Material3 alignment is a large consumer of our styling infrastructure. We explic
 should avoid duplicating) the repository workstream for consistent “state → style” authoring:
 
 - State-driven style resolution v1: `docs/workstreams/state-driven-style-resolution-v1.md`
-  - Contract gate: `docs/adr/1158-state-driven-style-resolution-v1.md`
-  - Ecosystem override surface: `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+  - Contract gate: `docs/adr/0219-state-driven-style-resolution-v1.md`
+  - Ecosystem override surface: `docs/adr/0220-ecosystem-style-override-surface-v1.md`
 
 Material3 should keep *policies* (token namespaces, alias mapping, indication behavior) in
 `ecosystem/fret-ui-material3`, while mechanism-level primitives stay in `crates/fret-ui` and shared

@@ -5,7 +5,7 @@ Status: Complete (v2 shipped; keep updated if new v2 gaps are discovered)
 This document tracks executable TODOs for the Input Dispatch v2 workstream.
 
 - Narrative plan: `docs/workstreams/input-dispatch-v2.md`
-- Contract gate: `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- Contract gate: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - Coverage audit: `docs/audits/action-availability-coverage.md`
 
 ## Active Branch Notes

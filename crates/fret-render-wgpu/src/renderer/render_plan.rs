@@ -58,6 +58,8 @@ pub(super) enum RenderPlanPass {
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
     ColorAdjust(ColorAdjustPass),
+    ColorMatrix(ColorMatrixPass),
+    AlphaThreshold(AlphaThresholdPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -105,6 +107,33 @@ pub(super) struct ColorAdjustPass {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(super) struct ColorMatrixPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) matrix: [f32; 20],
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct AlphaThresholdPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) cutoff: f32,
+    pub(super) soft: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(super) struct FullscreenBlitPass {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
@@ -123,6 +152,7 @@ pub(super) struct CompositePremulPass {
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
+    pub(super) blend_mode: fret_core::BlendMode,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -208,6 +238,12 @@ impl RenderPlan {
                     .is_some()
                 }
                 fret_core::EffectStep::ColorAdjust { .. } => {
+                    effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+                }
+                fret_core::EffectStep::ColorMatrix { .. } => {
+                    effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+                }
+                fret_core::EffectStep::AlphaThreshold { .. } => {
                     effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
                 }
                 fret_core::EffectStep::Pixelate { scale } => effects::pixelate_enabled(
@@ -348,6 +384,16 @@ impl RenderPlan {
             content_target: Option<PlanTarget>,
         }
 
+        #[derive(Clone, Copy, Debug)]
+        struct CompositeGroupScope {
+            mode: fret_core::BlendMode,
+            quality: fret_core::EffectQuality,
+            scissor: ScissorRect,
+            uniform_index: u32,
+            parent_target: PlanTarget,
+            content_target: Option<PlanTarget>,
+        }
+
         let mut passes: Vec<RenderPlanPass> = Vec::new();
         let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
             target: scene_target,
@@ -355,6 +401,7 @@ impl RenderPlan {
             clear_color: clear,
         }];
         let mut effect_scopes: Vec<EffectScope> = Vec::new();
+        let mut composite_group_scopes: Vec<CompositeGroupScope> = Vec::new();
 
         let mut scene_range_start: usize = 0;
         let mut cursor: usize = 0;
@@ -530,10 +577,79 @@ impl RenderPlan {
                                     dst_scissor: None,
                                     mask_uniform_index: Some(scope.uniform_index),
                                     mask: None,
+                                    blend_mode: fret_core::BlendMode::Over,
                                     load: wgpu::LoadOp::Load,
                                 }));
 
                                 let _ = draw_scopes.pop();
+                            }
+                        }
+                        EffectMarkerKind::CompositeGroupPush {
+                            scissor,
+                            uniform_index,
+                            mode,
+                            quality,
+                        } => {
+                            let parent_target = draw_scopes.last().expect("draw scope").target;
+                            let mut content_target: Option<PlanTarget> = None;
+                            for t in [
+                                PlanTarget::Intermediate0,
+                                PlanTarget::Intermediate1,
+                                PlanTarget::Intermediate2,
+                            ] {
+                                if draw_scopes.iter().any(|s| s.target == t) {
+                                    continue;
+                                }
+                                content_target = Some(t);
+                                break;
+                            }
+
+                            if let Some(content_target) = content_target {
+                                draw_scopes.push(DrawScope {
+                                    target: content_target,
+                                    needs_clear: true,
+                                    clear_color: wgpu::Color::TRANSPARENT,
+                                });
+                            }
+
+                            composite_group_scopes.push(CompositeGroupScope {
+                                mode,
+                                quality,
+                                scissor,
+                                uniform_index,
+                                parent_target,
+                                content_target,
+                            });
+                        }
+                        EffectMarkerKind::CompositeGroupPop => {
+                            let Some(scope) = composite_group_scopes.pop() else {
+                                marker_ix += 1;
+                                continue;
+                            };
+
+                            if let Some(content_target) = scope.content_target {
+                                debug_assert_eq!(
+                                    draw_scopes.last().expect("draw scope").target,
+                                    content_target
+                                );
+
+                                passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
+                                    src: content_target,
+                                    dst: scope.parent_target,
+                                    src_size: viewport_size,
+                                    dst_size: viewport_size,
+                                    dst_scissor: Some(scope.scissor),
+                                    mask_uniform_index: Some(scope.uniform_index),
+                                    mask: None,
+                                    blend_mode: scope.mode,
+                                    load: wgpu::LoadOp::Load,
+                                }));
+
+                                let _ = draw_scopes.pop();
+                            } else if scope.mode != fret_core::BlendMode::Over {
+                                // Degraded: no free intermediate targets, so behave as if the group
+                                // was not isolated and the blend mode was `Over` (ADR 0247).
+                                let _ = scope.quality;
                             }
                         }
                     }
@@ -1046,6 +1162,20 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::ColorAdjust(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::ColorMatrix(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::AlphaThreshold(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {

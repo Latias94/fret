@@ -13,12 +13,18 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         return;
     }
 
-    // PointerRegion pointer-down hooks run during the capture phase (root → target) so that
-    // wrappers can observe activation even when a descendant pressable stops bubble propagation.
+    // PointerRegion pointer hooks run during the capture phase (root → target) so wrappers can
+    // observe activation even when a descendant pressable stops bubble propagation.
     //
-    // Bubble-phase pointer-down handling is skipped to avoid double-dispatch.
+    // Bubble-phase handling is skipped to avoid double-dispatch (capture + bubble) once
+    // `event_capture_impl` opts a given event into capture-phase dispatch for PointerRegion.
     if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
-        && matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. }))
+        && matches!(
+            event,
+            Event::Pointer(fret_core::PointerEvent::Down { .. })
+                | Event::Pointer(fret_core::PointerEvent::Up { .. })
+                | Event::PointerCancel(_)
+        )
     {
         return;
     }

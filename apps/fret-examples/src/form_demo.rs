@@ -10,8 +10,9 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
@@ -236,7 +237,7 @@ impl WinitAppDriver for FormDemoDriver {
                     cx.observe_model(&start_date, Invalidation::Layout);
                     cx.observe_model(&status, Invalidation::Layout);
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
                     let padding = theme.metric_required("metric.padding.md");
 
                     let (submit_count, valid, dirty) = cx

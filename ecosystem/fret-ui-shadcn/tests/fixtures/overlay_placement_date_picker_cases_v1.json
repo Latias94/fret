@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "date-picker-with-presets.open_overlay_placement",
+      "web_name": "date-picker-with-presets",
+      "recipe": "with_presets_open_overlay_placement"
+    },
+    {
+      "id": "date-picker-with-presets.vp375x240.open_overlay_placement",
+      "web_name": "date-picker-with-presets.vp375x240",
+      "recipe": "with_presets_open_overlay_placement"
+    },
+    {
+      "id": "date-picker-with-presets.preset_tomorrow.vp375x240.open_overlay_placement",
+      "web_name": "date-picker-with-presets.preset-tomorrow-vp375x240",
+      "recipe": "with_presets_preset_tomorrow_open_overlay_placement"
+    },
+
+    {
+      "id": "date-picker-with-presets.select_open.listbox_overlay_placement",
+      "web_name": "date-picker-with-presets.select-open",
+      "recipe": "with_presets_select_listbox_overlay_placement"
+    },
+    {
+      "id": "date-picker-with-presets.select_open.vp375x240.listbox_overlay_placement",
+      "web_name": "date-picker-with-presets.select-open-vp375x240",
+      "recipe": "with_presets_select_listbox_overlay_placement"
+    },
+    {
+      "id": "date-picker-with-presets.select_open.vp375x160.listbox_overlay_placement",
+      "web_name": "date-picker-with-presets.select-open-vp375x160",
+      "recipe": "with_presets_select_listbox_overlay_placement"
+    },
+
+    {
+      "id": "date-picker-with-range.open_overlay_placement",
+      "web_name": "date-picker-with-range",
+      "recipe": "with_range_open_overlay_placement"
+    },
+    {
+      "id": "date-picker-with-range.vp375x240.open_overlay_placement",
+      "web_name": "date-picker-with-range.vp375x240",
+      "recipe": "with_range_open_overlay_placement"
+    }
+  ]
+}
+

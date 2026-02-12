@@ -355,5 +355,5 @@ Exit criteria:
 - Tracy workflow: `docs/tracy.md`
 - Layout engine roadmap: `docs/layout-engine-refactor-roadmap.md`
 - Observability contract: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
-- AvailableSpace + measurement rules: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
+- AvailableSpace + measurement rules: `docs/adr/0113-available-space-and-non-reentrant-measurement.md`
 - Virtualization boundary: `docs/adr/0042-virtualization-and-large-lists.md`

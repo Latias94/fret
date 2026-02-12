@@ -5,7 +5,6 @@ use fret_kit::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::state::{query_error_alert, query_status_badge};
 
 const TEST_ID_INPUT: &str = "todo-input";
@@ -35,7 +34,6 @@ struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
     filter: Model<TodoFilter>,
-    router: MessageRouter<Msg>,
     next_id: u64,
 }
 
@@ -114,13 +112,36 @@ fn tip_policy() -> QueryPolicy {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<TodoProgram>("todo-demo")?
         .with_main_window("todo_demo", (560.0, 520.0))
         .run()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
+struct TodoProgram;
+
+impl MvuProgram for TodoProgram {
+    type State = TodoState;
+    type Message = Msg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+        init_window(app, window)
+    }
+
+    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+        update(app, state, message);
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, state, msg)
+    }
+}
+
+fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     let done_1 = app.models_mut().insert(false);
     let done_2 = app.models_mut().insert(true);
     let done_3 = app.models_mut().insert(false);
@@ -142,39 +163,34 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
         },
     ]);
 
-    let prefix = format!("todo-demo.{window:?}.");
     TodoState {
         todos,
         draft: app.models_mut().insert(String::new()),
         filter: app.models_mut().insert(TodoFilter::All),
-        router: MessageRouter::new(prefix),
         next_id: 4,
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
-    st.router.clear();
-    let theme = Theme::global(&*cx.app).clone();
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut TodoState,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let draft_value = cx
-        .watch_model(&st.draft)
-        .layout()
-        .cloned()
-        .unwrap_or_default();
+    let draft_value = cx.watch_model(&st.draft).layout().cloned_or_default();
 
     let filter_value = cx
         .watch_model(&st.filter)
         .layout()
-        .copied()
-        .unwrap_or(TodoFilter::All);
+        .copied_or(TodoFilter::All);
 
     let derived = cx.use_selector(
         |cx| {
             let filter = cx
                 .watch_model(&st.filter)
                 .layout()
-                .copied()
-                .unwrap_or(TodoFilter::All);
+                .copied_or(TodoFilter::All);
             let (todos_rev, done_revs) = cx
                 .watch_model(&st.todos)
                 .layout()
@@ -252,8 +268,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let tip_state = cx
         .watch_model(tip_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<TipData>::default);
+        .cloned_or_else(QueryState::<TipData>::default);
 
     let tip_status = query_status_badge(cx, &tip_state);
     let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
@@ -303,33 +318,27 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
-    let add_cmd = st.router.cmd(Msg::Add);
-    let clear_done_cmd = st.router.cmd(Msg::ClearDone);
-    let refresh_tip_cmd = st.router.cmd(Msg::RefreshTip);
-    let filter_all_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::All));
-    let filter_active_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::Active));
-    let filter_completed_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::Completed));
+    let add_cmd = msg.cmd(Msg::Add);
+    let clear_done_cmd = msg.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
+    let filter_all_cmd = msg.cmd(Msg::SetFilter(TodoFilter::All));
+    let filter_active_cmd = msg.cmd(Msg::SetFilter(TodoFilter::Active));
+    let filter_completed_cmd = msg.cmd(Msg::SetFilter(TodoFilter::Completed));
     let add_button = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
         .on_click(add_cmd.clone())
         .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_ADD),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_ADD);
 
     let input = shadcn::Input::new(st.draft.clone())
         .placeholder("Add a task")
         .submit_command(add_cmd.clone())
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::TextField)
-                .test_id(TEST_ID_INPUT),
-        );
+        .a11y_role(SemanticsRole::TextField)
+        .test_id(TEST_ID_INPUT);
 
     let input_row = ui::h_flex(cx, |_cx| [input, add_button])
         .gap(Space::N2)
@@ -367,7 +376,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
 
     let rows = ui::v_flex_build(cx, |cx, out| {
         for row in derived.rows.iter() {
-            let remove_cmd = st.router.cmd(Msg::Remove(row.id));
+            let remove_cmd = msg.cmd(Msg::Remove(row.id));
             out.push(cx.keyed(row.id, |cx| todo_row(cx, &theme, row, remove_cmd.clone())));
         }
 
@@ -391,21 +400,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .disabled(derived.completed == 0)
         .on_click(clear_done_cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_CLEAR_DONE),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_CLEAR_DONE);
 
     let refresh_tip = shadcn::Button::new("Refresh tip")
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(refresh_tip_cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_REFRESH_TIP),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_REFRESH_TIP);
 
     let summary = ui::text(
         cx,
@@ -460,7 +463,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn filter_chip(
@@ -479,16 +482,13 @@ fn filter_chip(
         .size(shadcn::ButtonSize::Sm)
         .on_click(cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(test_id),
-        )
+        .a11y_role(SemanticsRole::Button)
+        .test_id(test_id)
 }
 
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {
@@ -499,11 +499,8 @@ fn todo_row(
         .on_click(remove_cmd)
         .children([icon::icon(cx, IconId::new("lucide.trash"))])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(todo_remove_test_id(row.id)),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(todo_remove_test_id(row.id));
 
     let label = cx.text_props(TextProps {
         layout: Default::default(),
@@ -538,25 +535,11 @@ fn todo_row(
         .p(Space::N3)
         .w_full()
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::ListItem)
-                .test_id(todo_row_test_id(row.id)),
-        )
+        .a11y_role(SemanticsRole::ListItem)
+        .test_id(todo_row_test_id(row.id))
 }
 
-fn on_command(
-    app: &mut App,
-    _services: &mut dyn UiServices,
-    window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    state: &mut TodoState,
-    cmd: &CommandId,
-) {
-    let Some(msg) = state.router.try_take(cmd) else {
-        return;
-    };
-
+fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
     match msg {
         Msg::Add => {
             let draft = app
@@ -580,7 +563,6 @@ fn on_command(
                 todos.insert(0, item);
             });
             let _ = app.models_mut().update(&state.draft, String::clear);
-            app.request_redraw(window);
         }
         Msg::ClearDone => {
             let snapshot = app
@@ -593,25 +575,21 @@ fn on_command(
                 .filter(|todo| app.models().get_copied(&todo.done).is_none_or(|done| !done))
                 .collect::<Vec<_>>();
             let _ = app.models_mut().update(&state.todos, |todos| *todos = keep);
-            app.request_redraw(window);
         }
         Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
             });
-            app.request_redraw(window);
         }
         Msg::SetFilter(filter) => {
             let _ = app
                 .models_mut()
                 .update(&state.filter, |current| *current = filter);
-            app.request_redraw(window);
         }
         Msg::Remove(id) => {
             let _ = app.models_mut().update(&state.todos, |todos| {
                 todos.retain(|todo| todo.id != id);
             });
-            app.request_redraw(window);
         }
     }
 }

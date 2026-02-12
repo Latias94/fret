@@ -50,15 +50,17 @@ impl AspectRatio {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
         let base_layout = LayoutRefinement::default().w_full();
-        let mut props = decl_style::container_props(
-            &theme,
-            self.chrome,
-            base_layout.aspect_ratio(self.ratio).merge(self.layout),
-        );
+        let mut props = {
+            let theme = Theme::global(&*cx.app);
+            decl_style::container_props(
+                theme,
+                self.chrome,
+                base_layout.aspect_ratio(self.ratio).merge(self.layout),
+            )
+        };
         props.layout.overflow = self.overflow;
 
         let child = self.child;

@@ -1,0 +1,16 @@
+[package]
+name = "fret-text-nav"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[dependencies]
+fret-runtime = { path = "../fret-runtime" }
+unicode-segmentation.workspace = true
+unicode-ident.workspace = true
+

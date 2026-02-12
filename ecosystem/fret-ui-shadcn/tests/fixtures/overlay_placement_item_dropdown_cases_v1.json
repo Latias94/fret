@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "item-dropdown.overlay_placement",
+      "web_name": "item-dropdown",
+      "recipe": "overlay_placement"
+    },
+    {
+      "id": "item-dropdown.vp375x240.overlay_placement",
+      "web_name": "item-dropdown.vp375x240",
+      "recipe": "overlay_placement"
+    }
+  ]
+}

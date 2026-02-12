@@ -11,12 +11,23 @@ work so your app remains deterministic, portable (native + wasm), and easy to de
 If you are looking for **GPU post-processing** (“blur/glass/backdrop”), that is **EffectLayer**
 (`docs/effects-authoring.md`), not the runtime `Effect` pipeline described here.
 
-## When to apply
+## When to use
 
 - You are building a new app (or a new feature surface) and want a stable “golden path”.
 - You need persistence (load/save), file/network work, or other side effects.
 - You need time-based behavior (debounce, timeouts, animation ticks) without split-brain scheduling.
 - You are unsure whether something belongs in `Effect::SetTimer` vs `Dispatcher::dispatch_after`.
+
+## Quick start
+
+- For a minimal app wiring example, start with `apps/fret-examples/src/todo_demo.rs`.
+- For “background work without blocking UI”, follow the Dispatcher + Inbox pattern (ADR 0160).
+- If this touches user-visible timing, prefer `Effect::SetTimer` / `Effect::RequestAnimationFrame` over ad-hoc timers.
+
+## Workflow
+
+Follow the “Golden path (recommended defaults)” below, then protect the behavior with at least one regression artifact
+(unit/integration test, or a `fretboard diag` script if a state machine is involved).
 
 ## Golden path (recommended defaults)
 
@@ -68,7 +79,7 @@ Notes:
 - Prefer `app.request_redraw(window)` / `Effect::Redraw(window)` for one-shot redraws.
 - Prefer `Effect::RequestAnimationFrame(window)` for frame-driven progression.
 - Use `Effect::SetTimer` + `Event::Timer { token }` for UI-visible timing so it participates in the
-  runner’s deterministic flush points (ADR 0112 / ADR 0190).
+  runner’s deterministic flush points (ADR 0108 / ADR 0160).
 
 References:
 
@@ -77,7 +88,7 @@ References:
 
 ### 4) Background work: Dispatcher + Inbox (canonical pattern)
 
-Hard rule (ADR 0190):
+Hard rule (ADR 0160):
 
 - UI/runtime state (`App`, `ModelStore`) is **main-thread only**.
 - Background tasks must communicate results via **data-only messages**.
@@ -98,53 +109,12 @@ Examples:
 - Manual draining in the render loop: `apps/fret-examples/src/markdown_demo.rs`
 - Runner-drained inboxes via registry: `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
 
-### 4.1) Common ecosystem integrations
+### 4.1) Common integrations and copyable recipes
 
-Use these defaults unless a domain requires a custom policy:
+Keep the main skill lean and link out:
 
-- HTTP APIs (`reqwest`): perform fetch in `use_query_async(...)`, map transport errors to
-  `QueryError::{transient, permanent}`, invalidate namespace after mutations.
-- SQL (`sqlx`/SQLite): use queries for read models, commands/inbox for writes/transactions,
-  then invalidate affected query namespaces.
-- GraphQL: key by operation + normalized variables, keep mutation flow command-driven,
-  invalidate dependent query namespaces.
-- SSE/WebSocket streams: treat as inbox streams (data-only messages) instead of forcing query polling.
-
-References:
-
-- `docs/integrating-tokio-and-reqwest.md`
-- `docs/workstreams/state-management-v1-extension-contract.md`
-
-## Recipes you can copy
-
-### A) Debounced persistence (UI timer + background save)
-
-Use a UI-visible timer effect to debounce saves, then write on a background lane.
-
-Suggested structure:
-
-- Keep `save_timer: Option<TimerToken>` in window state.
-- On each “mutation” command:
-  - cancel the previous timer (`Effect::CancelTimer`),
-  - allocate a new token (`app.next_timer_token()`),
-  - schedule a one-shot timer (`Effect::SetTimer { after: 250ms }`).
-- On `Event::Timer { token }` (matching your token):
-  - snapshot the data you need (clone/serialize on main thread),
-  - spawn a background task that writes to disk.
-
-Persistence location (dev-friendly):
-
-- Project-local state under `.fret/` (`fret_app::PROJECT_CONFIG_DIR`).
-
-Reference for config dir conventions: `crates/fret-app/src/config_files.rs`.
-
-### B) Async load at startup (background load → inbox → apply)
-
-1. During window init, create an inbox and store it in app globals or window state.
-2. Spawn a background task to read/decode.
-3. When a message arrives, apply to Models and request redraw.
-
-Use `InboxOverflowStrategy::DropOldest` for “latest wins” streams (logs, incremental loads).
+- Common ecosystem integrations: `references/recipes.md`
+- Copyable app recipes (debounced persistence, async load): `references/recipes.md`
 
 ## Common pitfalls
 
@@ -155,9 +125,23 @@ Use `InboxOverflowStrategy::DropOldest` for “latest wins” streams (logs, inc
 
 ## References
 
-- ADR 0190 (Dispatcher + inbox + wake): `docs/adr/0190-execution-and-concurrency-surface-v1.md`
-- Golden path pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- ADR 0160 (Dispatcher + inbox + wake): `docs/adr/0184-execution-and-concurrency-surface-v1.md`
+- Golden path pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - Minimal todo app wiring: `apps/fret-examples/src/todo_demo.rs`
 - Background inbox pattern (manual drain): `apps/fret-examples/src/markdown_demo.rs`
 - Background inbox pattern (runner drain registry): `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
 
+## Evidence anchors (where to start reading code)
+
+- Effect enum + shapes: `crates/fret-runtime/src/effect.rs`
+- App effect queue + flushing: `crates/fret-app/src/app.rs`
+- Config + project dirs: `crates/fret-app/src/config_files.rs`
+- Executor + inbox patterns:
+  - Example (manual drain): `apps/fret-examples/src/markdown_demo.rs`
+  - Example (registry drain): `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
+
+## Related skills
+
+- `fret-component-authoring` (component-level state/invalidation)
+- `fret-commands-and-keymap` (commands as app intent)
+- `fret-diag-workflow` (shareable bundles and scripted repros)

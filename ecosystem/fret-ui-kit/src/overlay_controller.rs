@@ -59,6 +59,15 @@ pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
     pub style: window_overlays::ToastLayerStyle,
+    pub toaster_id: Option<std::sync::Arc<str>>,
+    pub visible_toasts: usize,
+    pub expand: bool,
+    pub rich_colors: bool,
+    pub invert: bool,
+    pub container_aria_label: Option<std::sync::Arc<str>>,
+    pub custom_aria_label: Option<std::sync::Arc<str>>,
+    pub offset: Option<window_overlays::ToastOffset>,
+    pub mobile_offset: Option<window_overlays::ToastOffset>,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -287,6 +296,15 @@ impl OverlayRequest {
                 store,
                 position: window_overlays::ToastPosition::default(),
                 style: window_overlays::ToastLayerStyle::default(),
+                toaster_id: None,
+                visible_toasts: window_overlays::DEFAULT_VISIBLE_TOASTS,
+                expand: false,
+                rich_colors: false,
+                invert: false,
+                container_aria_label: None,
+                custom_aria_label: None,
+                offset: None,
+                mobile_offset: None,
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -311,6 +329,114 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn toast_toaster_id(mut self, id: impl Into<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_toaster_id requires a ToastLayer request");
+        spec.toaster_id = Some(id.into());
+        self
+    }
+
+    pub fn toast_visible_toasts(mut self, visible_toasts: usize) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_visible_toasts requires a ToastLayer request");
+        spec.visible_toasts = visible_toasts.max(1);
+        self
+    }
+
+    pub fn toast_expand_by_default(mut self, expand: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_expand_by_default requires a ToastLayer request");
+        spec.expand = expand;
+        self
+    }
+
+    pub fn toast_rich_colors(mut self, rich_colors: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_rich_colors requires a ToastLayer request");
+        spec.rich_colors = rich_colors;
+        self
+    }
+
+    pub fn toast_invert(mut self, invert: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_invert requires a ToastLayer request");
+        spec.invert = invert;
+        self
+    }
+
+    pub fn toast_container_aria_label(mut self, label: impl Into<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_container_aria_label requires a ToastLayer request");
+        spec.container_aria_label = Some(label.into());
+        self
+    }
+
+    pub fn toast_container_aria_label_opt(mut self, label: Option<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_container_aria_label_opt requires a ToastLayer request");
+        spec.container_aria_label = label;
+        self
+    }
+
+    pub fn toast_custom_aria_label_opt(mut self, label: Option<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_custom_aria_label_opt requires a ToastLayer request");
+        spec.custom_aria_label = label;
+        self
+    }
+
+    pub fn toast_offset(mut self, offset: window_overlays::ToastOffset) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_offset requires a ToastLayer request");
+        spec.offset = Some(offset);
+        self
+    }
+
+    pub fn toast_offset_opt(mut self, offset: Option<window_overlays::ToastOffset>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_offset_opt requires a ToastLayer request");
+        spec.offset = offset;
+        self
+    }
+
+    pub fn toast_mobile_offset(mut self, offset: window_overlays::ToastOffset) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_mobile_offset requires a ToastLayer request");
+        spec.mobile_offset = Some(offset);
+        self
+    }
+
+    pub fn toast_mobile_offset_opt(mut self, offset: Option<window_overlays::ToastOffset>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_mobile_offset_opt requires a ToastLayer request");
+        spec.mobile_offset = offset;
         self
     }
 
@@ -587,6 +713,7 @@ impl OverlayController {
                         trigger,
                         open,
                         present: request.presence.present,
+                        on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
                 );
@@ -602,7 +729,20 @@ impl OverlayController {
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
                     .style(spec.style)
+                    .toaster_id_opt(spec.toaster_id)
+                    .visible_toasts(spec.visible_toasts)
+                    .expand_by_default(spec.expand)
+                    .rich_colors(spec.rich_colors)
+                    .invert(spec.invert)
+                    .container_aria_label_opt(spec.container_aria_label)
+                    .custom_aria_label_opt(spec.custom_aria_label)
                     .root_name(root_name);
+                if let Some(offset) = spec.offset {
+                    toast_req = toast_req.offset(offset);
+                }
+                if let Some(offset) = spec.mobile_offset {
+                    toast_req = toast_req.mobile_offset(offset);
+                }
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }
@@ -769,6 +909,7 @@ impl OverlayController {
     ///
     /// This is the generalized form of `fade_presence*` and is useful for driving multiple
     /// properties (opacity/scale/translation) with a shared open/close timeline.
+    #[track_caller]
     pub fn transition<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -778,6 +919,7 @@ impl OverlayController {
     }
 
     /// Drive a general transition timeline with separate open/close durations.
+    #[track_caller]
     pub fn transition_with_durations<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -796,6 +938,7 @@ impl OverlayController {
     ///
     /// This enables CSS-style easing (e.g. cubic-bezier) while staying deterministic and
     /// renderer-agnostic.
+    #[track_caller]
     pub fn transition_with_durations_and_easing<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -812,6 +955,7 @@ impl OverlayController {
         )
     }
 
+    #[track_caller]
     pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -849,6 +993,14 @@ impl OverlayController {
     ) -> bool {
         window_overlays::dismiss_toast_action(host, store, window, id)
     }
+
+    pub fn dismiss_all_toasts_action(
+        host: &mut dyn fret_ui::action::UiActionHost,
+        store: Model<window_overlays::ToastStore>,
+        window: AppWindowId,
+    ) -> usize {
+        window_overlays::dismiss_all_toasts_action(host, store, window)
+    }
 }
 
 #[cfg(test)]
@@ -863,6 +1015,7 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::CommandId;
     use fret_runtime::Effect;
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, PressableProps};
     use std::sync::Arc;
 
@@ -1180,6 +1333,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -1533,5 +1699,37 @@ mod tests {
         };
         dispatch_keydown_and_apply_commands(&mut ui, &mut app, &mut services, KeyCode::Tab, mods);
         assert_eq!(ui.focus(), Some(modal_b_node));
+    }
+
+    #[test]
+    fn transition_wrapper_keeps_independent_state_per_call_site() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let (a, b) = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(200.0), Px(120.0)),
+            ),
+            "overlay-transition-wrapper-independence",
+            |cx| {
+                let a = OverlayController::transition_with_durations(cx, true, 6, 6);
+                let b = OverlayController::transition_with_durations(cx, false, 6, 6);
+                (a, b)
+            },
+        );
+
+        assert!(a.present);
+        assert!(a.animating);
+        assert!(a.progress > 0.0 && a.progress < 1.0);
+
+        assert!(!b.present);
+        assert!(!b.animating);
+        assert_eq!(b.progress, 0.0);
     }
 }

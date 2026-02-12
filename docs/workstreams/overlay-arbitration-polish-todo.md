@@ -16,7 +16,7 @@ Primary goal: make overlay behavior deterministic and regression-tested before d
 - Runtime contract matrix (placement + semantics expectations): `docs/runtime-contract-matrix.md`
 - Focus scopes + traversal: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - Overlay dismiss policy: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-- Modal vs non-modal overlays: `docs/adr/0095-menu-open-modality-and-entry-focus.md`
+- Modal vs non-modal overlays: `docs/adr/0094-menu-open-modality-and-entry-focus.md`
 
 ## Tracking Format
 

@@ -83,6 +83,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     fn render_frame(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -96,7 +109,7 @@ mod tests {
 
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                let checked_now = cx.watch_model(&checked).copied().unwrap_or(false);
+                let checked_now = cx.watch_model(&checked).copied_or_default();
                 vec![
                     cx.container(
                         ContainerProps {

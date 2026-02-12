@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "generated_unix_ms": 1770804524589,
+  "kind": "perf_baseline",
+  "out_path": "F:\\SourceCodes\\Rust\\fret\\docs\\workstreams\\perf-baselines\\ui-code-editor-resize-probes.windows-rtx4090.v1.json",
+  "warmup_frames": 5,
+  "sort": "time",
+  "repeat": 7,
+  "headroom_pct": 20,
+  "threshold_seed_policy": {
+    "schema_version": 1,
+    "default_seed": "max",
+    "rules": [
+      {
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "metric": "top_layout_engine_solve_time_us",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "metric": "top_layout_time_us",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "metric": "top_total_time_us",
+        "seed": "p95",
+        "source": "preset"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "measured_max": {
+        "top_total_time_us": 20040,
+        "top_layout_time_us": 16188,
+        "top_layout_engine_solve_time_us": 10467,
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0
+      },
+      "measured_p90": {
+        "top_total_time_us": 20040,
+        "top_layout_time_us": 16188,
+        "top_layout_engine_solve_time_us": 10467
+      },
+      "measured_p95": {
+        "top_total_time_us": 20040,
+        "top_layout_time_us": 16188,
+        "top_layout_engine_solve_time_us": 10467
+      },
+      "threshold_seed": {
+        "top_total_time_us": 20040,
+        "top_layout_time_us": 16188,
+        "top_layout_engine_solve_time_us": 10467
+      },
+      "threshold_seed_source": {
+        "top_total_time_us": "p95",
+        "top_layout_time_us": "p95",
+        "top_layout_engine_solve_time_us": "p95"
+      },
+      "thresholds": {
+        "max_top_total_us": 24048,
+        "max_top_layout_us": 19426,
+        "max_top_solve_us": 12561,
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0
+      }
+    }
+  ]
+}

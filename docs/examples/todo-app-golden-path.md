@@ -11,9 +11,9 @@ It is intentionally “golden path”: advanced apps may assemble crates manuall
 
 Related ADRs:
 
-- Golden-path driver/pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
-- Ecosystem bootstrap and tooling: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
-- Dev hotpatch safety: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+- Golden-path driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
+- Ecosystem bootstrap and tooling: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- Dev hotpatch safety: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - Resource handle boundary: `docs/adr/0004-resource-handles.md`
 
 ## Recommended dependencies (native)
@@ -66,7 +66,7 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 
 ```rust,ignore
 fn main() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<TodoProgram>("todo")?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
 
@@ -76,15 +76,14 @@ fn main() -> anyhow::Result<()> {
 
 Notes:
 
-- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107).
-- `fret-kit::app_with_hooks` applies conservative defaults while keeping the underlying driver hotpatch-friendly.
+- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
+- `fret-kit::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
 
 ## App state (models)
 
 ```rust,ignore
 use std::sync::Arc;
 use fret_runtime::Model;
-use fret_kit::prelude::MessageRouter;
 
 #[derive(Clone)]
 struct TodoItem {
@@ -95,17 +94,19 @@ struct TodoItem {
 
 #[derive(Debug, Clone)]
 enum Msg {
+    Add,
+    ClearDone,
+    RefreshTip,
     Remove(u64),
 }
 
-struct TodoWindowState {
-    ui: fret_ui::UiTree<fret_app::App>,
-    root: Option<fret_core::NodeId>,
+struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
-    router: MessageRouter<Msg>,
     next_id: u64,
 }
+
+struct TodoProgram;
 ```
 
 
@@ -131,8 +132,6 @@ Boundary rule:
 Use typed messages as the default boundary between UI intents and app mutations:
 
 ```rust,ignore
-use fret_kit::prelude::MessageRouter;
-
 #[derive(Debug, Clone)]
 enum Msg {
     Add,
@@ -141,19 +140,30 @@ enum Msg {
     Remove(u64),
 }
 
-struct TodoWindowState {
-    // ...
-    router: MessageRouter<Msg>,
+impl fret_kit::prelude::MvuProgram for TodoProgram {
+    type State = TodoState;
+    type Message = Msg;
+
+    fn view(
+        cx: &mut fret_ui::ElementContext<'_, fret_app::App>,
+        state: &mut Self::State,
+        msg: &mut fret_kit::prelude::MessageRouter<Self::Message>,
+    ) -> fret_ui::element::Elements {
+        // Allocate command IDs for the current frame.
+        let add_cmd = msg.cmd(Msg::Add);
+        // ...
+        fret_ui::element::Elements::default()
+    }
 }
 ```
 
 Recommended pattern:
 
 - Keep app mutations in typed `Msg` variants.
-- Allocate command IDs via `MessageRouter<Msg>` in `view(...)`:
+- Allocate command IDs via the per-frame `MessageRouter<Msg>` passed into `Program::view(...)`:
   - toolbar intents (`Add`, `ClearDone`, `RefreshTip`),
   - row intents (`Remove(id)`).
-- Resolve once in `on_command(...)` via `state.router.try_take(cmd)` and `match` on `Msg`.
+- Let the MVU driver route `CommandId` back into typed messages and call `Program::update(...)`.
 - Only keep stable literal `CommandId`s when the action must be globally addressable by keymap/menu.
 
 This removes stringly `"prefix.{id}"` parsing and keeps hot reload resets predictable.
@@ -165,14 +175,21 @@ This is high-level pseudocode showing the intent; exact component APIs may vary.
 ```rust,ignore
 use fret_kit::prelude::*;
 
-fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) -> Vec<AnyElement> {
+fn view(
+    cx: &mut ElementContext<'_, fret_app::App>,
+    st: &mut TodoState,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
     let add_icon = IconId::new("lucide.plus");
     let trash_icon = IconId::new("lucide.trash-2");
+
+    let add_cmd = msg.cmd(Msg::Add);
+    let remove_cmd = msg.cmd(Msg::Remove(42));
 
     // 1) Input row: text field + add button
     // 2) List: checkbox + label + remove button per item
     // 3) Footer: “clear done”
-    vec![todo_root(cx, st, add_icon, trash_icon)]
+    todo_root(cx, st, add_icon, trash_icon, add_cmd, remove_cmd).into()
 }
 ```
 
@@ -185,7 +202,7 @@ For editor-style UIs, views often need derived values (counts, filters, projecti
 memoizing these computations with selectors instead of:
 
 - recomputing every frame, or
-- introducing “tick models” to force refresh.
+- introducing user-managed “tick models” to force refresh.
 
 High-level sketch:
 
@@ -210,7 +227,7 @@ use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState};
 
 let handle = cx.use_query(key, policy, move |token| fetch(token));
-let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned().unwrap_or_default();
+let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned_or_default();
 ```
 
 To invalidate/refetch from app logic:
@@ -230,26 +247,17 @@ In a typical window driver:
 
 ## Command handler (app logic)
 
-Commands are the boundary where you mutate models and emit effects:
+In the MVU shape, `Program::update` is the boundary where you mutate models and emit effects:
 
 ```rust,ignore
-fn on_command(
-    app: &mut fret_app::App,
-    services: &mut dyn fret_core::UiServices,
-    window: fret_core::AppWindowId,
-    ui: &mut fret_ui::UiTree<fret_app::App>,
-    state: &mut TodoWindowState,
-    cmd: &fret_runtime::CommandId,
-) {
-    let Some(msg) = state.router.try_take(cmd) else {
-        return;
-    };
-
-    match msg {
-        Msg::Add => { /* read draft, push todo, clear draft */ }
-        Msg::ClearDone => { /* retain only !done */ }
-        Msg::RefreshTip => { /* invalidate query key */ }
-        Msg::Remove(id) => { /* remove */ }
+impl MvuProgram for TodoProgram {
+    fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
+        match msg {
+            Msg::Add => { /* read draft, push todo, clear draft */ }
+            Msg::ClearDone => { /* retain only !done */ }
+            Msg::RefreshTip => { /* invalidate query key */ }
+            Msg::Remove(id) => { /* remove */ }
+        }
     }
 }
 ```
@@ -267,11 +275,11 @@ For apps that need background work (I/O, indexing, etc), we recommend:
    - send pure data messages to UI thread,
    - UI thread applies updates to models and requests redraw.
 
-See ADR 0112 for rationale and constraints.
+See ADR 0110 for rationale and constraints.
 
 ## Hotpatch (Subsecond) integration
 
-When using hotpatch (ADR 0107):
+When using hotpatch (ADR 0105):
 
 - prefer `FnDriver` entry points (function pointers),
 - treat action hook registries and overlay registries as disposable,

@@ -107,9 +107,7 @@ fn declarative_attach_semantics_can_override_state_and_relations() {
         bounds,
         "a11y-attach-semantics-v2",
         |cx| {
-            let label = cx
-                .text("Label")
-                .attach_semantics(crate::element::SemanticsDecoration::default().test_id("label"));
+            let label = cx.text("Label").test_id("label");
             let labelled_by = label.id.0;
 
             vec![

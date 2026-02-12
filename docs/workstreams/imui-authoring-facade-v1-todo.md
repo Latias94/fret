@@ -8,7 +8,7 @@ This is the checkbox tracker companion to:
 - `docs/workstreams/imui-authoring-facade-v1.md`
 
 Note (2026-02-03): v1 is treated as feature-complete enough for internal demos. We plan a fearless v2 consolidation
-refactor (authoring surface convergence with ADR 0175 / `ui()` / `UiBuilder<T>`). New work should be tracked in:
+refactor (authoring surface convergence with ADR 0160 / `ui()` / `UiBuilder<T>`). New work should be tracked in:
 
 - `docs/workstreams/imui-authoring-facade-v2.md`
 - `docs/workstreams/imui-authoring-facade-v2-todo.md`
@@ -251,5 +251,5 @@ This tracker focuses on v1 closure only. The v2 refactor work is tracked in:
 
 Related consolidation workstreams / ADRs:
 
-- `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`

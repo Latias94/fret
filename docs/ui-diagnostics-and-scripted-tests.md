@@ -26,9 +26,9 @@ The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
 Related ADRs:
 
-- ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- ADR 0159: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
 
 Implementation pointers (where the code lives today):
 
@@ -97,6 +97,30 @@ Workflow tip:
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
+
+## DevTools GUI (preview)
+
+This repo includes a WIP DevTools GUI app at `apps/fret-devtools` that wraps the same inspect/pick/scripts/bundles
+contracts with a low-friction, real-time UI (including web runner support via WebSocket transport).
+
+Run the DevTools GUI (it hosts a loopback-only WS server):
+
+- `cargo run -p fret-devtools`
+
+Connect a target app (native):
+
+- set `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/`
+- set `FRET_DEVTOOLS_TOKEN=<token>`
+
+Connect a target app (web runner):
+
+- add `?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>` to the URL
+
+Notes:
+
+- The GUI prints a ready-to-copy `ws://.../?fret_devtools_token=...` URL on startup.
+- `FRET_DEVTOOLS_WS_PORT` overrides the default port (`7331`).
+- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains `bundle.json`.
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
@@ -127,6 +151,24 @@ Workflow tip:
   ]
 }
 ```
+
+Optional: generate scripts from typed Rust templates
+
+If you prefer authoring scripts in Rust (type-safe selectors + reusable helpers) but still want the portable/reviewable
+JSON artifact, use `fret-diag-scriptgen`:
+
+```bash
+cargo run -p fret-diag-scriptgen -- list
+cargo run -p fret-diag-scriptgen -- write todo-baseline-v2
+```
+
+This writes a JSON file under `.fret/diag/scripts/` by default and prints the path. You can then run it via:
+
+```bash
+cargo run -p fretboard -- diag run .fret/diag/scripts/todo-baseline-v2.json --launch -- cargo run -p fret-demo --bin todo_demo
+```
+
+Implementation note: templates are built using the `fret_diag_protocol::builder` helpers.
 
 4. Push the script into the running app (write `script.json` + touch `script.touch`):
 
@@ -175,6 +217,39 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
     - Or launch a fresh process per script (clean state, slower):
 
       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+
+Web runner note:
+
+- `diag perf` uses the filesystem-trigger transport, so for web runner workflows you typically:
+  1) run the script via `apps/fret-devtools` (or any devtools-ws-capable driver) to export bundles under `.fret/diag/exports/`, then
+  2) compute a baseline from those bundle paths:
+     - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
+
+### Web runner: exporting bundles headlessly (Trunk + devtools-ws)
+
+This is the simplest repeatable workflow for producing `.fret/diag/exports/<timestamp>/bundle.json` from a web/WASM app.
+
+1. Start the loopback devtools WS hub (prints the token):
+
+   - `cargo run -p fret-devtools-ws`
+
+2. Serve the WASM app with Trunk:
+
+   - `cd apps/fret-ui-gallery-web`
+   - `trunk serve --port 8080`
+
+3. Open the app URL with WS parameters:
+
+   - `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+
+4. Export a bundle by running a script that includes a `capture_bundle` step:
+
+   - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --token <token>`
+
+The command prints the export directory path, and writes:
+
+- `.fret/diag/exports/<timestamp>/bundle.json`
+
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
@@ -278,11 +353,11 @@ At a high level:
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
-  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0190 “ephemeral prepaint items” workflows)
+  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0175 “ephemeral prepaint items” workflows)
   - `debug.virtual_list_windows`: VirtualList window telemetry (used to triage scroll-induced work)
     - `debug.virtual_list_windows[*].source`: whether the record was emitted from `layout` or `prepaint`
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
-  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
+  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0132)
   - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
@@ -316,7 +391,7 @@ Semantics export:
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
-- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0192).
+- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
 
@@ -401,6 +476,7 @@ Recent additions:
 
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
+- `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 
 Notes:
 
@@ -646,7 +722,7 @@ Notes:
 
 Recommended (CI/automation):
 
-- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+- `python3 tools/diag_matrix_ui_gallery.py --out-dir target/fret-diag --warmup-frames 5 --release --json`
 
 ### Bundle comparison (cached vs uncached)
 

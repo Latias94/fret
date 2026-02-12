@@ -49,7 +49,7 @@ Fret models Radix/Floating outcomes with a deterministic, pure solver and thin w
   `ecosystem/fret-ui-kit/src/primitives/popper.rs`
 - Popper wrapper/panel skeleton (absolute layout + arrow protrusion hit-test expansion):
   `ecosystem/fret-ui-kit/src/primitives/popper_content.rs`
-- Overlay helpers that prefer visual bounds (render-transform aware anchors, ADR 0083):
+- Overlay helpers that prefer visual bounds (render-transform aware anchors, ADR 0082):
   `ecosystem/fret-ui-kit/src/overlay.rs` (`anchor_bounds_for_element`, `outer_bounds_with_window_margin`)
 
 ### Recipe usage (examples)

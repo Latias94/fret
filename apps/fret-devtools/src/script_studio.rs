@@ -1,6 +1,83 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+/// Best-effort discovery of JSON Pointers that are convenient to edit in Script Studio.
+///
+/// This is intentionally heuristic and tolerant of invalid/partial scripts.
+pub fn collect_common_json_pointers(script_text: &str) -> Vec<String> {
+    let v: serde_json::Value = match serde_json::from_str(script_text) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut out: Vec<String> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let mut push = |p: String| {
+        if seen.insert(p.clone()) {
+            out.push(p);
+        }
+    };
+
+    // Common root-level pointers.
+    if v.get("schema_version").is_some() {
+        push("/schema_version".to_string());
+    }
+    if v.get("name").is_some() {
+        push("/name".to_string());
+    }
+    if v.get("steps").is_some() {
+        push("/steps".to_string());
+    }
+
+    let steps = v.get("steps").and_then(|x| x.as_array());
+    let Some(steps) = steps else { return out };
+
+    for (i, step) in steps.iter().enumerate() {
+        let Some(obj) = step.as_object() else {
+            continue;
+        };
+
+        let prefix = format!("/steps/{i}");
+        push(prefix.clone());
+
+        // Common step fields.
+        for key in [
+            "type",
+            "target",
+            "predicate",
+            "container",
+            "from",
+            "to",
+            "menu",
+            "item",
+            "a",
+            "b",
+        ] {
+            if obj.contains_key(key) {
+                push(format!("{prefix}/{key}"));
+            }
+        }
+
+        // Common nested values.
+        if obj.contains_key("path") {
+            push(format!("{prefix}/path"));
+            push(format!("{prefix}/path/0"));
+        }
+
+        // Predicates often embed selectors under nested fields.
+        if let Some(pred) = obj.get("predicate").and_then(|v| v.as_object()) {
+            for key in ["target", "a", "b"] {
+                if pred.contains_key(key) {
+                    push(format!("{prefix}/predicate/{key}"));
+                }
+            }
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScriptOrigin {
     WorkspaceTools,
@@ -152,6 +229,62 @@ pub fn apply_pick_to_json_pointer(
     serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
 }
 
+pub fn apply_json_value_to_json_pointer(
+    script_text: &str,
+    pointer: &str,
+    value: serde_json::Value,
+) -> Result<String, String> {
+    let mut script: serde_json::Value =
+        serde_json::from_str(script_text).map_err(|e| format!("script json parse failed: {e}"))?;
+
+    if pointer.trim().is_empty() {
+        return Err("json pointer is empty".to_string());
+    }
+    if !pointer.starts_with('/') {
+        return Err("json pointer must start with '/'".to_string());
+    }
+
+    let Some(slot) = script.pointer_mut(pointer) else {
+        return Err("json pointer not found in script".to_string());
+    };
+    *slot = value;
+
+    serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
+}
+
+pub fn append_step_json(script_text: &str, step: serde_json::Value) -> Result<String, String> {
+    insert_step_json(script_text, usize::MAX, step)
+}
+
+pub fn insert_step_json(
+    script_text: &str,
+    index: usize,
+    step: serde_json::Value,
+) -> Result<String, String> {
+    let mut script: serde_json::Value =
+        serde_json::from_str(script_text).map_err(|e| format!("script json parse failed: {e}"))?;
+
+    let Some(obj) = script.as_object_mut() else {
+        return Err("script root must be an object".to_string());
+    };
+    if !obj.contains_key("steps") {
+        obj.insert("steps".to_string(), serde_json::Value::Array(Vec::new()));
+    }
+
+    let steps = obj
+        .get_mut("steps")
+        .and_then(|v| v.as_array_mut())
+        .ok_or_else(|| "script.steps must be an array".to_string())?;
+
+    if index >= steps.len() {
+        steps.push(step);
+    } else {
+        steps.insert(index, step);
+    }
+
+    serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
+}
+
 fn best_selector_value_from_pick_payload(
     pick_payload: &serde_json::Value,
 ) -> Option<serde_json::Value> {
@@ -248,5 +381,31 @@ mod tests {
             v.pointer("/steps/0/target/kind").and_then(|x| x.as_str()),
             Some("test_id")
         );
+    }
+
+    #[test]
+    fn collect_common_json_pointers_discovers_step_slots() {
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                {"type":"click","target":{"kind":"node_id","node": 1}, "button":"left"},
+                {"type":"assert","predicate":{"kind":"exists","target":{"kind":"test_id","id":"x"}}},
+                {"type":"drag_to","from":{"kind":"test_id","id":"a"},"to":{"kind":"test_id","id":"b"}},
+                {"type":"assert","predicate":{"kind":"bounds_overlapping_x","a":{"kind":"test_id","id":"a"},"b":{"kind":"test_id","id":"b"},"eps_px": 0.0}},
+                {"type":"click_path","path":[{"kind":"test_id","id":"x"}]},
+            ]
+        });
+
+        let pointers =
+            collect_common_json_pointers(&serde_json::to_string_pretty(&script).unwrap());
+        assert!(pointers.contains(&"/schema_version".to_string()));
+        assert!(pointers.contains(&"/steps".to_string()));
+        assert!(pointers.contains(&"/steps/0/target".to_string()));
+        assert!(pointers.contains(&"/steps/1/predicate".to_string()));
+        assert!(pointers.contains(&"/steps/2/from".to_string()));
+        assert!(pointers.contains(&"/steps/2/to".to_string()));
+        assert!(pointers.contains(&"/steps/3/predicate/a".to_string()));
+        assert!(pointers.contains(&"/steps/3/predicate/b".to_string()));
+        assert!(pointers.contains(&"/steps/4/path/0".to_string()));
     }
 }

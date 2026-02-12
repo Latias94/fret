@@ -192,6 +192,19 @@ mod tests {
         fn release(&mut self, _path: PathId) {}
     }
 
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
     #[derive(Default)]
     struct TestHost {
         globals: HashMap<TypeId, Box<dyn Any>>,

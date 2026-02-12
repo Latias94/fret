@@ -5,7 +5,7 @@
 //! - emit scene ops every frame, but
 //! - want to avoid re-preparing renderer-owned resources (text blobs, paths, SVGs) unnecessarily.
 //!
-//! Unlike declarative hosted caches (ADR 0156), retained widgets own their caches directly and
+//! Unlike declarative hosted caches (ADR 0141), retained widgets own their caches directly and
 //! must release resources deterministically via `Widget::cleanup_resources`.
 
 mod hosted_resource_touch;

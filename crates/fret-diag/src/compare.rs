@@ -638,7 +638,7 @@ pub(super) fn maybe_launch_demo(
     let child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
-    let demo = LaunchedDemo {
+    let mut demo = LaunchedDemo {
         child,
         launched_unix_ms,
         launched_instant,
@@ -646,8 +646,30 @@ pub(super) fn maybe_launch_demo(
     };
 
     // Avoid racing cold-start compilation by waiting for the app to signal readiness.
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(180_000));
+    // `--launch` commonly runs `cargo run`, which may require a cold build and can take several
+    // minutes in large workspaces. Waiting long enough here avoids racing the diagnostics trigger
+    // protocol (the in-app side treats the first observed stamp as a baseline).
+    let exe_lower = exe.to_ascii_lowercase();
+    let is_cargo = exe_lower == "cargo"
+        || exe_lower.ends_with("\\cargo.exe")
+        || exe_lower.ends_with("/cargo.exe");
+    let min_timeout_ms = if is_cargo { 600_000 } else { 30_000 };
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(min_timeout_ms));
     while Instant::now() < deadline {
+        match demo.child.try_wait() {
+            Ok(Some(status)) => {
+                return Err(format!(
+                    "launched demo exited before signaling readiness (ready.touch): {status}"
+                ));
+            }
+            Ok(None) => {}
+            Err(e) => {
+                return Err(format!(
+                    "failed to query launched demo status while waiting for readiness: {e}"
+                ));
+            }
+        }
+
         let ready_mtime = std::fs::metadata(ready_path)
             .and_then(|m| m.modified())
             .ok();

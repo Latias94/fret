@@ -12,7 +12,8 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     SemanticsProps, ViewCacheProps,
 };
-use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
+use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{TreeItem, TreeState};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
@@ -169,10 +170,10 @@ impl WorkspaceShellDemoDriver {
                     cx.observe_model(&file_tree_items, Invalidation::Layout);
                     cx.observe_model(&file_tree_state, Invalidation::Layout);
 
-                    let theme = Arc::new(Theme::global(&*cx.app).clone());
+                    let theme = cx.theme_snapshot();
                     let bg = Some(theme.color_required("background"));
 
-                    let theme_for_left = Arc::clone(&theme);
+                    let theme_for_left = theme;
                     let left = cx.keyed("workspace_shell.left", move |cx| {
                         let mut props = FileTreeViewProps::default();
                         props.layout = fill_layout();
@@ -204,7 +205,7 @@ impl WorkspaceShellDemoDriver {
                         )
                     });
 
-                    let theme_for_center = Arc::clone(&theme);
+                    let theme_for_center = theme;
                     let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
                             move |cx: &mut fret_ui::ElementContext<'_, App>,
@@ -422,7 +423,7 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
+                Some(&state.ui),
                 semantics_snapshot,
                 element_runtime,
             )

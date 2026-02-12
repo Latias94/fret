@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -138,6 +139,7 @@ impl NavigationDrawer {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let NavigationDrawer {
             model,
@@ -150,8 +152,6 @@ impl NavigationDrawer {
         } = self;
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
             let disabled_items: Arc<[bool]> = Arc::from(
@@ -163,7 +163,7 @@ impl NavigationDrawer {
 
             let selected = cx
                 .get_model_cloned(&model, Invalidation::Layout)
-                .unwrap_or_else(|| Arc::<str>::from(""));
+                .unwrap_or_else(empty_arc_str);
 
             let tab_stop = items
                 .iter()
@@ -178,16 +178,25 @@ impl NavigationDrawer {
                 ..Default::default()
             };
 
-            let container_w = drawer_tokens::container_width(&theme);
-            let item_h_pad = drawer_tokens::item_horizontal_padding(&theme);
+            let (container_w, item_h_pad, container_bg, shadow, container_shape) = {
+                let theme = Theme::global(&*cx.app);
 
-            let container_bg = drawer_tokens::container_background(&theme, variant);
-            let elevation = drawer_tokens::container_elevation(&theme, variant);
-            let container_shape = drawer_tokens::container_shape(&theme);
-            let surface =
-                material_surface_style(&theme, container_bg, elevation, None, container_shape);
-            let container_bg = surface.background;
-            let shadow = surface.shadow;
+                let container_w = drawer_tokens::container_width(theme);
+                let item_h_pad = drawer_tokens::item_horizontal_padding(theme);
+
+                let container_bg = drawer_tokens::container_background(theme, variant);
+                let elevation = drawer_tokens::container_elevation(theme, variant);
+                let container_shape = drawer_tokens::container_shape(theme);
+                let surface =
+                    material_surface_style(theme, container_bg, elevation, None, container_shape);
+                (
+                    container_w,
+                    item_h_pad,
+                    surface.background,
+                    surface.shadow,
+                    container_shape,
+                )
+            };
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Vertical;
@@ -306,7 +315,6 @@ impl NavigationDrawer {
                                     let tab_stop = tab_stop.is_some_and(|t| t == idx);
                                     navigation_drawer_item(
                                         cx,
-                                        &theme,
                                         model.clone(),
                                         it,
                                         idx,
@@ -326,7 +334,6 @@ impl NavigationDrawer {
 
 fn navigation_drawer_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     model: Model<Arc<str>>,
     item: &NavigationDrawerItem,
     idx: usize,
@@ -340,6 +347,71 @@ fn navigation_drawer_item<H: UiHost>(
     let badge_label = item.badge_label.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+
+    let (
+        height,
+        corner_radii,
+        focus_ring,
+        ripple_base_opacity,
+        config,
+        selected_bg,
+        icon_size,
+        label_style_base,
+        label_weight_active,
+        label_weight_inactive,
+        badge_style,
+        badge_color,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+
+        let height = drawer_tokens::active_indicator_height(theme);
+        let corner_radii = Corners::all(drawer_tokens::active_indicator_radius(theme));
+        let focus_ring =
+            material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
+
+        let ripple_base_opacity = drawer_tokens::pressed_state_layer_opacity(theme);
+        let config = material_pressable_indication_config(theme, None);
+
+        let selected_bg = drawer_tokens::active_indicator_color(theme);
+        let icon_size = drawer_tokens::icon_size(theme);
+
+        let label_style_base = theme
+            .text_style_by_key("md.sys.typescale.label-large")
+            .unwrap_or_else(TextStyle::default);
+        let label_weight_active = drawer_tokens::label_weight(theme, true);
+        let label_weight_inactive = drawer_tokens::label_weight(theme, false);
+
+        let mut badge_style = theme
+            .text_style_by_key("md.sys.typescale.label-small")
+            .unwrap_or_else(TextStyle::default);
+        let weight = theme
+            .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
+            .unwrap_or(500.0);
+        badge_style.weight = fret_core::FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+
+        let badge_color = theme
+            .color_by_key("md.comp.navigation-drawer.large-badge-label.color")
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+            .unwrap_or_else(|| {
+                crate::foundation::token_resolver::MaterialTokenResolver::new(theme)
+                    .color_sys("md.sys.color.on-surface-variant")
+            });
+
+        (
+            height,
+            corner_radii,
+            focus_ring,
+            ripple_base_opacity,
+            config,
+            selected_bg,
+            icon_size,
+            label_style_base,
+            label_weight_active,
+            label_weight_inactive,
+            badge_style,
+            badge_color,
+        )
+    };
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
@@ -366,14 +438,10 @@ fn navigation_drawer_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let height = drawer_tokens::active_indicator_height(theme);
-        let corner_radii = Corners::all(drawer_tokens::active_indicator_radius(theme));
-        let focus_ring =
-            material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
-
         let pressable_props = PressableProps {
             enabled,
             focusable: enabled && tab_stop,
+            key_activation: Default::default(),
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Tab),
                 label: a11y_label.clone().or_else(|| Some(label.clone())),
@@ -388,7 +456,10 @@ fn navigation_drawer_item<H: UiHost>(
                 l.size.height = Length::Px(height);
                 l.size.width = Length::Fill;
                 l.overflow = Overflow::Visible;
-                enforce_minimum_interactive_size(&mut l, theme);
+                {
+                    let theme = Theme::global(&*cx.app);
+                    enforce_minimum_interactive_size(&mut l, theme);
+                }
                 l
             },
             focus_ring: Some(focus_ring),
@@ -411,15 +482,21 @@ fn navigation_drawer_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = drawer_tokens::label_color(theme, selected, interaction);
-                let icon_color = drawer_tokens::icon_color(theme, selected, interaction);
-                let state_layer_color =
-                    drawer_tokens::state_layer_color(theme, selected, interaction);
-                let state_layer_target =
-                    drawer_tokens::state_layer_target_opacity(theme, enabled, interaction);
-
-                let ripple_base_opacity = drawer_tokens::pressed_state_layer_opacity(theme);
-                let config = material_pressable_indication_config(theme, None);
+                let (label_color, icon_color, state_layer_color, state_layer_target) = {
+                    let theme = Theme::global(&*cx.app);
+                    let label_color = drawer_tokens::label_color(theme, selected, interaction);
+                    let icon_color = drawer_tokens::icon_color(theme, selected, interaction);
+                    let state_layer_color =
+                        drawer_tokens::state_layer_color(theme, selected, interaction);
+                    let state_layer_target =
+                        drawer_tokens::state_layer_target_opacity(theme, enabled, interaction);
+                    (
+                        label_color,
+                        icon_color,
+                        state_layer_color,
+                        state_layer_target,
+                    )
+                };
                 let ink = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -434,13 +511,24 @@ fn navigation_drawer_item<H: UiHost>(
                     false,
                 );
 
-                let selected_bg = drawer_tokens::active_indicator_color(theme);
-
-                let icon_el = drawer_icon(cx, theme, &icon, icon_color);
-                let label_el = drawer_label(cx, theme, &label, label_color, selected);
-                let badge_el = badge_label
-                    .as_ref()
-                    .map(|text| drawer_badge_label(cx, theme, text));
+                let icon_el = drawer_icon(cx, &icon, icon_size, icon_color);
+                let label_el = {
+                    let mut style = label_style_base.clone();
+                    style.weight = if selected {
+                        label_weight_active
+                    } else {
+                        label_weight_inactive
+                    };
+                    drawer_label(cx, &label, style, label_color)
+                };
+                let badge_el = badge_label.as_ref().map(|text| {
+                    let mut props = TextProps::new(text.clone());
+                    props.style = Some(badge_style.clone());
+                    props.color = Some(badge_color);
+                    props.wrap = TextWrap::None;
+                    props.overflow = TextOverflow::Clip;
+                    cx.text_props(props)
+                });
                 let mut spacer = SpacerProps::default();
                 spacer.layout.flex.grow = 1.0;
                 let spacer = cx.spacer(spacer);
@@ -518,47 +606,10 @@ fn interaction_state(
 
 fn drawer_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     text: &Arc<str>,
+    style: TextStyle,
     color: Color,
-    active: bool,
 ) -> AnyElement {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_else(TextStyle::default);
-
-    style.weight = drawer_tokens::label_weight(theme, active);
-
-    let mut props = TextProps::new(text.clone());
-    props.style = Some(style);
-    props.color = Some(color);
-    props.wrap = TextWrap::None;
-    props.overflow = TextOverflow::Clip;
-    cx.text_props(props)
-}
-
-fn drawer_badge_label<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    text: &Arc<str>,
-) -> AnyElement {
-    let mut style = theme
-        .text_style_by_key("md.sys.typescale.label-small")
-        .unwrap_or_else(TextStyle::default);
-
-    let weight = theme
-        .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
-        .unwrap_or(500.0);
-    style.weight = fret_core::FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
-
-    let color = theme
-        .color_by_key("md.comp.navigation-drawer.large-badge-label.color")
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| {
-            crate::foundation::token_resolver::MaterialTokenResolver::new(theme)
-                .color_sys("md.sys.color.on-surface-variant")
-        });
-
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
@@ -569,11 +620,10 @@ fn drawer_badge_label<H: UiHost>(
 
 fn drawer_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     icon: &IconId,
+    size: Px,
     color: Color,
 ) -> AnyElement {
-    let size = drawer_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);

@@ -53,6 +53,16 @@ Set:
 
 and run the target app with `fret-bootstrap` `diagnostics-ws` enabled.
 
+## Optional: filesystem transport (native-only)
+
+If you want to drive the existing file-trigger workflow (no WS bridge), run DevTools with:
+
+- `FRET_DEVTOOLS_TRANSPORT=fs`
+- `FRET_DIAG_DIR=target/fret-diag` (optional; defaults to `target/fret-diag`)
+
+In this mode DevTools polls `FRET_DIAG_DIR` for `latest.txt`, `pick.result.json`, `script.result.json`,
+and `screenshots.result.json` updates (and writes `*.touch` triggers for inspect/pick/script/bundle dump).
+
 ## Connect a target app (web runner)
 
 Add query parameters:

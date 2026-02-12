@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
-    SemanticsDecoration,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
+    MainAlign, RowProps, SemanticsDecoration,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
@@ -75,8 +75,7 @@ fn is_field_legend_variant_legend(element: &AnyElement) -> bool {
     line_height.is_some_and(|lh| (lh.0 - 24.0).abs() <= 0.5)
 }
 
-fn is_field_description(theme: &Theme, element: &AnyElement) -> bool {
-    let muted = muted_foreground(theme);
+fn is_field_description(muted: fret_core::Color, element: &AnyElement) -> bool {
     let element = peel_single_child_wrappers(element);
     match &element.kind {
         ElementKind::Text(props) => props.wrap == TextWrap::Word && props.color == Some(muted),
@@ -258,21 +257,41 @@ impl FieldSet {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
-        // is present via CSS `:has` selectors.
-        let gap = if self.children.iter().any(is_radio_group_element)
-            || self.children.iter().any(is_checkbox_group_element)
-        {
-            MetricRef::space(Space::N3).resolve(&theme)
-        } else {
-            MetricRef::space(Space::N6).resolve(&theme)
+        let has_radio_or_checkbox_group = self.children.iter().any(is_radio_group_element)
+            || self.children.iter().any(is_checkbox_group_element);
+
+        let (gap, layout, rest_layout, legend_gap, muted, desc_mt_neg_n1, desc_mt_neg_n1p5) = {
+            let theme = Theme::global(&*cx.app);
+            // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
+            // is present via CSS `:has` selectors.
+            let gap = if has_radio_or_checkbox_group {
+                MetricRef::space(Space::N3).resolve(theme)
+            } else {
+                MetricRef::space(Space::N6).resolve(theme)
+            };
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().merge(self.layout),
+            );
+            let rest_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+            let legend_gap = MetricRef::space(Space::N3).resolve(theme);
+            let muted = muted_foreground(theme);
+            let desc_mt_neg_n1 =
+                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
+            let desc_mt_neg_n1p5 =
+                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1p5));
+            (
+                gap,
+                layout,
+                rest_layout,
+                legend_gap,
+                muted,
+                desc_mt_neg_n1,
+                desc_mt_neg_n1p5,
+            )
         };
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().w_full().merge(self.layout),
-        );
 
         let mut children = self.children;
         let has_leading_legend =
@@ -282,7 +301,6 @@ impl FieldSet {
             let legend = children.remove(0);
             let legend_is_variant_legend = is_field_legend_variant_legend(&legend);
             let rest_children = children;
-            let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
             let outer_gap = match &peel_semantics_wrappers(&legend).kind {
                 ElementKind::Container(props) if matches!(props.layout.margin.bottom, fret_ui::element::MarginEdge::Px(px) if (px.0 - legend_gap.0).abs() <= 0.5) => {
                     Px(0.0)
@@ -299,10 +317,7 @@ impl FieldSet {
                 move |cx| {
                     let rest = cx.column(
                         ColumnProps {
-                            layout: decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().w_full(),
-                            ),
+                            layout: rest_layout,
                             gap,
                             ..Default::default()
                         },
@@ -315,17 +330,13 @@ impl FieldSet {
                                 .map(|(idx, child)| {
                                     if len >= 2
                                         && idx == len - 2
-                                        && is_field_description(&theme, &child)
+                                        && is_field_description(muted, &child)
                                     {
-                                        let space = if legend_is_variant_legend && idx == 0 {
-                                            Space::N1p5
+                                        let layout = if legend_is_variant_legend && idx == 0 {
+                                            desc_mt_neg_n1p5.clone()
                                         } else {
-                                            Space::N1
+                                            desc_mt_neg_n1.clone()
                                         };
-                                        let layout = decl_style::layout_style(
-                                            &theme,
-                                            LayoutRefinement::default().mt_neg(space),
-                                        );
                                         cx.container(
                                             ContainerProps {
                                                 layout,
@@ -357,11 +368,8 @@ impl FieldSet {
                         .into_iter()
                         .enumerate()
                         .map(|(idx, child)| {
-                            if len >= 2 && idx == len - 2 && is_field_description(&theme, &child) {
-                                let layout = decl_style::layout_style(
-                                    &theme,
-                                    LayoutRefinement::default().mt_neg(Space::N1),
-                                );
+                            if len >= 2 && idx == len - 2 && is_field_description(muted, &child) {
+                                let layout = desc_mt_neg_n1.clone();
                                 cx.container(
                                     ContainerProps {
                                         layout,
@@ -423,29 +431,42 @@ impl FieldLegend {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let (fg, size, line_height, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme
+                .color_by_key("foreground")
+                .unwrap_or_else(|| theme.color_required("foreground"));
 
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            let (size, line_height) = match self.variant {
+                FieldLegendVariant::Legend => {
+                    // Tailwind `text-base` = 16px / 24px by default.
+                    let size = theme
+                        .metric_by_key("component.field.legend_px")
+                        .unwrap_or(Px(16.0));
+                    let line_height = theme
+                        .metric_by_key("component.field.legend_line_height")
+                        .unwrap_or(Px(24.0));
+                    (size, line_height)
+                }
+                FieldLegendVariant::Label => {
+                    let size = theme.metric_required("font.size");
+                    let line_height = theme.metric_required("font.line_height");
+                    (size, line_height)
+                }
+            };
 
-        let (size, line_height) = match self.variant {
-            FieldLegendVariant::Legend => {
-                // Tailwind `text-base` = 16px / 24px by default.
-                let size = theme
-                    .metric_by_key("component.field.legend_px")
-                    .unwrap_or(Px(16.0));
-                let line_height = theme
-                    .metric_by_key("component.field.legend_line_height")
-                    .unwrap_or(Px(24.0));
-                (size, line_height)
-            }
-            FieldLegendVariant::Label => {
-                let size = theme.metric_required("font.size");
-                let line_height = theme.metric_required("font.line_height");
-                (size, line_height)
-            }
+            // Upstream has `mb-3` on the legend.
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .w_full()
+                    .mb(Space::N3)
+                    .merge(self.layout),
+            );
+
+            (fg, size, line_height, layout)
         };
 
         let text = ui::label(cx, self.text)
@@ -456,15 +477,6 @@ impl FieldLegend {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .into_element(cx);
-
-        // Upstream has `mb-3` on the legend.
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .mb(Space::N3)
-                .merge(self.layout),
-        );
 
         cx.container(
             ContainerProps {
@@ -522,21 +534,25 @@ impl FieldGroup {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = self
-            .gap
-            .map(|g| g.resolve(&theme))
-            .unwrap_or_else(|| match self.slot {
-                FieldGroupSlot::Default => theme
-                    .metric_by_key("component.field.group_gap")
-                    .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(&theme)),
-                FieldGroupSlot::CheckboxGroup => MetricRef::space(Space::N3).resolve(&theme),
-            });
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().w_full().merge(self.layout),
-        );
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = self
+                .gap
+                .map(|g| g.resolve(theme))
+                .unwrap_or_else(|| match self.slot {
+                    FieldGroupSlot::Default => theme
+                        .metric_by_key("component.field.group_gap")
+                        .unwrap_or_else(|| MetricRef::space(Space::N8).resolve(theme)),
+                    FieldGroupSlot::CheckboxGroup => MetricRef::space(Space::N3).resolve(theme),
+                });
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().merge(self.layout),
+            );
+            (gap, layout)
+        };
         let children = self.children;
         let column = cx.column(
             ColumnProps {
@@ -577,11 +593,15 @@ impl FieldContent {
         Self { children }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N1p5).resolve(&theme);
-        let layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+        let (gap, layout) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = MetricRef::space(Space::N1p5).resolve(theme);
+            let layout =
+                decl_style::layout_style(theme, LayoutRefinement::default().flex_1().min_w_0());
+            (gap, layout)
+        };
         let children = self.children;
         cx.column(
             ColumnProps {
@@ -604,20 +624,23 @@ impl FieldTitle {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
-        let px = theme
-            .metric_by_key("component.field.title_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.field.title_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme
+                .color_by_key("foreground")
+                .unwrap_or_else(|| theme.color_required("foreground"));
+            let px = theme
+                .metric_by_key("component.field.title_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.field.title_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::label(cx, self.text)
             .text_size_px(px)
@@ -648,24 +671,28 @@ impl FieldLabel {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
 
-        // Upstream `FieldLabel` uses `leading-snug` instead of the plain `Label` default.
-        // See: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`.
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or_else(|| theme.color_required("foreground"));
-        let px = theme
-            .metric_by_key("component.field.label_px")
-            .or_else(|| theme.metric_by_key("component.label.text_px"))
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.field.label_line_height")
-            .or_else(|| theme.metric_by_key("component.label.line_height"))
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            // Upstream `FieldLabel` uses `leading-snug` instead of the plain `Label` default.
+            // See: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx`.
+            let fg = theme
+                .color_by_key("foreground")
+                .unwrap_or_else(|| theme.color_required("foreground"));
+            let px = theme
+                .metric_by_key("component.field.label_px")
+                .or_else(|| theme.metric_by_key("component.label.text_px"))
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.field.label_line_height")
+                .or_else(|| theme.metric_by_key("component.label.line_height"))
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::label(cx, self.text)
             .layout(self.layout)
@@ -688,18 +715,21 @@ impl FieldDescription {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let fg = muted_foreground(&theme);
-        let px = theme
-            .metric_by_key("component.field.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.field.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = muted_foreground(theme);
+            let px = theme
+                .metric_by_key("component.field.description_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.field.description_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .w_full()
@@ -723,18 +753,21 @@ impl FieldError {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let fg = theme.color_required("destructive");
-        let px = theme
-            .metric_by_key("component.field.error_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_required("font.size"));
-        let line_height = theme
-            .metric_by_key("component.field.error_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let (fg, px, line_height) = {
+            let theme = Theme::global(&*cx.app);
+            let fg = theme.color_required("destructive");
+            let px = theme
+                .metric_by_key("component.field.error_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or_else(|| theme.metric_required("font.size"));
+            let line_height = theme
+                .metric_by_key("component.field.error_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
+            (fg, px, line_height)
+        };
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -771,29 +804,59 @@ impl FieldSeparator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let (outer_layout, layout, line_layout, label_props, border) = {
+            let theme = Theme::global(&*cx.app);
 
-        let h = theme
-            .metric_by_key("component.field.separator_h")
-            .unwrap_or_else(|| MetricRef::space(Space::N5).resolve(&theme));
-        let border = theme.color_required("border");
-        let bg = theme.color_required("background");
+            let h = theme
+                .metric_by_key("component.field.separator_h")
+                .unwrap_or_else(|| MetricRef::space(Space::N5).resolve(theme));
+            let border = theme.color_required("border");
+            let bg = theme.color_required("background");
 
-        // Upstream uses `-my-2` (negative 8px) to visually tighten the separator in a group.
-        let outer_layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .mt_neg(Space::N2)
-                .mb_neg(Space::N2)
-                .merge(self.layout),
-        );
+            // Upstream uses `-my-2` (negative 8px) to visually tighten the separator in a group.
+            let outer_layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .w_full()
+                    .mt_neg(Space::N2)
+                    .mb_neg(Space::N2)
+                    .merge(self.layout),
+            );
 
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().relative().w_full().h_px(h),
-        );
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().relative().w_full().h_px(h),
+            );
+
+            let line_layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .absolute()
+                    .left(Space::N0)
+                    .right(Space::N0)
+                    .top(Space::N2p5)
+                    .h_px(Px(1.0)),
+            );
+
+            let label_layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default()
+                    .absolute()
+                    .left(Space::N0)
+                    .right(Space::N0)
+                    .top(Space::N0),
+            );
+            let chrome = ChromeRefinement::default()
+                .bg(fret_ui_kit::ColorRef::Color(bg))
+                .px(Space::N2);
+            let mut label_props =
+                decl_style::container_props(theme, chrome, LayoutRefinement::default());
+            label_props.layout = label_layout;
+
+            (outer_layout, layout, line_layout, label_props, border)
+        };
 
         cx.container(
             ContainerProps {
@@ -801,16 +864,6 @@ impl FieldSeparator {
                 ..Default::default()
             },
             move |cx| {
-                let line_layout = decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default()
-                        .absolute()
-                        .left(Space::N0)
-                        .right(Space::N0)
-                        .top(Space::N2p5)
-                        .h_px(Px(1.0)),
-                );
-
                 let label = self.label.clone();
                 let separator = cx.container(
                     ContainerProps {
@@ -836,24 +889,7 @@ impl FieldSeparator {
                         ));
 
                         if let Some(label) = label {
-                            let label_layout = decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default()
-                                    .absolute()
-                                    .left(Space::N0)
-                                    .right(Space::N0)
-                                    .top(Space::N0),
-                            );
-                            let chrome = ChromeRefinement::default()
-                                .bg(fret_ui_kit::ColorRef::Color(bg))
-                                .px(Space::N2);
-                            let mut props = decl_style::container_props(
-                                &theme,
-                                chrome,
-                                LayoutRefinement::default(),
-                            );
-                            props.layout = label_layout;
-                            children.push(cx.container(props, move |cx| {
+                            children.push(cx.container(label_props, move |cx| {
                                 vec![FieldDescription::new(label).into_element(cx)]
                             }));
                         }
@@ -908,19 +944,25 @@ impl Field {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let gap = MetricRef::space(Space::N3).resolve(&theme);
-        let wrapper = decl_style::container_props(
-            &theme,
-            self.chrome,
-            LayoutRefinement::default().w_full().merge(self.layout),
-        );
+        let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
+            let theme = Theme::global(&*cx.app);
+            let gap = MetricRef::space(Space::N3).resolve(theme);
+            let wrapper = decl_style::container_props(
+                theme,
+                self.chrome,
+                LayoutRefinement::default().w_full().merge(self.layout),
+            );
+            let inner_layout =
+                decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
+            let muted = muted_foreground(theme);
+            let desc_mt_neg =
+                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
+            (gap, wrapper, inner_layout, muted, desc_mt_neg)
+        };
 
         let orientation = self.orientation;
-        let inner_layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
         let children = self.children;
         let align_horizontal = if children.iter().any(subtree_has_flex_grow) {
             CrossAlign::Start
@@ -928,75 +970,31 @@ impl Field {
             CrossAlign::Center
         };
 
-        let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+        let region_props = LayoutQueryRegionProps {
+            layout: inner_layout.clone(),
+            name: None,
+        };
 
-        cx.container(wrapper, move |cx| {
-            let inner = match orientation {
-                FieldOrientation::Vertical => cx.column(
-                    ColumnProps {
-                        layout: inner_layout.clone(),
-                        gap,
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                        let len = children.len();
-                        children
-                            .into_iter()
-                            .enumerate()
-                            .map(|(idx, child)| {
-                                if len >= 2
-                                    && idx == len - 2
-                                    && is_field_description(&theme, &child)
-                                {
-                                    let layout = decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default().mt_neg(Space::N1),
-                                    );
-                                    cx.container(
-                                        ContainerProps {
-                                            layout,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![child],
-                                    )
-                                } else {
-                                    child
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    },
-                ),
-                FieldOrientation::Horizontal => cx.row(
-                    RowProps {
-                        layout: inner_layout,
-                        gap,
-                        justify: MainAlign::Start,
-                        align: align_horizontal,
-                        ..Default::default()
-                    },
-                    move |_cx| children,
-                ),
-                FieldOrientation::Responsive => {
-                    let children_row = children.clone();
-                    let children_col = children;
-                    if md_breakpoint {
-                        let children_row = children_row
-                            .into_iter()
-                            .map(responsive_md_width_auto)
-                            .collect::<Vec<_>>();
-                        cx.row(
-                            RowProps {
-                                layout: inner_layout,
-                                gap,
-                                justify: MainAlign::Start,
-                                align: align_horizontal,
-                                ..Default::default()
-                            },
-                            move |_cx| children_row,
-                        )
-                    } else {
-                        cx.column(
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.field",
+            region_props,
+            move |cx, region_id| {
+                vec![cx.container(wrapper, move |cx| {
+                    let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                        cx,
+                        region_id,
+                        Invalidation::Layout,
+                        false,
+                        &[(
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
+                            true,
+                        )],
+                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                    );
+
+                    let inner = match orientation {
+                        FieldOrientation::Vertical => cx.column(
                             ColumnProps {
                                 layout: inner_layout.clone(),
                                 gap,
@@ -1004,22 +1002,18 @@ impl Field {
                             },
                             move |cx| {
                                 // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                                let len = children_col.len();
-                                children_col
+                                let len = children.len();
+                                children
                                     .into_iter()
                                     .enumerate()
                                     .map(|(idx, child)| {
                                         if len >= 2
                                             && idx == len - 2
-                                            && is_field_description(&theme, &child)
+                                            && is_field_description(muted, &child)
                                         {
-                                            let layout = decl_style::layout_style(
-                                                &theme,
-                                                LayoutRefinement::default().mt_neg(Space::N1),
-                                            );
                                             cx.container(
                                                 ContainerProps {
-                                                    layout,
+                                                    layout: desc_mt_neg.clone(),
                                                     ..Default::default()
                                                 },
                                                 move |_cx| vec![child],
@@ -1030,13 +1024,75 @@ impl Field {
                                     })
                                     .collect::<Vec<_>>()
                             },
-                        )
-                    }
-                }
-            };
+                        ),
+                        FieldOrientation::Horizontal => cx.row(
+                            RowProps {
+                                layout: inner_layout,
+                                gap,
+                                justify: MainAlign::Start,
+                                align: align_horizontal,
+                                ..Default::default()
+                            },
+                            move |_cx| children,
+                        ),
+                        FieldOrientation::Responsive => {
+                            let children_row = children.clone();
+                            let children_col = children;
+                            if md_breakpoint {
+                                let children_row = children_row
+                                    .into_iter()
+                                    .map(responsive_md_width_auto)
+                                    .collect::<Vec<_>>();
+                                cx.row(
+                                    RowProps {
+                                        layout: inner_layout,
+                                        gap,
+                                        justify: MainAlign::Start,
+                                        align: align_horizontal,
+                                        ..Default::default()
+                                    },
+                                    move |_cx| children_row,
+                                )
+                            } else {
+                                cx.column(
+                                    ColumnProps {
+                                        layout: inner_layout.clone(),
+                                        gap,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                                        let len = children_col.len();
+                                        children_col
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(|(idx, child)| {
+                                                if len >= 2
+                                                    && idx == len - 2
+                                                    && is_field_description(muted, &child)
+                                                {
+                                                    cx.container(
+                                                        ContainerProps {
+                                                            layout: desc_mt_neg.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                        move |_cx| vec![child],
+                                                    )
+                                                } else {
+                                                    child
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
+                                )
+                            }
+                        }
+                    };
 
-            vec![inner]
-        })
+                    vec![inner]
+                })]
+            },
+        )
     }
 }
 

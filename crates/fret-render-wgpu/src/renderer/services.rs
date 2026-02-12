@@ -245,3 +245,69 @@ impl fret_core::SvgService for Renderer {
         true
     }
 }
+
+impl fret_core::MaterialService for Renderer {
+    fn register_material(
+        &mut self,
+        desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        // v1: all baseline material kinds are supported by the quad shader on wgpu backends.
+        //
+        // v2: sampled materials are capability-gated by a fixed, renderer-owned catalog texture
+        // binding shape (ADR 0242).
+        match desc.binding {
+            fret_core::MaterialBindingShape::ParamsOnly => {}
+            fret_core::MaterialBindingShape::ParamsPlusCatalogTexture { .. } => {
+                let f = self
+                    .adapter
+                    .get_texture_format_features(wgpu::TextureFormat::Rgba8Unorm);
+                let ok_usages = f
+                    .allowed_usages
+                    .contains(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
+                let ok_filterable = f
+                    .flags
+                    .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE);
+                if !(ok_usages && ok_filterable) {
+                    return Err(fret_core::MaterialRegistrationError::Unsupported);
+                }
+            }
+        }
+
+        match self.materials_by_desc.entry(desc) {
+            Entry::Occupied(e) => {
+                let id = *e.get();
+                if let Some(entry) = self.materials.get_mut(id) {
+                    entry.refs = entry.refs.saturating_add(1);
+                }
+                Ok(id)
+            }
+            Entry::Vacant(e) => {
+                let id = self
+                    .materials
+                    .insert(super::MaterialEntry { desc, refs: 1 });
+                e.insert(id);
+                Ok(id)
+            }
+        }
+    }
+
+    fn unregister_material(&mut self, id: fret_core::MaterialId) -> bool {
+        let Some(refs) = self.materials.get(id).map(|e| e.refs) else {
+            return false;
+        };
+
+        if refs > 1 {
+            if let Some(entry) = self.materials.get_mut(id) {
+                entry.refs = entry.refs.saturating_sub(1);
+            }
+            return true;
+        }
+
+        let Some(entry) = self.materials.remove(id) else {
+            return false;
+        };
+
+        self.materials_by_desc.remove(&entry.desc);
+        true
+    }
+}

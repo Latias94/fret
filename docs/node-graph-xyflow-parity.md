@@ -11,7 +11,7 @@ files in `repo-ref/xyflow` and the current (or planned) module in `fret-node`.
 If you are looking for overall sequencing and milestones, see `docs/node-graph-roadmap.md`.
 If you are looking for an execution plan (milestones + deliverables), see
 `docs/workstreams/fret-node-xyflow-parity.md`.
-If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
+If you are looking for contracts, see `docs/adr/0126-node-graph-editor-and-typed-connections.md`.
 If you are looking for an API-level guide, see `docs/node-graph-how-to-build-like-xyflow.md`.
 
 ## How to use this doc
@@ -112,7 +112,7 @@ XyFlow is split into:
 
 ## fret-node code map (where to look)
 
-High-level layering (ADR 0135):
+High-level layering (ADR 0126):
 
 - **Graph model (serializable)**: `ecosystem/fret-node/src/core/*`
 - **Headless policies (optional)**: `ecosystem/fret-node/src/rules/*`, `ecosystem/fret-node/src/profile/*`
@@ -361,7 +361,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [x] **Viewport persistence contract**
   - XyFlow: app decides; store holds `transform`
   - fret-node:
-    - contract: `docs/adr/0135-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
+    - contract: `docs/adr/0126-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
     - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewStateFileV1`, `default_project_view_state_path`)
     - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
 
@@ -869,7 +869,7 @@ canonical data flow and invalidation boundaries:
 
 - [x] **Escape hatch for complex widgets (IME/text/clipboard)**
   - XyFlow: DOM is native; overlays are just DOM
-  - fret-node: `NodeGraphPortalHost` mounts `fret-ui` subtrees per node in window-space (ADR 0135 Stage 2)
+  - fret-node: `NodeGraphPortalHost` mounts `fret-ui` subtrees per node in window-space (ADR 0126 Stage 2)
 
 - [x] **Overlay input transparency by default**
   - XyFlow: most overlays are pointer-events: none except interactive controls

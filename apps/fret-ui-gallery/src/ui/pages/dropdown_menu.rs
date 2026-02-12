@@ -181,8 +181,6 @@ pub(super) fn preview_dropdown_menu(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -205,17 +203,17 @@ pub(super) fn preview_dropdown_menu(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -276,7 +274,7 @@ pub(super) fn preview_dropdown_menu(
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dropdown-menu-demo"));
+        .test_id("ui-gallery-dropdown-menu-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = shadcn::DropdownMenu::new(basic_open.clone()).into_element(
@@ -531,10 +529,7 @@ pub(super) fn preview_dropdown_menu(
             shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
                 .refine_layout(LayoutRefinement::default().w_px(Px(36.0)).h_px(Px(36.0)))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-dropdown-menu-avatar-trigger"),
-                )
+                .test_id("ui-gallery-dropdown-menu-avatar-trigger")
         },
         |_cx| {
             vec![
@@ -660,9 +655,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-dropdown-menu-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-dropdown-menu-component");
 
     let code_panel_body = stack::vstack(
         cx,

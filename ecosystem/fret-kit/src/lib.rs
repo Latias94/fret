@@ -73,7 +73,8 @@ pub mod prelude {
         AnyElement, AnyElementIterExt, Elements, HoverRegionProps, Length, SemanticsProps,
         TextProps,
     };
-    pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiTree};
+    pub use fret_ui_kit::declarative::AnyElementSemanticsExt;
     pub use fret_ui_kit::declarative::ModelWatchExt;
     #[cfg(not(feature = "shadcn"))]
     pub use fret_ui_kit::{
@@ -425,8 +426,16 @@ pub fn app_with_hooks<S: 'static>(
 ) -> Result<UiAppBuilder<S>> {
     let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
         .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+    #[cfg(feature = "shadcn")]
+    let driver = driver
+        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
+
+    #[cfg(feature = "router")]
+    let builder = builder.install_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+    });
 
     #[cfg(feature = "diagnostics")]
     let builder = builder.with_default_diagnostics();
@@ -451,6 +460,25 @@ pub fn app_with_hooks<S: 'static>(
     let builder = builder.preload_icon_svgs_on_gpu_ready();
 
     Ok(UiAppBuilder::new(builder))
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
+fn shadcn_sync_theme_from_environment_on_global_changes<S>(
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut S,
+    changed: &[std::any::TypeId],
+) {
+    if !changed.contains(&std::any::TypeId::of::<fret_core::WindowMetricsService>()) {
+        return;
+    }
+    let config = app
+        .global::<fret_ui_shadcn::ShadcnInstallConfig>()
+        .copied()
+        .unwrap_or_default();
+    let _ =
+        fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
 }
 
 /// Same as [`app_with_hooks`], but without a driver configuration hook.
@@ -484,4 +512,68 @@ pub fn run<S: 'static>(
     view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
 ) -> Result<()> {
     run_with_hooks(root_name, init_window, view, |d| d)
+}
+
+#[cfg(all(
+    test,
+    not(target_arch = "wasm32"),
+    feature = "desktop",
+    feature = "shadcn"
+))]
+mod tests {
+    use std::any::TypeId;
+
+    use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
+    use fret_ui::{Theme, UiTree};
+
+    use super::App;
+
+    #[test]
+    fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
+        let mut app = App::new();
+        fret_ui_shadcn::install_app(&mut app);
+
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_color_scheme(window, Some(ColorScheme::Dark));
+        });
+
+        let mut ui = UiTree::<App>::default();
+        let mut state = ();
+
+        let before_bg = Theme::global(&app).colors.surface_background;
+        let before_rev = Theme::global(&app).revision();
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), before_rev);
+        assert_eq!(Theme::global(&app).colors.surface_background, before_bg);
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_ne!(Theme::global(&app).colors.surface_background, before_bg);
+        let rev_after = Theme::global(&app).revision();
+
+        super::shadcn_sync_theme_from_environment_on_global_changes::<()>(
+            &mut app,
+            window,
+            &mut ui,
+            &mut state,
+            &[TypeId::of::<WindowMetricsService>()],
+        );
+
+        assert_eq!(Theme::global(&app).revision(), rev_after);
+    }
 }

@@ -4,7 +4,7 @@ This workstream note tracks the P0 refactor goals for overlay/input arbitration 
 implementation progress in the `input-dispatch-v2` worktree.
 
 Note: keep the phase/default-action/action-availability contract in
-`docs/workstreams/input-dispatch-v2.md` (ADR 1157), and track overlay/pointer-occlusion specific
+`docs/workstreams/input-dispatch-v2.md` (ADR 0218), and track overlay/pointer-occlusion specific
 progress here to avoid document ownership conflicts.
 
 Primary roadmap document:
@@ -17,7 +17,7 @@ Related ADRs:
 
 - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 
 ## Goals (P0)
 

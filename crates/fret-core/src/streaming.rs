@@ -1,6 +1,6 @@
 use crate::FrameId;
 
-/// Per-frame counters for streaming image uploads (ADR 0123).
+/// Per-frame counters for streaming image uploads (ADR 0121).
 ///
 /// This is intended for debugging/telemetry surfaces (e.g. an on-screen overlay). The runner
 /// updates it when enabled by configuration.

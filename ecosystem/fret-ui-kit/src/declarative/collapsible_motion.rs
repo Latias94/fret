@@ -343,6 +343,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn collapsible_can_measure_off_flow_then_animate_open() {
         let window = AppWindowId::default();
@@ -378,7 +391,7 @@ mod tests {
                 "collapsible-motion",
                 |cx| {
                     let state_id = cx.root_id();
-                    let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+                    let is_open = cx.watch_model(&open).copied_or_default();
 
                     let measured = last_measured_height_for(cx, state_id);
                     let has_measurement = measured.0 > 0.0;

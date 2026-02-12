@@ -18,25 +18,321 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0 — Guardrails first
 
-- [ ] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
-  - Candidates: `pwsh -NoProfile -File tools/check_layering.ps1`, `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo nextest run`.
-  - Prefer documenting the minimal subsets that catch most regressions early (e.g. `-p fret-ui`, `-p fret-ui-shadcn`).
-  - Prefer defining “Fast vs Full” gate tiers so contributors know what to run in the inner loop vs before merge.
+- [x] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
+  - Evidence:
+    - `tools/gates_fast.ps1`
+    - `tools/gates_full.ps1`
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Always-run gates”)
 
 - [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard diag`).
   - Link: `docs/ui-diagnostics-and-scripted-tests.md`
 
-- [ ] BU-FR-guard-003 Inventory the current scripted diagnostics suites and map them to program milestones.
+- [~] BU-FR-guard-003 Inventory the current scripted diagnostics suites and map them to program milestones.
   - Start from: `docs/ui-diagnostics-and-scripted-tests.md` and `tools/diag-scripts/`
+  - Early evidence:
+    - `fretboard diag suite ui-gallery-overlay-steady` (overlay/focus interaction subset)
+    - `crates/fret-diag/src/lib.rs` (suite definitions)
 
 - [ ] BU-FR-guard-004 Convert “huge Rust conformance sources” into data-driven harnesses where possible.
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
+  - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
+  - Hygiene: keep shared integration-test helpers under `tests/support/` so they do not compile as standalone test crates.
+  - Evidence (module split):
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/harness.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/insets.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/web.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/web.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/web.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/services.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/geometry.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/harness.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/assertions.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/input.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/listbox.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/mod.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/overlay.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/context_menu.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/navigation_menu.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/overlay_chrome/menu_subcontent.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/probes.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/shadow.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/scene.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/semantics.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/support/viewport.rs`
+  - Evidence (shadcn web golden schema + helpers):
+    - `ecosystem/fret-ui-shadcn/tests/support/web_golden_shadcn.rs`
+    - `ecosystem/fret-ui-shadcn/tests/support/repo_root.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_typography.rs`
+  - Evidence (overlay chrome web query helpers):
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/web.rs` (`web_find_active_element_chrome`, `web_find_menu_item_chrome_by_slot_variant_and_text`, `web_find_open_menu_subtrigger_chrome`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/avatar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/chart.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/collapsible.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/button.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/breadcrumb.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/typography.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/dashboard.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/item.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/pagination.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/progress.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/select.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sonner.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/tabs.rs`
+  - Evidence (fixture-driven slice):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_sonner_open_toast_rect_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, overlay placement smoke):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_smoke_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures`)
+  - Evidence (fixture-driven slice, dropdown-menu demo overlay placement):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_demo.rs` (`web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures`)
+  - Evidence (fixture-driven slice, menubar demo overlay placement):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_menubar_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar/fixtures.rs` (`web_vs_fret_menubar_demo_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar.rs` (keeps procedural “underlay scroll re-anchor” test)
+  - Evidence (fixture-driven slice, select overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs` (`web_vs_fret_select_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select.rs` (keeps procedural “underlay scroll re-anchor” test)
+  - Evidence (fixture-driven slice, overlay chrome select chrome + option states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/select/fixtures.rs` (`web_vs_fret_select_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/select.rs`
+  - Evidence (fixture-driven slice, overlay chrome dropdown-menu chrome + submenu states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dropdown_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dropdown_menu/fixtures.rs` (`web_vs_fret_dropdown_menu_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dropdown_menu.rs`
+  - Evidence (fixture-driven slice, overlay chrome navigation-menu content/viewport/trigger chrome):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_navigation_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/navigation_menu/fixtures.rs` (`web_vs_fret_navigation_menu_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/navigation_menu.rs`
+  - Evidence (fixture-driven slice, overlay chrome menubar chrome + submenu states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_menubar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/menubar/fixtures.rs` (`web_vs_fret_menubar_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/menubar.rs` (keeps procedural root drop-shadow tests)
+  - Evidence (fixture-driven slice, overlay chrome context-menu chrome + submenu states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_context_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/context_menu/fixtures.rs` (`web_vs_fret_context_menu_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/context_menu.rs`
+  - Evidence (fixture-driven slice, overlay chrome popover chrome + surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_popover_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/popover/fixtures.rs` (`web_vs_fret_popover_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/popover.rs`
+  - Evidence (fixture-driven slice, overlay chrome tooltip chrome + panel size):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_tooltip_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/tooltip/fixtures.rs` (`web_vs_fret_tooltip_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/tooltip.rs`
+  - Evidence (fixture-driven slice, overlay chrome combobox listbox option states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_combobox_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/combobox/fixtures.rs` (`web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/combobox.rs`
+  - Evidence (fixture-driven slice, overlay chrome command-dialog chrome + option states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog/fixtures.rs` (`web_vs_fret_command_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs`
+  - Evidence (fixture-driven slice, overlay chrome sheet variants):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_sheet_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sheet/fixtures.rs` (`web_vs_fret_sheet_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sheet.rs`
+  - Evidence (fixture-driven slice, overlay chrome hover-card chrome + surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card/fixtures.rs` (`web_vs_fret_hover_card_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card.rs`
+  - Evidence (fixture-driven slice, overlay chrome date-picker select-open listbox sizing):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/date_picker/fixtures.rs` (`web_vs_fret_date_picker_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/date_picker.rs` (keeps procedural “listbox paints above popover” test)
+  - Evidence (fixture-driven slice, overlay chrome button-group destructive menu item states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/button_group/fixtures.rs` (`web_vs_fret_button_group_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/button_group.rs`
+  - Evidence (fixture-driven slice, overlay chrome calendar panel sizing):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/calendar/fixtures.rs` (`web_vs_fret_calendar_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/calendar.rs`
+  - Evidence (fixture-driven slice, overlay chrome dialog chrome + surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dialog/fixtures.rs` (`web_vs_fret_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dialog.rs`
+  - Evidence (fixture-driven slice, overlay chrome drawer surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_drawer_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/drawer/fixtures.rs` (`web_vs_fret_drawer_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/drawer.rs`
+  - Evidence (fixture-driven slice, overlay chrome alert-dialog chrome):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_alert_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog/fixtures.rs` (`web_vs_fret_alert_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog.rs`
+  - Evidence (fixture-driven slice, context-menu demo overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu/fixtures.rs` (`web_vs_fret_context_menu_demo_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu.rs` (keeps procedural “underlay scroll re-anchor” test)
+  - Evidence (fixture-driven slice, combobox overlay placement + listbox metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_combobox_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/combobox/fixtures.rs` (`web_vs_fret_combobox_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/combobox.rs` (keeps procedural “underlay scroll re-anchor” tests)
+  - Evidence (fixture-driven slice, navigation-menu overlay placement + mobile viewport geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_navigation_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/navigation_menu/fixtures.rs` (`web_vs_fret_navigation_menu_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/navigation_menu.rs` (keeps procedural “underlay scroll re-anchor” + indicator geometry tests)
+  - Evidence (fixture-driven slice, dropdown-menu misc overlay placement + menu metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_misc_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_misc/fixtures.rs` (`web_vs_fret_dropdown_menu_misc_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_misc.rs` (keeps procedural “underlay scroll re-anchor” test)
+  - Evidence (fixture-driven slice, calendar overlay placement):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/calendar/fixtures.rs` (`web_vs_fret_calendar_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/calendar.rs`
+  - Evidence (fixture-driven slice, date picker overlay placement):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/date_picker/fixtures.rs` (`web_vs_fret_date_picker_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/date_picker.rs` (keeps procedural “select listbox internal scroll” test)
+  - Evidence (fixture-driven slice, dropdown-menu checkboxes overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_checkboxes_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_checkboxes/fixtures.rs` (`web_vs_fret_dropdown_menu_checkboxes_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_checkboxes.rs`
+  - Evidence (fixture-driven slice, dropdown-menu radio-group overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_radio_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group/fixtures.rs` (`web_vs_fret_dropdown_menu_radio_group_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group.rs`
+  - Evidence (fixture-driven slice, dropdown-menu dialog overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_dialog/fixtures.rs` (`web_vs_fret_dropdown_menu_dialog_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_dialog.rs`
+  - Evidence (fixture-driven slice, breadcrumb overlay placement + responsive drawer anchoring):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_breadcrumb_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/breadcrumb/fixtures.rs` (`web_vs_fret_breadcrumb_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/breadcrumb.rs`
+  - Evidence (fixture-driven slice, button-group overlay placement + menu metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/button_group/fixtures.rs` (`web_vs_fret_button_group_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/button_group.rs`
+  - Evidence (fixture-driven slice, mode-toggle menu metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_mode_toggle_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/mode_toggle/fixtures.rs` (`web_vs_fret_mode_toggle_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/mode_toggle.rs`
+  - Evidence (fixture-driven slice, item-dropdown overlay placement + item metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_item_dropdown_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/item_dropdown/fixtures.rs` (`web_vs_fret_item_dropdown_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/item_dropdown.rs`
+  - Evidence (fixture-driven slice, misc overlays overlay placement + chrome insets):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs` (`web_vs_fret_misc_overlays_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays.rs` (keeps procedural “underlay scroll re-anchor” tests)
+  - Evidence (fixture-driven slice, layout trigger heights):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_trigger_height_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_trigger_heights_match_web_fixtures`)
+  - Evidence (fixture-driven slice, date picker trigger geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_date_picker_trigger_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, native select heights):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_native_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/native_select.rs` (`web_vs_fret_layout_native_select_heights_match_web_fixtures`)
+  - Evidence (fixture-driven slice, textarea geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_textarea_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/textarea.rs` (`web_vs_fret_layout_textarea_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, input geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_input_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs` (`web_vs_fret_layout_input_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, scroll-area geometry + hover):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_scroll_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs` (`web_vs_fret_layout_scroll_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, field geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_field_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs` (`web_vs_fret_layout_field_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, typography geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_typography_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/typography.rs` (`web_vs_fret_layout_typography_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, switch + radio-group layout):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_switch_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_radio_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/switch.rs` (`web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs` (`web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, empty geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_empty_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/empty.rs` (`web_vs_fret_layout_empty_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, resizable geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_resizable_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/resizable.rs` (`web_vs_fret_layout_resizable_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, calendar variants geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_calendar_variant_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` (`web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures`)
+  - Evidence (fixture-driven slice, sidebar menu button heights):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_sidebar_menu_button_height_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sidebar.rs` (`web_vs_fret_layout_sidebar_menu_button_heights_match_web_fixtures`)
+  - Evidence (fixture-driven slice, shell container centered variants):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_shell_container_centered_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/shell.rs` (`web_vs_fret_layout_shell_container_centered_x_w_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, chart scaffold geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_chart_scaffold_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/chart_scaffold.rs` (`web_vs_fret_layout_chart_scaffold_geometry_matches_web_fixtures`)
+  - Evidence (wiring, split modules are exercised by the integration test root):
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`mod avatar`, `mod badge`, `mod basic`, `mod breadcrumb`, `mod button`, `mod card`, `mod collapsible`, `mod accordion`, `mod calendar`, `mod carousel`, `mod chart`, `mod layout_chart_scaffold_fixtures`, `mod dashboard`, `mod empty`, `mod layout_form_fixtures`, `mod layout_field_fixtures`, `mod layout_input_fixtures`, `mod layout_scroll_fixtures`, `mod layout_typography_fixtures`, `mod item`, `mod kbd`, `mod native_select`, `mod pagination`, `mod progress`, `mod radio_group`, `mod resizable`, `mod select`, `mod separator`, `mod shell`, `mod sidebar`, `mod skeleton`, `mod spinner`, `mod sonner`, `mod switch`, `mod table`, `mod tabs`, `mod textarea`, `mod triggers`)
+  - Evidence (fixture-driven slice, bug report form demo geometry):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_form_bug_report_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/form.rs` (`web_vs_fret_layout_form_bug_report_demo_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, kbd heights):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_kbd_height_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/kbd.rs` (`web_vs_fret_layout_kbd_heights_match_web_fixtures`)
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
   - Evidence:
-    - `tools/report_largest_files.ps1`
+    - `tools/report_largest_files.py`
+
+## M0.5 — Code-quality audit program (make best-practice reviews repeatable)
+
+- [x] BU-FR-audit-006 Add a stable per-crate audit template and an audits index.
+  - Goal: make “read each crate and review best practices” actionable and trackable.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+    - `docs/workstreams/crate-audits/fret-core.l0.md`
+    - `docs/workstreams/crate-audits/fret-runtime.l0.md`
+    - `docs/workstreams/crate-audits/fret-app.l0.md`
+    - `docs/workstreams/crate-audits/fret-ui.l0.md`
+
+- [x] BU-FR-audit-007 Decide audit levels + minimum gates per level (L0/L1/L2).
+  - Goal: scale audits across a large workspace without blocking progress.
+  - Start from:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Minimum gates per audit level”)
+
+- [~] BU-FR-skill-008 Evaluate skill coverage for fearless refactors and decide whether to add any missing “procedural” skills.
+  - Goal: make repeated tasks (audit snapshots, fixture-driven conformance, perf/diag gates) easy to run consistently.
+  - Start from:
+    - `.agents/skills/README.md`
+    - `.agents/skills/fret-crate-audits/SKILL.md`
+    - `.agents/skills/fret-boundary-checks/SKILL.md`
+  - Early evidence:
+    - `.agents/skills/fret-fixture-driven-harnesses/SKILL.md`
 
 ## M1 — Core contracts closure
 
@@ -55,13 +351,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/README.md`
     - `crates/fret-app/README.md`
 
-- [ ] BU-FR-core-013 Write down an explicit async policy per layer (core vs app vs backends vs ecosystem) and add at least one regression gate.
+- [~] BU-FR-core-013 Write down an explicit async policy per layer (core vs app vs backends vs ecosystem) and add at least one regression gate.
   - Goal: prevent Tokio/executor coupling from leaking into core crates and prevent UI-thread blocking regressions.
   - References: `docs/integrating-tokio-and-reqwest.md`, `docs/integrating-sqlite-and-sqlx.md`.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Async policy”)
 
-- [ ] BU-FR-core-014 Define a v1 “serialization stability” checklist for core persisted formats.
+- [x] BU-FR-core-014 Define a v1 “serialization stability” checklist for core persisted formats.
   - Target: settings/keymap/layout and any persisted docking state formats.
   - Goal: avoid accidental format drift during internal refactors.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Serialization stability checklist (v1)”)
+    - `crates/fret-core/src/dock/tests.rs` (`dock_layout_json_roundtrips_and_validates`)
 
 - [x] BU-FR-core-015 Convert docking-related crate-root modules in `fret-core` into a single `dock/` subsystem.
   - Goal: remove `dock_*` crate-root prefixes while keeping the stable re-export surface unchanged.
@@ -125,7 +426,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/input/mod.rs`
 
 - [x] BU-FR-core-025 Extract viewport input types and mapping helpers into dedicated submodules.
-  - Goal: keep `input/mod.rs` focused on portable event vocabulary, while isolating viewport-tooling glue (ADR 0147).
+  - Goal: keep `input/mod.rs` focused on portable event vocabulary, while isolating viewport-tooling glue (ADR 0132).
   - Evidence:
     - `crates/fret-core/src/input/viewport.rs`
     - `crates/fret-core/src/input/viewport_input_event_tests.rs`
@@ -145,6 +446,58 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: remove ambiguous `keymap.rs` / `keymap/` split and enable incremental internal splits by responsibility.
   - Evidence:
     - `crates/fret-runtime/src/keymap/mod.rs`
+
+- [x] BU-FR-core-028 Convert `fret-runtime` model store into a directory subsystem (`model/mod.rs`).
+  - Goal: split the large model store implementation by responsibility while keeping the stable re-export surface unchanged.
+  - Evidence:
+    - `crates/fret-runtime/src/model/mod.rs`
+    - `crates/fret-runtime/src/model/store.rs`
+    - `crates/fret-runtime/src/model/handle.rs`
+    - `crates/fret-runtime/src/model/host.rs`
+    - `crates/fret-runtime/src/model/debug.rs`
+    - `crates/fret-runtime/src/model/error.rs`
+
+- [x] BU-FR-core-029 Split `fret-runtime` keymap logic into focused submodules.
+  - Goal: keep `keymap/mod.rs` as a small facade and isolate loading, matching, conflicts, and display logic.
+  - Evidence:
+    - `crates/fret-runtime/src/keymap/mod.rs`
+    - `crates/fret-runtime/src/keymap/load.rs`
+    - `crates/fret-runtime/src/keymap/ops.rs`
+    - `crates/fret-runtime/src/keymap/conflicts.rs`
+    - `crates/fret-runtime/src/keymap/display.rs`
+    - `crates/fret-runtime/src/keymap/types.rs`
+    - `crates/fret-runtime/src/keymap/wire.rs`
+    - `crates/fret-runtime/src/keymap/error.rs`
+
+- [x] BU-FR-core-030 Convert `fret-runtime` window command gating to a directory subsystem (`window_command_gating/mod.rs`).
+  - Goal: split service state, snapshot data, and helper construction functions without changing the contract surface.
+  - Evidence:
+    - `crates/fret-runtime/src/window_command_gating/mod.rs`
+    - `crates/fret-runtime/src/window_command_gating/service.rs`
+    - `crates/fret-runtime/src/window_command_gating/snapshot.rs`
+    - `crates/fret-runtime/src/window_command_gating/helpers.rs`
+
+- [x] BU-FR-core-031 Split `fret-runtime` menubar wire decoding into submodules (`menu/wire/*`).
+  - Goal: isolate v1/v2 wire structs, patch ops decoding, and config parsing while keeping the stable exports unchanged.
+  - Evidence:
+    - `crates/fret-runtime/src/menu/wire/mod.rs`
+    - `crates/fret-runtime/src/menu/wire/load.rs`
+    - `crates/fret-runtime/src/menu/wire/v1.rs`
+    - `crates/fret-runtime/src/menu/wire/v2.rs`
+    - `crates/fret-runtime/src/menu/wire/patch_v1.rs`
+    - `crates/fret-runtime/src/menu/wire/patch_v2.rs`
+    - `crates/fret-runtime/src/menu/wire/config_v1.rs`
+    - `crates/fret-runtime/src/menu/wire/config_v2.rs`
+
+- [x] BU-FR-core-032 Convert `fret-runtime` platform capabilities to a directory subsystem (`capabilities/mod.rs`).
+  - Goal: keep capability keys/kinds/quality enums and aggregation logic in focused submodules without changing re-exports.
+  - Evidence:
+    - `crates/fret-runtime/src/capabilities/mod.rs`
+    - `crates/fret-runtime/src/capabilities/kind.rs`
+    - `crates/fret-runtime/src/capabilities/exec.rs`
+    - `crates/fret-runtime/src/capabilities/qualities.rs`
+    - `crates/fret-runtime/src/capabilities/leaf.rs`
+    - `crates/fret-runtime/src/capabilities/platform.rs`
 
 ## M2 — UI runtime closure
 
@@ -198,6 +551,30 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-ui/src/scroll/mod.rs`
     - `crates/fret-ui/src/virtual_list/mod.rs`
+
+- [x] BU-FR-ui-028 Reduce “god test file” risk in `crates/fret-ui` declarative layout tests by splitting `layout.rs` into submodules.
+  - Target: `crates/fret-ui/src/declarative/tests/layout.rs`
+  - Gate: `cargo nextest run -p fret-ui`
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/layout.rs`
+    - `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`
+    - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+
+- [x] BU-FR-ui-029 Reduce “god test file” risk in `crates/fret-ui` declarative interaction tests by splitting `interactions.rs` into submodules.
+  - Target: `crates/fret-ui/src/declarative/tests/interactions.rs`
+  - Gate: `cargo nextest run -p fret-ui`
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/interactions.rs`
+    - `crates/fret-ui/src/declarative/tests/interactions/text_input.rs`
+    - `crates/fret-ui/src/declarative/tests/interactions/selectable_text.rs`
+
+- [x] BU-FR-ui-030 Reduce “god test file” risk in `crates/fret-ui` declarative virtual list tests by splitting `virtual_list.rs` into submodules.
+  - Target: `crates/fret-ui/src/declarative/tests/virtual_list.rs`
+  - Gate: `cargo nextest run -p fret-ui`
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/virtual_list.rs`
+    - `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`
+    - `crates/fret-ui/src/declarative/tests/virtual_list/scroll_to_item.rs`
 
 ## M3 — Renderer closure
 
@@ -344,7 +721,81 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
   - Link: `docs/workstreams/retained-bridge-exit-v1.md`
-  - Gate: `tools/check_layering.ps1` (extend if needed)
+  - Gate: `tools/check_layering.py` (extend if needed)
 
 - [ ] BU-FR-eco-041 Map ecosystem crates into “headless → kit → shadcn → specialized” lanes and mark ownership boundaries.
   - Start from: `docs/repo-structure.md`, `docs/workstreams/ecosystem-status.md`
+
+- [x] BU-FR-eco-042 L0 audit `fret-ui-kit` and capture the top refactor hazards and seams.
+  - Goal: identify which policy belongs in `fret-ui-kit` vs `fret-ui-shadcn` vs apps, and establish initial gates.
+  - Evidence:
+    - `docs/workstreams/crate-audits/fret-ui-kit.l0.md`
+    - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-kit`
+    - `cargo nextest run -p fret-ui-kit`
+
+- [~] BU-FR-eco-043 Reduce “god test file” risk in `fret-ui-kit` overlays by moving scenario matrices to fixtures.
+  - Target: `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs` (formerly `tests.rs`)
+  - Goal: shrink Rust LOC and make overlay contracts reviewable and stable during refactors.
+  - Gate: `cargo nextest run -p fret-ui-kit`
+  - Early evidence (module split scaffolding):
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/tooltip.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/pointer_capture.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/viewport_capture.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/dismissible_popover.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/modal.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/non_modal_overlay.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/dock_drag.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/fixtures/tooltip_observers.json`
+
+- [x] BU-FR-eco-045 Reduce “god test file” risk in `fret-docking` by splitting `dock/tests.rs` into focused submodules.
+  - Target: `ecosystem/fret-docking/src/dock/tests/mod.rs` (formerly `tests.rs`)
+  - Goal: keep the shared harness stable while making incremental test edits low-conflict.
+  - Gate: `cargo nextest run -p fret-docking`
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/tests/mod.rs`
+    - `ecosystem/fret-docking/src/dock/tests/drag.rs`
+    - `ecosystem/fret-docking/src/dock/tests/viewport.rs`
+
+- [ ] BU-FR-eco-044 L0 audit `fret-ui-shadcn`, and plan conversion of huge web-vs-fret conformance sources into data-driven harnesses.
+  - Targets:
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  - Gate: `cargo nextest run -p fret-ui-shadcn`
+  - Interim evidence (fixture-driven conversion):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_menubar_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_combobox_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_breadcrumb_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_mode_toggle_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_item_dropdown_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_navigation_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_misc_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_checkboxes_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_radio_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dropdown_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_navigation_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_menubar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_context_menu_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_popover_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_tooltip_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_combobox_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_sheet_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_drawer_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_alert_dialog_cases_v1.json`

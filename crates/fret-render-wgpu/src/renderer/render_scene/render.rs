@@ -48,6 +48,8 @@ impl Renderer {
             panic!("invalid scene: {e}");
         }
 
+        self.ensure_material_catalog_uploaded(queue);
+
         self.ensure_viewport_pipeline(device, format);
         self.ensure_pipeline(device, format);
         self.ensure_text_pipeline(device, format);
@@ -155,6 +157,24 @@ impl Renderer {
             encoding
         };
 
+        if perf_enabled {
+            frame_perf.material_quad_ops = frame_perf
+                .material_quad_ops
+                .saturating_add(encoding.material_quad_ops);
+            frame_perf.material_sampled_quad_ops = frame_perf
+                .material_sampled_quad_ops
+                .saturating_add(encoding.material_sampled_quad_ops);
+            frame_perf.material_distinct = frame_perf
+                .material_distinct
+                .saturating_add(encoding.material_distinct);
+            frame_perf.material_unknown_ids = frame_perf
+                .material_unknown_ids
+                .saturating_add(encoding.material_unknown_ids);
+            frame_perf.material_degraded_due_to_budget = frame_perf
+                .material_degraded_due_to_budget
+                .saturating_add(encoding.material_degraded_due_to_budget);
+        }
+
         let postprocess = if self.debug_pixelate_scale > 0 {
             DebugPostprocess::Pixelate {
                 scale: self.debug_pixelate_scale,
@@ -244,6 +264,14 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::ColorAdjust(_)));
+        let needs_color_matrix = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ColorMatrix(_)));
+        let needs_alpha_threshold = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::AlphaThreshold(_)));
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
@@ -262,6 +290,12 @@ impl Renderer {
         }
         if needs_color_adjust {
             self.ensure_color_adjust_pipeline(device, format);
+        }
+        if needs_color_matrix {
+            self.ensure_color_matrix_pipeline(device, format);
+        }
+        if needs_alpha_threshold {
+            self.ensure_alpha_threshold_pipeline(device, format);
         }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_release_targets = plan
@@ -304,6 +338,16 @@ impl Renderer {
             }
         }
 
+        self.ensure_mask_capacity(device, encoding.masks.len().max(1));
+        if !encoding.masks.is_empty() {
+            queue.write_buffer(&self.mask_buffer, 0, bytemuck::cast_slice(&encoding.masks));
+            if perf_enabled {
+                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
+                    (std::mem::size_of::<MaskGradientUniform>() * encoding.masks.len()) as u64,
+                );
+            }
+        }
+
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
         self.prepare_image_bind_groups(device, &encoding.ordered_draws);
 
@@ -320,6 +364,8 @@ impl Renderer {
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
         let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
+        let quad_instance_bind_group =
+            self.quad_instance_bind_groups[instance_buffer_index].clone();
         if !instances.is_empty() {
             queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
             if perf_enabled {
@@ -638,7 +684,11 @@ impl Renderer {
                                             frame_perf.pipeline_switches_quad =
                                                 frame_perf.pipeline_switches_quad.saturating_add(1);
                                         }
-                                        pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                                        pass.set_bind_group(1, &quad_instance_bind_group, &[]);
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                        }
                                         active_pipeline = ActivePipeline::Quad;
                                     }
 
@@ -1236,7 +1286,7 @@ impl Renderer {
                     let Some(path_msaa_pipeline) = self.path_msaa_pipeline.as_ref() else {
                         continue;
                     };
-                    let Some(composite_pipeline) = self.composite_pipeline.as_ref() else {
+                    let Some(composite_pipeline) = self.composite_pipelines[0].as_ref() else {
                         continue;
                     };
 
@@ -2231,7 +2281,510 @@ impl Renderer {
                         );
                     }
                 }
+                RenderPlanPass::ColorMatrix(pass) => {
+                    let m = pass.matrix;
+                    let packed: [f32; 20] = [
+                        // row0 (col0..3)
+                        m[0], m[1], m[2], m[3], // row1 (col0..3)
+                        m[5], m[6], m[7], m[8], // row2 (col0..3)
+                        m[10], m[11], m[12], m[13], // row3 (col0..3)
+                        m[15], m[16], m[17], m[18], // bias (col4)
+                        m[4], m[9], m[14], m[19],
+                    ];
+                    queue.write_buffer(
+                        &self.color_matrix_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&packed),
+                    );
+                    if perf_enabled {
+                        frame_perf.uniform_bytes = frame_perf
+                            .uniform_bytes
+                            .saturating_add(std::mem::size_of::<[f32; 20]>() as u64);
+                    }
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ColorMatrix src cannot be Output/mask targets");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ColorMatrix dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based color-matrix expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask color-matrix needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let layout = self
+                            .color_matrix_mask_bind_group_layout
+                            .as_ref()
+                            .expect("color-matrix mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret color-matrix mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.color_matrix_param_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+                        let pipeline = self
+                            .color_matrix_mask_pipeline
+                            .as_ref()
+                            .expect("color-matrix mask pipeline must exist");
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-matrix mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .color_matrix_bind_group_layout
+                            .as_ref()
+                            .expect("color-matrix bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-matrix bind group",
+                            layout,
+                            &src_view,
+                            self.color_matrix_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .color_matrix_masked_pipeline
+                            .as_ref()
+                            .expect("color-matrix masked pipeline must exist");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-matrix masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
+                    } else {
+                        let layout = self
+                            .color_matrix_bind_group_layout
+                            .as_ref()
+                            .expect("color-matrix bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-matrix bind group",
+                            layout,
+                            &src_view,
+                            self.color_matrix_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .color_matrix_pipeline
+                            .as_ref()
+                            .expect("color-matrix pipeline must exist");
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            "fret color-matrix pass",
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            &[],
+                            pass.dst_scissor,
+                            perf_enabled.then_some(&mut frame_perf),
+                        );
+                    }
+                }
+                RenderPlanPass::AlphaThreshold(pass) => {
+                    queue.write_buffer(
+                        &self.alpha_threshold_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&[pass.cutoff, pass.soft, 0.0, 0.0]),
+                    );
+                    if perf_enabled {
+                        frame_perf.uniform_bytes = frame_perf
+                            .uniform_bytes
+                            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+                    }
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(
+                                false,
+                                "AlphaThreshold src cannot be Output/mask targets"
+                            );
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "AlphaThreshold dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based alpha-threshold expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask alpha-threshold needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let layout = self
+                            .alpha_threshold_mask_bind_group_layout
+                            .as_ref()
+                            .expect("alpha-threshold mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret alpha-threshold mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.alpha_threshold_param_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+                        let pipeline = self
+                            .alpha_threshold_mask_pipeline
+                            .as_ref()
+                            .expect("alpha-threshold mask pipeline must exist");
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret alpha-threshold mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .alpha_threshold_bind_group_layout
+                            .as_ref()
+                            .expect("alpha-threshold bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret alpha-threshold bind group",
+                            layout,
+                            &src_view,
+                            self.alpha_threshold_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .alpha_threshold_masked_pipeline
+                            .as_ref()
+                            .expect("alpha-threshold masked pipeline must exist");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret alpha-threshold masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
+                    } else {
+                        let layout = self
+                            .alpha_threshold_bind_group_layout
+                            .as_ref()
+                            .expect("alpha-threshold bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret alpha-threshold bind group",
+                            layout,
+                            &src_view,
+                            self.alpha_threshold_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .alpha_threshold_pipeline
+                            .as_ref()
+                            .expect("alpha-threshold pipeline must exist");
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            "fret alpha-threshold pass",
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            &[],
+                            pass.dst_scissor,
+                            perf_enabled.then_some(&mut frame_perf),
+                        );
+                    }
+                }
                 RenderPlanPass::CompositePremul(pass) => {
+                    let pipeline_ix = match pass.blend_mode {
+                        fret_core::BlendMode::Over => 0,
+                        fret_core::BlendMode::Add => 1,
+                        fret_core::BlendMode::Multiply => 2,
+                        fret_core::BlendMode::Screen => 3,
+                    };
+
                     let src_view = match pass.src {
                         PlanTarget::Output
                         | PlanTarget::Mask0
@@ -2306,9 +2859,9 @@ impl Renderer {
                         });
 
                         (
-                            self.composite_mask_pipeline
+                            self.composite_mask_pipelines[pipeline_ix]
                                 .as_ref()
-                                .expect("composite premul mask pipeline must exist"),
+                                .expect("composite mask pipeline must exist"),
                             bind_group,
                         )
                     } else {
@@ -2329,9 +2882,9 @@ impl Renderer {
                             ],
                         });
                         (
-                            self.composite_pipeline
+                            self.composite_pipelines[pipeline_ix]
                                 .as_ref()
-                                .expect("composite premul pipeline must exist"),
+                                .expect("composite pipeline must exist"),
                             bind_group,
                         )
                     };
@@ -2805,6 +3358,26 @@ impl Renderer {
                 .perf
                 .scene_encoding_cache_misses
                 .saturating_add(frame_perf.scene_encoding_cache_misses);
+            self.perf.material_quad_ops = self
+                .perf
+                .material_quad_ops
+                .saturating_add(frame_perf.material_quad_ops);
+            self.perf.material_sampled_quad_ops = self
+                .perf
+                .material_sampled_quad_ops
+                .saturating_add(frame_perf.material_sampled_quad_ops);
+            self.perf.material_distinct = self
+                .perf
+                .material_distinct
+                .saturating_add(frame_perf.material_distinct);
+            self.perf.material_unknown_ids = self
+                .perf
+                .material_unknown_ids
+                .saturating_add(frame_perf.material_unknown_ids);
+            self.perf.material_degraded_due_to_budget = self
+                .perf
+                .material_degraded_due_to_budget
+                .saturating_add(frame_perf.material_degraded_due_to_budget);
 
             self.last_frame_perf = Some(RenderPerfSnapshot {
                 frames: frame_perf.frames,
@@ -2874,6 +3447,11 @@ impl Renderer {
                 vertex_bytes: frame_perf.vertex_bytes,
                 scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
                 scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
+                material_quad_ops: frame_perf.material_quad_ops,
+                material_sampled_quad_ops: frame_perf.material_sampled_quad_ops,
+                material_distinct: frame_perf.material_distinct,
+                material_unknown_ids: frame_perf.material_unknown_ids,
+                material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
             });
         }
 

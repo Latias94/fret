@@ -1,0 +1,51 @@
+---
+title: Diagnostics Extensibility + Capabilities v1 - Determinism
+status: draft
+date: 2026-02-10
+scope: diagnostics, determinism, flake, triage
+---
+
+# Diagnostics Extensibility + Capabilities v1 - Determinism
+
+This document is a sub-part of `docs/workstreams/diag-extensibility-and-capabilities-v1.md`.
+
+Goal: turn “flaky” regressions into actionable reports by capturing environment fingerprints and enabling repeat-run
+triage workflows.
+
+## Environment fingerprint (bundle-level)
+
+Bundles SHOULD include a deterministic fingerprint of inputs that commonly cause nondeterminism:
+
+- platform + runner kind (`native`/`web`),
+- DPI / scale factor,
+- font selection/fallback summary,
+- feature flags relevant to UI behavior (view cache, redaction, screenshots),
+- timing sources used by the runner (monotonic clocks, vsync policy),
+- versions (app, framework, renderer).
+
+This is not for blame; it is for explainability and reproducibility.
+
+## Repeat-run triage
+
+Add a workflow that runs the same script N times and classifies differences:
+
+- semantics diffs,
+- layout diffs (bounds/overflow),
+- hit-test/routing diffs (trace),
+- performance diffs (frame stats).
+
+Outputs:
+
+- `repeat.summary.json` (machine-readable),
+- links/paths to the worst-case bundles for inspection.
+
+## Flake mitigation knobs (runner/tooling)
+
+Prefer contract-backed mitigation (no wall-clock sleeps):
+
+- intent-level steps (`click_stable`, `ensure_visible`),
+- predicate-based waits (`wait_until`),
+- bounded retries with structured reasons.
+
+If a mitigation requires support (e.g. ROI screenshots, coordinate injection), gate it via capabilities.
+

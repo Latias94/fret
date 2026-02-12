@@ -66,6 +66,8 @@ Upstream exports a thin wrapper around `vaul`:
   overlay defaults).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `Drawer::on_dismiss_request(...)` (delegates to `Sheet`).
+- Pass: Open lifecycle callbacks are available via `Drawer::on_open_change(...)` and
+  `Drawer::on_open_change_complete(...)` (delegates to `Sheet`).
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from a small handle affordance region.
 
 ### Focus behavior
@@ -83,3 +85,4 @@ Upstream exports a thin wrapper around `vaul`:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
+- `cargo nextest run -p fret-ui-shadcn drawer_open_change_handlers_forward_to_sheet`

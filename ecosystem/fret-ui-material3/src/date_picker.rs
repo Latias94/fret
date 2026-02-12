@@ -6,6 +6,7 @@
 //! - Selection is staged while open and applied on confirm.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
@@ -26,6 +27,46 @@ use crate::foundation::surface::material_surface_style;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
+
+fn default_date_picker_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-date-picker"))
+        .clone()
+}
+
+fn cached_day_of_month_label(day: u8) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (1u8..=31)
+            .map(|d| Arc::<str>::from(d.to_string()))
+            .collect::<Vec<_>>()
+    });
+    let idx = day.saturating_sub(1) as usize;
+    table
+        .get(idx)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(day.to_string()))
+}
+
+fn weekday_short_arc(w: Weekday) -> Arc<str> {
+    static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            .into_iter()
+            .map(Arc::<str>::from)
+            .collect::<Vec<_>>()
+    });
+    let idx = match w {
+        Weekday::Monday => 0,
+        Weekday::Tuesday => 1,
+        Weekday::Wednesday => 2,
+        Weekday::Thursday => 3,
+        Weekday::Friday => 4,
+        Weekday::Saturday => 5,
+        Weekday::Sunday => 6,
+    };
+    table[idx].clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DatePickerVariant {
@@ -89,10 +130,9 @@ impl DockedDatePicker {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let month = cx
                 .get_model_cloned(&self.month, Invalidation::Layout)
                 .unwrap_or_else(|| CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
@@ -108,12 +148,23 @@ impl DockedDatePicker {
                 DatePickerVariant::Modal => DatePickerTokenVariant::Modal,
             };
 
-            let width = date_tokens::container_width(&theme, token_variant);
-            let height = date_tokens::container_height(&theme, token_variant);
-            let background = date_tokens::container_color(&theme, token_variant);
-            let elevation = date_tokens::container_elevation(&theme, token_variant);
-            let corner_radii = date_tokens::container_shape(&theme, token_variant);
-            let surface = material_surface_style(&theme, background, elevation, None, corner_radii);
+            let (width, height, background, shadow, corner_radii) = {
+                let theme = Theme::global(&*cx.app);
+                let width = date_tokens::container_width(theme, token_variant);
+                let height = date_tokens::container_height(theme, token_variant);
+                let container_color = date_tokens::container_color(theme, token_variant);
+                let elevation = date_tokens::container_elevation(theme, token_variant);
+                let corner_radii = date_tokens::container_shape(theme, token_variant);
+                let surface =
+                    material_surface_style(theme, container_color, elevation, None, corner_radii);
+                (
+                    width,
+                    height,
+                    surface.background,
+                    surface.shadow,
+                    corner_radii,
+                )
+            };
 
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Px(width);
@@ -122,13 +173,12 @@ impl DockedDatePicker {
 
             let mut container = ContainerProps::default();
             container.layout = layout;
-            container.background = Some(surface.background);
-            container.shadow = surface.shadow;
+            container.background = Some(background);
+            container.shadow = shadow;
             container.corner_radii = corner_radii;
 
             let content = date_picker_body(
                 cx,
-                &theme,
                 token_variant,
                 month,
                 self.month.clone(),
@@ -250,14 +300,13 @@ impl DatePickerDialog {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         underlay: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open_now = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
@@ -299,30 +348,36 @@ impl DatePickerDialog {
                     .update(&models.draft_selected, |m| *m = external_selected);
             }
 
-            let open_ms = self
-                .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let close_ms = self
-                .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
-            let open_ticks = motion::ms_to_frames(open_ms);
-            let close_ticks = motion::ms_to_frames(close_ms);
-
             let easing_key = self
                 .easing_key
                 .clone()
                 .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
+
+            let (theme_motion_ms, bezier) = {
+                let theme = Theme::global(&*cx.app);
+                let motion_ms = theme.duration_ms_by_key("md.sys.motion.duration.medium2");
+                let bezier =
+                    theme
+                        .easing_by_key(easing_key.as_ref())
+                        .unwrap_or(fret_ui::theme::CubicBezier {
+                            x1: 0.0,
+                            y1: 0.0,
+                            x2: 1.0,
+                            y2: 1.0,
+                        });
+                (motion_ms, bezier)
+            };
+
+            let open_ms = self
+                .open_duration_ms
+                .or(theme_motion_ms)
+                .unwrap_or(300);
+            let close_ms = self
+                .close_duration_ms
+                .or(theme_motion_ms)
+                .unwrap_or(300);
+            let open_ticks = motion::ms_to_frames(open_ms);
+            let close_ticks = motion::ms_to_frames(close_ms);
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -339,7 +394,10 @@ impl DatePickerDialog {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let scrim_base = theme.color_required("md.sys.color.scrim");
+                let scrim_base = {
+                    let theme = Theme::global(&*cx.app);
+                    theme.color_required("md.sys.color.scrim")
+                };
                 let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
@@ -354,14 +412,26 @@ impl DatePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_test_id = self
-                    .test_id
-                    .clone()
-                    .map(|id| Arc::from(format!("{id}-scrim")));
-                let panel_test_id = self
-                    .test_id
-                    .clone()
-                    .map(|id| Arc::from(format!("{id}-panel")));
+                #[derive(Default)]
+                struct DerivedTestIds {
+                    base: Option<Arc<str>>,
+                    scrim: Option<Arc<str>>,
+                    panel: Option<Arc<str>>,
+                }
+
+                let (scrim_test_id, panel_test_id) =
+                    cx.with_state(DerivedTestIds::default, |st| {
+                        if st.base.as_deref() != self.test_id.as_deref() {
+                            st.base = self.test_id.clone();
+                            st.scrim = st.base.as_ref().map(|id| {
+                                Arc::from(format!("{}-scrim", id.as_ref()))
+                            });
+                            st.panel = st.base.as_ref().map(|id| {
+                                Arc::from(format!("{}-panel", id.as_ref()))
+                            });
+                        }
+                        (st.scrim.clone(), st.panel.clone())
+                    });
 
                 let cancel: OnActivate = {
                     let open = self.open.clone();
@@ -475,7 +545,6 @@ impl DatePickerDialog {
 
                                 let picker = date_picker_modal_panel(
                                     cx,
-                                    &theme,
                                     models.draft_month.clone(),
                                     models.draft_selected.clone(),
                                     panel_test_id.clone(),
@@ -526,7 +595,6 @@ impl DatePickerDialog {
 
 fn date_picker_modal_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
     test_id: Option<Arc<str>>,
@@ -542,12 +610,26 @@ fn date_picker_modal_panel<H: UiHost>(
         .get_model_cloned(&selected, Invalidation::Layout)
         .unwrap_or(None);
 
-    let width = date_tokens::container_width(theme, token_variant);
-    let height = date_tokens::container_height(theme, token_variant);
-    let background = date_tokens::container_color(theme, token_variant);
-    let elevation = date_tokens::container_elevation(theme, token_variant);
-    let corner_radii = date_tokens::container_shape(theme, token_variant);
-    let surface = material_surface_style(theme, background, elevation, None, corner_radii);
+    let (width, height, background, shadow, corner_radii, headline_style, headline_color) = {
+        let theme = Theme::global(&*cx.app);
+        let width = date_tokens::container_width(theme, token_variant);
+        let height = date_tokens::container_height(theme, token_variant);
+        let container_color = date_tokens::container_color(theme, token_variant);
+        let elevation = date_tokens::container_elevation(theme, token_variant);
+        let corner_radii = date_tokens::container_shape(theme, token_variant);
+        let surface = material_surface_style(theme, container_color, elevation, None, corner_radii);
+        let headline_style = date_tokens::header_headline_style(theme);
+        let headline_color = date_tokens::header_headline_color(theme);
+        (
+            width,
+            height,
+            surface.background,
+            surface.shadow,
+            corner_radii,
+            headline_style,
+            headline_color,
+        )
+    };
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(width);
@@ -556,14 +638,14 @@ fn date_picker_modal_panel<H: UiHost>(
 
     let mut container = ContainerProps::default();
     container.layout = layout;
-    container.background = Some(surface.background);
-    container.shadow = surface.shadow;
+    container.background = Some(background);
+    container.shadow = shadow;
     container.corner_radii = corner_radii;
 
     let title = {
         let mut props = TextProps::new(Arc::<str>::from("Select date"));
-        props.style = Some(date_tokens::header_headline_style(theme));
-        props.color = Some(date_tokens::header_headline_color(theme));
+        props.style = Some(headline_style);
+        props.color = Some(headline_color);
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
@@ -590,7 +672,6 @@ fn date_picker_modal_panel<H: UiHost>(
                 title,
                 date_picker_body(
                     cx,
-                    theme,
                     token_variant,
                     month_value,
                     month.clone(),
@@ -646,7 +727,6 @@ fn date_picker_actions<H: UiHost>(
 
 fn date_picker_body<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -674,16 +754,14 @@ fn date_picker_body<H: UiHost>(
             vec![
                 month_nav_header(
                     cx,
-                    theme,
                     token_variant,
                     month,
                     month_model.clone(),
                     test_id.clone(),
                 ),
-                weekdays_row(cx, theme, token_variant, week_start),
+                weekdays_row(cx, token_variant, week_start),
                 dates_grid(
                     cx,
-                    theme,
                     token_variant,
                     month,
                     month_model,
@@ -700,13 +778,30 @@ fn date_picker_body<H: UiHost>(
 
 fn month_nav_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    let title = Arc::<str>::from(format!("{} {}", month_name_en(month.month), month.year));
+    #[derive(Default)]
+    struct DerivedTitle {
+        month: Option<time::Month>,
+        year: i32,
+        title: Option<Arc<str>>,
+    }
+
+    let title = cx.with_state(DerivedTitle::default, |st| {
+        if st.title.is_none() || st.month != Some(month.month) || st.year != month.year {
+            st.month = Some(month.month);
+            st.year = month.year;
+            st.title = Some(Arc::<str>::from(format!(
+                "{} {}",
+                month_name_en(month.month),
+                month.year
+            )));
+        }
+        st.title.as_ref().expect("title").clone()
+    });
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -717,19 +812,24 @@ fn month_nav_header<H: UiHost>(
     row.gap = Px(12.0);
 
     let title_el = {
+        let (style, color) = {
+            let theme = Theme::global(&*cx.app);
+            let style = theme
+                .text_style_by_key("md.sys.typescale.title-large")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
+            let color = theme.color_required("md.sys.color.on-surface");
+            (style, color)
+        };
+
         let mut props = TextProps::new(title);
-        props.style = theme
-            .text_style_by_key("md.sys.typescale.title-large")
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.title-medium"));
-        props.color = Some(theme.color_required("md.sys.color.on-surface"));
+        props.style = style;
+        props.color = Some(color);
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
     };
 
-    let base_id = test_id
-        .clone()
-        .unwrap_or_else(|| Arc::<str>::from("material3-date-picker"));
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
 
     let prev: OnActivate = {
         let month_model = month_model.clone();
@@ -755,15 +855,37 @@ fn month_nav_header<H: UiHost>(
         DatePickerTokenVariant::Modal => "modal",
     };
 
+    #[derive(Default)]
+    struct DerivedNavTestIds {
+        base: Option<Arc<str>>,
+        tag: Option<&'static str>,
+        prev: Option<Arc<str>>,
+        next: Option<Arc<str>>,
+    }
+
+    let (prev_test_id, next_test_id) = cx.with_state(DerivedNavTestIds::default, |st| {
+        if st.prev.is_none() || st.base.as_deref() != Some(base_id.as_ref()) || st.tag != Some(tag)
+        {
+            st.base = Some(base_id.clone());
+            st.tag = Some(tag);
+            st.prev = Some(Arc::from(format!("{base_id}-{tag}-prev")));
+            st.next = Some(Arc::from(format!("{base_id}-{tag}-next")));
+        }
+        (
+            st.prev.as_ref().expect("prev").clone(),
+            st.next.as_ref().expect("next").clone(),
+        )
+    });
+
     let prev = Button::new("Prev")
         .variant(ButtonVariant::Text)
         .on_activate(prev)
-        .test_id(Arc::from(format!("{base_id}-{tag}-prev")))
+        .test_id(prev_test_id)
         .into_element(cx);
     let next = Button::new("Next")
         .variant(ButtonVariant::Text)
         .on_activate(next)
-        .test_id(Arc::from(format!("{base_id}-{tag}-next")))
+        .test_id(next_test_id)
         .into_element(cx);
 
     cx.flex(row, move |_cx| vec![prev, title_el, next])
@@ -771,7 +893,6 @@ fn month_nav_header<H: UiHost>(
 
 fn weekdays_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     week_start: Weekday,
 ) -> AnyElement {
@@ -783,15 +904,19 @@ fn weekdays_row<H: UiHost>(
     row.layout.size.width = Length::Fill;
     row.gap = Px(0.0);
 
-    let style = date_tokens::weekdays_label_text_style(theme, token_variant);
-    let color = date_tokens::weekdays_label_text_color(theme, token_variant);
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = date_tokens::weekdays_label_text_style(theme, token_variant);
+        let color = date_tokens::weekdays_label_text_color(theme, token_variant);
+        (style, color)
+    };
 
     let weekdays = weekdays_from_start(week_start);
     cx.flex(row, move |cx| {
         weekdays
             .into_iter()
             .map(|w| {
-                let label: Arc<str> = Arc::from(weekday_short_en(w));
+                let label = weekday_short_arc(w);
                 let mut props = TextProps::new(label);
                 props.style = Some(style.clone());
                 props.color = Some(color);
@@ -805,7 +930,6 @@ fn weekdays_row<H: UiHost>(
 
 fn dates_grid<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     token_variant: DatePickerTokenVariant,
     month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -816,20 +940,54 @@ fn dates_grid<H: UiHost>(
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let days = month_grid(month, week_start);
-    let cell_w = date_tokens::date_cell_width(theme, token_variant);
-    let cell_h = date_tokens::date_cell_height(theme, token_variant);
-    let cell_shape = date_tokens::date_cell_shape(theme, token_variant);
-    let label_style = date_tokens::date_label_text_style(theme, token_variant);
-    let unselected_color = date_tokens::date_unselected_label_text_color(theme, token_variant);
-    let selected_container = date_tokens::date_selected_container_color(theme, token_variant);
-    let selected_label = date_tokens::date_selected_label_text_color(theme, token_variant);
-    let today_outline_width = date_tokens::date_today_outline_width(theme, token_variant);
-    let today_outline_color = date_tokens::date_today_outline_color(theme, token_variant);
-    let outside_opacity = date_tokens::date_outside_month_opacity(theme, token_variant);
+    let (
+        cell_w,
+        cell_h,
+        cell_shape,
+        label_style,
+        unselected_color,
+        selected_container,
+        selected_label,
+        today_outline_width,
+        today_outline_color,
+        outside_opacity,
+    ) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            date_tokens::date_cell_width(theme, token_variant),
+            date_tokens::date_cell_height(theme, token_variant),
+            date_tokens::date_cell_shape(theme, token_variant),
+            date_tokens::date_label_text_style(theme, token_variant),
+            date_tokens::date_unselected_label_text_color(theme, token_variant),
+            date_tokens::date_selected_container_color(theme, token_variant),
+            date_tokens::date_selected_label_text_color(theme, token_variant),
+            date_tokens::date_today_outline_width(theme, token_variant),
+            date_tokens::date_today_outline_color(theme, token_variant),
+            date_tokens::date_outside_month_opacity(theme, token_variant),
+        )
+    };
 
-    let base_id = test_id
-        .clone()
-        .unwrap_or_else(|| Arc::<str>::from("material3-date-picker"));
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+
+    #[derive(Default)]
+    struct DerivedGridTestIds {
+        base: Option<Arc<str>>,
+        cell_test_ids: Option<Arc<[Arc<str>]>>,
+    }
+
+    let cell_test_ids = cx.with_state(DerivedGridTestIds::default, |st| {
+        if st.cell_test_ids.is_none() || st.base.as_deref() != Some(base_id.as_ref()) {
+            st.base = Some(base_id.clone());
+            let mut out: Vec<Arc<str>> = Vec::with_capacity(42);
+            for row_idx in 0..6 {
+                for col_idx in 0..7 {
+                    out.push(Arc::from(format!("{base_id}-cell-{row_idx}-{col_idx}")));
+                }
+            }
+            st.cell_test_ids = Some(Arc::from(out));
+        }
+        st.cell_test_ids.as_ref().expect("cell_test_ids").clone()
+    });
 
     let mut grid = FlexProps::default();
     grid.direction = Axis::Vertical;
@@ -842,10 +1000,10 @@ fn dates_grid<H: UiHost>(
     cx.flex(grid, move |cx| {
         let mut out: Vec<AnyElement> = Vec::new();
         for row_idx in 0..6 {
-            let base_id = base_id.clone();
             let month_model = month_model.clone();
             let selected_model = selected_model.clone();
             let label_style = label_style.clone();
+            let cell_test_ids = cell_test_ids.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
             row.justify = MainAlign::SpaceBetween;
@@ -880,7 +1038,7 @@ fn dates_grid<H: UiHost>(
                             props.border_color = Some(today_outline_color);
                         }
 
-                        let mut label_props = TextProps::new(Arc::from(date.day().to_string()));
+                        let mut label_props = TextProps::new(cached_day_of_month_label(date.day()));
                         label_props.style = Some(label_style.clone());
                         let mut label_color = if is_selected {
                             selected_label
@@ -894,7 +1052,10 @@ fn dates_grid<H: UiHost>(
                         label_props.wrap = TextWrap::None;
                         label_props.overflow = TextOverflow::Clip;
 
-                        let cell_test_id = Arc::from(format!("{base_id}-cell-{row_idx}-{i}"));
+                        let cell_test_id = cell_test_ids
+                            .get(row_idx * 7 + i)
+                            .expect("cell_test_id")
+                            .clone();
 
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
@@ -947,18 +1108,6 @@ fn weekdays_from_start(start: Weekday) -> [Weekday; 7] {
     ];
     let idx = all.iter().position(|w| *w == start).unwrap_or(0);
     std::array::from_fn(|i| all[(idx + i) % 7])
-}
-
-fn weekday_short_en(w: Weekday) -> &'static str {
-    match w {
-        Weekday::Monday => "Mo",
-        Weekday::Tuesday => "Tu",
-        Weekday::Wednesday => "We",
-        Weekday::Thursday => "Th",
-        Weekday::Friday => "Fr",
-        Weekday::Saturday => "Sa",
-        Weekday::Sunday => "Su",
-    }
 }
 
 fn month_name_en(m: time::Month) -> &'static str {

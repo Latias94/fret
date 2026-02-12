@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -79,7 +77,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-demo"));
+    .test_id("ui-gallery-typography-demo");
     let demo = section_card(cx, "Demo", demo_story);
 
     let h1_sample = shadcn::typography::h1(cx, "The Joke Tax Chronicles");
@@ -139,7 +137,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-table"));
+    .test_id("ui-gallery-typography-table");
     let table = section_card(cx, "table", table_example);
 
     let list_example = shadcn::typography::list(
@@ -150,7 +148,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             Arc::<str>::from("Taxes should be fair."),
         ],
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-list"));
+    .test_id("ui-gallery-typography-list");
     let list = section_card(cx, "list", list_example);
 
     let inline_code_sample = shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery");
@@ -192,7 +190,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             )
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-rtl"));
+    .test_id("ui-gallery-typography-rtl");
     let rtl = section_card(cx, "RTL", rtl_story);
 
     let preview_hint = shadcn::typography::muted(
@@ -226,9 +224,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-typography-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-typography-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

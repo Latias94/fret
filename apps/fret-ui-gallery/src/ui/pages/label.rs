@@ -35,8 +35,6 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -59,17 +57,17 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -98,7 +96,7 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-label-demo"));
+        .test_id("ui-gallery-label-demo");
         section_card(cx, "Demo", content)
     };
 
@@ -128,7 +126,7 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-label-field"));
+        .test_id("ui-gallery-label-field");
         section_card(cx, "Label in Field", content)
     };
 
@@ -155,7 +153,7 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 )
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-label-rtl"));
+        .test_id("ui-gallery-label-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -178,8 +176,7 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-label-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-label-component");
 
     let code_panel_body = stack::vstack(
         cx,

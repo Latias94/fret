@@ -1,20 +1,38 @@
 #[cfg(not(target_arch = "wasm32"))]
-use fret_core::{ExternalDragFile, ExternalDropFileData, ExternalDropReadError};
+use fret_core::{ExternalDropFileData, ExternalDropReadError};
 use fret_core::{FileDialogDataEvent, FileDialogOptions, FileDialogSelection, FileDialogToken};
 use fret_platform::external_drop::ExternalDropReadLimits;
 use fret_platform::file_dialog::{FileDialogError, FileDialogProvider};
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::{collections::HashMap, path::PathBuf};
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+use fret_core::ExternalDragFile;
 
 #[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+use std::collections::HashMap;
+
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
 #[derive(Debug)]
 pub struct NativeFileDialog {
     next_token: u64,
     selections: HashMap<FileDialogToken, Vec<PathBuf>>,
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+)))]
 #[derive(Debug)]
 pub struct NativeFileDialog;
 
@@ -22,7 +40,10 @@ pub type DesktopFileDialog = NativeFileDialog;
 
 impl NativeFileDialog {
     pub fn new() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             Self {
                 next_token: 1,
@@ -30,7 +51,10 @@ impl NativeFileDialog {
             }
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             Self
         }
@@ -43,16 +67,37 @@ impl Default for NativeFileDialog {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
 impl NativeFileDialog {
     fn allocate_token(&mut self) -> FileDialogToken {
         let token = FileDialogToken(self.next_token);
         self.next_token = self.next_token.saturating_add(1);
         token
     }
+}
 
+#[cfg(not(target_arch = "wasm32"))]
+impl NativeFileDialog {
     pub fn paths(&self, token: FileDialogToken) -> Option<&[PathBuf]> {
-        self.selections.get(&token).map(|v| v.as_slice())
+        #[cfg(all(
+            any(target_os = "windows", target_os = "macos", target_os = "linux"),
+            not(target_arch = "wasm32")
+        ))]
+        {
+            self.selections.get(&token).map(|v| v.as_slice())
+        }
+
+        #[cfg(not(all(
+            any(target_os = "windows", target_os = "macos", target_os = "linux"),
+            not(target_arch = "wasm32")
+        )))]
+        {
+            let _ = token;
+            None
+        }
     }
 
     pub fn read_paths(
@@ -157,7 +202,10 @@ impl FileDialogProvider for NativeFileDialog {
         &mut self,
         options: &FileDialogOptions,
     ) -> Result<Option<FileDialogSelection>, FileDialogError> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             let mut dialog = rfd::FileDialog::new();
 
@@ -197,7 +245,10 @@ impl FileDialogProvider for NativeFileDialog {
             Ok(Some(FileDialogSelection { token, files }))
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = options;
             Err(FileDialogError {
@@ -211,13 +262,19 @@ impl FileDialogProvider for NativeFileDialog {
         token: FileDialogToken,
         limits: ExternalDropReadLimits,
     ) -> Option<FileDialogDataEvent> {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             let paths = self.selections.get(&token)?.clone();
             Some(Self::read_paths(token, paths, limits))
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = token;
             let _ = limits;
@@ -226,12 +283,18 @@ impl FileDialogProvider for NativeFileDialog {
     }
 
     fn release(&mut self, token: FileDialogToken) {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        ))]
         {
             self.selections.remove(&token);
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(all(
+            not(target_arch = "wasm32"),
+            any(target_os = "windows", target_os = "macos", target_os = "linux")
+        )))]
         {
             let _ = token;
         }

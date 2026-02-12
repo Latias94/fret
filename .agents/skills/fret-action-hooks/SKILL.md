@@ -8,6 +8,14 @@ description: Component-owned interaction policy in Fret (ADR 0074). Use when wir
 Fret keeps `crates/fret-ui` **mechanism-only**. Interaction policy (what happens on click, Escape,
 outside press, roving navigation, typeahead, focus restore…) lives in component crates via **action hooks**.
 
+## When to use
+
+Use this skill when:
+
+- You need “what happens on activate/dismiss/roving/typeahead/timer” behavior in a component.
+- You’re migrating legacy code away from runtime-owned policy fields on props.
+- You’re debugging why a press/dismiss/typeahead behavior is inconsistent across components.
+
 ## Overview
 
 **Why hooks exist:**
@@ -75,6 +83,19 @@ Use the `ActionHooksExt` helpers:
 - `cx.roving_typeahead_prefix_arc_str(labels, timeout_ticks)`
 - `cx.roving_nav_apg()` (APG-aligned default navigation policy)
 
+## Workflow (recommended checklist)
+
+1. Decide the policy layer:
+   - `fret-ui` owns *mechanisms* (routing, focus primitives, overlay roots).
+   - Components own *policy* (toggle models, close overlays, selection writes).
+2. Attach hooks inside the correct element scope:
+   - Pressable hooks inside `cx.pressable_with_id_props(...)` or equivalent.
+   - Dismiss hooks inside dismissible scopes / overlay content render scopes.
+3. Prefer `WeakModel<T>` in long-lived callbacks (timers, delayed dismiss).
+4. Add a regression gate:
+   - Unit test for the headless policy when possible, or
+   - `fretboard diag` script when event sequences matter.
+
 ## Best practices
 
 - Prefer `WeakModel<T>` for long-lived callbacks (timers, deferred close, hover intent) to avoid keeping state alive unintentionally.
@@ -84,9 +105,22 @@ Use the `ActionHooksExt` helpers:
   - remove runtime shortcut fields (toggle/set/select/typeahead) from props,
   - attach hooks during render instead.
 
-## References
+## Evidence anchors (where to look)
 
-- Action hooks overview: `docs/action-hooks.md` (start here)
-- ADR 0074: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
-- Runtime plumbing: `crates/fret-ui/src/action.rs`
-- Component helpers: `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs`
+- Runtime hook plumbing: `crates/fret-ui/src/action.rs`
+- Component convenience helpers: `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs`
+- Docs:
+  - Action hooks overview: `docs/action-hooks.md`
+  - ADR 0074: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+
+## Common pitfalls
+
+- Capturing strong `Model<T>` in long-lived closures (leaks state / keeps overlays alive).
+- Installing hooks outside the intended element scope (hook never runs).
+- Re-introducing policy in runtime by “just adding a flag” (creates churn).
+
+## Related skills
+
+- `fret-component-authoring` (identity/state/invalidation patterns)
+- `fret-overlays-and-focus` (dismiss/focus policy in overlay families)
+- `fret-diag-workflow` (scripted interaction repros)

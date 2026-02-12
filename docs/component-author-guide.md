@@ -93,7 +93,7 @@ Practical note:
 ### 2.1) (Recommended) Opt into the unified `ui()` builder surface
 
 If your component type is meant to be consumed by third-party crates and apps, prefer opting into
-the ecosystem-level fluent authoring surface (ADR 0175):
+the ecosystem-level fluent authoring surface (ADR 0160):
 
 - `value.ui().px_3().py_2().w_full().into_element(cx)`
 
@@ -112,6 +112,48 @@ Guidance:
 - Keep your public constructor surface “policy-free” (no implicit theme install, no global hooks).
 - Accept children as `impl IntoIterator<Item = AnyElement>` and store them as `Vec<AnyElement>`
   internally (call-site flexibility; internal stability).
+
+### 2.2) Theme access (avoid long-lived borrows)
+
+Component code often needs theme tokens (colors/metrics). Avoid holding a `&Theme` borrow across
+other `cx` calls, otherwise you may be forced into noisy `Theme::global(&*cx.app).clone()`
+workarounds.
+
+Recommended patterns:
+
+- For pure token reads: use `ThemeSnapshot` via `cx.theme_snapshot()` (cheap `Copy`, no long-lived
+  `&Theme` borrow).
+- Many `fret-ui-kit` style helpers accept a `ThemeSnapshot` (via `ThemeTokenRead`), e.g.
+  `declarative::style::container_props(&theme, ...)`.
+- If you truly need a full `Theme` (theme metadata/config, APIs not mirrored on `ThemeSnapshot`):
+  prefer `let theme = cx.theme().clone();` so theme observation is wired automatically.
+- If you must read from `Theme::global(&*cx.app)` (e.g. a custom token namespace not covered by
+  `ThemeSnapshot`), keep the borrow scoped and do **not** call `cx.*` methods while the `&Theme`
+  borrow is live. Instead, resolve tokens into plain values first, then build elements.
+
+```rust
+let theme = cx.theme_snapshot();
+let padding = theme.metric_required("metric.padding.md");
+let fg = theme.color_required("foreground");
+```
+
+```rust
+use fret_core::{Corners, Px};
+use fret_ui::{Theme, element::ContainerProps};
+
+let (bg, radius): (_, Px) = {
+    let theme = Theme::global(&*cx.app);
+    (
+        theme.color_required("md.sys.color.surface"),
+        theme.metric_required("md.sys.shape.corner.medium"),
+    )
+};
+
+let mut props = ContainerProps::default();
+props.background = Some(bg);
+props.corner_radii = Corners::all(radius);
+cx.container(props, |_cx| Vec::new());
+```
 
 ## 3) Commands + shortcuts: always go through `CommandId` + keymap
 
@@ -156,15 +198,15 @@ Concrete reference:
 ### Gizmos and viewport tooling (Tier A boundary, plugin surface)
 
 `ecosystem/fret-gizmo` is **not** a `fret-ui` widget. It is engine/driver-owned viewport tool logic
-that stays backend-agnostic and unit-explicit (ADR 0139).
+that stays backend-agnostic and unit-explicit (ADR 0130).
 
 If you are authoring reusable gizmo tooling:
 
 - Prefer depending on `fret-gizmo` (and `fret-core` if you need shared IDs/types).
 - Avoid `wgpu`/`winit` dependencies; rendering is owned by the engine pass.
-- Use the plugin contract (`GizmoPlugin`, ADR 0155) for extensibility.
+- Use the plugin contract (`GizmoPlugin`, ADR 0140) for extensibility.
 - When your plugin needs to read domain values (e.g. light radius readouts), query the host via
-  `GizmoPropertySource` (read-only, ADR 0167) instead of requiring host push caches.
+  `GizmoPropertySource` (read-only, ADR 0152) instead of requiring host push caches.
 - Emit edits via `GizmoCustomEdit` and let the host apply validation + undo/redo (write policy is
   intentionally host-owned in v1).
 - Treat gizmos as **viewport tools**, not UI widgets:
@@ -224,8 +266,8 @@ Practical guidance:
 
 Contract references:
 
-- ADR 0181: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
-- View-cache semantics: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+- ADR 0166: `docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md`
+- View-cache semantics: `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`
 
 ## 10) View-cache boundaries: make caching explicit, keep render pure
 
@@ -243,7 +285,7 @@ Rules of thumb:
 
 ## References
 
-- Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`
+- Component ecosystem conventions: `docs/adr/0148-component-ecosystem-authoring-conventions-v1.md`
 - Component authoring contracts (mechanism surface): `docs/component-authoring-contracts.md`
 - Crate map (what to depend on): `docs/crate-usage-guide.md`
-- Ecosystem integration guidance: `docs/adr/0113-ecosystem-integration-contracts.md`
+- Ecosystem integration guidance: `docs/adr/0111-ecosystem-integration-contracts.md`

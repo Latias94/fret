@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-06
+Last updated: 2026-02-09
 
 This document proposes an ecosystem-level “batteries included” facade built on top of Fret’s
 immediate-mode authoring surface (`imui`) that targets **egui/Dear ImGui-style ergonomics**
@@ -11,7 +11,7 @@ The central decision: keep `ecosystem/fret-imui` **policy-light and minimal**, a
 egui/imgui” convenience (richer `Response` signals, floating windows/areas, menus, adapters for
 common controls) into **ecosystem facade crates**.
 
-Status snapshot (2026-02-06):
+Status snapshot (2026-02-09):
 
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
@@ -34,25 +34,53 @@ Status snapshot (2026-02-06):
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
   - optional v1 resize handles via `floating_window_resizable(...)` (edges + corners; diagonal cursor supported).
+  - ImGui-style input gating outcomes are supported:
+    - `pointer_passthrough`: pointer hit-test transparent (ImGui `NoMouseInputs`-like),
+    - `no_inputs`: pointer click-through and skipped by focus traversal (ImGui `NoInputs`-like).
 - `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
+- ImGui-aligned authoring conveniences are available without changing the low-level layout primitives:
+  - `ui.items(...)` models ImGui's default vertical item flow (`Style.ItemSpacing.y`, `Items::Start`).
+  - `ui.same_line(...)` models ImGui's `SameLine()` (`Style.ItemSpacing.x`).
+  - Both are theme-tunable via `component.imui.item_spacing_{x,y}_px` (fallbacks `8px`/`4px`).
 - OS-window promotion scope for non-docking floatings is explicitly locked: docking-only in v1, with a capability-gated promotion checklist for later milestones.
 - Performance guidance is tracked in a dedicated short guide for facade authors and reviewers.
   - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- 150% DPI text wrapping regression (fixed):
+  - Symptom: wrapped text in floating windows could overlap following items on Windows with scale factor 1.5.
+  - Root cause: `Text` measurement was clamping intrinsic height to parent-provided "known height" during sizing, so
+    layout under-reported text height while paint still prepared full glyph blobs.
+  - Fix: treat `Text` / `StyledText` / `SelectableText` intrinsic height as independent of height constraints when
+    `height=Auto` and no `max_height` is set; ignore `known.height` and allow `available.height=MaxContent` during
+    measure so layout reserves the full wrapped height.
+  - Regression gate: `tools/diag-scripts/imui-float-window-text-wrap-no-overlap-150.json`
+- Floating window title bar wrapping into content area under fractional DPI (fixed):
+  - Symptom (pre-fix): title text could wrap into multiple lines during min-content probes, painting into the window
+    body (visually overlapping the first content line) at 150% DPI.
+  - Fix: clip title bar contents and force the title text to be single-line (`wrap=None`, `overflow=Ellipsis`) with
+    flex shrink + `min_width=0` so the row can shrink without multi-line spill.
+  - Evidence/gate: `tools/diag-scripts/imui-float-window-titlebar-drag-screenshots.json` + stale paint check on
+    `imui-float-demo.a.activate`.
+- Diagnostics bundles now export docking “why did it pick this target?” traces for cross-window drag/drop triage.
+  - Field: `debug.docking_interaction.dock_drop_resolve` (source + resolved target + candidate rects).
+  - Producer: `ecosystem/fret-docking/src/dock/space.rs` → `fret-runtime::WindowInteractionDiagnosticsStore`.
+  - Exporter: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiDockDropResolveDiagnosticsV1`).
+  - Scripted repro (multi-window overlap hover): `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`.
 - A minimal response-signals demo exists for click variants + drag lifecycle + context-menu requests.
   - Demo: `cargo run -p fret-demo --bin imui_response_signals_demo`
 
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- ImGui parity audit notes: `docs/workstreams/imui-imgui-parity-audit-v1.md`
 - State integration note: `docs/workstreams/imui-state-integration-v1.md`
 - v2 follow-up: `docs/workstreams/imui-ecosystem-facade-v2.md`
 - v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
 - Perf guide: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - imui authoring facade v2 (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
-- Unified authoring builder surface (ADR): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- Unified authoring builder surface (ADR): `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Docking + multi-window parity (ImGui-aligned): `docs/workstreams/docking-multiwindow-imgui-parity.md`
 - macOS multi-window parity anchors: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
 - Overlays policy split (Radix-aligned): `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -106,7 +134,7 @@ These are hard constraints aligned with the existing `imui` v2 plan and core ADR
    - Immediate-mode entry points are thin adapters that delegate, not parallel implementations.
 
 4) **Single patch vocabulary**
-   - `ui()` / `UiBuilder<T>` (ADR 0175) remains the canonical patch chain for chrome/layout.
+   - `ui()` / `UiBuilder<T>` (ADR 0160) remains the canonical patch chain for chrome/layout.
    - The facade should not introduce a separate “tailwind-ish” patch language.
 
 5) **Policy stays in ecosystem crates**
@@ -295,6 +323,13 @@ Multi-window / “tear-off” alignment:
 
 Upstream reference anchors (Dear ImGui docking branch):
 
+Note: `repo-ref/imgui` is local state. When citing behavior, record the commit you audited:
+
+- `git -C repo-ref/imgui rev-parse --short HEAD`
+- If `repo-ref/` is not present in your worktree, run the same command against your local snapshot:
+  - `git -C <path-to-imgui> rev-parse --short HEAD`
+  - Windows tip: `New-Item -ItemType Junction repo-ref -Target <path-to-repo-ref>`
+
 - Viewports and platform window lifecycle:
   - `repo-ref/imgui/imgui.h` (Viewports section; `ImGuiViewportFlags_*`, `RenderPlatformWindowsDefault`, platform callbacks)
   - `repo-ref/imgui/imgui.cpp` (`UpdateViewportsNewFrame`, `UpdateViewportsEndFrame`, `RenderPlatformWindowsDefault`)
@@ -303,6 +338,12 @@ Upstream reference anchors (Dear ImGui docking branch):
   - `repo-ref/imgui/imgui_internal.h` (declarations)
 - Hovered-viewport detection (backend contract):
   - `repo-ref/imgui/docs/BACKENDS.md` (HasMouseHoveredViewport, `io.AddMouseViewportEvent`, and handling `ImGuiViewportFlags_NoInputs`)
+- Window flags vocabulary (what "NoInputs" means upstream):
+  - `repo-ref/imgui/imgui.h` (`enum ImGuiWindowFlags_`, notably `ImGuiWindowFlags_NoMouseInputs` and `ImGuiWindowFlags_NoInputs`)
+- Item query semantics (hover/active/focus/click, incl. nav highlight interaction):
+  - `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemActive`, `IsItemFocused`, `IsItemClicked`)
+- Popups/context menus (open stack + close policies):
+  - `repo-ref/imgui/imgui.cpp` (`OpenPopupEx`, `BeginPopupEx`, `BeginPopupContextItem/Window/Void`, `CloseCurrentPopup`)
 
 ### 5.6 M0 seam decisions (locked for v1)
 

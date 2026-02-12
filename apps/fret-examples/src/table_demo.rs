@@ -10,8 +10,9 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
+use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,
@@ -334,7 +335,7 @@ impl WinitAppDriver for TableDemoDriver {
                         })
                         .unwrap_or((0, "<none>".to_string()));
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
 
                     let mut root_layout = LayoutStyle::default();
                     root_layout.size.width = Length::Fill;

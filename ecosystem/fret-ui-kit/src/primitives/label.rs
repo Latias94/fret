@@ -14,26 +14,32 @@ impl Label {
         Self { text: text.into() }
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         label(cx, self.text)
     }
 }
 
+#[track_caller]
 pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
     let text = text.into();
-    let theme = Theme::global(&*cx.app).clone();
+    let (fg, px, line_height) = {
+        let theme = Theme::global(&*cx.app);
 
-    let fg = theme
-        .color_by_key("foreground")
-        .unwrap_or_else(|| theme.color_required("foreground"));
-    let px = theme
-        .metric_by_key("component.label.text_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
-    let line_height = theme
-        .metric_by_key("component.label.line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_required("foreground"));
+        let px = theme
+            .metric_by_key("component.label.text_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let line_height = theme
+            .metric_by_key("component.label.line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+        (fg, px, line_height)
+    };
 
     cx.text_props(TextProps {
         layout: fret_ui::element::LayoutStyle {

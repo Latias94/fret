@@ -2024,7 +2024,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -2092,6 +2092,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -2679,6 +2703,81 @@
               "right_1_metrics_right_2_status_right_3_status_status": 0,
               "right_2_status_right_3_status_status": 0,
               "right_3_status_status": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 150,
+              "center_total_size": 450,
+              "right_total_size": 150
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": 150,
+                "mem_mb": 300,
+                "status": null
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": 0
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": null,
+                "cpu": 300,
+                "cpu2": 150,
+                "mem_mb": 0,
+                "status": null
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": 0
+              }
             }
           },
           "rows": {
@@ -5259,7 +5358,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -5327,6 +5426,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -5983,6 +6106,81 @@
               "center_3_perf_cpu2": 150,
               "center_3_mem_mem_mb": 300,
               "center_3_status_status": 450
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 150,
+              "center_total_size": 600,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": null,
+                "cpu2": 150,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": 0,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 450,
+                "cpu": null,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
             }
           },
           "rows": {
@@ -8141,7 +8339,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -8209,6 +8407,29 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -8744,6 +8965,81 @@
               "center_3_perf_cpu": 150,
               "center_3_mem_mem_mb": 300,
               "center_3_status_status": 450
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 600,
+              "left_total_size": 0,
+              "center_total_size": 600,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 450,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 450,
+                "mem_mb": 300,
+                "status": 450
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 450,
+                "cpu": 300,
+                "cpu2": 600,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 450,
+                "cpu": 300,
+                "cpu2": 600,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
             }
           },
           "rows": {
@@ -10994,7 +11290,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -11062,6 +11358,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -11625,6 +11945,81 @@
               "center_3_perf_cpu": 150,
               "center_3_mem_mem_mb": 450,
               "center_3_status_status": 600
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 0,
+              "center_total_size": 750,
+              "right_total_size": 0
+            },
+            "size": {
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150
+            },
+            "start": {
+              "all": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 0,
+                "cpu": 150,
+                "cpu2": 300,
+                "mem_mb": 450,
+                "status": 600
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
+            },
+            "after": {
+              "all": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "left": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              },
+              "center": {
+                "name": 600,
+                "cpu": 450,
+                "cpu2": 300,
+                "mem_mb": 150,
+                "status": 0
+              },
+              "right": {
+                "name": null,
+                "cpu": null,
+                "cpu2": null,
+                "mem_mb": null,
+                "status": null
+              }
             }
           },
           "rows": {
@@ -13921,7 +14316,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "name",
@@ -13989,6 +14384,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "status": {
               "can_hide": true,
@@ -14552,6 +14971,81 @@
               "center_3_mem_mem_mb": 150,
               "center_3_perf_cpu": 300,
               "center_3_name_name": 600
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 750,
+              "left_total_size": 0,
+              "center_total_size": 750,
+              "right_total_size": 0
+            },
+            "size": {
+              "status": 150,
+              "mem_mb": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "name": 150
+            },
+            "start": {
+              "all": {
+                "status": 0,
+                "mem_mb": 150,
+                "cpu": 300,
+                "cpu2": 450,
+                "name": 600
+              },
+              "left": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              },
+              "center": {
+                "status": 0,
+                "mem_mb": 150,
+                "cpu": 300,
+                "cpu2": 450,
+                "name": 600
+              },
+              "right": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              }
+            },
+            "after": {
+              "all": {
+                "status": 600,
+                "mem_mb": 450,
+                "cpu": 300,
+                "cpu2": 150,
+                "name": 0
+              },
+              "left": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              },
+              "center": {
+                "status": 600,
+                "mem_mb": 450,
+                "cpu": 300,
+                "cpu2": 150,
+                "name": 0
+              },
+              "right": {
+                "status": null,
+                "mem_mb": null,
+                "cpu": null,
+                "cpu2": null,
+                "name": null
+              }
             }
           },
           "rows": {

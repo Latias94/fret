@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Authoring surfaces and integration helpers for editor-style Fret workflows."
 
 [features]
 default = []
@@ -15,7 +16,7 @@ query = ["dep:fret-query", "fret-query/ui"]
 selector = ["dep:fret-selector", "fret-selector/ui"]
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-ui = { path = "../../crates/fret-ui" }
-fret-query = { path = "../fret-query", optional = true }
-fret-selector = { path = "../fret-selector", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
+fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
+fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }

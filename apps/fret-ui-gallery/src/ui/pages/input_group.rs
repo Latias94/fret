@@ -167,8 +167,6 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -191,17 +189,17 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -314,8 +312,13 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let text = {
         let content = shadcn::InputGroup::new(text_value)
             .a11y_label("Text example")
-            .leading([shadcn::InputGroupText::new("https://").into_element(cx)])
-            .trailing([shadcn::InputGroupText::new(".com").into_element(cx)])
+            .control_test_id("ui-gallery-input-group-text-control")
+            .leading([shadcn::InputGroupText::new("https://")
+                .into_element(cx)
+                .test_id("ui-gallery-input-group-text-leading")])
+            .trailing([shadcn::InputGroupText::new(".com")
+                .into_element(cx)
+                .test_id("ui-gallery-input-group-text-trailing")])
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-text")
             .into_element(cx);
@@ -424,7 +427,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-group-rtl"));
+        .test_id("ui-gallery-input-group-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -458,9 +461,8 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-input-group-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-input-group-component");
 
     let code_panel_body = stack::vstack(
         cx,

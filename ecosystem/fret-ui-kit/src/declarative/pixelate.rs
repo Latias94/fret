@@ -10,6 +10,7 @@ use crate::recipes::pixelate::{
     PixelateEffectRefinement, PixelateEffectTokenKeys, PixelateTokenKeys, pixelate_effect_chain,
     resolve_pixelate_chrome, resolve_pixelate_effect,
 };
+use crate::recipes::resolve::ResolvedWithFallback;
 
 #[derive(Debug, Clone)]
 pub struct PixelatePanelProps {
@@ -50,7 +51,7 @@ where
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_pixelate_chrome(theme, &props.chrome, props.chrome_keys);
     let effect = resolve_pixelate_effect(theme, &props.effect, props.effect_keys);
-    let chain = pixelate_effect_chain(effect);
+    let chain = ResolvedWithFallback::ok(pixelate_effect_chain(effect));
 
     let outer = ContainerProps {
         layout: LayoutStyle {
@@ -70,7 +71,7 @@ where
             EffectLayerProps {
                 layout: effect_layout,
                 mode: props.mode,
-                chain,
+                chain: chain.value,
                 quality: props.quality,
             },
             |cx| {

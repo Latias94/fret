@@ -1,9 +1,9 @@
 # Text System v2 (Parley) — Workstream Roadmap & TODO Tracker
 
-Status: Active (design proposed in ADR 0157; implementation in progress)
+Status: Active (design proposed in ADR 0142; implementation in progress)
 
 This document is a living, implementation-focused tracker. It is intentionally non-authoritative;
-the normative contract is `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
+the normative contract is `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
 
 ## Scope (v2)
 
@@ -20,7 +20,7 @@ Non-goals (v2):
 
 - Per-span font size / per-span line height (kept uniform per layout for now).
 - Full-document code-editor virtualization (separate higher-level layer).
-- Rich clipboard formats (tracked by ADR 0110/0152).
+- Rich clipboard formats (tracked by ADR 0106/0137).
 
 ## Milestones
 
@@ -208,12 +208,12 @@ Current:
     `apps/fret-demo-web` feature `emoji-fonts`.
 - Automated conformance (unit): emoji sequences (VS16/ZWJ/flags/keycaps) produce
   `GlyphQuadKind::Color` and populate the `color_atlas` when a bundled color emoji font is available
-  (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text.rs`).
+  (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text/mod.rs`).
 - Manual CJK conformance harness exists: `apps/fret-examples/src/cjk_conformance_demo.rs`.
   - Web runner supports `?demo=cjk_conformance_demo` and optional bundled CJK fonts via
     `apps/fret-demo-web` feature `cjk-lite-fonts`.
 - Automated conformance (unit): CJK glyphs populate `mask_atlas`/`subpixel_atlas` when a bundled CJK
-  font is available (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text.rs`).
+  font is available (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text/mod.rs`).
 
 ## Acceptance Checklist (what “done” means)
 
@@ -274,11 +274,11 @@ Legend:
 
 **B1 — Font + fallback + stable keys**
 - [x] Define a “font stack key” / revision model that invalidates caches on font DB changes.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`font_stack_key`, `font_db_revision`, `add_fonts`,
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`font_stack_key`, `font_db_revision`, `add_fonts`,
     `set_font_families`), `crates/fret-runtime/src/font_catalog.rs` (`TextFontStackKey`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (observes `TextFontStackKey`).
 - [x] Implement family overrides (`TextFontFamilyConfig`) in the new system.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`TextSystem::set_font_families`),
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::set_font_families`),
     `crates/fret-launch/src/runner/desktop/mod.rs` + `crates/fret-launch/src/runner/web.rs`
     (applies config + publishes `TextFontStackKey`).
 
@@ -289,9 +289,9 @@ Legend:
   - hit-testing
   - span-aware paint assignment
   - Evidence: `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
-    `crates/fret-render-wgpu/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render-wgpu/src/text.rs`
+    `crates/fret-render-wgpu/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render-wgpu/src/text/mod.rs`
     (`caret_stops_for_slice`, `paint_span_for_text_range`).
-  - Tests: `crates/fret-render-wgpu/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
+  - Tests: `crates/fret-render-wgpu/src/text/mod.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
     `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
@@ -311,9 +311,9 @@ Legend:
 
 **B5 — Quality baseline**
 - [x] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
 - [x] Add shader gamma/contrast correction uniforms (GPUI-aligned).
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`TextQualitySettings`),
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`TextQualitySettings`),
     `crates/fret-render-wgpu/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`).
 - [x] Ensure quality knobs participate in cache keys (layout/raster).
   - Evidence: subpixel binning participates in `GlyphKey` (`x_bin`, `y_bin`) and atlas residency.
@@ -321,13 +321,13 @@ Legend:
     `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey.text_quality_key`),
     test `crates/fret-render-wgpu/src/renderer/tests.rs` (`scene_encoding_cache_is_busted_by_text_quality_changes`).
 
-**B6 — Cache boundary refactor (ADR 0158)**
+**B6 — Cache boundary refactor (ADR 0143)**
 - [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
 - [x] Add a frame-driven `TextSystem::prepare_for_scene(...)` that runs even when scene encoding is cached.
 - [x] Move atlas allocation/uploads out of `prepare(...)` and into the scene-driven ensure step.
 - [x] Define eviction semantics based on “last used frame” and document in-flight safety constraints.
 
-**B7 — Unified glyph key + subpixel policy (ADR 0160)**
+**B7 — Unified glyph key + subpixel policy (ADR 0145)**
 - [x] Introduce renderer-owned `GlyphKey` and remove backend-specific glyph keys.
 - [x] Introduce a stable `FontFaceKey` registry (decouple from Parley fontique IDs; reserve variable font support).
 - [x] Add `GlyphKind::Subpixel` (atlas + shader) and lock `SUBPIXEL_VARIANTS_X/Y` as a platform policy.
@@ -387,9 +387,9 @@ Legend:
 ### E) Tests & conformance
 
 - [x] Unit tests: span invariant validation and clamping behavior.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
-  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
+  - Evidence: `crates/fret-render-wgpu/src/text/mod.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
     `crates/fret-render-wgpu/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
   - Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
@@ -411,20 +411,20 @@ Legend:
 
 ## Progress Log (append-only)
 
-- 2026-01-13: ADR 0157 added (design locked), worktree created.
-- 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
+- 2026-01-13: ADR 0142 added (design locked), worktree created.
+- 2026-01-13: ADR 0143 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render-wgpu/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
-- 2026-01-13: M1.4: align Parley rasterization with cosmic-text subpixel binning + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
+- 2026-01-13: M1.4: align Parley rasterization with the legacy 4-way subpixel binning policy + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
 - 2026-01-13: M1.5: add Parley word wrap + multiline layout (commit `12e0aa2`), then extend wrapping across newlines (commit `63a00be`).
 - 2026-01-13: M1.6: add multipage glyph atlas budget + plumb atlas page through draws (commit `c29a866`).
 - 2026-01-13: M1.7: evict unreferenced glyph atlas pages (commit `eac5619`).
 - 2026-01-13: M1.8: evict unused glyphs from the atlas via per-glyph live refs (commit `2983e98`).
 - 2026-01-13: B6: decouple text layout from glyph atlas residency + add `prepare_for_scene` and atlas revision cache key (commit `4885937`).
-- 2026-01-13: ADR 0160 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
+- 2026-01-13: ADR 0145 added: unify glyph identity (`GlyphKey`) + subpixel rendering policy (commit `d56a8be`).
 - 2026-01-13: B7.1: unify glyph key and switch `prepare` to Parley-only (commit `797fe93`).
 - 2026-01-13: B7.2: add subpixel atlas + shader/pipeline and platform subpixel policy (commit `8282cf1`).
 - 2026-01-13: B7.3: add stable `FontFaceKey` registry (commit `9a7f81a`).
@@ -437,3 +437,4 @@ Legend:
 - 2026-01-31: Add deterministic window snapshot smoke test for mixed-script + emoji + IME preedit.
 - 2026-02-01: Graduate `text_v2` module namespace into `text/*` (mechanical rename + import updates; no behavior change).
 - 2026-02-01: Start WP6 (macOS baseline) tracker.
+- 2026-02-11: Make fontique the single source of truth for font family resolution (remove the legacy fontdb bridge), and explicitly enable `swash(scale)` for rasterization.

@@ -1,6 +1,11 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+#[path = "support/repo_root.rs"]
+mod repo_root;
+
+use repo_root::repo_root;
 
 #[derive(Debug, Clone, Deserialize)]
 struct TimelineGolden {
@@ -43,15 +48,6 @@ struct DomNode {
     text: Option<String>,
     #[serde(default)]
     children: Vec<DomNode>,
-}
-
-fn repo_root() -> PathBuf {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(Path::to_path_buf)
-        .expect("repo root")
 }
 
 fn radix_web_dir() -> PathBuf {

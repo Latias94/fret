@@ -174,6 +174,21 @@ where
     // geometry via `ElementContext::last_bounds_for_element` (e.g. measured-height motion).
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
+        let window_state = runtime.for_window_mut(window);
+        window_state.record_committed_viewport_bounds(bounds);
+        if let Some(svc) = _app.global::<fret_core::window::WindowMetricsService>() {
+            let scale_factor = svc.scale_factor(window).unwrap_or(1.0);
+            window_state.record_committed_scale_factor(scale_factor);
+
+            if svc.safe_area_insets_is_known(window) {
+                window_state.record_committed_safe_area_insets(svc.safe_area_insets(window));
+            }
+            if svc.occlusion_insets_is_known(window) {
+                window_state.record_committed_occlusion_insets(svc.occlusion_insets(window));
+            }
+        } else {
+            window_state.record_committed_scale_factor(1.0);
+        }
     });
 
     // Out-of-band scroll handle mutations (e.g. deferred scroll-to-item) must be visible to view
@@ -314,7 +329,7 @@ where
         });
 
         // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
-        // reuse roots + subtree membership lists; ADR 0191). Parent pointers are still required
+        // reuse roots + subtree membership lists; ADR 0176). Parent pointers are still required
         // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
         // inconsistencies before applying invalidations that may need to propagate across cache-root
         // boundaries.
@@ -435,13 +450,13 @@ where
 
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
         // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
-        // via explicit liveness bookkeeping (ADR 0191).
+        // via explicit liveness bookkeeping (ADR 0176).
         //
         // We only sweep nodes that are both stale and unreachable from the window's liveness
         // roots:
         // - layer roots (base + overlays),
         // - view-cache reuse roots, and
-        // - retained windowed-surface keep-alive roots (ADR 0192),
+        // - retained windowed-surface keep-alive roots (ADR 0177),
         // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
         //   edges on cache-hit frames).
         //
@@ -487,7 +502,7 @@ where
 
             // Also treat recorded view-cache subtree memberships as authoritative reachability,
             // so cache hits can keep subtrees alive even when child edges are temporarily
-            // incomplete (ADR 0191).
+            // incomplete (ADR 0176).
             for root in view_cache_reuse_roots {
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
@@ -1298,7 +1313,10 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::SemanticFlex(p) => ElementInstance::SemanticFlex(p),
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
+        ElementKind::LayoutQueryRegion(p) => ElementInstance::LayoutQueryRegion(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
+        ElementKind::HitTestGate(p) => ElementInstance::HitTestGate(p),
+        ElementKind::FocusTraversalGate(p) => ElementInstance::FocusTraversalGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
         ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
@@ -1359,6 +1377,14 @@ fn mount_element<H: UiHost + 'static>(
         ElementInstance::InteractivityGate(p) => Some((p.present, p.interactive)),
         _ => None,
     };
+    let hit_test_gate_state = match &instance {
+        ElementInstance::HitTestGate(p) => Some(p.hit_test),
+        _ => None,
+    };
+    let focus_traversal_gate_state = match &instance {
+        ElementInstance::FocusTraversalGate(p) => Some(p.traverse),
+        _ => None,
+    };
     let use_barrier_set_children = matches!(
         &instance,
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
@@ -1383,6 +1409,12 @@ fn mount_element<H: UiHost + 'static>(
 
     if let Some((present, interactive)) = interactivity_gate_state {
         ui.sync_interactivity_gate_widget(node, present, interactive);
+    }
+    if let Some(hit_test) = hit_test_gate_state {
+        ui.sync_hit_test_gate_widget(node, hit_test);
+    }
+    if let Some(traverse) = focus_traversal_gate_state {
+        ui.sync_focus_traversal_gate_widget(node, traverse);
     }
     let inserted = window_frame
         .instances
@@ -1679,7 +1711,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                         return None;
                     }
 
-                    // Prefer the prepaint-derived window range (ADR 0190). This lets retained
+                    // Prefer the prepaint-derived window range (ADR 0175). This lets retained
                     // virtual surfaces update row membership on cache-hit frames without
                     // re-deriving the window from scroll state during reconcile.
                     let mut window_range =
@@ -1733,7 +1765,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let reconcile_start = std::time::Instant::now();
+        let reconcile_start = fret_core::time::Instant::now();
 
         let prev_items_len = props.visible_items.len();
         let next_items_len = desired_items.len();
@@ -1935,6 +1967,7 @@ fn declarative_instance_change_mask(
         return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
     }
 
+    let mut hit_test_changed = false;
     let mut layout_changed = layout_style_for_instance(previous) != layout_style_for_instance(next);
     let mut paint_changed = false;
 
@@ -1962,6 +1995,17 @@ fn declarative_instance_change_mask(
             // and semantics inclusion. Even when the wrapper layout is unchanged, we need a layout
             // refresh so the host widget can recompute its derived flags.
             if a.present != b.present || a.interactive != b.interactive {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::HitTestGate(a), ElementInstance::HitTestGate(b)) => {
+            if a.hit_test != b.hit_test {
+                hit_test_changed = true;
+            }
+        }
+        (ElementInstance::FocusTraversalGate(a), ElementInstance::FocusTraversalGate(b)) => {
+            if a.traverse != b.traverse {
                 layout_changed = true;
                 paint_changed = true;
             }
@@ -2041,13 +2085,16 @@ fn declarative_instance_change_mask(
         _ => {}
     }
 
+    let mut mask = 0;
+    if hit_test_changed {
+        mask |= INVALIDATION_HIT_TEST;
+    }
     if layout_changed {
-        return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+        mask |= INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+    } else if paint_changed {
+        mask |= INVALIDATION_PAINT;
     }
-    if paint_changed {
-        return INVALIDATION_PAINT;
-    }
-    0
+    mask
 }
 
 fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) -> bool {

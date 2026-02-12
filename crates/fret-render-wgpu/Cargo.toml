@@ -8,19 +8,21 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "WGPU backend implementation for Fret rendering."
 
 [dependencies]
-fret-render-core = { path = "../fret-render-core" }
+fret-render-core = { version = "0.1.0", path = "../fret-render-core" }
 
 wgpu.workspace = true
 bytemuck.workspace = true
 anyhow.workspace = true
 glam.workspace = true
-fret-core = { path = "../fret-core" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
 slotmap.workspace = true
 thiserror.workspace = true
-cosmic-text.workspace = true
 parley.workspace = true
+swash.workspace = true
+read-fonts.workspace = true
 unicode-script.workspace = true
 unicode-segmentation.workspace = true
 etagere.workspace = true
@@ -33,5 +35,4 @@ serde_json.workspace = true
 [dev-dependencies]
 naga.workspace = true
 pollster.workspace = true
-fret-fonts = { path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
-
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }

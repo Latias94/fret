@@ -20,6 +20,13 @@ pub(super) enum MermaidDiagramType {
     C4,
     Mindmap,
     Timeline,
+    Kanban,
+    Architecture,
+    Packet,
+    Info,
+    Error,
+    Radar,
+    Treemap,
     ZenUML,
     Sankey,
     XYChart,
@@ -44,6 +51,13 @@ impl MermaidDiagramType {
             Self::C4 => "C4 Diagram",
             Self::Mindmap => "Mindmap",
             Self::Timeline => "Timeline",
+            Self::Kanban => "Kanban",
+            Self::Architecture => "Architecture Diagram",
+            Self::Packet => "Packet Diagram",
+            Self::Info => "Info Diagram",
+            Self::Error => "Error Diagram",
+            Self::Radar => "Radar Chart",
+            Self::Treemap => "Treemap",
             Self::ZenUML => "ZenUML Diagram",
             Self::Sankey => "Sankey Diagram",
             Self::XYChart => "XY Chart",
@@ -106,6 +120,20 @@ pub(super) fn detect_mermaid_diagram_type(source: &str) -> MermaidDiagramType {
         MermaidDiagramType::Mindmap
     } else if first_line_lower.starts_with("timeline") {
         MermaidDiagramType::Timeline
+    } else if first_line_lower.starts_with("kanban") {
+        MermaidDiagramType::Kanban
+    } else if first_line_lower.starts_with("architecture") {
+        MermaidDiagramType::Architecture
+    } else if first_line_lower.starts_with("packet") {
+        MermaidDiagramType::Packet
+    } else if first_line_lower.starts_with("info") {
+        MermaidDiagramType::Info
+    } else if first_line_lower.starts_with("error") {
+        MermaidDiagramType::Error
+    } else if first_line_lower.starts_with("radar") {
+        MermaidDiagramType::Radar
+    } else if first_line_lower.starts_with("treemap") {
+        MermaidDiagramType::Treemap
     } else if first_line_lower.starts_with("zenuml") {
         MermaidDiagramType::ZenUML
     } else if first_line_lower.starts_with("sankey") {

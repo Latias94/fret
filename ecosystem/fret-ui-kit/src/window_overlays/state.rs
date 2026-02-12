@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, Model};
+use fret_ui::action::OnDismissiblePointerMove;
 use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
@@ -77,6 +78,7 @@ pub(super) struct ActiveHoverOverlay {
 #[derive(Default)]
 pub(super) struct WindowOverlays {
     pub(super) windows: HashMap<AppWindowId, WindowOverlayFrame>,
+    pub(super) toast_viewport_restore_focus: HashMap<AppWindowId, Option<NodeId>>,
     /// Last-known request declarations for a given window/id.
     ///
     /// These are persisted across frames so per-frame request lists can be treated as an
@@ -92,6 +94,9 @@ pub(super) struct WindowOverlays {
     /// See `cached_popover_requests`.
     pub(super) cached_hover_overlay_requests:
         HashMap<(AppWindowId, GlobalElementId), HoverOverlayRequest>,
+    /// See `cached_popover_requests`.
+    pub(super) cached_hover_overlay_pointer_move_handlers:
+        HashMap<(AppWindowId, GlobalElementId), Option<OnDismissiblePointerMove>>,
     /// See `cached_popover_requests`.
     pub(super) cached_tooltip_requests: HashMap<(AppWindowId, GlobalElementId), TooltipRequest>,
     pub(super) popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,

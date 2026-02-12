@@ -28,6 +28,7 @@ pub const TEXT_COPY: &str = "text.copy";
 pub const TEXT_CUT: &str = "text.cut";
 pub const TEXT_PASTE: &str = "text.paste";
 pub const TEXT_SELECT_ALL: &str = "text.select_all";
+pub const TEXT_RESCAN_SYSTEM_FONTS: &str = "text.rescan_system_fonts";
 pub const EDIT_UNDO: &str = "edit.undo";
 pub const EDIT_REDO: &str = "edit.redo";
 
@@ -37,6 +38,7 @@ pub fn register_core_commands(registry: &mut CommandRegistry) {
     register_app_commands(registry);
     register_focus_commands(registry);
     register_text_edit_commands(registry);
+    register_text_system_commands(registry);
 }
 
 pub fn register_app_commands(registry: &mut CommandRegistry) {
@@ -432,6 +434,15 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
     );
 }
 
+pub fn register_text_system_commands(registry: &mut CommandRegistry) {
+    registry.register(
+        CommandId::new(TEXT_RESCAN_SYSTEM_FONTS),
+        CommandMeta::new("Rescan System Fonts")
+            .with_category("Text")
+            .with_keywords(["fonts", "font", "system", "rescan", "refresh", "catalog"]),
+    );
+}
+
 const CORE_COMMAND_CATEGORY_APP_KEY: &str = "core-command-category-app";
 
 const CORE_COMMAND_LOCALIZATION_SPECS: &[(&str, &str, Option<&str>)] = &[
@@ -562,7 +573,7 @@ fn localized_or_fallback(
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     use fret_runtime::fret_i18n::{I18nLookup, I18nLookupError, LocalizedMessage, MessageKey};
 
@@ -605,7 +616,7 @@ mod tests {
             .global::<fret_runtime::fret_i18n::I18nService>()
             .cloned()
             .unwrap_or_default();
-        service.set_lookup(Some(Arc::new(TestLookup)));
+        service.set_lookup(Some(Rc::new(TestLookup)));
         app.set_global(service);
 
         let mut settings = crate::SettingsFileV1::default();
@@ -633,7 +644,7 @@ mod tests {
             .global::<fret_runtime::fret_i18n::I18nService>()
             .cloned()
             .unwrap_or_default();
-        service.set_lookup(Some(Arc::new(TestLookup)));
+        service.set_lookup(Some(Rc::new(TestLookup)));
         app.set_global(service);
 
         let mut settings = crate::SettingsFileV1::default();

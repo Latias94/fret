@@ -159,7 +159,7 @@ pub(crate) const DOC_UI_KIT_LIST_TORTURE: &str = r#"
 
 This page is an ecosystem-level harness for `fret-ui-kit::declarative::list`.
 
-It intentionally uses the **retained-host** VirtualList path (ADR 0192) to validate that:
+It intentionally uses the **retained-host** VirtualList path (ADR 0177) to validate that:
 
 - scroll can update membership under cache-hit reuse,
 - crossing window boundaries does not require dirtying the parent cache-root,
@@ -185,7 +185,7 @@ This page is a stress surface for **large scrollable text/code documents**.
 It is intended to back the GPUI parity workstream:
 
 - validate scroll stability (no “stale paint” / “UI looks not refreshed” regressions)
-- identify when code/text surfaces should become **prepaint-windowed** (ADR 0190)
+- identify when code/text surfaces should become **prepaint-windowed** (ADR 0175)
 - provide a deterministic bundle capture target for perf investigations
 "#;
 
@@ -241,6 +241,26 @@ let editor = CodeEditor::new(handle)
     .into_element(cx);
 ```
 "#;
+
+pub(crate) const DOC_MARKDOWN_EDITOR_SOURCE: &str = r#"
+## Markdown editor (source mode)
+
+This page is a v0 **source-mode** Markdown editor milestone:
+
+- edit Markdown as plain text (no WYSIWYG),
+- validate `fret-code-editor` interaction control (edit vs read-only),
+- validate Markdown syntax highlighting (best-effort) and wrap stability,
+- optionally validate a live preview rendered by `fret-markdown`.
+"#;
+
+pub(crate) const USAGE_MARKDOWN_EDITOR_SOURCE: &str = r##"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("# Hello\n\n- Item\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"##;
 
 pub(crate) const DOC_TEXT_SELECTION_PERF: &str = r#"
 ## Text selection (perf diagnostics)
@@ -307,7 +327,7 @@ pub(crate) const USAGE_TEXT_MEASURE_OVERLAY: &str = r#"
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 
-This page exists to validate the wasm IME bridge contract (ADR 0195):
+This page exists to validate the wasm IME bridge contract (ADR 0180):
 
 - a hidden textarea is used as the browser-owned IME target,
 - `composition*` drives `Event::Ime::{Preedit,Commit}`,
@@ -339,7 +359,7 @@ This page is a stress surface for **canvas-driven charts** with pan/zoom interac
 It exists to support the GPUI parity workstream:
 
 - validate “no stale scene” behavior under view-cache reuse,
-- identify where charts/plots should adopt prepaint-windowed sampling (ADR 0190),
+- identify where charts/plots should adopt prepaint-windowed sampling (ADR 0175),
 - provide a deterministic bundle capture target for perf investigations.
 "#;
 
@@ -360,7 +380,7 @@ This page is a stress surface for **pan/zoom canvas scenes** with viewport-drive
 It exists to support the GPUI parity workstream:
 
 - validate “no stale scene” behavior under view-cache reuse,
-- identify when large canvas/node-graph surfaces should become **prepaint-windowed** (ADR 0190),
+- identify when large canvas/node-graph surfaces should become **prepaint-windowed** (ADR 0175),
 - provide a deterministic bundle capture target for perf investigations.
 "#;
 
@@ -384,7 +404,7 @@ This page hosts a large `fret-node` canvas surface (nodes + edges) intended to s
 
 It exists to support the GPUI parity workstream:
 
-- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0190),
+- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0175),
 - validate “paint-only” interaction updates for small deltas,
 - provide deterministic script targets for perf investigations.
 "#;
@@ -452,8 +472,8 @@ let el = windowed_rows_surface(cx, WindowedRowsSurfaceProps::default(), |_p, _i,
 pub(crate) const DOC_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str = r#"
 ## Windowed Rows Surface (interactive harness)
 
-This page demonstrates a “windowed surface” pattern (ADR 0190) with **paint-only hover chrome**
-(ADR 0181) using a stable element tree:
+This page demonstrates a “windowed surface” pattern (ADR 0175) with **paint-only hover chrome**
+(ADR 0166) using a stable element tree:
 
 - `Scroll` (retained scroll state + transform)
 - `PointerRegion` (row hit-testing in event hooks)
@@ -516,7 +536,7 @@ It exists to validate:
 
 - scroll stability under view-cache reuse (no stale paint),
 - row-window correctness (expand/collapse does not detach state on cache hits),
-- future migrations toward prepaint-driven windowing (ADR 0190).
+- future migrations toward prepaint-driven windowing (ADR 0175).
 "#;
 
 pub(crate) const USAGE_TREE_TORTURE: &str = r#"
@@ -528,7 +548,7 @@ use fret_ui_kit::declarative::tree::tree_view;
 pub(crate) const DOC_TABLE_RETAINED_TORTURE: &str = r#"
 ## Table (retained torture harness)
 
-This page is a baseline for the **UI Kit table surface** running on the virt-003 retained host path (ADR 0192).
+This page is a baseline for the **UI Kit table surface** running on the virt-003 retained host path (ADR 0177).
 
 It exists to validate:
 
@@ -551,8 +571,8 @@ This page is a baseline for **long scrolling conversations** (chat transcripts).
 It exists to validate:
 
 - scroll stability under view-cache reuse (no stale paint),
-- virtualization correctness under composable message rows (virt-003 retained hosts; ADR 0192),
-- future migrations toward prepaint-windowed/ephemeral updates (ADR 0190/0193).
+- virtualization correctness under composable message rows (virt-003 retained hosts; ADR 0177),
+- future migrations toward prepaint-windowed/ephemeral updates (ADR 0160/0178).
 "#;
 
 pub(crate) const USAGE_AI_TRANSCRIPT_TORTURE: &str = r#"
@@ -1364,7 +1384,7 @@ This page validates the first Material 3 outcome-aligned component surface:
 
 - state layer (hover / pressed / focus) driven by Material tokens
 - bounded ripple (pointer-origin) driven by motion tokens
-- ADR 1159 style overrides via `ButtonStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `ButtonStyle` (partial per-state overrides)
 
 This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
 "#;
@@ -1448,7 +1468,7 @@ This page validates a second Material 3 component:
 - token-driven icon color + container color (variants)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
-- ADR 1159 style overrides via `IconButtonStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `IconButtonStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_ICON_BUTTON: &str = r#"
@@ -1471,7 +1491,7 @@ This page validates a third Material 3 component:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
-- ADR 1159 style overrides via `CheckboxStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `CheckboxStyle` (partial per-state overrides)
 
 Notes:
 - This is the control-only MVP (40px target, 18px box). Label-click behavior is a follow-up recipe.
@@ -1496,7 +1516,7 @@ This page validates a Material 3 switch surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus) centered on the thumb
 - bounded ripple (pointer-origin)
-- ADR 1159 style overrides via `SwitchStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `SwitchStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_SWITCH: &str = r#"
@@ -1518,7 +1538,7 @@ This page validates a Material 3 radio button surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
-- ADR 1159 style overrides via `RadioStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `RadioStyle` (partial per-state overrides)
 
 This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
 
@@ -1721,7 +1741,7 @@ This page validates a Material 3 select surface:
 
 - token-driven trigger outcomes via `md.comp.{outlined,filled}-select.*`
 - listbox overlay anchored to the trigger (Escape / outside press dismissal)
-- ADR 1159 style overrides via `SelectStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `SelectStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
@@ -1794,7 +1814,7 @@ This page validates Material 3 text field variants:
 - filled: token-driven filled container + active indicator + hover state layer
 - label + placeholder outcomes (best-effort)
 - outlined: animated label float + an outline "notch" patch (best-effort)
-- ADR 1159 style overrides via `TextFieldStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `TextFieldStyle` (partial per-state overrides)
 
 This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
 "#;
@@ -1820,7 +1840,7 @@ This page validates a Material 3 primary navigation tabs surface:
 - roving focus + automatic activation (selection follows focus)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
-- ADR 1159 style overrides via `TabsStyle` (partial per-state overrides)
+- ADR 0220 style overrides via `TabsStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TABS: &str = r#"
@@ -2218,7 +2238,7 @@ let group = shadcn::ResizablePanelGroup::new(h)
 pub(crate) const DOC_DATA_TABLE: &str = r#"
 ## DataTable
 
-`DataTable` integrates the TanStack-aligned headless engine (ADR 0101):
+`DataTable` integrates the TanStack-aligned headless engine (ADR 0100):
 
 - headless: sorting / filtering / selection state (`TableState`)
 - UI: fixed header + virtualized body
@@ -2410,6 +2430,27 @@ let dialog = shadcn::Dialog::new(open.clone()).into_element(
 ```
 "#;
 
+pub(crate) const DOC_SHADCN_EXTRAS: &str = r#"
+## Shadcn Extras (`fret-ui-shadcn::extras`)
+
+This page showcases shadcn-styled **blocks / recipes** that are intentionally out of scope for
+shadcn/ui v4 taxonomy parity.
+
+Design rules:
+
+- Exposed under a module surface (`shadcn::extras::*`), not glob re-exported from the crate root.
+- Should not expand the `fret-ui` runtime contract surface (ADR 0066).
+"#;
+
+pub(crate) const USAGE_SHADCN_EXTRAS: &str = r#"
+```rust
+use fret_ui_shadcn as shadcn;
+
+let tags = shadcn::extras::Tags::new(["Alpha", "Beta"]).into_element(cx);
+let marquee = shadcn::extras::Marquee::new(["One", "Two"]).into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_CARD: &str = r#"
 ## Card
 
@@ -2463,6 +2504,34 @@ let avatar = shadcn::Avatar::new(vec![
     shadcn::AvatarFallback::new("FR").into_element(cx),
 ])
 .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_IMAGE_OBJECT_FIT: &str = r#"
+## Image / Object Fit
+
+This page demonstrates:
+
+- the core `SceneOp::Image { fit }` contract (Stretch / Contain / Cover),
+- the shadcn policy recipe `MediaImage`,
+- a virtualized thumbnails list surface (VirtualList),
+- and a small streaming-update harness (partial `ImageUpdateRgba8` writes).
+"#;
+
+pub(crate) const USAGE_IMAGE_OBJECT_FIT: &str = r#"
+```rust
+// Fixed-size thumbnail (default cover):
+let thumb = shadcn::MediaImage::maybe(Some(image_id))
+    .fit(fret_core::ViewportFit::Cover)
+    .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
+    .into_element(cx);
+
+// Optional intrinsic aspect ratio wrapper (policy-owned metadata store; opt-in):
+let card = shadcn::MediaImage::maybe(Some(image_id))
+    .intrinsic_aspect_ratio_from_metadata(true)
+    .fit(fret_core::ViewportFit::Contain)
+    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+    .into_element(cx);
 ```
 "#;
 

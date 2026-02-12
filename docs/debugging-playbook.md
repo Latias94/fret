@@ -246,7 +246,7 @@ In Fret, the most common “matrix looks wrong” bugs are not about layout, but
 
 Contracts:
 
-- RenderTransform semantics: `docs/adr/0083-render-transform-hit-testing.md`
+- RenderTransform semantics: `docs/adr/0082-render-transform-hit-testing.md`
 - Scene transform + clip composition: `docs/adr/0078-scene-transform-and-clip-composition.md`
 
 Practical checklist:
@@ -260,7 +260,7 @@ Practical checklist:
 
 ### 1.5 Debugging streaming image updates (video frames)
 
-When debugging `Effect::ImageUpdate*` ingestion (ADR 0121 / ADR 0126), prefer collecting *both*:
+When debugging `Effect::ImageUpdate*` ingestion (ADR 0119 / ADR 0124), prefer collecting *both*:
 
 - per-frame counters via `fret_core::StreamingUploadPerfSnapshot`, and
 - (optional) runner debug logs when drops/delays happen.
@@ -296,7 +296,7 @@ Notes on the NV12 GPU path (`FRET_STREAMING_GPU_YUV=1`):
   `upload_bytes_applied` reflects actual CPU->GPU uploads performed by the applied path.
 - A quick sanity check is that `streaming_nv12_demo` should show a significantly smaller `yuv_us` vs CPU fallback.
 
-Notes on capability gating (ADR 0124):
+Notes on capability gating (ADR 0122):
 
 - The runner publishes a per-session capability snapshot as an app global: `fret_render::RendererCapabilities`.
 - NV12 GPU conversion requires both:
@@ -322,7 +322,7 @@ Practical workflow:
 1. Reduce to the smallest demo that reproduces the issue (`apps/fret-examples`).
 2. Verify the bounds handed to the root (window size, scale factor).
 3. Verify child bounds propagation (especially when using absolute positioning helpers).
-4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0083).
+4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0082).
 
 ### 2.1 Dump Taffy layout trees (layout engine v2)
 
@@ -487,7 +487,7 @@ Notes:
 
 For app-facing screenshots/recording, the contract is defined by:
 
-- `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+- `docs/adr/0120-offscreen-rendering-frame-capture-and-readback.md`
 
 Note: encoding (PNG/MP4) is app-owned; the framework’s responsibility is a portable readback mechanism and
 bounded backpressure.

@@ -66,7 +66,7 @@ fn selectable_text_paints_span_background_quads() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     let quad_index = scene.ops().iter().position(|op| match op {
-        SceneOp::Quad { background, .. } => *background == bg,
+        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg),
         _ => false,
     });
     let text_index = scene

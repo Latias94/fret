@@ -19,6 +19,7 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -524,7 +525,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let normalized_menu_bar = menu_bar.clone().normalized();
     let group = cx.root_id();
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let border = theme.color_required("color.panel.border");
     let bg = theme.color_required("color.panel.background");
 
@@ -739,7 +740,7 @@ fn render_menu_from_runtime<H: UiHost>(
             open
         };
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = cx.theme_snapshot();
         let enabled = menu.enabled;
 
         let bg_hover = theme.color_required("color.hover.background");
@@ -767,6 +768,8 @@ fn render_menu_from_runtime<H: UiHost>(
         };
 
         cx.pressable_with_id_props(|cx, st, trigger_id| {
+            let (patient_click_sticky, patient_click_timer) =
+                menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
             let group_has_active = cx.watch_model(&group_active).cloned().is_some();
             let show_mnemonics =
@@ -785,6 +788,8 @@ fn render_menu_from_runtime<H: UiHost>(
                 group_active.clone(),
                 trigger_id,
                 open.clone(),
+                patient_click_sticky.clone(),
+                patient_click_timer.clone(),
                 enabled,
                 st.hovered,
                 st.pressed,
@@ -795,6 +800,8 @@ fn render_menu_from_runtime<H: UiHost>(
                 group_active.clone(),
                 trigger_id,
                 open.clone(),
+                patient_click_sticky,
+                patient_click_timer,
             ));
             cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
                 if down.button == fret_core::MouseButton::Left {
@@ -821,6 +828,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 layout: LayoutStyle::default(),
                 enabled,
                 focusable: true,
+                key_activation: Default::default(),
                 focus_ring: Some(ring),
                 focus_ring_bounds: None,
                 a11y: PressableA11y {
@@ -837,7 +845,7 @@ fn render_menu_from_runtime<H: UiHost>(
             if overlay_presence.present && enabled {
                 request_menu_overlay(
                     cx,
-                    &theme,
+                    theme,
                     trigger_id,
                     open.clone(),
                     overlay_root_name.clone(),
@@ -903,7 +911,7 @@ fn render_menu_from_runtime<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn request_menu_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     trigger_id: GlobalElementId,
     open: fret_runtime::Model<bool>,
     overlay_root_name: String,
@@ -955,7 +963,11 @@ fn request_menu_overlay<H: UiHost>(
             let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                 return (Vec::new(), None);
             };
-            let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                window_margin,
+            );
 
             let desired = menu_panel_desired_size(entries, Px(220.0), row_height);
             let placement = popper::PopperContentPlacement::new(
@@ -1197,7 +1209,7 @@ fn request_menu_overlay<H: UiHost>(
 
 fn render_menu_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     entries: &[InWindowMenuEntry],
     open: fret_runtime::Model<bool>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
@@ -1280,7 +1292,7 @@ fn render_menu_entries<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn render_menu_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     item: &InWindowMenuItem,
     open: fret_runtime::Model<bool>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
@@ -1319,7 +1331,11 @@ fn render_menu_item<H: UiHost>(
             && item.has_submenu
         {
             let geometry_hint = menu::sub_trigger::MenuSubTriggerGeometryHint {
-                outer: overlay::outer_bounds_with_window_margin(cx.bounds, Px(8.0)),
+                outer: overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    Px(8.0),
+                ),
                 desired: Size::new(Px(180.0), Px(200.0)),
             };
             expanded = menu::sub_trigger::wire(
@@ -1361,6 +1377,7 @@ fn render_menu_item<H: UiHost>(
             layout,
             enabled: !disabled,
             focusable: !disabled,
+            key_activation: Default::default(),
             focus_ring: None,
             focus_ring_bounds: None,
             a11y: PressableA11y {
@@ -1564,6 +1581,8 @@ fn menu_fallback_input_context<H: UiHost>(
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 
@@ -1751,6 +1770,19 @@ mod tests {
             }
 
             fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+                true
+            }
+        }
+
+        impl fret_core::MaterialService for FakeServices {
+            fn register_material(
+                &mut self,
+                _desc: fret_core::MaterialDescriptor,
+            ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+                Err(fret_core::MaterialRegistrationError::Unsupported)
+            }
+
+            fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
                 true
             }
         }

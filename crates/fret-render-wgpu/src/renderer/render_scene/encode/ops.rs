@@ -1,5 +1,6 @@
 use super::clip;
 use super::draw;
+use super::mask;
 use super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
 
@@ -41,6 +42,13 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             clip::pop_clip(state);
         }
 
+        SceneOp::PushMask { bounds, mask: m } => {
+            let _ = mask::push_mask(state, bounds, m);
+        }
+        SceneOp::PopMask => {
+            mask::pop_mask(state);
+        }
+
         SceneOp::PushEffect {
             bounds,
             mode,
@@ -50,7 +58,13 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, bounds);
-            let uniform_index = state.push_effect_uniform_snapshot(scissor);
+            let uniform_index = state.push_effect_uniform_snapshot(
+                scissor,
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+            );
             state.effect_markers.push(EffectMarker {
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::Push {
@@ -61,6 +75,22 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                     quality,
                 },
             });
+
+            // Inside an effect scope, masks active at effect entry are excluded from draw shaders
+            // and applied by the composite that closes the effect scope.
+            state
+                .mask_scope_stack
+                .push((state.mask_scope_head, state.mask_scope_count));
+            state.mask_scope_head = state.mask_head;
+            state.mask_scope_count = state.mask_count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
         SceneOp::PopEffect => {
             state.flush_quad_batch();
@@ -68,25 +98,103 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::Pop,
             });
+
+            let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
+            state.mask_scope_head = head;
+            state.mask_scope_count = count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+        }
+
+        SceneOp::PushCompositeGroup { desc } => {
+            state.flush_quad_batch();
+
+            let scissor = effect_scissor(state, desc.bounds);
+            let uniform_index = state.push_effect_uniform_snapshot(
+                scissor,
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+            );
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::CompositeGroupPush {
+                    scissor,
+                    uniform_index,
+                    mode: desc.mode,
+                    quality: desc.quality,
+                },
+            });
+
+            // Inside an isolated compositing group, masks active at group entry are excluded from
+            // draw shaders and applied by the composite that closes the group.
+            state
+                .mask_scope_stack
+                .push((state.mask_scope_head, state.mask_scope_count));
+            state.mask_scope_head = state.mask_head;
+            state.mask_scope_count = state.mask_count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
+        }
+        SceneOp::PopCompositeGroup => {
+            state.flush_quad_batch();
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::CompositeGroupPop,
+            });
+
+            let (head, count) = state.mask_scope_stack.pop().unwrap_or((0, 0));
+            state.mask_scope_head = head;
+            state.mask_scope_count = count;
+            state.current_uniform_index = state.push_uniform_snapshot(
+                state.clip_head,
+                state.clip_count,
+                state.mask_head,
+                state.mask_count,
+                state.mask_scope_head,
+                state.mask_scope_count,
+            );
         }
 
         SceneOp::Quad {
             rect,
             background,
             border,
-            border_color,
+            border_paint,
             corner_radii,
             ..
         } => {
-            draw::encode_quad(state, rect, background, border, border_color, corner_radii);
+            draw::encode_quad(
+                renderer,
+                state,
+                rect,
+                background,
+                border,
+                border_paint,
+                corner_radii,
+            );
         }
         SceneOp::Image {
             rect,
             image,
+            fit,
             opacity,
             ..
         } => {
-            draw::encode_image(renderer, state, rect, image, opacity);
+            draw::encode_image(renderer, state, rect, image, fit, opacity);
         }
         SceneOp::ImageRegion {
             rect,

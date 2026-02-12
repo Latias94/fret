@@ -9,7 +9,7 @@ This document exists to resolve `IDV2-def-006/007` without repeatedly reshaping 
 In Input Dispatch v2, `prevent_default(DefaultAction)` must remain **orthogonal** to propagation
 (`stop_propagation`) and to overlay/input policy (pointer occlusion, outside-press).
 
-- Contract: `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- Contract: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - Workstream: `docs/workstreams/input-dispatch-v2.md`
 - Tracker: `docs/workstreams/input-dispatch-v2-todo.md` (`IDV2-def-006/007`)
 

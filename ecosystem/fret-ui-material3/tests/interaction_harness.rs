@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Scene, SceneOp};
+use fret_core::{Corners, DrawOrder, Edges, Paint, Px, Rect, Scene, SceneOp};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SceneSig {
@@ -18,8 +18,12 @@ pub enum SceneSig {
     PushClipRect,
     PushClipRRect,
     PopClip,
+    PushMask,
+    PopMask,
     PushEffect,
     PopEffect,
+    PushCompositeGroup,
+    PopCompositeGroup,
     Quad(DrawOrder),
     Image(DrawOrder),
     ImageRegion(DrawOrder),
@@ -45,8 +49,12 @@ pub fn scene_signature(scene: &Scene) -> Vec<SceneSig> {
             SceneOp::PushClipRect { .. } => SceneSig::PushClipRect,
             SceneOp::PushClipRRect { .. } => SceneSig::PushClipRRect,
             SceneOp::PopClip => SceneSig::PopClip,
+            SceneOp::PushMask { .. } => SceneSig::PushMask,
+            SceneOp::PopMask => SceneSig::PopMask,
             SceneOp::PushEffect { .. } => SceneSig::PushEffect,
             SceneOp::PopEffect => SceneSig::PopEffect,
+            SceneOp::PushCompositeGroup { .. } => SceneSig::PushCompositeGroup,
+            SceneOp::PopCompositeGroup => SceneSig::PopCompositeGroup,
             SceneOp::Quad { order, .. } => SceneSig::Quad(order),
             SceneOp::Image { order, .. } => SceneSig::Image(order),
             SceneOp::ImageRegion { order, .. } => SceneSig::ImageRegion(order),
@@ -122,7 +130,7 @@ pub fn scene_quad_signature(scene: &Scene) -> Vec<QuadSig> {
             } => Some(QuadSig {
                 order,
                 rect: rect_sig(rect),
-                background: color_sig(background),
+                background: paint_sig(background),
                 border: edges_sig(border),
                 corner_radii: corners_sig(corner_radii),
             }),
@@ -172,7 +180,15 @@ fn corners_sig(corners: Corners) -> CornersSig {
     }
 }
 
-fn color_sig(color: Color) -> ColorSig {
+fn paint_sig(paint: Paint) -> ColorSig {
+    let Paint::Solid(color) = paint else {
+        return ColorSig {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0,
+        };
+    };
     ColorSig {
         r: unit_sig(color.r),
         g: unit_sig(color.g),

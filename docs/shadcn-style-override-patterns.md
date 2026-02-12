@@ -5,7 +5,7 @@ shadcn/ui-aligned Fret component libraries.
 
 Primary references:
 
-- State-driven resolution primitive: `docs/adr/1158-state-driven-style-resolution-v1.md`
+- State-driven resolution primitive: `docs/adr/0219-state-driven-style-resolution-v1.md`
 - Token naming vocabulary: `docs/shadcn-style-token-conventions.md`
 - Focus-visible semantics: `docs/adr/0061-focus-rings-and-focus-visible.md`
 

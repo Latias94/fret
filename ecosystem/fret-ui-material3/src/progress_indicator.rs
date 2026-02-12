@@ -6,7 +6,8 @@ use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Size, Transform2D};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, CanvasProps, Length, SemanticsProps};
 use fret_ui::elements::ElementContext;
-use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui::{Invalidation, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
 use crate::tokens::progress_indicator as progress_tokens;
 
@@ -66,9 +67,9 @@ fn paint_quad(
     scene.push(fret_core::SceneOp::Quad {
         order,
         rect,
-        background,
+        background: fret_core::Paint::Solid(background),
         border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT,
         corner_radii,
     });
 }
@@ -107,11 +108,14 @@ impl LinearProgressIndicator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let h = progress_tokens::linear_height(&theme);
-        let track_thickness = progress_tokens::linear_track_thickness(&theme).0.min(h.0);
-        let active_thickness = progress_tokens::linear_active_thickness(&theme).0.min(h.0);
+        let (h, track_thickness, active_thickness) = cx.with_theme(|theme| {
+            let h = progress_tokens::linear_height(theme);
+            let track_thickness = progress_tokens::linear_track_thickness(theme).0.min(h.0);
+            let active_thickness = progress_tokens::linear_active_thickness(theme).0.min(h.0);
+            (h, track_thickness, active_thickness)
+        });
 
         let is_indeterminate = matches!(&self.progress, ProgressValue::Indeterminate);
 
@@ -139,11 +143,16 @@ impl LinearProgressIndicator {
             ProgressValue::Indeterminate => 0.0,
         };
 
-        let track_color = progress_tokens::track_color(&theme);
-        let active_color = progress_tokens::active_color(&theme);
-        let four_colors = progress_tokens::four_color_palette(&theme);
-        let track_shape = progress_tokens::track_shape(&theme);
-        let active_shape = progress_tokens::active_shape(&theme);
+        let (track_color, active_color, four_colors, track_shape, active_shape) =
+            cx.with_theme(|theme| {
+                (
+                    progress_tokens::track_color(theme),
+                    progress_tokens::active_color(theme),
+                    progress_tokens::four_color_palette(theme),
+                    progress_tokens::track_shape(theme),
+                    progress_tokens::active_shape(theme),
+                )
+            });
 
         let mut props = CanvasProps::default();
         props.layout.size.width = Length::Fill;
@@ -516,11 +525,15 @@ impl CircularProgressIndicator {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let size = progress_tokens::circular_size(&theme);
-        let track_thickness = progress_tokens::circular_track_thickness(&theme);
-        let active_thickness = progress_tokens::circular_active_thickness(&theme);
+        let (size, track_thickness, active_thickness) = cx.with_theme(|theme| {
+            (
+                progress_tokens::circular_size(theme),
+                progress_tokens::circular_track_thickness(theme),
+                progress_tokens::circular_active_thickness(theme),
+            )
+        });
 
         let is_indeterminate = matches!(&self.progress, ProgressValue::Indeterminate);
 
@@ -548,11 +561,16 @@ impl CircularProgressIndicator {
             ProgressValue::Indeterminate => 0.0,
         };
 
-        let track_color = progress_tokens::track_color(&theme);
-        let active_color = progress_tokens::active_color(&theme);
-        let four_colors = progress_tokens::four_color_palette(&theme);
-        let track_shape = progress_tokens::track_shape(&theme);
-        let active_shape = progress_tokens::active_shape(&theme);
+        let (track_color, active_color, four_colors, track_shape, active_shape) =
+            cx.with_theme(|theme| {
+                (
+                    progress_tokens::track_color(theme),
+                    progress_tokens::active_color(theme),
+                    progress_tokens::four_color_palette(theme),
+                    progress_tokens::track_shape(theme),
+                    progress_tokens::active_shape(theme),
+                )
+            });
 
         let mut props = CanvasProps::default();
         props.layout.size.width = Length::Px(size);

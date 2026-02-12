@@ -18,7 +18,7 @@ Related foundations:
 - Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect + pick UX: `docs/debugging-ui-with-inspector-and-scripts.md`
 - Debugging playbook: `docs/debugging-playbook.md`
-- Base contract ADR: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- Base contract ADR: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Semantics contract ADR: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - CLI tooling baseline: `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 - In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
@@ -148,10 +148,19 @@ This MCP adapter should not invent new capabilities. It should expose a *small* 
 map directly to the same operations the GUI/CLI perform (inspect, pick, run script, pack artifacts,
 compare bundles), and (optionally) expose common artifacts as MCP resources.
 
+Resource model (recommended):
+
+- Expose key artifacts as resources under a stable URI scheme (e.g. `fret-diag://sessions/<id>/bundle.json`).
+- Support `resources/subscribe` so AI clients can wait for updates without polling.
+  - On updates, send notifications:
+    - `notifications/resources/list_changed` when the set of resource URIs changes (session add/remove),
+    - `notifications/resources/updated` when a subscribed resource’s content changes (e.g. after `bundle.dumped`).
+
 Recommended packaging:
 
 - A dedicated binary `apps/fret-devtools-mcp` (headless) for automation and CI.
 - Optionally, the GUI can embed/launch the MCP server for convenience.
+- End-to-end workflow guide: `docs/workstreams/diag-devtools-gui-v1-ai-mcp.md`.
 
 ### Transport strategy (v1)
 

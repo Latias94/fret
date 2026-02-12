@@ -30,6 +30,11 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`, with a non-zero
   close delay by default to allow moving from trigger to content.
+- Pass: Controlled/uncontrolled open state parity is available via
+  `HoverCard::new_controllable(cx, open, default_open, trigger, content)`
+  (Base UI / Radix `open` + `defaultOpen`).
+- Pass: Open lifecycle callbacks are available via `HoverCard::on_open_change` and
+  `HoverCard::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 
 ### Placement & sizing
 
@@ -51,6 +56,8 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn hover_card::tests`
+- Contract test: `hover_card_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `hover_card_open_change_events_complete_without_animation`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   hover card panel tracks the trigger after wheel-driven scroll updates (validated in

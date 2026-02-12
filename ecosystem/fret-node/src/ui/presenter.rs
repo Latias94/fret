@@ -290,7 +290,7 @@ pub trait NodeGraphPresenter {
     /// domain-derived content (e.g. constant values) without embedding an entire UI subtree.
     ///
     /// More advanced node content should eventually be modeled as a dedicated "node view" layer
-    /// (see ADR 0135), but this hook is useful for early demos and diagnostics.
+    /// (see ADR 0126), but this hook is useful for early demos and diagnostics.
     fn node_body_label(&self, _graph: &Graph, _node: NodeId) -> Option<Arc<str>> {
         None
     }

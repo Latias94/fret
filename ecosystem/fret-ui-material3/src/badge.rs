@@ -7,7 +7,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{Edges, LayoutDirection, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, LayoutDirection, Px, SemanticsRole, TextOverflow, TextWrap,
+};
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, InsetStyle, Length, PositionStyle};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
@@ -81,6 +83,7 @@ impl Badge {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -90,19 +93,24 @@ impl Badge {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let layout_direction =
-                resolved_layout_direction(cx, theme_default_layout_direction(&theme));
+            let anchor_children: Vec<AnyElement> = anchor(cx).into_iter().collect();
+
+            let (layout_direction, resolved) = {
+                let theme = Theme::global(&*cx.app);
+                let layout_direction =
+                    resolved_layout_direction(&*cx, theme_default_layout_direction(theme));
+                let resolved = BadgeResolvedTokens::resolve(theme);
+                (layout_direction, resolved)
+            };
 
             let mut wrapper = ContainerProps::default();
             wrapper.layout.position = PositionStyle::Relative;
             wrapper.layout.overflow = fret_ui::element::Overflow::Visible;
 
-            let anchor_children: Vec<AnyElement> = anchor(cx).into_iter().collect();
             let badge = badge_element(
                 cx,
-                &theme,
                 layout_direction,
+                resolved,
                 self.value.clone(),
                 self.placement,
                 self.anchor_size,
@@ -119,10 +127,40 @@ impl Badge {
     }
 }
 
+#[derive(Debug, Clone)]
+struct BadgeResolvedTokens {
+    dot_size: Px,
+    dot_color: Color,
+    dot_shape: Corners,
+    large_size: Px,
+    large_color: Color,
+    large_shape: Corners,
+    large_label_style: fret_core::TextStyle,
+    large_label_color: Color,
+}
+
+impl BadgeResolvedTokens {
+    fn resolve(theme: &Theme) -> Self {
+        Self {
+            dot_size: badge_tokens::dot_size(theme),
+            dot_color: badge_tokens::dot_color(theme),
+            dot_shape: badge_tokens::shape(theme),
+            large_size: badge_tokens::large_size(theme),
+            large_color: badge_tokens::large_color(theme),
+            large_shape: badge_tokens::large_shape(theme),
+            large_label_style: theme
+                .text_style_by_key("md.comp.badge.large.label-text")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-small"))
+                .unwrap_or_else(fret_core::TextStyle::default),
+            large_label_color: badge_tokens::large_label_color(theme),
+        }
+    }
+}
+
 fn badge_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     layout_direction: LayoutDirection,
+    resolved: BadgeResolvedTokens,
     value: BadgeValue,
     placement: BadgePlacement,
     anchor_size: Option<Px>,
@@ -152,22 +190,20 @@ fn badge_element<H: UiHost>(
     }
 
     let (height, width, min_width, background, corner_radii) = if is_large {
-        let size = badge_tokens::large_size(theme);
         (
-            size,
+            resolved.large_size,
             Length::Auto,
-            Some(size),
-            badge_tokens::large_color(theme),
-            badge_tokens::large_shape(theme),
+            Some(resolved.large_size),
+            resolved.large_color,
+            resolved.large_shape,
         )
     } else {
-        let size = badge_tokens::dot_size(theme);
         (
-            size,
-            Length::Px(size),
-            Some(size),
-            badge_tokens::dot_color(theme),
-            badge_tokens::shape(theme),
+            resolved.dot_size,
+            Length::Px(resolved.dot_size),
+            Some(resolved.dot_size),
+            resolved.dot_color,
+            resolved.dot_shape,
         )
     };
 
@@ -191,14 +227,9 @@ fn badge_element<H: UiHost>(
     let content = match value {
         BadgeValue::Dot => cx.container(container, move |_cx| Vec::<AnyElement>::new()),
         BadgeValue::Text(text) => {
-            let style = theme
-                .text_style_by_key("md.comp.badge.large.label-text")
-                .or_else(|| theme.text_style_by_key("md.sys.typescale.label-small"))
-                .unwrap_or_else(fret_core::TextStyle::default);
-
             let mut props = fret_ui::element::TextProps::new(text.clone());
-            props.style = Some(style);
-            props.color = Some(badge_tokens::large_label_color(theme));
+            props.style = Some(resolved.large_label_style);
+            props.color = Some(resolved.large_label_color);
             props.wrap = TextWrap::None;
             props.overflow = TextOverflow::Clip;
 

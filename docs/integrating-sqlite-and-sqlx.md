@@ -6,7 +6,7 @@ Fret’s kernel intentionally stays runtime-agnostic and main-thread UI only. Pe
 the same portability rules as other background work:
 
 - run blocking/async I/O off the UI thread,
-- send **data-only** results back to the UI via an inbox drainer (ADR 0190),
+- send **data-only** results back to the UI via an inbox drainer (ADR 0175),
 - apply results on the UI thread by updating `Model<T>` values.
 
 This document shows a practical “golden path” for using `sqlx` (SQLite) with:
@@ -49,7 +49,7 @@ Treat a DB read like any other “resource”:
 - returns a typed value `T`,
 - cached behind `QueryClient`, observable via `Model<QueryState<T>>`.
 
-Lifecycle reminder (ADR 1164 semantics):
+Lifecycle reminder (ADR 0225 semantics):
 
 - `stale_time` gates freshness only,
 - `cache_time` controls retention/GC,
@@ -252,14 +252,14 @@ Two viable strategies:
 **A) Put `db_epoch` in the query key (simplest, but creates more cache entries):**
 
 ```rust
-let epoch = cx.watch_model(&db_epoch).paint().copied().unwrap_or(0);
+let epoch = cx.watch_model(&db_epoch).paint().copied_or_default();
 let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &epoch);
 ```
 
 **B) Keep the key stable and invalidate on epoch change (preferred for hot paths):**
 
 ```rust
-let epoch = cx.watch_model(&db_epoch).paint().copied().unwrap_or(0);
+let epoch = cx.watch_model(&db_epoch).paint().copied_or_default();
 cx.with_state(|| 0u64, |last_epoch| {
     if *last_epoch != epoch {
         *last_epoch = epoch;

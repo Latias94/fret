@@ -66,6 +66,7 @@ impl ModelRevisions {
 pub struct ChartModel {
     pub id: ChartId,
     pub viewport: Option<Rect>,
+    pub plot_viewports_by_grid: BTreeMap<GridId, Rect>,
 
     pub datasets: BTreeMap<DatasetId, DatasetModel>,
     pub grids: BTreeMap<GridId, GridModel>,
@@ -90,6 +91,7 @@ impl ChartModel {
         let mut model = Self {
             id: spec.id,
             viewport: spec.viewport,
+            plot_viewports_by_grid: BTreeMap::default(),
             datasets: BTreeMap::default(),
             grids: BTreeMap::default(),
             axes: BTreeMap::default(),
@@ -123,9 +125,30 @@ impl ChartModel {
                 dataset.id,
                 DatasetModel {
                     id: dataset.id,
+                    from: dataset.from,
+                    transforms: dataset.transforms,
+                    root: dataset.id,
                     fields,
                 },
             );
+        }
+
+        // Compute lineage roots and validate dataset chains.
+        //
+        // v1 subset: transforms are only supported on derived datasets (`from` must be set).
+        let mut roots: BTreeMap<DatasetId, DatasetId> = BTreeMap::new();
+        let mut visiting: BTreeSet<DatasetId> = BTreeSet::new();
+        for dataset_id in model.datasets.keys().copied().collect::<Vec<_>>() {
+            let root =
+                resolve_dataset_root(&model.datasets, dataset_id, &mut roots, &mut visiting)?;
+            if let Some(ds) = model.datasets.get_mut(&dataset_id) {
+                ds.root = root;
+                if ds.from.is_none() && !ds.transforms.is_empty() {
+                    return Err(ModelError::InvalidSpec {
+                        reason: "dataset.transforms requires dataset.from in v1",
+                    });
+                }
+            }
         }
 
         let mut grid_ids: BTreeSet<GridId> = BTreeSet::new();
@@ -653,7 +676,49 @@ fn apply_visual_maps(
 #[derive(Debug, Clone)]
 pub struct DatasetModel {
     pub id: DatasetId,
+    pub from: Option<DatasetId>,
+    pub transforms: Vec<crate::spec::DatasetTransformSpecV1>,
+    pub root: DatasetId,
     pub fields: BTreeMap<FieldId, usize>,
+}
+
+impl ChartModel {
+    pub fn root_dataset_id(&self, dataset: DatasetId) -> DatasetId {
+        self.datasets
+            .get(&dataset)
+            .map(|d| d.root)
+            .unwrap_or(dataset)
+    }
+}
+
+fn resolve_dataset_root(
+    datasets: &BTreeMap<DatasetId, DatasetModel>,
+    id: DatasetId,
+    memo: &mut BTreeMap<DatasetId, DatasetId>,
+    visiting: &mut BTreeSet<DatasetId>,
+) -> Result<DatasetId, ModelError> {
+    if let Some(root) = memo.get(&id).copied() {
+        return Ok(root);
+    }
+    if !visiting.insert(id) {
+        return Err(ModelError::InvalidSpec {
+            reason: "dataset.from contains a cycle",
+        });
+    }
+
+    let root = match datasets.get(&id).and_then(|d| d.from) {
+        None => id,
+        Some(parent) => {
+            if !datasets.contains_key(&parent) {
+                return Err(ModelError::MissingReference { kind: "dataset" });
+            }
+            resolve_dataset_root(datasets, parent, memo, visiting)?
+        }
+    };
+
+    visiting.remove(&id);
+    memo.insert(id, root);
+    Ok(root)
 }
 
 #[derive(Debug, Clone)]
