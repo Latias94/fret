@@ -55,7 +55,7 @@ Evidence anchors:
 - Dock space UI + layout + interaction
   - Files: `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/layout.rs`, `ecosystem/fret-docking/src/dock/manager.rs`
 - Painting and geometry helpers
-  - Files: `ecosystem/fret-docking/src/dock/paint.rs`, `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`, `ecosystem/fret-docking/src/dock/split_stabilize.rs`
+  - Files: `ecosystem/fret-docking/src/dock/paint.rs`, `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`, `ecosystem/fret-docking/src/dock/hit_test.rs`
 - Runtime binding / event handling
   - Files: `ecosystem/fret-docking/src/runtime.rs`, `ecosystem/fret-docking/src/facade.rs`, `ecosystem/fret-docking/src/invalidation.rs`
 - Test harness host utilities

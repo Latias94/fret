@@ -36,6 +36,7 @@ impl FrictionSimulation {
         let final_time = if constant_deceleration == 0.0 {
             f64::INFINITY
         } else {
+            // Solve v0*drag^t - c*t = 0 via Newton iterations.
             let mut guess = 0.0;
             for _ in 0..10 {
                 let f = velocity * drag.powf(guess) - constant_deceleration * guess;

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fret_core::geometry::{Point, Rect};
-use fret_core::{AppWindowId, DockNodeId, DropZone, PointerId, RenderTargetId};
+use fret_core::{AppWindowId, Axis, DockNodeId, DropZone, PointerId, RenderTargetId};
 
 use crate::FrameId;
 
@@ -25,6 +25,54 @@ pub struct DockingInteractionDiagnostics {
     pub dock_drag: Option<DockDragDiagnostics>,
     pub dock_drop_resolve: Option<DockDropResolveDiagnostics>,
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
+    /// Best-effort dock graph stats snapshot for the current window.
+    pub dock_graph_stats: Option<DockGraphStatsDiagnostics>,
+    /// Best-effort stable signature for the current window's dock graph.
+    ///
+    /// This is intended for scripted regression gates that want to assert an exact layout shape
+    /// (dockview-style) without relying on pixels.
+    pub dock_graph_signature: Option<DockGraphSignatureDiagnostics>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockGraphSignatureDiagnostics {
+    /// Stable, canonical-ish shape signature for the dock graph in a specific window.
+    ///
+    /// Notes:
+    /// - Does not include floating window rects (platform-dependent).
+    /// - Does not include split fractions (pointer-driven and DPI-sensitive).
+    pub signature: String,
+    /// FNV-1a 64-bit hash of `signature` (for compact assertions).
+    pub fingerprint64: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockGraphStatsDiagnostics {
+    pub node_count: u32,
+    pub tabs_count: u32,
+    pub split_count: u32,
+    pub floating_count: u32,
+    pub max_depth: u32,
+    pub max_split_depth: u32,
+    /// True when the graph satisfies the key canonical-form invariants used by docking.
+    pub canonical_ok: bool,
+    /// True when a split contains a same-axis split child (an indicator of unflattened nesting).
+    pub has_nested_same_axis_splits: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropPreviewKindDiagnostics {
+    WrapBinary,
+    InsertIntoSplit {
+        axis: Axis,
+        split: DockNodeId,
+        insert_index: usize,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DockDropPreviewDiagnostics {
+    pub kind: DockDropPreviewKindDiagnostics,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +136,7 @@ pub struct DockDropResolveDiagnostics {
     pub dock_bounds: Rect,
     pub source: DockDropResolveSource,
     pub resolved: Option<DockDropTargetDiagnostics>,
+    pub preview: Option<DockDropPreviewDiagnostics>,
     pub candidates: Vec<DockDropCandidateRectDiagnostics>,
 }
 
@@ -100,6 +149,7 @@ pub struct WindowInteractionDiagnosticsStore {
 struct WindowInteractionDiagnosticsFrame {
     frame_id: FrameId,
     docking: DockingInteractionDiagnostics,
+    latest_docking: DockingInteractionDiagnostics,
 }
 
 impl WindowInteractionDiagnosticsStore {
@@ -119,7 +169,8 @@ impl WindowInteractionDiagnosticsStore {
     ) {
         self.begin_frame(window, frame_id);
         let w = self.per_window.entry(window).or_default();
-        w.docking = diagnostics;
+        w.docking = diagnostics.clone();
+        w.latest_docking = diagnostics;
     }
 
     pub fn docking_for_window(
@@ -129,5 +180,55 @@ impl WindowInteractionDiagnosticsStore {
     ) -> Option<&DockingInteractionDiagnostics> {
         let w = self.per_window.get(&window)?;
         (w.frame_id == frame_id).then_some(&w.docking)
+    }
+
+    pub fn docking_latest_for_window(
+        &self,
+        window: AppWindowId,
+    ) -> Option<&DockingInteractionDiagnostics> {
+        self.per_window.get(&window).map(|w| &w.latest_docking)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn docking_latest_is_stable_across_begin_frame_resets() {
+        let mut store = WindowInteractionDiagnosticsStore::default();
+        let window = AppWindowId::default();
+
+        let snapshot = DockingInteractionDiagnostics {
+            dock_graph_stats: Some(DockGraphStatsDiagnostics {
+                node_count: 3,
+                tabs_count: 1,
+                split_count: 1,
+                floating_count: 0,
+                max_depth: 2,
+                max_split_depth: 1,
+                canonical_ok: true,
+                has_nested_same_axis_splits: false,
+            }),
+            ..Default::default()
+        };
+
+        store.record_docking(window, FrameId(1), snapshot);
+        store.begin_frame(window, FrameId(2));
+
+        assert!(
+            store
+                .docking_latest_for_window(window)
+                .and_then(|d| d.dock_graph_stats)
+                .is_some_and(|s| s.canonical_ok),
+            "latest snapshot should persist even when the current frame snapshot is reset"
+        );
+
+        assert!(
+            store
+                .docking_for_window(window, FrameId(2))
+                .is_some_and(|d| d.dock_graph_stats.is_none()),
+            "frame-scoped snapshot should be cleared by begin_frame when not recorded"
+        );
     }
 }

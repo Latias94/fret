@@ -1,6 +1,8 @@
 use std::fmt;
 
 #[cfg(target_os = "macos")]
+use std::collections::HashMap;
+#[cfg(target_os = "macos")]
 use winit::dpi::PhysicalPosition;
 
 pub(super) fn macos_window_log(_args: fmt::Arguments<'_>) {
@@ -328,7 +330,7 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
     }
 
     #[cfg(target_os = "macos")]
-    fn macos_calibrate_cursor_transform_from_window_sample(
+    pub(super) fn macos_calibrate_cursor_transform_from_window_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
         scale_factor: f64,
@@ -344,7 +346,7 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
     }
 
     #[cfg(target_os = "macos")]
-    fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
+    pub(super) fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
         let Some(cocoa_pos) = macos_mouse_location() else {
             return false;
         };
@@ -423,5 +425,108 @@ impl MacCursorTransformTable {
 
     fn map(&mut self, cocoa_pos: cocoa::foundation::NSPoint) -> Option<PhysicalPosition<f64>> {
         self.map_with_key_hint(cocoa_pos, macos_screen_key_for_point(cocoa_pos))
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::*;
+    use winit::dpi::PhysicalPosition;
+
+    #[test]
+    fn macos_cursor_transform_table_prefers_key_hint_then_last_used() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 100,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 10.0,
+                y_offset: 100.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+        table.by_screen.insert(
+            key_b,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 20.0,
+                y_offset: 200.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_a))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+        assert_eq!(table.last_used, Some(key_a));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, None)
+            .expect("expected mapping via last_used");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(21.0, 198.0));
+        assert_eq!(table.last_used, Some(key_b));
+    }
+
+    #[test]
+    fn macos_cursor_transform_table_falls_back_to_any_transform() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 200,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 5.0,
+                y_offset: 50.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping via any transform");
+        assert_eq!(mapped, PhysicalPosition::new(6.0, 48.0));
     }
 }

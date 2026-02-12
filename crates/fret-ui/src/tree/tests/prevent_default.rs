@@ -184,3 +184,135 @@ fn stop_propagation_does_not_suppress_default_focus_on_pointer_down() {
 
     assert_eq!(ui.focus(), Some(root));
 }
+
+#[test]
+fn touch_focus_on_pointer_down_requests_virtual_keyboard_for_text_input() {
+    struct FocusableTextInput;
+
+    impl<H: UiHost> Widget<H> for FocusableTextInput {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(Px(100.0), Px(100.0))
+        }
+
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let root = ui.create_node(FocusableTextInput);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    ui.layout_all(
+        &mut app,
+        &mut services,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ),
+        1.0,
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(ui.focus(), Some(root));
+
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| {
+            matches!(
+                e,
+                fret_runtime::Effect::ImeRequestVirtualKeyboard {
+                    window: w,
+                    visible: true
+                } if *w == window
+            )
+        }),
+        "touch focus on text input should request the virtual keyboard"
+    );
+}
+
+#[test]
+fn mouse_focus_on_pointer_down_does_not_request_virtual_keyboard_for_text_input() {
+    struct FocusableTextInput;
+
+    impl<H: UiHost> Widget<H> for FocusableTextInput {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(Px(100.0), Px(100.0))
+        }
+
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn is_text_input(&self) -> bool {
+            true
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let root = ui.create_node(FocusableTextInput);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    ui.layout_all(
+        &mut app,
+        &mut services,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ),
+        1.0,
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.focus(), Some(root));
+
+    let effects = app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ImeRequestVirtualKeyboard { .. })),
+        "mouse focus should not request the virtual keyboard"
+    );
+}

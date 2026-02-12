@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: splitter drag clamps viewports to minimum size (n-ary)",
+    "tags": ["docking", "nary", "splitter", "min_size", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This script drags the splitter far beyond the window bounds in both directions.",
+      "Expected behavior: the adjacent viewport panels clamp at the docking policy minimum size and never collapse."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" },
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 160
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "min_w_px": 240.0,
+        "min_h_px": 160.0,
+        "eps_px": 2.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "max_w_px": 280.0,
+        "max_h_px": 10000.0,
+        "eps_px": 2.0
+      }
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" },
+      "delta_x": -2400.0,
+      "delta_y": 0.0,
+      "steps": 160
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "min_w_px": 240.0,
+        "min_h_px": 160.0,
+        "eps_px": 2.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "max_w_px": 280.0,
+        "max_h_px": 10000.0,
+        "eps_px": 2.0
+      }
+    },
+
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size" }
+  ]
+}

@@ -34,6 +34,11 @@ Outcome:
 - Core graph helpers no longer assume binary splits.
 - Post-op simplification produces canonical form.
 
+Status:
+
+- Implemented in `crates/fret-core/src/dock/mutate.rs` (`simplify_window_forest`).
+- Regression gates live in `crates/fret-core/src/dock/tests.rs` (e.g. pruning empty tabs in 3+ child splits).
+
 Implementation targets:
 
 - `crates/fret-core/src/dock/mutate.rs`
@@ -56,6 +61,13 @@ Outcome:
 
 - `MovePanel` / `MoveTabs` edge docking prefers inserting into a same-axis split.
 - Fractions are updated by splitting the target share, not resetting to 50/50.
+
+Status:
+
+- Implemented in `crates/fret-core/src/dock/mutate.rs` (`insert_edge_child_prefer_same_axis_split`).
+- Deterministic gates live in `crates/fret-core/src/dock/tests.rs`:
+  - `edge_dock_inserts_into_existing_same_axis_split_and_splits_share`
+  - `repeated_edge_dock_keeps_same_axis_splits_flat`
 
 Implementation targets:
 
@@ -83,22 +95,28 @@ Outcome:
 - Splitter drags update adjacent shares only (stable, no oscillation).
 - Nested split stabilization is reduced as canonical form guarantees take over.
 
+Status:
+
+- Preview semantics aligned via `DockGraph::edge_dock_decision` (insert vs wrap).
+- Deterministic edge-insert overlay geometry gate exists in `ecosystem/fret-docking`.
+- Splitter drag updates use adjacent-only resizing for N-ary splits.
+- N-ary split handle hit-testing is covered by deterministic unit tests.
+- Legacy same-axis nested split stabilization has been removed (canonicalization keeps same-axis splits flat).
+- Remaining: none (M3 complete).
+
 Implementation targets:
 
 - `ecosystem/fret-docking/src/dock/layout.rs`:
   - compute preview rects based on simulated commit (pure function).
 - `ecosystem/fret-docking/src/dock/space.rs`:
   - update drag intent resolution to request the new semantics.
-- `ecosystem/fret-docking/src/dock/split_stabilize.rs`:
-  - simplify or remove; keep only what remains necessary after M2.
 - `ecosystem/fret-docking/src/dock/paint.rs`:
   - adjust overlay rendering to match the new preview model (no “always half” assumption).
 
 Gates:
 
 - Existing docking tests remain green.
-- Add at least one new geometry test that:
-  - simulates insertion into an existing split and checks the preview rect.
+- Geometry tests exist for edge-insert preview rects.
 
 ## M4 — Diagnostics: scripted correctness gates (`fretboard diag`)
 

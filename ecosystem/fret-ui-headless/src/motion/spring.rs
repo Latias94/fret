@@ -144,6 +144,8 @@ impl SpringSolution {
                 let cos = (wd * t).cos();
                 let sin = (wd * t).sin();
 
+                // derivative of envelope * (c1 cos + c2 sin)
+                // = envelope'*(...) + envelope*(...') where envelope'=-zeta*w0*envelope
                 let term = c1 * cos + c2 * sin;
                 let term_d = -c1 * wd * sin + c2 * wd * cos;
                 (-zeta * w0) * envelope * term + envelope * term_d
@@ -151,6 +153,8 @@ impl SpringSolution {
             SpringType::CriticallyDamped => {
                 let envelope = (-w0 * t).exp();
                 let a = self.v0 + w0 * self.y0;
+                // y = envelope * (y0 + a t)
+                // y' = envelope'*(y0 + a t) + envelope*a, envelope'=-w0*envelope
                 (-w0) * envelope * (self.y0 + a * t) + envelope * a
             }
             SpringType::OverDamped => {

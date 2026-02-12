@@ -164,6 +164,7 @@ pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
 pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
 pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
 pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
+pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
 pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
@@ -347,6 +348,7 @@ pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
 pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
 pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
 pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
+pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
 pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
@@ -501,6 +503,8 @@ pub(crate) const CMD_GALLERY_PAGE_FORWARD: &str = "ui_gallery.page.forward";
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
 pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
+
+pub(crate) const CMD_SHELL_SHARE_SHEET_SMOKE: &str = "ui_gallery.shell.share_sheet_smoke";
 
 pub(crate) const CMD_CODE_EDITOR_LOAD_FONTS: &str = "ui_gallery.code_editor.load_fonts";
 pub(crate) const CMD_CODE_EDITOR_DUMP_TAFFY: &str = "ui_gallery.code_editor.dump_taffy";
@@ -2080,6 +2084,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["magic", "dock", "pointer", "magnify"],
                 docs::DOC_MAGIC_DOCK,
                 docs::USAGE_MAGIC_DOCK,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_PATTERNS,
+                "Patterns",
+                "Patterns (Tier B materials)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_PATTERNS,
+                &["magic", "patterns", "materials", "tier-b"],
+                docs::DOC_MAGIC_PATTERNS,
+                docs::USAGE_MAGIC_PATTERNS,
             ),
             PageSpec::new(
                 PAGE_MAGIC_BLOOM,

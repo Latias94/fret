@@ -1,6 +1,9 @@
+use super::*;
 use fret_app::App;
 use fret_render::{Renderer, WgpuContext};
 use winit::event_loop::{EventLoop, EventLoopBuilder};
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopExtAndroid as _;
 
 use crate::RunnerError;
 
@@ -29,6 +32,101 @@ pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>(
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(runner)?;
     Ok(())
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
+        let mut app = app;
+        let now = Instant::now();
+        let startup_incoming_open_paths = read_startup_incoming_open_paths_from_args();
+        let requested = match app.global::<PlatformCapabilities>().cloned() {
+            Some(caps) => caps,
+            None => {
+                let caps = PlatformCapabilities::default();
+                app.set_global(caps.clone());
+                caps
+            }
+        };
+        let caps = Self::effective_platform_capabilities(&config, &requested);
+        if caps != requested {
+            app.set_global(caps.clone());
+        }
+        tracing::info!(caps = ?caps, "platform capabilities");
+
+        let dispatcher = DesktopDispatcher::new(caps.exec);
+        app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
+
+        Self {
+            config,
+            app,
+            driver,
+            dispatcher,
+            event_loop_proxy: None,
+            proxy_events: Arc::new(Mutex::new(Vec::new())),
+            is_suspended: false,
+            driver_initialized: false,
+            wgpu_init_blocked: false,
+            #[cfg(target_os = "android")]
+            android_app: None,
+            renderdoc: None,
+            context: None,
+            renderer: None,
+            renderer_caps: None,
+            system_font_rescan_result: Arc::new(Mutex::new(None)),
+            system_font_rescan_in_flight: false,
+            system_font_rescan_pending: false,
+            no_services: NoUiServices,
+            diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
+            #[cfg(feature = "webview-wry")]
+            webviews_wry: fret_webview_wry::wry_host::WryWebViewHost::new(),
+            windows: SlotMap::with_key(),
+            window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
+            main_window: None,
+            menu_bar: None,
+            windows_pending_front: HashMap::new(),
+            windows_z_order: Vec::new(),
+            saw_left_mouse_release_this_turn: false,
+            left_mouse_down: false,
+            dock_tearoff_follow: None,
+            tick_id: TickId::default(),
+            frame_id: FrameId::default(),
+            next_environment_poll_at: now,
+            #[cfg(target_os = "linux")]
+            linux_portal_settings_listener_started: false,
+            raf_windows: HashSet::new(),
+            timers: HashMap::new(),
+            clipboard: NativeClipboard::default(),
+            diag_clipboard_force_unavailable_windows: HashSet::new(),
+            open_url: NativeOpenUrl,
+            file_dialog: NativeFileDialog::default(),
+            diag_incoming_open_next_token: 1,
+            diag_incoming_open_payloads: HashMap::new(),
+            startup_incoming_open_paths,
+            startup_incoming_open_delivered: false,
+            incoming_open_path_payloads: HashMap::new(),
+            #[cfg(target_os = "ios")]
+            ios_keyboard: None,
+            diag_cursor_screen_pos_override:
+                super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
+            cursor_screen_pos: None,
+            #[cfg(target_os = "macos")]
+            macos_cursor_transform: MacCursorTransformTable::default(),
+            internal_drag_hover_window: None,
+            internal_drag_hover_pos: None,
+            internal_drag_pointer_id: None,
+            external_drop: NativeExternalDrop::default(),
+            uploaded_images: HashMap::new(),
+            streaming_uploads: StreamingUploadQueue::default(),
+            nv12_gpu: None,
+            #[cfg(feature = "hotpatch-subsecond")]
+            hotpatch: hotpatch_trigger_from_env(now),
+            #[cfg(feature = "hotpatch-subsecond")]
+            hot_reload_generation: 0,
+
+            #[cfg(feature = "diag-screenshots")]
+            diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
+        }
+    }
 }
 
 pub struct WinitAppBuilder<D: super::WinitAppDriver> {
@@ -129,7 +227,7 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
             config,
             app,
             driver,
-            windows_ime_msg_hook_enabled,
+            windows_ime_msg_hook_enabled: _windows_ime_msg_hook_enabled,
             on_main_window_created,
             on_gpu_ready,
             event_loop_builder_hook,
@@ -154,7 +252,7 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
                 {
                     use winit::platform::windows::EventLoopBuilderExtWindows as _;
                     super::event_loop::set_windows_ime_msg_hook_enabled(
-                        windows_ime_msg_hook_enabled,
+                        _windows_ime_msg_hook_enabled,
                     );
                     builder.with_msg_hook(super::windows_msg_hook);
                 }

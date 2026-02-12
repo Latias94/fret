@@ -66,12 +66,16 @@ fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
     parse_wgpu_backends(&raw)
 }
 
-fn create_wgpu_instance() -> wgpu::Instance {
-    let backends = parse_wgpu_backends_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+fn create_wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instance {
     wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends,
         ..Default::default()
     })
+}
+
+fn create_wgpu_instance() -> wgpu::Instance {
+    let backends = parse_wgpu_backends_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+    create_wgpu_instance_with_backends(backends)
 }
 
 pub struct WgpuContext {
@@ -84,6 +88,33 @@ pub struct WgpuContext {
 impl WgpuContext {
     pub async fn new() -> Result<Self, RenderError> {
         let instance = create_wgpu_instance();
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .await
+            .map_err(|source| RenderError::RequestAdapterFailed { source })?;
+
+        let (device, queue) = adapter
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("fret wgpu device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                experimental_features: wgpu::ExperimentalFeatures::default(),
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::default(),
+            })
+            .await
+            .map_err(|source| RenderError::RequestDeviceFailed { source })?;
+
+        Ok(Self {
+            instance,
+            adapter,
+            device,
+            queue,
+        })
+    }
+
+    pub async fn new_with_backends(backends: wgpu::Backends) -> Result<Self, RenderError> {
+        let instance = create_wgpu_instance_with_backends(backends);
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions::default())
             .await

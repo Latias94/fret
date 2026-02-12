@@ -8682,10 +8682,14 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 9] {
     ]
 }
 
-fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 13] {
+fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 17] {
     [
+        "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
+        "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+        "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
+        "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
@@ -8711,10 +8715,19 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     ]
 }
 
-fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
+fn docking_arbitration_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
         "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
+        "tools/diag-scripts/docking-arbitration-demo-default-layout-signature.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+        "tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
+        "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size.json",
     ]
 }
 

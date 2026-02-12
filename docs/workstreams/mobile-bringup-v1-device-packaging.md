@@ -30,6 +30,9 @@ Notes:
 - `NativeActivity` is still useful for low-friction rendering bring-up, but it is not sufficient for
   reliable IME / composing text input on modern devices.
 - `GameActivity` is treated as the baseline for our MVP UX (scroll + input + keyboard avoidance).
+- Android Emulator caveat: the default Vulkan adapter is often **GFXStream/SwiftShader**, which is
+  currently unstable for our `wgpu` bring-up path (observed SIGSEGV during renderer init). Prefer a
+  **real device** for smoke tests, or configure the emulator to use host Vulkan/graphics.
 
 ## iOS (real device)
 

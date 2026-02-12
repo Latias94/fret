@@ -1,9 +1,9 @@
 ---
 name: fret-diag-workflow
-description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted interaction automation, diagnostics bundles, screenshots, and triage/compare. Use when authoring or running `tools/diag-scripts/*.json`, turning a flaky UI bug into a stable repro gate, or when you need shareable artifacts for AI/humans."
+description: "Diagnostics workflow for Fret UI: scripted interaction automation (`fretboard diag`), shareable bundles/screenshots, triage/compare, and perf gates (`diag perf`) with worst-bundle attribution. Use to turn flaky UI issues or perf hitches into stable repro gates with evidence."
 ---
 
-# Fret diag workflow
+# Fret diagnostics workflow (correctness + perf)
 
 ## When to use
 
@@ -13,20 +13,51 @@ Use this skill when:
 - You need a **shareable artifact** (bundle + optional screenshots) for triage.
 - You want to convert a bug into a **CI-friendly gate** (script + assertions).
 
-If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
-If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
+This skill covers both correctness diagnostics and performance gating/attribution. Use `fret-ui-review` when your goal
+is an architecture/UX audit rather than producing repro artifacts.
+
+## Choose this vs adjacent skills
+
+- Use this skill for **correctness repro + regression gating** (scripts, bundles, post-run checks).
+- Use this skill for **perf gates + worst-bundle evidence** (`diag perf` + thresholds/baselines).
+- Use `fret-ui-review` when the task is “audit this UI implementation” (not “turn this bug into a script”).
+
+## Inputs to collect (ask the user)
+
+Ask 3–6 questions up front so you don’t “debug the wrong thing”:
+
+- Target: which app/demo/page reproduces it (smallest runnable target)?
+- Platform/transport: native launch (filesystem) or web (DevTools WS)?
+- Expected invariant: what should be true at the end (exists/focus/selection/command fired)?
+- Evidence needs: bundle only, or screenshots/pixel checks as well?
+- Flake shape: timing-sensitive, jittery targets, animation/virtualization involved?
+
+Defaults if unclear:
+
+- Use a UI gallery page + stable `test_id` selectors.
+- Capture at least one `capture_bundle` step (screenshots only if they add signal).
+
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
 
-- Web runner (WASM): export bundles via devtools-ws (headless-friendly):
+- Web runner (WASM): export bundles via DevTools WS (no filesystem access in-browser):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
   - Serve the WASM app: `cd apps/fret-ui-gallery-web && trunk serve --port 8080`
   - Open (note the query params): `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
-  - Run the script and materialize `.fret/diag/exports/<timestamp>/bundle.json`:
+  - Run a script that includes `capture_bundle` and materialize bundles under `.fret/diag/exports/<timestamp>/bundle.json`:
     - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --token <token>`
+  - Optional: run a script over WS via `fretboard` for pass/fail + post-run checks (but note transport limitations):
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
+    - Notes:
+      - `--launch/--reuse-launch` is not supported with `--devtools-ws-url` (you run the web app separately).
+      - `--pack` is not supported with `--devtools-ws-url` yet; run `fretboard diag pack <bundle_dir|bundle.json>` after.
+      - `capture_bundle` steps do not currently auto-materialize a local `bundle.json` in this mode; prefer `fret-diag-export` when you need the bundle artifact.
 
 ## Workflow
 
@@ -34,20 +65,29 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Prefer a UI gallery page or a dedicated demo binary.
 2. Create or edit a script in `tools/diag-scripts/`.
    - Use stable `test_id` targets instead of pixel coordinates.
-   - Common steps: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`.
+   - Prefer schema v2 for new scripts (more intent-level steps; less flake).
+   - Optional: generate scripts from typed Rust templates via `fret-diag-scriptgen` (portable JSON output).
+   - Common steps:
+     - v1: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`
+     - v2: `click_stable`, `ensure_visible`, `scroll_into_view`, `type_text_into`, `press_shortcut`, `menu_select_path`
    - If the target moves/animates during navigation, prefer `click_stable` (schema v2) to avoid “stale click” flake.
-     - Example: click only after the target’s center stays within `eps_px` for `stable_frames`.
+     - Key knobs: `stable_frames` and `max_move_px`.
    - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
 3. Ensure diagnostics are enabled in the running app.
-   - Minimum: `FRET_DIAG=1`
+   - If you run via `fretboard diag run ... --launch -- <cmd...>`, the launcher injects `FRET_DIAG=1` for you.
+   - Otherwise, set `FRET_DIAG=1` in the target environment.
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
+   - If you want a best-effort BMP screenshot alongside bundle dumps (manual `diag poke` / auto-dumps): set `FRET_DIAG_SCREENSHOT=1`.
    - While authoring scripts, consider disabling text redaction: `FRET_DIAG_REDACT_TEXT=0`.
    - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
 4. Run the script via `fretboard` and collect artifacts.
    - Prefer `fretboard diag run ... --launch -- <cmd...>` so env vars are applied consistently.
-   - Web runner note: `fretboard diag run` uses the filesystem-trigger transport; for web/WASM use
-     devtools-ws + `fret-diag-export` (or `apps/fret-devtools`) to export bundles under
-     `.fret/diag/exports/`.
+   - Reserved env note (when using `--launch`): do not pass `--env FRET_DIAG=1` / `--env FRET_DIAG_DIR=...` etc.
+     The launcher sets them and treats them as reserved.
+   - Web runner note: use DevTools WS transport via `--devtools-ws-url` / `--devtools-token`.
+   - If timing flake is the problem, prefer fixed frame delta:
+     - CLI: `--fixed-frame-delta-ms 16` (when launching), or
+     - env: `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`
 5. Turn the repro into a gate (stable assertions first).
    - Prefer geometry/semantics invariants over pixel diffs when possible.
    - If you need pixel diffs, add `capture_screenshot` steps and use `--check-pixels-changed <test_id>`.
@@ -57,33 +97,41 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
-## Perf triage handoff (when the “bug” is a hitch)
+## Definition of done (what to leave behind)
 
-If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a correctness regression:
+Ship a result that is reviewable and reusable:
 
-1. Switch to `fret-perf-workflow` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
-2. When a `diag perf` run fails, start with the thresholds file:
-   - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
-   - Tip: `fret-perf-workflow` includes a compact gate triage helper:
-     `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir>`
-3. Use the worst bundle for root cause:
-   - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
-4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
-   - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
+- Minimum deliverables (3-pack): Repro (script), Gate (script/test), Evidence (bundle + anchors). See `fret-skills-playbook`.
+- A minimal script under `tools/diag-scripts/` (schema v2 for new work) that reproduces the issue deterministically.
+- Stable selectors (`test_id`) added/updated so the script survives refactors.
+- One portable artifact path to share:
+  - native: packed bundle dir (optional screenshots), or
+  - web: `.fret/diag/exports/<timestamp>/bundle.json` via `fret-diag-export`.
+- If you changed behavior: at least one regression gate (script and/or Rust test) linked from the PR/commit message.
+
+## Performance gates (diag perf)
+
+Use this section when the issue is “it feels janky” (resize/scroll/pointer-move) and you need **numbers**
+and **worst-bundle evidence** (not only a correctness repro).
 
 ### “Resize jank” fast path (copy/paste)
 
 Run the P0 resize probes (numbers + thresholds):
 
 ```bash
-tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
-tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
+python3 tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3
+python3 tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3
 ```
 
-If a gate fails (or you want the worst bundles even on PASS):
+Notes:
+
+- For non-default machines/OS, pass `--baseline <baseline.json>` explicitly (defaults may be tuned for a specific host).
+- The bash gate (`tools/perf/diag_resize_probes_gate.sh`) is still available, but the Python gate is cross-platform.
+
+If a gate fails (or you want the worst bundles even on PASS), triage the out-dir:
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot
+python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot
 ```
 
 Then inspect the worst bundle:
@@ -92,14 +140,122 @@ Then inspect the worst bundle:
 cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 ```
 
+### VirtualList boundary gate (window shift invariants)
+
+Run the VirtualList window-boundary crossing gate repeatedly (checks + bundles per run):
+
+```bash
+python3 tools/perf/diag_vlist_boundary_gate.py --runs 3
+```
+
+Notes:
+
+- Default profile is retained (`--retained 1`). For non-retained stress runs: `--retained 0`.
+- Each run writes `summary.json` under the out-dir; failures also keep per-run `stdout.log`/`stderr.log`.
+
+### Steady baseline run (when you want a stable “global sanity”)
+
+Run a suite against a baseline file (under `docs/workstreams/perf-baselines/`):
+
+```bash
+cargo run -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-perf/ui-gallery-steady.<tag> \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json \
+  --perf-baseline <baseline.json> \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+### Baseline selection (anti-outlier)
+
+If you need to generate a new baseline, prefer the baseline-select helper:
+
+- `tools/perf/diag_perf_baseline_select.py` (cross-platform)
+  - Bash wrapper: `tools/perf/diag_perf_baseline_select.sh`
+
+## Perf attribution (answer “why did the worst frame hitch?”)
+
+1) Identify the failing script/metric:
+
+- `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
+
+2) Resolve worst bundles quickly:
+
+- `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all`
+
+3) Attribute the worst frames in a bundle:
+
+- `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+
+4) If the failing threshold is “max of a specific metric”, locate the exact max frame with `jq`:
+
+```bash
+jq -c '
+  .windows[0].snapshots
+  | map({frame_id, tick_id, ts: .timestamp_unix_ms, solve: .debug.stats.layout_engine_solve_time_us, paint: .debug.stats.paint_time_us})
+  | max_by(.solve)
+' <bundle.json> | jq .
+```
+
 ## Tips
 
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
+- Use suites/repros when you want standardized runs:
+  - `cargo run -p fretboard -- diag suite <suite-name>`
+  - `cargo run -p fretboard -- diag repro <script.json> ...` (convenience wrapper around `diag run` + checks)
 - When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
   rather than retrying `click` with arbitrary sleeps.
+- If `click_stable` flakes, set `FRET_DIAG_DEBUG_CLICK_STABLE=1` to capture additional debug context in traces/bundles.
 - If a script fails, start from `script.result.json` (reason code + evidence) before opening screenshots.
+
+## Minimal script template (schema v2)
+
+Use schema v2 for new scripts. Start with stable `test_id` selectors and one `capture_bundle`.
+
+Good in-tree examples to copy from:
+
+- `tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json` (press_shortcut + exists assertions)
+- `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json` (click_stable on jittery targets)
+- `tools/diag-scripts/ui-gallery-dropdown-submenu-safe-corridor-sweep.json` (move_pointer_sweep hover corridor)
+- `tools/diag-scripts/ui-gallery-material3-select-rich-options-screenshots.json` (ensure_visible + screenshot)
+
+```json
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "my-scenario",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "my-trigger" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "my-trigger" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "my-input" },
+      "text": "hello",
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "after" }
+  ]
+}
+```
+
+If you add `capture_screenshot`, require screenshot capability and enable screenshots:
+
+- Script: add `diag.screenshot_png` to `meta.required_capabilities`
+- Native/filesystem: set `FRET_DIAG_SCREENSHOTS=1`
 
 ## Capabilities & fail-fast gating
 
@@ -199,10 +355,11 @@ Where the code lives:
 
 - Doc: `docs/ui-diagnostics-and-scripted-tests.md`
 - In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- CLI entry: `apps/fretboard/src/diag.rs`
+- CLI entry + flags: `apps/fretboard/src/cli.rs`, `crates/fret-diag/src/lib.rs`
 - Headless exporter (devtools-ws -> `.fret/diag/exports/`): `apps/fret-diag-export`
 - Loopback WS hub: `apps/fret-devtools-ws`
 - DevTools GUI (optional): `apps/fret-devtools`
+- DevTools WS bridge (in-app): `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
 - Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
 - Triage/compare engine: `crates/fret-diag`
 
@@ -220,5 +377,5 @@ Where the code lives:
 ## Related skills
 
 - `fret-shadcn-source-alignment` (turn Radix/shadcn mismatches into tests + scripts)
-- `fret-overlays-and-focus` (overlay/dismiss/focus issues)
-- `fret-perf-workflow` (perf baselines/gates)
+- `fret-app-ui-builder` (add stable `test_id` targets and leave gates early)
+- `fret-ui-review` (audit layering/focus/command gating pitfalls that often cause diag failures)
