@@ -24,11 +24,35 @@ use crate::ui::{
 };
 use crate::view::PanZoom2D;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CanvasWorldScaleMode {
+    /// XYFlow-like: nodes and edges scale with the world zoom.
+    #[default]
+    ScaleWithZoom,
+    /// Editor-like: nodes remain constant-size in screen space, while their positions follow the
+    /// zoomed canvas mapping.
+    ///
+    /// In this mode the world subtree is **not** render-transformed. Callers should place node
+    /// subtrees using `CanvasWorldPaintCx::canvas_to_screen(...)` (or `view.canvas_to_screen`).
+    SemanticZoom,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct CanvasWorldPaintCx {
     pub bounds: Rect,
     pub view: PanZoom2D,
     pub raster_scale_factor: f32,
+    pub scale_mode: CanvasWorldScaleMode,
+}
+
+impl CanvasWorldPaintCx {
+    pub fn canvas_to_screen(&self, canvas: fret_core::Point) -> fret_core::Point {
+        self.view.canvas_to_screen(self.bounds, canvas)
+    }
+
+    pub fn screen_to_canvas(&self, screen: fret_core::Point) -> fret_core::Point {
+        self.view.screen_to_canvas(self.bounds, screen)
+    }
 }
 
 #[derive(Clone)]
@@ -37,6 +61,7 @@ pub struct CanvasWorldSurfacePanelProps {
     pub layout_query: LayoutQueryRegionProps,
     /// Underlying pan/zoom surface (input + paint).
     pub pan_zoom: PanZoomCanvasSurfacePanelProps,
+    pub scale_mode: CanvasWorldScaleMode,
 }
 
 impl Default for CanvasWorldSurfacePanelProps {
@@ -51,6 +76,7 @@ impl Default for CanvasWorldSurfacePanelProps {
                 name: Some("fret-canvas.ui.canvas_world_surface_panel".into()),
             },
             pan_zoom: PanZoomCanvasSurfacePanelProps::default(),
+            scale_mode: CanvasWorldScaleMode::default(),
         }
     }
 }
@@ -71,6 +97,7 @@ where
     let view = use_controllable_model(cx, props.pan_zoom.view.take(), move || default_view).model();
     props.pan_zoom.view = Some(view.clone());
 
+    let scale_mode = props.scale_mode;
     let layout_query = props.layout_query.clone();
     cx.layout_query_region_with_id(layout_query, move |cx, region_id| {
         let view_value = cx
@@ -90,25 +117,36 @@ where
             bounds,
             view: view_value,
             raster_scale_factor,
+            scale_mode,
         };
 
         let canvas = pan_zoom_canvas_surface_panel(cx, props.pan_zoom.clone(), paint);
 
-        let transform = view_value
-            .render_transform(bounds)
-            .unwrap_or(Transform2D::IDENTITY);
+        let mut fill = LayoutStyle::default();
+        fill.size.width = Length::Fill;
+        fill.size.height = Length::Fill;
 
-        let mut rt_layout = LayoutStyle::default();
-        rt_layout.size.width = Length::Fill;
-        rt_layout.size.height = Length::Fill;
-
-        let world = cx.render_transform_props(
-            RenderTransformProps {
-                layout: rt_layout,
-                transform,
-            },
-            move |cx| world(cx, paint_cx),
-        );
+        let world = match scale_mode {
+            CanvasWorldScaleMode::ScaleWithZoom => {
+                let transform = view_value
+                    .render_transform(bounds)
+                    .unwrap_or(Transform2D::IDENTITY);
+                cx.render_transform_props(
+                    RenderTransformProps {
+                        layout: fill,
+                        transform,
+                    },
+                    move |cx| world(cx, paint_cx),
+                )
+            }
+            CanvasWorldScaleMode::SemanticZoom => cx.container(
+                ContainerProps {
+                    layout: fill,
+                    ..Default::default()
+                },
+                move |cx| world(cx, paint_cx),
+            ),
+        };
 
         let overlay = overlay(cx, paint_cx);
 
