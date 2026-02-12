@@ -3,6 +3,8 @@
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
+use fret_platform::external_drop::ExternalDropProvider as _;
+
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
 
