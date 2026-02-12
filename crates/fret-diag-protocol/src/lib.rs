@@ -280,6 +280,16 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Wait until the overlay placement trace contains an entry matching `query`.
+    ///
+    /// This is intended for overlay-driven components (Select/Combobox/Menus) where correctness
+    /// depends on collision/flip/shift behavior and we want failures to be explainable without
+    /// relying on screenshots.
+    WaitOverlayPlacementTrace {
+        query: UiOverlayPlacementTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     Assert {
         predicate: UiPredicateV1,
     },
@@ -1102,6 +1112,13 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub pending_sequence_len: Option<u32>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlayPlacementTraceKindV1 {
+    AnchoredPanel,
+    PlacedRect,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UiShortcutRoutingTraceQueryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1261,6 +1278,26 @@ pub enum UiOverlayPlacementTraceEntryV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         side: Option<UiOverlaySideV1>,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiOverlayPlacementTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<UiOverlayPlacementTraceKindV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overlay_root_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preferred_side: Option<UiOverlaySideV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_side: Option<UiOverlaySideV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub align: Option<UiOverlayAlignV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sticky: Option<UiOverlayStickyModeV1>,
 }
 
 /// Debug-only snapshot for the wasm textarea IME bridge (ADR 0180).

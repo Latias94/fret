@@ -493,6 +493,7 @@ Supported selectors (v1 MVP):
 - `wait_frames`
 - `wait_until`
 - `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
+- `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
 - `assert`
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
@@ -508,6 +509,7 @@ Recent additions:
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
 - `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
+- `wait_overlay_placement_trace` (assert overlay placement decisions by geometry trace rather than screenshots)
 
 Notes:
 

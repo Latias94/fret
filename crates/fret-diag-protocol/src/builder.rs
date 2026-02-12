@@ -7,7 +7,7 @@
 
 use crate::{
     UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiKeyModifiersV1, UiMouseButtonV1,
-    UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1,
+    UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -204,6 +204,17 @@ impl ScriptV2Builder {
         timeout_frames: u32,
     ) -> Self {
         self.push(UiActionStepV2::WaitShortcutRoutingTrace {
+            query,
+            timeout_frames,
+        })
+    }
+
+    pub fn wait_overlay_placement_trace(
+        self,
+        query: UiOverlayPlacementTraceQueryV1,
+        timeout_frames: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::WaitOverlayPlacementTrace {
             query,
             timeout_frames,
         })

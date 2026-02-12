@@ -4,8 +4,9 @@ use std::process::ExitCode;
 
 use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 use fret_diag_protocol::{
-    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1,
-    UiSelectorV1, UiShortcutRoutingTraceQueryV1,
+    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiOverlayPlacementTraceKindV1,
+    UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
+    UiShortcutRoutingTraceQueryV1,
 };
 
 fn main() -> ExitCode {
@@ -618,6 +619,15 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
         .click_stable(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::BoundsWithinWindow {
                 target: test_id("select-scroll-viewport"),
@@ -650,7 +660,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
         ))
         .build();
 
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {

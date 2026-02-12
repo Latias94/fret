@@ -38,6 +38,7 @@ Examples of “good invariants”:
 - roving/typeahead: active item updates as expected (and skips disabled items),
 - placement sanity: content bounds stay within window bounds; chosen side/align is explainable under collisions,
 - routing correctness: injected clicks/keys either land or emit a trace explaining barriers/capture/occlusion.
+  - prefer `wait_overlay_placement_trace` / `wait_shortcut_routing_trace` over ad-hoc sleeps when available.
 
 Notes:
 

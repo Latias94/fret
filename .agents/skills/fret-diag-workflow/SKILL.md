@@ -59,6 +59,7 @@ Practical rules:
 - Typical examples:
   - `diag.inject_ime`: enables script step `ime` (deterministic IME injection).
   - `diag.shortcut_routing_trace`: enables script step `wait_shortcut_routing_trace` (e.g. assert `reserved_for_ime`).
+  - `diag.overlay_placement_trace`: enables script step `wait_overlay_placement_trace` (overlay collision/flip/shift evidence).
 
 Where capabilities come from:
 

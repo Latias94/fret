@@ -1,7 +1,8 @@
 {
   "meta": {
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.overlay_placement_trace"
     ]
   },
   "schema_version": 2,
@@ -19,6 +20,13 @@
     },
     {
       "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {
@@ -26,6 +34,7 @@
       "type": "wait_frames"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
@@ -35,12 +44,23 @@
     {
       "key": "a",
       "modifiers": {
-        "ctrl": true
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
       },
+      "repeat": false,
       "type": "press_key"
     },
     {
       "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {
@@ -52,6 +72,7 @@
       "type": "wait_frames"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-select",
         "kind": "test_id"
@@ -81,6 +102,7 @@
       "type": "wait_until"
     },
     {
+      "button": "left",
       "max_move_px": 1.0,
       "stable_frames": 2,
       "target": {
@@ -100,6 +122,15 @@
       },
       "timeout_frames": 240,
       "type": "wait_until"
+    },
+    {
+      "query": {
+        "anchor_test_id": "ui-gallery-select-trigger",
+        "content_test_id": "select-scroll-viewport",
+        "kind": "anchored_panel"
+      },
+      "timeout_frames": 240,
+      "type": "wait_overlay_placement_trace"
     },
     {
       "predicate": {
@@ -125,6 +156,7 @@
       "type": "wait_bounds_stable"
     },
     {
+      "button": "left",
       "max_move_px": 1.0,
       "stable_frames": 2,
       "target": {
@@ -146,6 +178,7 @@
       "type": "wait_until"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-select-trigger",
         "kind": "test_id"
@@ -177,6 +210,13 @@
     },
     {
       "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {

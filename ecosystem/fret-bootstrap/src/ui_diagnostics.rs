@@ -11,11 +11,12 @@ use fret_diag_protocol::{
     UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1,
     UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1,
     UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1,
-    UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
-    UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
-    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiOverlayPlacementTraceEntryV1, UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1,
+    UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1,
+    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1,
+    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
+    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -739,6 +740,7 @@ impl UiDiagnosticsService {
                     wait_frames_remaining: 0,
                     wait_until: None,
                     wait_shortcut_routing_trace: None,
+                    wait_overlay_placement_trace: None,
                     screenshot_wait: None,
                     v2_step_state: None,
                     last_reported_step: Some(0),
@@ -861,6 +863,9 @@ impl UiDiagnosticsService {
         }
         if !matches!(&step, UiActionStepV2::WaitShortcutRoutingTrace { .. }) {
             active.wait_shortcut_routing_trace = None;
+        }
+        if !matches!(&step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
+            active.wait_overlay_placement_trace = None;
         }
 
         match step {
@@ -1308,6 +1313,70 @@ impl UiDiagnosticsService {
                         start_frame_id: state.start_frame_id,
                     });
                     output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::WaitOverlayPlacementTrace {
+                query,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if semantics_snapshot.is_none()
+                    && (query.anchor_test_id.is_some() || query.content_test_id.is_some())
+                {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-wait_overlay_placement_trace-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    output.request_redraw = true;
+                } else {
+                    record_overlay_placement_trace(
+                        &mut active.overlay_placement_trace,
+                        element_runtime,
+                        semantics_snapshot,
+                        window,
+                        step_index as u32,
+                        "wait_overlay_placement_trace",
+                    );
+
+                    let state = match active.wait_overlay_placement_trace.take() {
+                        Some(mut state) if state.step_index == step_index => {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => WaitOverlayPlacementTraceState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                        },
+                    };
+
+                    let step_index_u32 = step_index.min(u32::MAX as usize) as u32;
+                    let found = active.overlay_placement_trace.iter().any(|entry| {
+                        overlay_placement_trace_entry_matches_query(entry, step_index_u32, &query)
+                    });
+
+                    if found {
+                        active.wait_overlay_placement_trace = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-wait_overlay_placement_trace-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("wait_overlay_placement_trace_timeout".to_string());
+                        active.wait_overlay_placement_trace = None;
+                        output.request_redraw = true;
+                    } else {
+                        active.wait_overlay_placement_trace =
+                            Some(WaitOverlayPlacementTraceState {
+                                step_index: state.step_index,
+                                remaining_frames: state.remaining_frames.saturating_sub(1),
+                            });
+                        output.request_redraw = true;
+                    }
                 }
             }
             UiActionStepV2::Assert { predicate } => {
@@ -5002,6 +5071,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
         | UiActionStepV2::WaitUntil { .. }
+        | UiActionStepV2::WaitOverlayPlacementTrace { .. }
         | UiActionStepV2::Assert { .. }
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
@@ -6257,6 +6327,7 @@ struct ActiveScript {
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     wait_shortcut_routing_trace: Option<WaitShortcutRoutingTraceState>,
+    wait_overlay_placement_trace: Option<WaitOverlayPlacementTraceState>,
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
@@ -6435,6 +6506,12 @@ struct WaitShortcutRoutingTraceState {
     step_index: usize,
     remaining_frames: u32,
     start_frame_id: u64,
+}
+
+#[derive(Debug, Clone)]
+struct WaitOverlayPlacementTraceState {
+    step_index: usize,
+    remaining_frames: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -11195,6 +11272,109 @@ fn shortcut_routing_trace_entry_matches_query(
         return false;
     }
     true
+}
+
+fn overlay_placement_trace_entry_matches_query(
+    entry: &UiOverlayPlacementTraceEntryV1,
+    expected_step_index: u32,
+    query: &UiOverlayPlacementTraceQueryV1,
+) -> bool {
+    match entry {
+        UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+            step_index,
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            preferred_side,
+            chosen_side,
+            align,
+            sticky,
+            ..
+        } => {
+            if *step_index != expected_step_index {
+                return false;
+            }
+            if let Some(kind) = query.kind
+                && kind != UiOverlayPlacementTraceKindV1::AnchoredPanel
+            {
+                return false;
+            }
+            if let Some(q) = &query.overlay_root_name
+                && overlay_root_name.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = &query.anchor_test_id
+                && anchor_test_id.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = &query.content_test_id
+                && content_test_id.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = query.preferred_side
+                && *preferred_side != q
+            {
+                return false;
+            }
+            if let Some(q) = query.chosen_side
+                && *chosen_side != q
+            {
+                return false;
+            }
+            if let Some(q) = query.align
+                && *align != q
+            {
+                return false;
+            }
+            if let Some(q) = query.sticky
+                && *sticky != q
+            {
+                return false;
+            }
+            true
+        }
+        UiOverlayPlacementTraceEntryV1::PlacedRect {
+            step_index,
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            side,
+            ..
+        } => {
+            if *step_index != expected_step_index {
+                return false;
+            }
+            if let Some(kind) = query.kind
+                && kind != UiOverlayPlacementTraceKindV1::PlacedRect
+            {
+                return false;
+            }
+            if let Some(q) = &query.overlay_root_name
+                && overlay_root_name.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = &query.anchor_test_id
+                && anchor_test_id.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = &query.content_test_id
+                && content_test_id.as_deref() != Some(q.as_str())
+            {
+                return false;
+            }
+            if let Some(q) = query.chosen_side
+                && side != &Some(q)
+            {
+                return false;
+            }
+            true
+        }
+    }
 }
 
 fn overlay_placement_trace_entry_eq(
