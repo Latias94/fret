@@ -69,3 +69,78 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
         },
     )]
 }
+
+pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_required("card"));
+    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+
+    let mut highlight = ring;
+    highlight.a = (highlight.a * 0.35).clamp(0.0, 1.0);
+
+    let mut border_highlight = ring;
+    border_highlight.a = (border_highlight.a * 0.65).clamp(0.0, 1.0);
+
+    let mut card_layout = LayoutStyle::default();
+    card_layout.size.width = Length::Px(Px(520.0));
+    card_layout.size.height = Length::Px(Px(240.0));
+
+    let card = magic::magic_card(
+        cx,
+        magic::MagicCardProps {
+            layout: card_layout,
+            base,
+            highlight,
+            border: Edges::all(Px(1.0)),
+            border_base: border,
+            border_highlight,
+            ..Default::default()
+        },
+        |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_start(),
+                |cx| {
+                    vec![
+                        shadcn::typography::h4(cx, "MagicCard"),
+                        shadcn::typography::p(
+                            cx,
+                            "Move the pointer over the card to drive the radial highlight.",
+                        ),
+                        stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full())
+                                .justify_between()
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Badge::new("left")
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-magic-card-target-left"),
+                                    shadcn::Badge::new("right")
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-magic-card-target-right"),
+                                ]
+                            },
+                        ),
+                    ]
+                },
+            )]
+        },
+    )
+    .test_id("ui-gallery-magic-card");
+
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center(),
+        |_cx| [card],
+    )]
+}
