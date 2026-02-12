@@ -36,6 +36,9 @@ pub mod workspace_shell;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod mvu;
 
+/// MVU-style command routing helpers (portable; desktop + web).
+pub mod mvu_router;
+
 /// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod interop;

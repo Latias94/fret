@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
-use fret_kit::mvu::KeyedMessageRouter;
+use fret_kit::mvu_router::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
 #[cfg(target_arch = "wasm32")]
