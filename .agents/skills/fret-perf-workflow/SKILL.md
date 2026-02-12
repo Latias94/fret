@@ -28,6 +28,10 @@ Defaults if unclear:
 
 - Run `ui-gallery-steady` + the P0 resize probes with `--attempts 3` and record the worst bundles.
 
+## Smallest starting point (one command)
+
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3`
+
 ## Quick start
 
 ### Run the P0 resize gates (recommended “global sanity”)

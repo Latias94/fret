@@ -31,6 +31,10 @@ For concrete component/app recipes, use:
 
 If the user has no preference: default to **dark + compact editor** and iterate.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin workspace_shell_demo`
+
 ## Quick start (golden path)
 
 - Prefer `use fret_ui_shadcn::prelude::*;` for UI code to stay on the shadcn-aligned path.

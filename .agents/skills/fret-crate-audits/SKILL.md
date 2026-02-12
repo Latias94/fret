@@ -32,6 +32,10 @@ Defaults if unclear:
 
 - Do an L0 snapshot with `tools/audit_crate.py`, list hazards, and propose 3–8 landable steps with one gate.
 
+## Smallest starting point (one command)
+
+- `python3 tools/audit_crate.py --crate fret-ui`
+
 ## Quick start (L0 audit)
 
 1. Generate a quick audit report (facts + evidence anchors):

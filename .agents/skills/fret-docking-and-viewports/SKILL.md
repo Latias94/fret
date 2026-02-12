@@ -33,6 +33,10 @@ Defaults if unclear:
 
 - Reproduce in `docking_arbitration_demo`, add/keep a `tools/diag-scripts/*.json` gate, and prefer invariants over pixels.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin docking_arbitration_demo`
+
 ## What to optimize for
 
 - Deterministic drag + input arbitration (dock drag vs viewport capture).

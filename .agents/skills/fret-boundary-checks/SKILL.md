@@ -26,6 +26,10 @@ Defaults if unclear:
 
 - Run layering + module-size drift before and after the change, and keep allowlists as a last resort.
 
+## Smallest starting point (one command)
+
+- `python3 tools/check_layering.py`
+
 ## Quick start
 
 Run the always-on guardrails:

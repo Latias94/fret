@@ -27,6 +27,10 @@ Defaults if unclear:
 
 - Keep workspace defaults conservative and publish only a small, explicit `[[package]]` whitelist in one `version_group`.
 
+## Smallest starting point (one command)
+
+- `python3 tools/release_closure_check.py --print-publish-commands`
+
 ## Quick intent
 
 - Keep release scope explicit and conservative.

@@ -28,6 +28,10 @@ Defaults if unclear:
 
 - Put the workflow into the most specific existing skill, add one repro gate, and keep the SKILL.md summary short.
 
+## Smallest starting point (one command)
+
+- `python3 .agents/skills/fret_skills.py validate --strict`
+
 ## Quick start
 
 1. Identify the “owner skill” (diag/perf/shadcn/text/etc).

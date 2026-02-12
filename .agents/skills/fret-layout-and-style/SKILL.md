@@ -31,6 +31,10 @@ Defaults if unclear:
 
 - Use `UiBuilder` patches with tokens, keep pressable/root overflow visible, and clip only inside chrome when needed.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin workspace_shell_demo`
+
 ## Quick start
 
 **Key concepts:**

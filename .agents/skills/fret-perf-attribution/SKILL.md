@@ -32,6 +32,10 @@ Defaults if unclear:
 
 - Start from `check.perf_thresholds.json`, pick the metric that failed, then locate the frame that maxes that metric in the bundle.
 
+## Smallest starting point (one command)
+
+- `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot`
+
 ---
 
 ## Quick start (from a failing gate)

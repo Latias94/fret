@@ -26,6 +26,10 @@ Defaults if unclear:
 
 - Use `virtual_list_keyed` with stable keys and `Fixed` measurement mode if row height can be constant.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin virtual_list_stress_demo`
+
 ## Core concepts (what matters)
 
 - **`ScrollHandle` is state + revision**: viewport size, content size, offset. Mutations bump a revision so layout/paint can react.

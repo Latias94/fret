@@ -32,6 +32,10 @@ Defaults if unclear:
 
 - Start from an existing recipe, add stable `test_id` to interactive affordances, and add one diag script for the state machine.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin components_gallery`
+
 ## Quick start (authoring)
 
 - Prefer `use fret_ui_shadcn::prelude::*;` in app code to stay on the shadcn-aligned golden path.

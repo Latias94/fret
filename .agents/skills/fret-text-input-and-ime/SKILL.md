@@ -25,6 +25,10 @@ Defaults if unclear:
 
 - Start by gating shortcuts with `when: "focus.is_text_input == false"` and add a scripted repro.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin ime_smoke_demo`
+
 ## Core rules (ADR 0012 is the contract)
 
 - **Shortcuts and text entry are separate channels**:

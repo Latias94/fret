@@ -34,6 +34,10 @@ Defaults if unclear:
 
 - Menus are non-click-through outside press (`dismissible_menu`) and restore focus to the trigger on close.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin date_picker_demo`
+
 ## Quick start
 
 **Key building blocks:**

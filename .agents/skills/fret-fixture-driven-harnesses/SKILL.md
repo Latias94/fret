@@ -37,6 +37,10 @@ Defaults if unclear:
 
 - Start with a single fixture file with `schema_version` + stable `cases[].id`, and a thin harness that prints failing ids.
 
+## Smallest starting point (one command)
+
+- `cargo nextest run -p fret-ui-shadcn`
+
 ## Quick start
 
 1. Pick a single “god test” to extract first (keep the old test while mirroring).

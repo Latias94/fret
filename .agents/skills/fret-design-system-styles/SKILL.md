@@ -33,6 +33,10 @@ Defaults if unclear:
 
 - `dark` + `compact` editor style, then adjust ring + radius.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin workspace_shell_demo`
+
 ## Quick start
 
 1. Pick a baseline preset: `apply_shadcn_new_york_v4(...)`.

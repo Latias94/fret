@@ -30,6 +30,10 @@ Defaults if unclear:
 
 - Use `presence`/`transition` helpers and tie continuous frames to element-local state so unmount drops the lease.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin effects_demo`
+
 ## Quick start
 
 ### Redraw primitives (what to reach for)

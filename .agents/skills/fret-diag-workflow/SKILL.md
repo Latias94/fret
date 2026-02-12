@@ -31,6 +31,10 @@ Defaults if unclear:
 - Use a UI gallery page + stable `test_id` selectors.
 - Capture at least one `capture_bundle` step (screenshots only if they add signal).
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json --launch -- cargo run -p fret-ui-gallery --release`
+
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):

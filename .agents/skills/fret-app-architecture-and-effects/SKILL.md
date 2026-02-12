@@ -32,6 +32,10 @@ Defaults if unclear:
 
 - Use `fret-kit` golden path, keep UI state main-thread-only, and put background results through an inbox + wake.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin todo_demo`
+
 ## Quick start
 
 - For a minimal app wiring example, start with `apps/fret-examples/src/todo_demo.rs`.

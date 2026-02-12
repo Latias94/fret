@@ -30,6 +30,10 @@ Defaults if unclear:
 
 - Keep policy in `ecosystem/`, install hooks in the narrowest correct scope, and add a `tools/diag-scripts/*.json` repro for state machines.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin components_gallery`
+
 ## Overview
 
 **Why hooks exist:**

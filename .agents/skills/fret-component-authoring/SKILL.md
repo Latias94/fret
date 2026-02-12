@@ -29,6 +29,10 @@ Defaults if unclear:
 
 - Add stable identity first (`keyed/scope`), then add state, then wire model reads with explicit invalidation.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin components_gallery`
+
 ## Workflow
 
 1. Ensure stable identity (`keyed` / `scope` / `named`) before adding state.

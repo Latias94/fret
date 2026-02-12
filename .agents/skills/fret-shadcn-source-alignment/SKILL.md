@@ -25,6 +25,10 @@ Defaults if unclear:
 
 - Treat interaction semantics as Radix truth; treat composition/sizing/tokens as shadcn truth; add at least one gate.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin components_gallery`
+
 ## Quick start
 
 1. Identify the layer (mechanism vs policy vs recipe) before touching code.

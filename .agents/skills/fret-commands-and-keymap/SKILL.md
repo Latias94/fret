@@ -26,6 +26,10 @@ Defaults if unclear:
 
 - Add a `when` gate that prevents firing inside text inputs (`focus.is_text_input == false`).
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin components_gallery`
+
 ## Mental model (how Fret wants you to think)
 
 - **Commands are stable IDs + metadata** (`CommandId` + `CommandMeta`).

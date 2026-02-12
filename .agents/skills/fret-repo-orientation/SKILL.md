@@ -28,6 +28,10 @@ Defaults if unclear:
 
 - Pick the smallest runnable demo target and start from architecture/ADR contracts first.
 
+## Smallest starting point (one command)
+
+- `cargo run -p fretboard -- dev native --bin todo_demo`
+
 ## Quick start
 
 1. Read the “contracts first” docs:
@@ -64,7 +68,7 @@ In the mono-repo:
 - UI authoring surface: `crates/fret-ui/src/elements/cx.rs` (`ElementContext`)
 - shadcn recipes: `ecosystem/fret-ui-shadcn/src/`
 - kit primitives: `ecosystem/fret-ui-kit/src/primitives/`
-- diagnostics driver: `apps/fretboard/src/diag.rs`
+- dev/diag CLI entry: `apps/fretboard/src/cli.rs`
 - diag protocol types: `crates/fret-diag-protocol`
 
 Quick search patterns:
