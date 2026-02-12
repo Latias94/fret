@@ -9,6 +9,7 @@ mod transcript_torture;
 mod transcription_demo;
 mod voice_selector_demo;
 mod workflow_chrome_demo;
+mod workflow_node_graph_demo;
 
 pub(in crate::ui) use agent_demo::*;
 pub(in crate::ui) use chat_demo::*;
@@ -21,3 +22,4 @@ pub(in crate::ui) use transcript_torture::*;
 pub(in crate::ui) use transcription_demo::*;
 pub(in crate::ui) use voice_selector_demo::*;
 pub(in crate::ui) use workflow_chrome_demo::*;
+pub(in crate::ui) use workflow_node_graph_demo::*;

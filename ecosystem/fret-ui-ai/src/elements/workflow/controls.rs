@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_core::SemanticsRole;
 use fret_icons::IconId;
+use fret_runtime::CommandId;
+use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -113,6 +115,8 @@ pub struct WorkflowControlsButton {
     icon: IconId,
     disabled: bool,
     test_id: Option<Arc<str>>,
+    command: Option<CommandId>,
+    on_activate: Option<OnActivate>,
 }
 
 impl std::fmt::Debug for WorkflowControlsButton {
@@ -122,6 +126,8 @@ impl std::fmt::Debug for WorkflowControlsButton {
             .field("icon", &self.icon)
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id.as_deref())
+            .field("command", &self.command)
+            .field("on_activate", &self.on_activate.is_some())
             .finish()
     }
 }
@@ -133,6 +139,8 @@ impl WorkflowControlsButton {
             icon,
             disabled: false,
             test_id: None,
+            command: None,
+            on_activate: None,
         }
     }
 
@@ -146,6 +154,16 @@ impl WorkflowControlsButton {
         self
     }
 
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let icon = decl_icon::icon(cx, self.icon);
 
@@ -154,6 +172,14 @@ impl WorkflowControlsButton {
             .variant(ButtonVariant::Ghost)
             .children([icon])
             .disabled(self.disabled);
+
+        if let Some(command) = self.command {
+            btn = btn.on_click(command);
+        }
+
+        if let Some(on_activate) = self.on_activate {
+            btn = btn.on_activate(on_activate);
+        }
 
         if let Some(test_id) = self.test_id {
             btn = btn.test_id(test_id);

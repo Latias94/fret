@@ -903,6 +903,26 @@ use fret_ui_ai::{WorkflowPanel, WorkflowToolbar};
 ```
 "#;
 
+pub(crate) const DOC_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = r#"
+## AI workflow node graph (demo)
+
+This page demonstrates an engine-backed workflow editor surface:
+
+- `fret-node` provides the graph model + interaction (pan/zoom, selection, connect ports),
+- `fret-ui-ai` provides AI Elements-aligned chrome wrappers (`WorkflowPanel`, `WorkflowToolbar`, `WorkflowControls`).
+
+The goal is to validate the recommended layering: keep `fret-ui-ai` policy-light and reuse existing
+ecosystem engines for editor-grade interaction.
+"#;
+
+pub(crate) const USAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = r#"
+```rust
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::{NodeGraphCanvas, NodeGraphViewQueue};
+use fret_ui_ai::{WorkflowControls, WorkflowControlsButton, WorkflowPanel, WorkflowToolbar};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 
