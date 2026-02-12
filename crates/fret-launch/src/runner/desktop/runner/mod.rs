@@ -3,7 +3,6 @@
 pub use super::super::common::*;
 
 use std::{
-    any::TypeId,
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
@@ -3594,129 +3593,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 break;
             }
         }
-    }
-
-    fn propagate_model_changes(&mut self) -> bool {
-        let changed = self.app.take_changed_models();
-        if changed.is_empty() {
-            return false;
-        }
-
-        for (window, runtime) in self.windows.iter_mut() {
-            self.driver.handle_model_changes(
-                WinitWindowContext {
-                    app: &mut self.app,
-                    window,
-                    state: &mut runtime.user,
-                },
-                &changed,
-            );
-        }
-        true
-    }
-
-    fn propagate_global_changes(&mut self) -> bool {
-        let changed = self.app.take_changed_globals();
-        if changed.is_empty() {
-            return false;
-        }
-
-        #[cfg(windows)]
-        {
-            if changed.contains(&TypeId::of::<fret_runtime::KeymapService>()) {
-                windows_menu::sync_keymap_from_app(&self.app);
-            }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
-                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
-                || changed.contains(&TypeId::of::<
-                    fret_runtime::WindowCommandActionAvailabilityService,
-                >())
-                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
-            {
-                windows_menu::sync_command_gating_from_app(&self.app);
-            }
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            let keymap_changed = changed.contains(&TypeId::of::<fret_runtime::KeymapService>());
-            if keymap_changed {
-                macos_menu::sync_keymap_from_app(&self.app);
-            }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
-                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
-                || changed.contains(&TypeId::of::<
-                    fret_runtime::WindowCommandActionAvailabilityService,
-                >())
-                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
-            {
-                macos_menu::sync_command_gating_from_app(&self.app);
-            }
-            if keymap_changed && let Some(menu_bar) = self.menu_bar.clone() {
-                macos_menu::set_app_menu_bar(&self.app, &menu_bar);
-            }
-        }
-
-        if changed.contains(&TypeId::of::<fret_core::TextFontFamilyConfig>())
-            && let (Some(renderer), Some(config)) = (
-                self.renderer.as_mut(),
-                self.app.global::<fret_core::TextFontFamilyConfig>(),
-            )
-            && renderer.set_text_font_families(config)
-        {
-            let new_key = renderer.text_font_stack_key();
-            let old_key = self
-                .app
-                .global::<fret_runtime::TextFontStackKey>()
-                .map(|k| k.0);
-            if old_key != Some(new_key) {
-                self.app.set_global::<fret_runtime::TextFontStackKey>(
-                    fret_runtime::TextFontStackKey(new_key),
-                );
-            }
-
-            for (_id, state) in self.windows.iter() {
-                state.window.request_redraw();
-            }
-        }
-
-        if changed.contains(&TypeId::of::<fret_runtime::fret_i18n::I18nService>())
-            && let Some(renderer) = self.renderer.as_mut()
-        {
-            let locale = self
-                .app
-                .global::<fret_runtime::fret_i18n::I18nService>()
-                .and_then(|service| service.preferred_locales().first())
-                .map(|locale| locale.to_string());
-            if renderer.set_text_locale(locale.as_deref()) {
-                let new_key = renderer.text_font_stack_key();
-                let old_key = self
-                    .app
-                    .global::<fret_runtime::TextFontStackKey>()
-                    .map(|k| k.0);
-                if old_key != Some(new_key) {
-                    self.app.set_global::<fret_runtime::TextFontStackKey>(
-                        fret_runtime::TextFontStackKey(new_key),
-                    );
-                }
-
-                for (_id, state) in self.windows.iter() {
-                    state.window.request_redraw();
-                }
-            }
-        }
-
-        for (window, runtime) in self.windows.iter_mut() {
-            self.driver.handle_global_changes(
-                WinitWindowContext {
-                    app: &mut self.app,
-                    window,
-                    state: &mut runtime.user,
-                },
-                &changed,
-            );
-        }
-        true
     }
 
     fn enqueue_window_front(
