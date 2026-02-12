@@ -161,7 +161,7 @@ to `fret-ui` (ADR 0234).
     - [x] native (v1 copy path): software decode → CPU upload (`Queue::write_texture`) →
           `RenderTargetUpdate::Update` with deterministic fallback.
       - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source)
-- [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
+  - [x] Add a concrete per-frame keepalive mechanism for truly ephemeral imported resources (ADR 0234 D3).
 - [x] Decide and implement the minimal render target descriptor metadata seam needed by real imports:
       alpha semantics (`premul` vs `straight`), orientation/transform metadata, and frame timing hints
       for diagnostics (ADR 0234 D4).
