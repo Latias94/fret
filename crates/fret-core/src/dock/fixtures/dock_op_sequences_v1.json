@@ -18,6 +18,20 @@
       }
     },
     {
+      "id": "explicit-rootless-floating-replace-does-not-drop-panels",
+      "kind": "explicit",
+      "initial": "root_tabs",
+      "panels": ["test.a", "test.b", "test.c"],
+      "steps": [
+        { "type": "float_tabs_in_window", "panel": "test.a", "rect": [10.0, 20.0, 480.0, 320.0] },
+        { "type": "move_panel", "panel": "test.a", "target_panel": "test.b", "zone": "left" }
+      ],
+      "expect": {
+        "max_reachable_nodes": 128,
+        "max_split_depth": 10
+      }
+    },
+    {
       "id": "random-seed-1-400-steps-12-panels",
       "kind": "random",
       "random": { "seed": 1, "steps": 400, "panel_count": 12 },
@@ -37,4 +51,3 @@
     }
   ]
 }
-

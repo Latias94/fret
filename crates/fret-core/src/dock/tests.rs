@@ -462,10 +462,32 @@ struct DockOpSequenceCase {
     spec: DockOpSequenceCaseSpec,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum DockOpSequenceInitialLayout {
+    #[default]
+    SplitNary,
+    RootTabs,
+}
+
+impl DockOpSequenceInitialLayout {
+    fn from_optional_string(raw: Option<&str>) -> Self {
+        let Some(raw) = raw else {
+            return Self::SplitNary;
+        };
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "" | "split_nary" | "split-nary" | "default" => Self::SplitNary,
+            "root_tabs" | "root-tabs" => Self::RootTabs,
+            _ => Self::SplitNary,
+        }
+    }
+}
+
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum DockOpSequenceCaseSpec {
     Explicit {
+        #[serde(default)]
+        initial: Option<String>,
         panels: Vec<String>,
         steps: Vec<DockOpSequenceStep>,
         expect: DockOpSequenceExpect,
@@ -492,6 +514,10 @@ struct DockOpSequenceExpect {
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum DockOpSequenceStep {
+    FloatTabsInWindow {
+        panel: String,
+        rect: [f32; 4],
+    },
     MovePanel {
         panel: String,
         target_panel: String,
@@ -517,11 +543,13 @@ fn dock_op_sequence_fixtures_hold_canonical_invariants() {
 fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
     match &case.spec {
         DockOpSequenceCaseSpec::Explicit {
+            initial,
             panels,
             steps,
             expect,
         } => {
-            let (mut g, main_window, _panels) = make_initial_nary_split_graph(panels);
+            let initial = DockOpSequenceInitialLayout::from_optional_string(initial.as_deref());
+            let (mut g, main_window, _panels) = make_initial_graph(panels, initial);
             assert_canonical_all_windows(&g);
 
             for (ix, step) in steps.iter().enumerate() {
@@ -696,12 +724,57 @@ fn make_initial_nary_split_graph(panels: &[String]) -> (DockGraph, AppWindowId, 
     (g, w, panel_keys)
 }
 
+fn make_initial_root_tabs_graph(panels: &[String]) -> (DockGraph, AppWindowId, Vec<PanelKey>) {
+    let w = window(1);
+    let panel_keys: Vec<PanelKey> = panels.iter().map(|s| PanelKey::new(s)).collect();
+
+    let mut g = DockGraph::new();
+    if panel_keys.is_empty() {
+        return (g, w, panel_keys);
+    }
+
+    let root = g.insert_node(DockNode::Tabs {
+        tabs: panel_keys.clone(),
+        active: 0,
+    });
+    g.set_window_root(w, root);
+    g.simplify_window_forest(w);
+
+    (g, w, panel_keys)
+}
+
+fn make_initial_graph(
+    panels: &[String],
+    initial: DockOpSequenceInitialLayout,
+) -> (DockGraph, AppWindowId, Vec<PanelKey>) {
+    match initial {
+        DockOpSequenceInitialLayout::SplitNary => make_initial_nary_split_graph(panels),
+        DockOpSequenceInitialLayout::RootTabs => make_initial_root_tabs_graph(panels),
+    }
+}
+
 fn apply_fixture_step(
     g: &mut DockGraph,
     _main_window: AppWindowId,
     step: &DockOpSequenceStep,
 ) -> bool {
     match step {
+        DockOpSequenceStep::FloatTabsInWindow {
+            panel,
+            rect: rect_xywh,
+        } => {
+            let panel = PanelKey::new(panel);
+            let windows = windows_including_floatings(g);
+            let (source_window, (source_tabs, _)) =
+                find_panel_any_window(g, &windows, &panel).expect("panel exists");
+
+            g.apply_op(&DockOp::FloatTabsInWindow {
+                source_window,
+                source_tabs,
+                target_window: source_window,
+                rect: rect(rect_xywh[0], rect_xywh[1], rect_xywh[2], rect_xywh[3]),
+            })
+        }
         DockOpSequenceStep::MovePanel {
             panel,
             target_panel,
