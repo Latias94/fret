@@ -46,6 +46,7 @@ Definition of done:
 - `fret-ui-gallery` applies a keyboard avoidance policy driven by environment queries:
   - uses `environment_occlusion_insets` (ADR 0232) and adds scrollable bottom slack (or padding)
     sufficient to keep focused inputs visible.
+  - treats “unknown vs known-but-zero” insets explicitly (ADR 0267).
 
 Evidence:
 

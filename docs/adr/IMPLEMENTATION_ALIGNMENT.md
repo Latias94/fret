@@ -15,10 +15,10 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-02-12
-- ADR count (numbered): 240
+- ADR count (numbered): 241
 
 - Aligned: 97
-- Aligned (with known gaps): 82
+- Aligned (with known gaps): 83
 - N/A (superseded): 2
 - Not audited: 18
 - Not implemented: 6
@@ -28,6 +28,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0267-mobile-safe-area-and-occlusion-insets-semantics-v1.md`](0267-mobile-safe-area-and-occlusion-insets-semantics-v1.md) | Proposed | Aligned (with known gaps) | Insets are stored per-window in `WindowMetricsService` with explicit “unknown vs known-but-none” representation (`*_is_known`): `crates/fret-core/src/window.rs`. The runtime commits safe-area/occlusion into the environment snapshot and tracks dependency keys (`EnvironmentQueryKey::SafeAreaInsets` / `OcclusionInsets`): `crates/fret-ui/src/elements/runtime.rs`. Diagnostics can override insets via effects (`Effect::WindowMetricsOverrideInsets`): `crates/fret-runtime/src/effect.rs`. Gaps: Android/iOS runners are not fully audited for insets sourcing correctness and update timing; keyboard avoidance policy remains ecosystem-owned and must be validated on real devices. |
 | [`0266-mobile-clipboard-portability-v1.md`](0266-mobile-clipboard-portability-v1.md) | Proposed | Aligned (with known gaps) | Clipboard is effect-driven and token-completed (`Effect::ClipboardSetText`, `Effect::ClipboardGetText` -> `Event::ClipboardText` / `Event::ClipboardTextUnavailable`) and capability-gated (`ClipboardCapabilities.text`): `crates/fret-runtime/src/effect.rs`, `crates/fret-core/src/input/mod.rs`, `crates/fret-runtime/src/capabilities/leaf.rs`; wired in desktop runner: `crates/fret-launch/src/runner/desktop/runner/mod.rs`. Gaps: mobile privacy/user-activation constraints are not implemented; rich clipboard formats/files are not implemented. |
 | [`0265-mobile-share-sheet-and-open-in-intents-v1.md`](0265-mobile-share-sheet-and-open-in-intents-v1.md) | Proposed | Partially aligned | Contract vocabulary exists (`ShareItem`, `ShareSheetOutcome`, tokens): `crates/fret-core/src/share.rs`, `crates/fret-core/src/ids.rs`. Effect surface exists (`Effect::ShareSheetShow`, `Effect::IncomingOpenReadAll*`, `Effect::IncomingOpenRelease`) and events exist (`Event::ShareSheetCompleted`, `Event::IncomingOpen*`): `crates/fret-runtime/src/effect.rs`, `crates/fret-core/src/input/mod.rs`, `crates/fret-core/src/incoming_open.rs`. Web/WASM runner maps share-sheet to `navigator.share` (best-effort) and capability-detects it: `crates/fret-launch/src/runner/web/effects.rs`, `crates/fret-launch/src/runner/web/mod.rs` (including best-effort `ShareItem::Bytes` via Web Share Level 2 `files`). Desktop share sheet is still a stub (`Unavailable`): `crates/fret-launch/src/runner/desktop/runner/mod.rs`. Incoming-open has diag-only request injection + bounded reads + explicit release in runners, but there is no OS-produced request plumbing yet: `crates/fret-runtime/src/effect.rs`, `crates/fret-launch/src/runner/{desktop,web}/*`. Gaps: browser-level support for share `files` is not universal; OS incoming-open sourcing not implemented. |
 | [`0264-mobile-file-picker-and-sandbox-handles-v1.md`](0264-mobile-file-picker-and-sandbox-handles-v1.md) | Proposed | Aligned (with known gaps) | File dialogs are token-based with safe metadata (`FileDialogSelection`) and effect-driven reads with limits + explicit release (`Effect::FileDialogOpen/ReadAll/ReadAllWithLimits/Release`): `crates/fret-core/src/file_dialog.rs`, `crates/fret-runtime/src/effect.rs`, events in `crates/fret-core/src/input/mod.rs`; wired in desktop runner: `crates/fret-launch/src/runner/desktop/runner/mod.rs`. Gaps: Android/iOS sandbox mappings and a persistence seam are not implemented. |

@@ -106,6 +106,7 @@ Pointer/touch semantics are a separate but required “contract baseline” for 
 - IME event model + caret anchoring: `docs/adr/0012-keyboard-ime-and-text-input.md`
 - Platform text input client interop: `docs/adr/0261-platform-text-input-client-interop-v1.md`
 - Environment queries + insets seam: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
+- Mobile safe-area + occlusion insets semantics: `docs/adr/0267-mobile-safe-area-and-occlusion-insets-semantics-v1.md`
 - Mobile lifecycle/surface policy: `docs/adr/0262-mobile-lifecycle-and-surface-policy-v1.md`
 - Pointer/touch baseline: `docs/adr/0263-pointer-and-touch-semantics-baseline-v1.md`
 - Mobile clipboard portability: `docs/adr/0266-mobile-clipboard-portability-v1.md`

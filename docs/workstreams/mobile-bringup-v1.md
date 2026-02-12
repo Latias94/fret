@@ -61,6 +61,7 @@ Notes:
 - Mechanism vs policy split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - Platform backends split: `docs/adr/0090-platform-backends-native-web.md`
 - Environment queries + insets: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
+- Mobile safe-area + occlusion insets semantics: `docs/adr/0267-mobile-safe-area-and-occlusion-insets-semantics-v1.md`
 - IME event model + caret anchoring: `docs/adr/0012-keyboard-ime-and-text-input.md`
 - Platform text input client interop: `docs/adr/0261-platform-text-input-client-interop-v1.md`
 - Mobile lifecycle + surface policy: `docs/adr/0262-mobile-lifecycle-and-surface-policy-v1.md`
