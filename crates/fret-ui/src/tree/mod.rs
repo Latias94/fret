@@ -32,6 +32,7 @@ mod hit_test;
 mod invalidation_dedup;
 mod layers;
 mod layout;
+mod measure;
 mod observation;
 mod paint;
 mod paint_cache;
@@ -61,6 +62,7 @@ pub use debug::{
 };
 use frame_arena::FrameArenaScratch;
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
+use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};
 use observation::{GlobalObservationIndex, ObservationIndex, ObservationMask};
 
 #[cfg(feature = "diagnostics")]
@@ -877,49 +879,6 @@ impl<H: UiHost> Default for UiTree<H> {
             deferred_cleanup: Vec::new(),
         }
     }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-struct MeasureReentrancyDiagnostics {
-    /// Frame ID of the last emitted warning.
-    last_log_frame: Option<FrameId>,
-    /// Number of suppressed re-entrancy events since the last emitted warning.
-    suppressed_since_last_log: u64,
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub(crate) struct DebugMeasureChildRecord {
-    total_time: Duration,
-    calls: u64,
-}
-
-impl MeasureReentrancyDiagnostics {
-    const MIN_FRAMES_BETWEEN_LOGS: u64 = 120;
-
-    fn record(&mut self, frame_id: FrameId) -> Option<u64> {
-        let should_log = match self.last_log_frame {
-            None => true,
-            Some(last) => frame_id.0.saturating_sub(last.0) >= Self::MIN_FRAMES_BETWEEN_LOGS,
-        };
-
-        if !should_log {
-            self.suppressed_since_last_log = self.suppressed_since_last_log.saturating_add(1);
-            return None;
-        }
-
-        self.last_log_frame = Some(frame_id);
-        Some(std::mem::take(&mut self.suppressed_since_last_log))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct MeasureStackKey {
-    node: NodeId,
-    known_w_bits: Option<u32>,
-    known_h_bits: Option<u32>,
-    avail_w: (u8, u32),
-    avail_h: (u8, u32),
-    scale_bits: u32,
 }
 
 impl<H: UiHost> UiTree<H> {
