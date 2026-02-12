@@ -37,6 +37,7 @@ mod observation;
 mod paint;
 mod paint_cache;
 mod prepaint;
+mod propagation_depth;
 mod semantics;
 mod shortcuts;
 use debug::{
@@ -64,6 +65,7 @@ use frame_arena::FrameArenaScratch;
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
 use measure::{DebugMeasureChildRecord, MeasureReentrancyDiagnostics, MeasureStackKey};
 use observation::{GlobalObservationIndex, ObservationIndex, ObservationMask};
+use propagation_depth::PropagationDepthCacheEntry;
 
 #[cfg(feature = "diagnostics")]
 pub use debug::{
@@ -358,12 +360,6 @@ impl<T: Copy, const N: usize> SmallCopyList<T, N> {
         }
         unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const T, self.len) }
     }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-struct PropagationDepthCacheEntry {
-    generation: u32,
-    depth: u32,
 }
 
 pub struct UiTree<H: UiHost> {
@@ -5471,61 +5467,6 @@ impl<H: UiHost> UiTree<H> {
         self.mark_invalidation_with_detail(node, inv, source, detail);
     }
 
-    fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
-        let generation = self.propagation_depth_generation;
-        if let Some(entry) = self.propagation_depth_cache.get(start)
-            && entry.generation == generation
-        {
-            return entry.depth;
-        }
-
-        self.propagation_chain.clear();
-
-        let mut current = Some(start);
-        while let Some(node) = current {
-            if let Some(entry) = self.propagation_depth_cache.get(node)
-                && entry.generation == generation
-            {
-                let mut d = entry.depth;
-                for id in self.propagation_chain.drain(..).rev() {
-                    d = d.saturating_add(1);
-                    self.propagation_depth_cache.insert(
-                        id,
-                        PropagationDepthCacheEntry {
-                            generation,
-                            depth: d,
-                        },
-                    );
-                }
-                return self
-                    .propagation_depth_cache
-                    .get(start)
-                    .and_then(|e| (e.generation == generation).then_some(e.depth))
-                    .unwrap_or_default();
-            }
-
-            self.propagation_chain.push(node);
-            current = self.nodes.get(node).and_then(|n| n.parent);
-        }
-
-        let mut d = 0u32;
-        for id in self.propagation_chain.drain(..).rev() {
-            self.propagation_depth_cache.insert(
-                id,
-                PropagationDepthCacheEntry {
-                    generation,
-                    depth: d,
-                },
-            );
-            d = d.saturating_add(1);
-        }
-
-        self.propagation_depth_cache
-            .get(start)
-            .and_then(|e| (e.generation == generation).then_some(e.depth))
-            .unwrap_or_default()
-    }
-
     fn propagate_observation_masks(
         &mut self,
         app: &mut H,
@@ -5555,7 +5496,7 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             };
 
-            let depth = self.propagation_depth_for(node);
+            let depth = propagation_depth::propagation_depth_for(self, node);
             let key = node.data().as_ffi();
             self.propagation_entries
                 .push((strength, depth, key, node, inv));
