@@ -41,6 +41,7 @@ mod terminal;
 mod test_results;
 mod tool;
 mod tool_call_block;
+mod transcription;
 mod web_preview;
 
 pub use ai_chat::*;
@@ -86,4 +87,5 @@ pub use terminal::*;
 pub use test_results::*;
 pub use tool::*;
 pub use tool_call_block::*;
+pub use transcription::*;
 pub use web_preview::*;

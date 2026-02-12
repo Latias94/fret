@@ -697,6 +697,22 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_TRANSCRIPTION_DEMO: &str = r#"
+## AI transcription (demo)
+
+This page demonstrates an AI Elements-aligned `Transcription` surface:
+
+- a flex-wrapping segment row,
+- segment styling for past/active/future regions,
+- an optional seek interaction seam (`on_seek`) for app-owned playback backends.
+"#;
+
+pub(crate) const USAGE_AI_TRANSCRIPTION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Transcription, TranscriptionSegment, TranscriptionSegmentData};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

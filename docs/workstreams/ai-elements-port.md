@@ -85,6 +85,8 @@ an interactive chat demo:
 - `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
 - `Context`: AI Elements-aligned context usage hovercard surface (percent trigger + progress content).
 - `Terminal`: AI Elements-aligned terminal output viewer surface (monospace output + copy/clear + auto-scroll).
+- `AudioPlayer`: AI Elements-aligned audio player chrome surface (UI-only; playback remains app-owned).
+- `Transcription`: AI Elements-aligned transcription segment surface (UI-only; playback timing remains app-owned).
 - `FileTree`: AI Elements-aligned nested file tree surface with per-row actions; flattens via UI Kit tree primitives and virtualizes via `VirtualList` when the host provides a height constraint.
 - `WebPreview`: AI Elements-aligned web preview chrome (navigation + URL input + console disclosure). Feature-gated native embedding exists via `wry` (see `docs/workstreams/webview-wry-v1.md`); chrome-only remains the default when the backend is not enabled.
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
@@ -115,6 +117,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`
   - `AI audio player (demo)` (`ai_audio_player_demo`): `AudioPlayer` chrome demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`
+  - `AI transcription (demo)` (`ai_transcription_demo`): `Transcription` segment demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -724,7 +728,7 @@ Legend:
 | `mic-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/mic_selector.rs` | Defer | Voice surfaces are optional. |
 | `voice-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/voice_selector.rs` | Defer | Voice surfaces are optional. |
 | `speech-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/speech_input.rs` | Defer | Depends on audio/ASR stack. |
-| `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Defer | Voice pipeline dependent. |
+| `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Prototype | Segment surface + seek seam (`on_seek`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
 | `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
 | `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
 | `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |

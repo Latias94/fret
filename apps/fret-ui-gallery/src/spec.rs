@@ -117,6 +117,7 @@ pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
 pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
 pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
 pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
+pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -277,6 +278,8 @@ pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str = "ui_gallery.nav.select.ai_
 pub(crate) const CMD_NAV_AI_OPEN_IN_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_open_in_chat_demo";
 pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_demo";
 pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str = "ui_gallery.nav.select.ai_audio_player_demo";
+pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
+    "ui_gallery.nav.select.ai_transcription_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -933,6 +936,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "audio", "player", "seek", "mute", "volume", "demo"],
                 docs::DOC_AI_AUDIO_PLAYER_DEMO,
                 docs::USAGE_AI_AUDIO_PLAYER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TRANSCRIPTION_DEMO,
+                "AI Transcription (Demo)",
+                "AI Elements Transcription / Segment Seek Demo",
+                "fret-ui-ai (transcription)",
+                CMD_NAV_AI_TRANSCRIPTION_DEMO,
+                &["ai", "transcription", "segments", "seek", "voice", "demo"],
+                docs::DOC_AI_TRANSCRIPTION_DEMO,
+                docs::USAGE_AI_TRANSCRIPTION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,

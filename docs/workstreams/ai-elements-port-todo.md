@@ -102,7 +102,8 @@ Status legend:
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
 | `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
-| `mic-selector` / `speech-input` / `transcription` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
+| `mic-selector` / `speech-input` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
 
 ### M1 — Chat surfaces (usable app kit)
 
@@ -281,7 +282,8 @@ Only implement if it is mostly “styling recipes over existing crates”:
 
 - [ ] AIEL-MVP5-voice-001 Decide whether voice UI belongs in `fret-ui-ai` or a sibling crate (`fret-ui-voice`).
 - [~] AIEL-MVP5-voice-002 Port `AudioPlayer` chrome (UI-only) + UI Gallery demo + diag gate.
-- [ ] AIEL-MVP5-voice-003 If in scope: `MicSelector`, `Transcription`, `VoiceSelector` (backend policy app-owned).
+- [~] AIEL-MVP5-voice-003 Port `Transcription` (segments + seek seam) + UI Gallery demo + diag gate.
+- [ ] AIEL-MVP5-voice-004 If in scope: `MicSelector`, `VoiceSelector` (backend policy app-owned).
 
 ## Upstream inventory (keep honest)
 
@@ -336,7 +338,6 @@ Keep this list in sync with the pinned upstream commit recorded in
 - `test-results.tsx`
 - `tool.tsx`
 - `toolbar.tsx`
-- `transcription.tsx`
 - `voice-selector.tsx`
 - `web-preview.tsx`
 

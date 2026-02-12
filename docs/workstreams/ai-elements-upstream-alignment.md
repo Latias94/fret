@@ -82,6 +82,7 @@ Legend:
 | `open-in-chat.tsx` | `fret-ui-ai` | `open_in_chat.rs` | Ported (prototype) | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl` (URLs match upstream). |
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 | `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
+| `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
 
 ## Known upstream files not yet ported
 
@@ -92,7 +93,7 @@ As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` p
 - `persona.tsx`
 - `sandbox.tsx`
 - Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
-- Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `transcription.tsx`, `voice-selector.tsx`
+- Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `voice-selector.tsx`
 
 ## Regenerating this diff (developer note)
 
