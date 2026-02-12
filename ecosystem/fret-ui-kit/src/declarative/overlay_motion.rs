@@ -14,7 +14,8 @@ use fret_ui::element::{
     VisualTransformProps,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::theme::CubicBezier;
+use fret_ui::{ElementContext, Theme, UiHost};
 
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
 
@@ -28,6 +29,56 @@ pub const SHADCN_MOTION_DURATION_100: Duration = Duration::from_millis(100);
 pub const SHADCN_MOTION_DURATION_200: Duration = Duration::from_millis(200);
 pub const SHADCN_MOTION_DURATION_300: Duration = Duration::from_millis(300);
 pub const SHADCN_MOTION_DURATION_500: Duration = Duration::from_millis(500);
+
+const THEME_DURATION_SHADCN_MOTION_100: &str = "duration.shadcn.motion.100";
+const THEME_DURATION_SHADCN_MOTION_200: &str = "duration.shadcn.motion.200";
+const THEME_DURATION_SHADCN_MOTION_300: &str = "duration.shadcn.motion.300";
+const THEME_DURATION_SHADCN_MOTION_500: &str = "duration.shadcn.motion.500";
+const THEME_EASING_SHADCN_MOTION: &str = "easing.shadcn.motion";
+
+fn theme_duration_ms_by_key<H: UiHost>(cx: &ElementContext<'_, H>, key: &str) -> Option<Duration> {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .duration_ms_by_key(key)
+        .map(|ms| Duration::from_millis(ms as u64))
+}
+
+/// shadcn overlay duration token (100ms).
+pub fn shadcn_motion_duration_100<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_100)
+        .unwrap_or(SHADCN_MOTION_DURATION_100)
+}
+
+/// shadcn overlay duration token (200ms).
+pub fn shadcn_motion_duration_200<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_200)
+        .unwrap_or(SHADCN_MOTION_DURATION_200)
+}
+
+/// shadcn overlay duration token (300ms).
+pub fn shadcn_motion_duration_300<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_300)
+        .unwrap_or(SHADCN_MOTION_DURATION_300)
+}
+
+/// shadcn overlay duration token (500ms).
+pub fn shadcn_motion_duration_500<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_500)
+        .unwrap_or(SHADCN_MOTION_DURATION_500)
+}
+
+/// shadcn overlay cubic-bezier easing curve (`ease-[cubic-bezier(0.22,1,0.36,1)]` by default).
+pub fn shadcn_motion_ease_bezier<H: UiHost>(cx: &ElementContext<'_, H>) -> CubicBezier {
+    let theme = Theme::global(&*cx.app);
+    theme
+        .easing_by_key(THEME_EASING_SHADCN_MOTION)
+        .unwrap_or(CubicBezier {
+            x1: crate::headless::easing::SHADCN_EASE.x1,
+            y1: crate::headless::easing::SHADCN_EASE.y1,
+            x2: crate::headless::easing::SHADCN_EASE.x2,
+            y2: crate::headless::easing::SHADCN_EASE.y2,
+        })
+}
 
 /// shadcn/ui v4 default easing curve (`ease-out`-ish).
 pub fn shadcn_ease(x: f32) -> f32 {
