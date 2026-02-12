@@ -43,6 +43,9 @@ use winit::{
     window::{Window, WindowId, WindowLevel},
 };
 
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopExtAndroid as _;
+
 use crate::RunnerError;
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -141,6 +144,8 @@ pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
 ) -> Result<(), RunnerError> {
     crate::configure_stacksafe_from_env();
     let mut runner = WinitRunner::new_app(config, app, driver);
+    #[cfg(target_os = "android")]
+    runner.set_android_app(event_loop.android_app().clone());
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(runner)?;
     Ok(())
@@ -1182,6 +1187,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
     is_suspended: bool,
+    #[cfg(target_os = "android")]
+    android_app: Option<winit::platform::android::activity::AndroidApp>,
 
     renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
@@ -2943,6 +2950,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
             is_suspended: false,
+            #[cfg(target_os = "android")]
+            android_app: None,
             renderdoc: None,
             context: None,
             renderer: None,
@@ -2989,6 +2998,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
+        }
+    }
+
+    #[cfg(target_os = "android")]
+    fn set_android_app(&mut self, app: winit::platform::android::activity::AndroidApp) {
+        self.android_app = Some(app);
+    }
+
+    #[cfg(target_os = "android")]
+    fn android_force_soft_input(&self, enabled: bool) {
+        let Some(app) = self.android_app.as_ref() else {
+            return;
+        };
+
+        // Some OEM builds appear to ignore "implicit" IME show requests. When a text input is
+        // focused we want the keyboard to appear reliably.
+        if enabled {
+            app.show_soft_input(false);
+        } else {
+            app.hide_soft_input(false);
         }
     }
 
@@ -4449,6 +4478,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         if let Some(state) = self.windows.get_mut(window)
                             && state.platform.set_ime_allowed(enabled)
                         {
+                            #[cfg(target_os = "android")]
+                            self.android_force_soft_input(enabled);
                             window_state_dirty.insert(window);
                         }
                     }
