@@ -210,7 +210,24 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: In progress (contract-path demo + diag scripts landed; perf baseline pending)
+Status: In progress (contract-path demo + diagnostics/perf evidence landed; first real backend path pending)
+
+Acceptance criteria (v1):
+
+- A demo can register a stable `RenderTargetId`, update its `TextureView` via runner-applied deltas, and
+  display it through `ViewportSurface` with:
+  - window resize handling,
+  - object-fit semantics (contain/cover/stretch),
+  - a lifecycle toggle (unregister/register) to validate ID stability and cleanup.
+- Diagnostics closure:
+  - `fretboard diag run` can launch the demo and execute a script v2 end-to-end, producing bundles and
+    PNG screenshots (requires `FRET_DIAG_SCREENSHOTS=1`).
+- Perf closure:
+  - a steady-state perf baseline is committed under `docs/workstreams/perf-baselines/` with a matching
+    seed policy preset under `docs/workstreams/perf-baselines/policies/`.
+- Follow-up (optional v1):
+  - at least one capability-gated “true external import” path (web or native) exists, with a clear
+    copy/zero-copy policy and deterministic fallback.
 
 Evidence:
 
@@ -220,4 +237,6 @@ Evidence:
 - `apps/fret-examples/src/external_texture_imports_demo.rs`
 - `tools/diag-scripts/external-texture-imports-contract-path.json`
 - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
+- `docs/workstreams/perf-baselines/policies/external-texture-imports-contract-path.v1.json`
+- `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)
