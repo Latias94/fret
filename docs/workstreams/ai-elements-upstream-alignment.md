@@ -83,9 +83,9 @@ Legend:
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 | `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
 | `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
-| `agent.tsx` | `fret-ui-ai` | `agent.rs` | Not started | UI-only shell; keep dependencies feature-gated; effects remain app-owned. |
-| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Not started | UI-only shell; primarily composition. |
-| `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Not started | UI-only shell; sandbox runtime is out-of-scope for v1 (feature-gate). |
+| `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
+| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | UI-only placeholder (upstream uses Rive/webgl2). Add gates: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
+| `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
 | `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
@@ -95,12 +95,8 @@ Legend:
 
 As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
 
-- `agent.tsx`
 - `jsx-preview.tsx` (likely out of scope for Rust)
-- `persona.tsx`
-- `sandbox.tsx`
 - Workflow wrappers: `canvas.tsx`, `node.tsx`, `edge.tsx`, `panel.tsx`, `toolbar.tsx`, `controls.tsx`, `connection.tsx`
-- Voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `voice-selector.tsx`
 
 ## Regenerating this diff (developer note)
 

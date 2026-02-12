@@ -179,21 +179,20 @@ Scope:
 
 - `audio-player` (UI-only chrome is ported; playback backend is app-owned).
 - `transcription` (segment surface is ported; playback timing remains app-owned).
-- `mic-selector`, `speech-input`, `voice-selector` (defer until there is a concrete consumer).
+- `mic-selector`, `speech-input`, `voice-selector` (UI-only chrome is ported; capture/ASR/preview are app-owned).
 
 Acceptance criteria:
 
 - Backends/policies are explicit; UI remains intent-driven (apps own side effects).
 
-Status: Partial (UI-only `audio-player` + `transcription` surfaces; UI Gallery demos + diag gates exist; remaining voice chrome planned; backends are app-owned).
+Status: Done (UI-only voice chrome ported; UI Gallery demos + diag gates exist; backends are app-owned).
 
 ### M6 — Upstream coverage closure (all files accounted for)
 
 Scope:
 
-- Port the remaining upstream “shell” components: `agent.tsx`, `persona.tsx`, `sandbox.tsx`.
-- Port remaining voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `voice-selector.tsx`.
 - Port workflow wrapper surfaces as chrome-only wrappers (no new engines inside `fret-ui-ai`).
+- Explicitly mark upstream-only web surfaces as `N/A` where appropriate (e.g. `jsx-preview.tsx`), with rationale.
 
 Acceptance criteria:
 
@@ -202,7 +201,7 @@ Acceptance criteria:
   (diag script preferred for interactive surfaces).
 - Heavy dependencies and backends are feature-gated; UI surfaces remain intent-driven.
 
-Status: Planned.
+Status: Planned (workflow wrappers remain).
 
 ## Next-step checklist (recommended weekly cadence)
 
