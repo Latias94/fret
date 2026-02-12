@@ -63,6 +63,7 @@ impl ScriptV2Builder {
 
     pub fn click(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::Click {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -72,10 +73,49 @@ impl ScriptV2Builder {
 
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
             modifiers: Some(modifiers),
+        })
+    }
+
+    pub fn pointer_down(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        })
+    }
+
+    pub fn pointer_down_with_modifiers(
+        self,
+        target: UiSelectorV1,
+        modifiers: UiKeyModifiersV1,
+    ) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: Some(modifiers),
+        })
+    }
+
+    pub fn pointer_move(self, delta_x: f32, delta_y: f32) -> Self {
+        self.push(UiActionStepV2::PointerMove {
+            window: None,
+            delta_x,
+            delta_y,
+            steps: 8,
+        })
+    }
+
+    pub fn pointer_up(self) -> Self {
+        self.push(UiActionStepV2::PointerUp {
+            window: None,
+            button: None,
         })
     }
 
@@ -140,6 +180,7 @@ impl ScriptV2Builder {
 
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {
         self.push(UiActionStepV2::WaitUntil {
+            window: None,
             predicate,
             timeout_frames,
         })
@@ -154,7 +195,10 @@ impl ScriptV2Builder {
     }
 
     pub fn assert(self, predicate: UiPredicateV1) -> Self {
-        self.push(UiActionStepV2::Assert { predicate })
+        self.push(UiActionStepV2::Assert {
+            window: None,
+            predicate,
+        })
     }
 
     pub fn assert_exists(self, target: UiSelectorV1) -> Self {

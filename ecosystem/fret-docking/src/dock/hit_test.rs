@@ -127,6 +127,7 @@ pub(super) fn hit_test_split_handle(
     split_handle_gap: Px,
     split_handle_hit_thickness: Px,
     position: Point,
+    mut min_px_for_split: impl FnMut(DockNodeId, fret_core::Axis, &[DockNodeId]) -> Vec<Px>,
 ) -> Option<DividerDragState> {
     for (&node, &bounds) in layout.iter() {
         let Some(DockNode::Split {
@@ -144,6 +145,7 @@ pub(super) fn hit_test_split_handle(
             continue;
         }
 
+        let min_px = min_px_for_split(node, *axis, children);
         let computed = resizable::compute_layout(
             *axis,
             bounds,
@@ -151,7 +153,7 @@ pub(super) fn hit_test_split_handle(
             fractions,
             split_handle_gap,
             split_handle_hit_thickness,
-            &[],
+            &min_px,
         );
         for (handle_ix, rect) in computed.handle_hit_rects.iter().enumerate() {
             if !rect.contains(position) {

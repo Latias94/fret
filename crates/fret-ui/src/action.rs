@@ -151,6 +151,14 @@ pub struct PointerMoveCx {
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
+    /// Best-effort pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    ///
+    /// Notes:
+    /// - This is derived from the UI runtime's pointer motion snapshots, not from per-element
+    ///   state. It may be `None` when monotonic timestamps are unavailable.
+    /// - Components that need deterministic velocity for tests should treat `None` as "unknown"
+    ///   and fall back to policy defaults.
+    pub velocity_window: Option<Point>,
     pub buttons: fret_core::MouseButtons,
     pub modifiers: Modifiers,
     pub pointer_type: PointerType,
@@ -208,6 +216,8 @@ pub struct PointerUpCx {
     pub tick_id: TickId,
     /// Pixels-per-point (a.k.a. window scale factor) for `position`.
     pub pixels_per_point: f32,
+    /// Best-effort pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub velocity_window: Option<Point>,
     pub button: MouseButton,
     pub modifiers: Modifiers,
     /// Whether this pointer-up completes a "true click" (press + release without exceeding click

@@ -155,6 +155,195 @@ fn dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect() {
         diag.candidates
     );
 }
+
+#[test]
+fn dock_drag_drop_zone_mask_can_disallow_left_hint_rect() {
+    struct DisallowLeft;
+
+    impl DockingPolicy for DisallowLeft {
+        fn allow_dock_drop_target(
+            &self,
+            _window: AppWindowId,
+            _layout_root: fret_core::DockNodeId,
+            _tabs: fret_core::DockNodeId,
+            zone: DropZone,
+            _outer: bool,
+        ) -> bool {
+            zone != DropZone::Left
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .with_global_mut(DockingPolicyService::default, |svc, _app| {
+            svc.set(Arc::new(DisallowLeft));
+        });
+
+    harness
+        .app
+        .set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+
+    harness.app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let left_rect = dock_hint_rects_with_font(dock_bounds, Px(13.0), false)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected inner left rect");
+    let position = Point::new(
+        Px(left_rect.origin.x.0 + left_rect.size.width.0 * 0.5),
+        Px(left_rect.origin.y.0 + left_rect.size.height.0 * 0.5),
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::InternalDrag(InternalDragEvent {
+            position,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    harness.layout();
+
+    let dock = harness
+        .app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_for_window(harness.window, harness.app.frame_id()))
+        .expect("expected docking interaction diagnostics to be published for the window/frame");
+    let diag = dock
+        .dock_drop_resolve
+        .as_ref()
+        .expect("expected drop target diagnostics to be published");
+    assert_eq!(
+        diag.source,
+        fret_runtime::DockDropResolveSource::InnerHintRect
+    );
+    assert!(
+        diag.resolved.is_none(),
+        "expected no resolved dock target due to policy mask, got: {:?}",
+        diag.resolved
+    );
+    assert!(
+        diag.candidates.iter().any(|c| {
+            c.kind == fret_runtime::DockDropCandidateRectKind::InnerHintRect
+                && c.zone == Some(DropZone::Left)
+                && c.rect == left_rect
+        }),
+        "expected diagnostics to include the inner left hint rect candidate, got: {:?}",
+        diag.candidates
+    );
+}
+
+#[test]
+fn dock_drag_start_respects_tabs_group_drag_policy() {
+    struct DisallowTabsGroupDrag;
+
+    impl DockingPolicy for DisallowTabsGroupDrag {
+        fn allow_tabs_group_drag(&self, _window: AppWindowId, _tabs: DockNodeId) -> bool {
+            false
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness
+        .app
+        .with_global_mut(DockingPolicyService::default, |svc, _app| {
+            svc.set(Arc::new(DisallowTabsGroupDrag));
+        });
+
+    let down_pos = {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let root = harness
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.graph.window_root(harness.window))
+            .expect("expected dock window root");
+        let settings = fret_runtime::DockingInteractionSettings::default();
+        let layout = compute_layout_map(
+            &harness.app.global::<DockManager>().unwrap().graph,
+            root,
+            dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        );
+        let root_rect = layout.get(&root).copied().expect("expected root rect");
+        let (tab_bar, _content) = split_tab_bar(root_rect);
+        Point::new(
+            Px(tab_bar.origin.x.0 + 600.0),
+            Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5),
+        )
+    };
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let move_pos = Point::new(Px(down_pos.x.0 + 240.0), down_pos.y);
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        harness.app.drag(fret_core::PointerId(0)).is_none(),
+        "expected policy to prevent starting a tabs group drag session"
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected policy to prevent dock drag from requesting pointer capture"
+    );
+}
 #[test]
 fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding() {
     struct HitTestTransparent;
@@ -1033,6 +1222,119 @@ fn dock_drag_only_requests_tear_off_after_stable_oob_frame() {
                 if *panel == PanelKey::new("core.hierarchy")
         )),
         "expected tear-off request after stable OOB, got: {effects:?}"
+    );
+}
+
+#[test]
+fn dock_drag_tear_off_request_respects_policy() {
+    struct NoTearOff;
+
+    impl DockingPolicy for NoTearOff {
+        fn allow_tear_off(
+            &self,
+            _source_window: AppWindowId,
+            _panel: &PanelKey,
+            _info: Option<&DockPanel>,
+        ) -> bool {
+            false
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
+        svc.set(Arc::new(NoTearOff));
+    });
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    // Frame N: first OOB hover should not request a tear-off yet (debounce).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected no tear-off request on first OOB over, got: {effects:?}"
+    );
+
+    // Frame N+1: stable OOB, but policy disallows tear-off -> still no request.
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected tear-off request to be blocked by policy, got: {effects:?}"
     );
 }
 #[test]

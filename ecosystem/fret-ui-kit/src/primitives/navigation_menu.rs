@@ -1651,6 +1651,13 @@ pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
         return NavigationMenuContentTransitionOutput::default();
     };
 
+    let (open_ticks, close_ticks) =
+        crate::declarative::transition::effective_transition_durations_for_cx(
+            cx,
+            open_ticks,
+            close_ticks,
+        );
+
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 

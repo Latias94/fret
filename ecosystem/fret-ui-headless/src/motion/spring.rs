@@ -34,6 +34,10 @@ impl SpringDescription {
     ///   - negative values are overdamped.
     pub fn with_duration_and_bounce(duration: Duration, bounce: f64) -> Self {
         assert!(duration.as_nanos() > 0, "duration must be positive");
+        assert!(
+            bounce > -1.0,
+            "bounce must be > -1.0 to keep damping derivation finite"
+        );
 
         let duration_secs = duration.as_secs_f64();
         let mass = 1.0;

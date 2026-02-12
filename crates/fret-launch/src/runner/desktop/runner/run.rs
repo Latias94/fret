@@ -106,6 +106,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             incoming_open_path_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
+            diag_cursor_screen_pos_override:
+                super::diag_cursor_override::DiagCursorScreenPosOverride::from_env(),
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),

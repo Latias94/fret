@@ -231,11 +231,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                 );
 
                 if let Some(h) = hook {
+                    let velocity_window = cx
+                        .app
+                        .global::<crate::pointer_motion::WindowPointerMotionService>()
+                        .and_then(|svc| svc.velocity_window(window, *pointer_id));
                     let mv = action::PointerMoveCx {
                         pointer_id: *pointer_id,
                         position: *position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
+                        velocity_window,
                         buttons: *buttons,
                         modifiers: *modifiers,
                         pointer_type: *pointer_type,
@@ -385,6 +390,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                         position: *position,
                         tick_id: cx.app.tick_id(),
                         pixels_per_point,
+                        velocity_window: cx
+                            .app
+                            .global::<crate::pointer_motion::WindowPointerMotionService>()
+                            .and_then(|svc| svc.velocity_window(window, *pointer_id)),
                         button: *button,
                         modifiers: *modifiers,
                         is_click: *is_click,

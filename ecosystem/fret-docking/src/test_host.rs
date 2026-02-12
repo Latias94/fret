@@ -4,7 +4,7 @@ use std::{
 };
 
 use fret_core::{AppWindowId, Point, PointerId};
-use fret_runtime::{ClipboardToken, TimerToken};
+use fret_runtime::{ClipboardToken, ShareSheetToken, TimerToken};
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
     EffectSink, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
@@ -24,6 +24,7 @@ pub(crate) struct TestHost {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_share_sheet_token: u64,
     next_image_upload_token: u64,
 }
 
@@ -83,6 +84,10 @@ impl TestHost {
 
     pub(crate) fn next_timer_token(&mut self) -> TimerToken {
         TimeHost::next_timer_token(self)
+    }
+
+    pub(crate) fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        TimeHost::next_share_sheet_token(self)
     }
 
     pub(crate) fn drag(&self, pointer_id: PointerId) -> Option<&DragSession> {
@@ -246,6 +251,12 @@ impl TimeHost for TestHost {
     fn next_clipboard_token(&mut self) -> ClipboardToken {
         let token = ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        token
+    }
+
+    fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        let token = ShareSheetToken(self.next_share_sheet_token);
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
         token
     }
 

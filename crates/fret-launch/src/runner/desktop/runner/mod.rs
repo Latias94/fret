@@ -71,6 +71,7 @@ struct IncomingOpenPathPayload {
 
 mod app_handler;
 mod diag_bundle_screenshots;
+mod diag_cursor_override;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
@@ -206,6 +207,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     incoming_open_path_payloads: HashMap<fret_core::IncomingOpenToken, IncomingOpenPathPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
+    diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,
