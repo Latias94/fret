@@ -2502,6 +2502,35 @@ impl WinitAppDriver for UiGalleryDriver {
                     *v = Arc::<str>::from("clipboard.copy");
                 });
             }
+            crate::spec::CMD_SHELL_SHARE_SHEET_SMOKE => {
+                let token = app.next_share_sheet_token();
+                app.push_effect(Effect::ShareSheetShow {
+                    window,
+                    token,
+                    items: vec![
+                        fret_core::ShareItem::Text("Hello from Fret (share sheet)".to_string()),
+                        fret_core::ShareItem::Url("https://example.com".to_string()),
+                        fret_core::ShareItem::Bytes {
+                            name: "hello.txt".to_string(),
+                            mime: Some("text/plain".to_string()),
+                            bytes: b"Hello from Fret!\n".to_vec(),
+                        },
+                    ],
+                });
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_message(
+                    &mut host,
+                    window,
+                    "Share sheet",
+                    shadcn::ToastMessageOptions::new().description("Requested."),
+                );
+
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("shell.share_sheet");
+                });
+            }
             CMD_MENU_DROPDOWN_APPLE => {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("menu.dropdown.apple");
@@ -2891,6 +2920,49 @@ impl WinitAppDriver for UiGalleryDriver {
                     shadcn::ToastMessageOptions::new()
                         .description("The file dialog completed without a selection."),
                 );
+            }
+            Event::ShareSheetCompleted { token: _, outcome } => {
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                match outcome {
+                    fret_core::ShareSheetOutcome::Shared => {
+                        sonner.toast_success_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new()
+                                .description("Shared successfully."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Canceled => {
+                        sonner.toast_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description("Canceled."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Unavailable => {
+                        sonner.toast_error_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description("Unavailable."),
+                        );
+                    }
+                    fret_core::ShareSheetOutcome::Failed { message } => {
+                        sonner.toast_error_message(
+                            &mut host,
+                            window,
+                            "Share sheet",
+                            shadcn::ToastMessageOptions::new().description(message.clone()),
+                        );
+                    }
+                }
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("shell.share_sheet.completed");
+                });
+                host.request_redraw(window);
             }
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {

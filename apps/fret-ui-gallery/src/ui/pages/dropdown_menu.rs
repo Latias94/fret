@@ -574,6 +574,10 @@ pub(super) fn preview_dropdown_menu(
                                     .on_select(CMD_MENU_DROPDOWN_APPLE),
                             ),
                             shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Native share sheet")
+                                    .on_select(crate::spec::CMD_SHELL_SHARE_SHEET_SMOKE),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
                                 shadcn::DropdownMenuItem::new("Copy link")
                                     .on_select(CMD_MENU_DROPDOWN_ORANGE),
                             ),
