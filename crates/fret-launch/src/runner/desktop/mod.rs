@@ -5149,6 +5149,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 state.window.request_redraw();
                             }
                         }
+                        WindowRequest::SetOuterPosition { window, position } => {
+                            if let Some(state) = self.windows.get(window) {
+                                state.window.set_outer_position(
+                                    winit::dpi::LogicalPosition::new(
+                                        position.x as f64,
+                                        position.y as f64,
+                                    )
+                                    .into(),
+                                );
+                                state.window.request_redraw();
+                            }
+                        }
                         WindowRequest::Raise {
                             window,
                             sender: sender_id,

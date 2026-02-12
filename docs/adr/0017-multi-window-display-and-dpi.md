@@ -78,4 +78,7 @@ When a window’s scale factor changes, the platform backend emits a scale-facto
 Prototype implementation (desktop runner + demo):
 
 - Window move events are forwarded as data: `crates/fret-launch/src/runner/mod.rs`
+- Best-effort window placement orchestration is available via effects:
+  - `Effect::Window(WindowRequest::SetOuterPosition { .. })` (screen-space logical pixels)
+  - capability gate: `ui.window_set_outer_position` (ADR 0054)
 - Demo persists/restores `DockLayoutWindow.placement`: implemented in `apps/fret-demo` (entrypoints evolve; search for `DockLayoutWindow` usage).

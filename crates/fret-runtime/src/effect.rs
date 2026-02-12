@@ -224,6 +224,14 @@ pub enum WindowRequest {
         window: AppWindowId,
         size: fret_core::Size,
     },
+    /// Request moving the OS window to a screen-space logical position (ADR 0017).
+    ///
+    /// Runners should treat this as best-effort and may clamp/deny the request based on platform
+    /// constraints and user settings.
+    SetOuterPosition {
+        window: AppWindowId,
+        position: fret_core::WindowLogicalPosition,
+    },
     Raise {
         window: AppWindowId,
         sender: Option<AppWindowId>,

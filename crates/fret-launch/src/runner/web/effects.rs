@@ -444,7 +444,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     WindowRequest::Create(_)
                     | WindowRequest::Raise { .. }
-                    | WindowRequest::SetInnerSize { .. } => {}
+                    | WindowRequest::SetInnerSize { .. }
+                    | WindowRequest::SetOuterPosition { .. } => {}
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
