@@ -471,6 +471,7 @@ Supported selectors (v1 MVP):
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
+- `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `drag_pointer_until` (schema v2 only; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
@@ -515,6 +516,7 @@ Supported intent steps (v2):
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
 - `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags)
+- `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags)
 - `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
 
 For window-targeted steps, the optional `window` field supports:

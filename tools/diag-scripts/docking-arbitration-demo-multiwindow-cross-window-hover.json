@@ -7,7 +7,7 @@
     "target_hints": [
       "This script is a multi-window routing helper (not a strict CI gate yet).",
       "It tears off a tab to create a DockFloating OS window, overlaps the windows, then uses a cursor screen-position override to assert that the dock drag current window can switch to the other OS window.",
-      "Note: cursor overrides are expressed in screen-space physical pixels; this may need adjustment on high-DPI setups."
+      "Note: cursor overrides are expressed in window-client physical pixels."
     ]
   },
   "steps": [
@@ -48,7 +48,7 @@
     },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "set_cursor_screen_pos", "x_px": 520.0, "y_px": 420.0 },
+    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 200.0, "y_px": 200.0 },
 
     {
       "type": "drag_pointer_until",
@@ -64,4 +64,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

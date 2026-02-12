@@ -383,6 +383,18 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override using window-local client coordinates.
+    ///
+    /// This is intended for cross-window scripted diagnostics where the runner must synthesize a
+    /// global cursor location from window-local input.
+    ///
+    /// Coordinates are in window-client **physical pixels**.
+    SetCursorInWindow {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        x_px: f32,
+        y_px: f32,
+    },
     RaiseWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,

@@ -302,6 +302,18 @@ fn script_v2_roundtrip_set_cursor_screen_pos() {
 }
 
 #[test]
+fn script_v2_roundtrip_set_cursor_in_window_last_seen_other() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 100.0, "y_px": 120.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_raise_window_last_seen_other() {
     assert_script_v2_roundtrip(
         r#"{

@@ -1257,11 +1257,36 @@ fn read_touch_stamp(path: &std::path::Path) -> Option<u64> {
         .find_map(|line| line.trim().parse::<u64>().ok())
 }
 
-fn parse_cursor_screen_pos_override_json(bytes: &[u8]) -> Option<(f64, f64)> {
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DiagCursorScreenPosOverridePayload {
+    ScreenPhysical {
+        x: f64,
+        y: f64,
+    },
+    WindowClientPhysical {
+        window: fret_core::AppWindowId,
+        x: f64,
+        y: f64,
+    },
+}
+
+fn parse_cursor_screen_pos_override_payload(
+    bytes: &[u8],
+) -> Option<DiagCursorScreenPosOverridePayload> {
     let s = std::str::from_utf8(bytes).ok()?;
+    let kind = parse_json_string_field(s, "kind");
+
+    if kind.as_deref() == Some("window_client_physical") {
+        let window_ffi = parse_json_u64_field(s, "window")?;
+        let window = fret_core::AppWindowId::from(slotmap::KeyData::from_ffi(window_ffi));
+        let x = parse_json_f64_field(s, "x_px")?;
+        let y = parse_json_f64_field(s, "y_px")?;
+        return Some(DiagCursorScreenPosOverridePayload::WindowClientPhysical { window, x, y });
+    }
+
     let x = parse_json_f64_field(s, "x_px")?;
     let y = parse_json_f64_field(s, "y_px")?;
-    Some((x, y))
+    Some(DiagCursorScreenPosOverridePayload::ScreenPhysical { x, y })
 }
 
 fn parse_json_f64_field(s: &str, field: &str) -> Option<f64> {
@@ -1283,6 +1308,37 @@ fn parse_json_f64_field(s: &str, field: &str) -> Option<f64> {
         return None;
     }
     after_colon[..end].parse::<f64>().ok()
+}
+
+fn parse_json_u64_field(s: &str, field: &str) -> Option<u64> {
+    let key = format!("\"{}\"", field);
+    let i = s.find(&key)?;
+    let after_key = &s[i + key.len()..];
+    let (_before, after_colon) = after_key.split_once(':')?;
+    let after_colon = after_colon.trim_start();
+
+    let mut end = 0;
+    for (idx, ch) in after_colon.char_indices() {
+        if !matches!(ch, '0'..='9') {
+            break;
+        }
+        end = idx + ch.len_utf8();
+    }
+    if end == 0 {
+        return None;
+    }
+    after_colon[..end].parse::<u64>().ok()
+}
+
+fn parse_json_string_field(s: &str, field: &str) -> Option<String> {
+    let key = format!("\"{}\"", field);
+    let i = s.find(&key)?;
+    let after_key = &s[i + key.len()..];
+    let (_before, after_colon) = after_key.split_once(':')?;
+    let after_colon = after_colon.trim_start();
+    let after_quote = after_colon.strip_prefix('\"')?;
+    let end = after_quote.find('\"')?;
+    Some(after_quote[..end].to_string())
 }
 
 #[cfg(target_os = "linux")]
@@ -5573,13 +5629,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.diag_cursor_screen_pos_override_active = cfg.last_stamp.is_some();
             return false;
         };
-        let Some((x, y)) = parse_cursor_screen_pos_override_json(&bytes) else {
+        let Some(payload) = parse_cursor_screen_pos_override_payload(&bytes) else {
             self.diag_cursor_screen_pos_override_active = cfg.last_stamp.is_some();
             return false;
         };
 
+        let prev_valid = cfg.last_stamp.is_some();
+        let screen_pos = match payload {
+            DiagCursorScreenPosOverridePayload::ScreenPhysical { x, y } => {
+                PhysicalPosition::new(x, y)
+            }
+            DiagCursorScreenPosOverridePayload::WindowClientPhysical { window, x, y } => {
+                let Some(state) = self.windows.get(window) else {
+                    self.diag_cursor_screen_pos_override_active = prev_valid;
+                    return false;
+                };
+                let Ok(outer) = state.window.outer_position() else {
+                    self.diag_cursor_screen_pos_override_active = prev_valid;
+                    return false;
+                };
+                let deco = state.window.surface_position();
+                let origin = client_origin_screen(outer, deco);
+                PhysicalPosition::new(origin.x + x, origin.y + y)
+            }
+        };
         cfg.last_stamp = Some(stamp);
-        self.cursor_screen_pos = Some(PhysicalPosition::new(x, y));
+        self.cursor_screen_pos = Some(screen_pos);
         self.diag_cursor_screen_pos_override_active = true;
         true
     }

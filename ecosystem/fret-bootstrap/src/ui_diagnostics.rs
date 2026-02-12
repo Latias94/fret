@@ -967,6 +967,46 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::SetCursorInWindow {
+                window: target_window,
+                x_px,
+                y_px,
+            } => {
+                let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "kind": "window_client_physical",
+                    "window": target_window.data().as_ffi(),
+                    "x_px": x_px,
+                    "y_px": y_px,
+                });
+                let json_path = self.cfg.out_dir.join("cursor_screen_pos.json");
+                let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
+                if write_json(json_path, &payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_in_window-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::RaiseWindow {
                 window: target_window,
             } => {
