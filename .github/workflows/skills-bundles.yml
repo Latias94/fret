@@ -11,7 +11,11 @@ jobs:
   build:
     name: Build skills bundles
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'Latias94/fret' }}
+    if: >-
+      ${{
+        github.repository == 'Latias94/fret'
+        && (github.event_name != 'release' || startsWith(github.event.release.tag_name, 'fret-skills-v'))
+      }}
     permissions:
       contents: write
     steps:
