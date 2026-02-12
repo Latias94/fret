@@ -1150,9 +1150,9 @@ dependencies = [
 [[package]]
 name = "dugong"
 version = "0.1.0"
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 dependencies = [
  "dugong-graphlib",
- "rustc-hash 2.1.1",
  "serde",
  "serde_json",
 ]
@@ -1160,9 +1160,7 @@ dependencies = [
 [[package]]
 name = "dugong-graphlib"
 version = "0.1.0"
-dependencies = [
- "rustc-hash 2.1.1",
-]
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 
 [[package]]
 name = "dunce"
@@ -4111,6 +4109,7 @@ dependencies = [
 [[package]]
 name = "manatee"
 version = "0.1.0"
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 dependencies = [
  "indexmap",
  "nalgebra",
@@ -4234,6 +4233,7 @@ dependencies = [
 [[package]]
 name = "merman"
 version = "0.1.0"
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 dependencies = [
  "merman-core",
  "merman-render",
@@ -4243,6 +4243,7 @@ dependencies = [
 [[package]]
 name = "merman-core"
 version = "0.1.0"
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 dependencies = [
  "chrono",
  "euclid",
@@ -4266,6 +4267,7 @@ dependencies = [
 [[package]]
 name = "merman-render"
 version = "0.1.0"
+source = "git+https://github.com/Latias94/merman?rev=9ad057021f002e9251b32c2a819cc74b7b65cc30#9ad057021f002e9251b32c2a819cc74b7b65cc30"
 dependencies = [
  "base64",
  "chrono",
