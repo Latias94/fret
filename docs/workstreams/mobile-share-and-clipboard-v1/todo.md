@@ -21,6 +21,7 @@ Workstream entry:
 - [x] Implement share sheet effect plumbing for at least one runner (desktop or web) behind capabilities gating.
   - Web/WASM maps `Effect::ShareSheetShow` to `navigator.share` (best-effort): `crates/fret-launch/src/runner/web/effects.rs`
   - Web clamps capability via runtime detection: `crates/fret-launch/src/runner/web/mod.rs`
+  - Web/WASM supports `ShareItem::Bytes` via Web Share Level 2 `files` (best-effort): `crates/fret-launch/src/runner/web/effects.rs`
 - [x] Implement incoming-open token plumbing (surface “open with…” requests to app code) with bounded reads + explicit release.
   - Currently diag-only injection (OS plumbing still pending): `crates/fret-runtime/src/effect.rs`, `crates/fret-launch/src/runner/{desktop,web}/*`
 - [ ] Extend `ClipboardCapabilities` if needed to expose mobile-specific read constraints (only if proven necessary).

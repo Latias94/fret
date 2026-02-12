@@ -157,7 +157,7 @@ As of 2026-02-12:
 
 - Web/WASM:
   - Share sheet is implemented as a best-effort mapping to `navigator.share`, capability-gated via runtime detection.
-  - `ShareItem::Bytes` sharing is not implemented yet (text/url only).
+  - `ShareItem::Bytes` is mapped via Web Share Level 2 (`navigator.share({ files: [...] })`) when supported; runners may still return `Unavailable` when the browser rejects the payload.
   - Incoming-open supports diag-only request injection plus bounded `ReadAll*` and explicit `Release`; there is no OS-produced request plumbing yet.
 - Desktop:
   - Share sheet is currently a stub (completes as `Unavailable`).
