@@ -1,4 +1,5 @@
 mod agent_demo;
+mod canvas_world_layer_spike;
 mod chat_demo;
 mod file_tree_demo;
 mod mic_selector_demo;
@@ -12,6 +13,7 @@ mod workflow_chrome_demo;
 mod workflow_node_graph_demo;
 
 pub(in crate::ui) use agent_demo::*;
+pub(in crate::ui) use canvas_world_layer_spike::*;
 pub(in crate::ui) use chat_demo::*;
 pub(in crate::ui) use file_tree_demo::*;
 pub(in crate::ui) use mic_selector_demo::*;

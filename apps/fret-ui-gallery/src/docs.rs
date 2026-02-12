@@ -923,6 +923,43 @@ use fret_ui_ai::{WorkflowControls, WorkflowControlsButton, WorkflowPanel, Workfl
 ```
 "#;
 
+pub(crate) const DOC_AI_CANVAS_WORLD_LAYER_SPIKE: &str = r#"
+## AI canvas world layer (spike)
+
+This page is a **composition spike** for an XYFlow-like mental model:
+
+- a pan/zoom canvas paint pass (background + edges),
+- nodes as normal element subtrees positioned in **canvas space**,
+- optional screen-space overlays above the world.
+
+It is intentionally **not** a full workflow engine. For editor-grade graph editing, use `fret-node`.
+"#;
+
+pub(crate) const USAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = r#"
+```rust
+use fret_canvas::ui::{CanvasWorldSurfacePanelProps, canvas_world_surface_panel};
+
+let world = canvas_world_surface_panel(
+    cx,
+    CanvasWorldSurfacePanelProps::default(),
+    |p, paint_cx| {
+        // draw grid/edges using paint_cx.view.render_transform(p.bounds())
+        let _ = (p, paint_cx);
+    },
+    |cx, world_cx| {
+        // build nodes as element subtrees in canvas-space coordinates
+        let _ = (cx, world_cx);
+        Vec::new()
+    },
+    |cx, world_cx| {
+        // build overlays (screen-space)
+        let _ = (cx, world_cx);
+        Vec::new()
+    },
+);
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

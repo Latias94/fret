@@ -131,6 +131,7 @@ pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
 pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
 pub(crate) const PAGE_AI_WORKFLOW_CHROME_DEMO: &str = "ai_workflow_chrome_demo";
 pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
+pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -310,6 +311,8 @@ pub(crate) const CMD_NAV_AI_WORKFLOW_CHROME_DEMO: &str =
     "ui_gallery.nav.select.ai_workflow_chrome_demo";
 pub(crate) const CMD_NAV_AI_WORKFLOW_NODE_GRAPH_DEMO: &str =
     "ui_gallery.nav.select.ai_workflow_node_graph_demo";
+pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
+    "ui_gallery.nav.select.ai_canvas_world_layer_spike";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -1081,6 +1084,18 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_WORKFLOW_NODE_GRAPH_DEMO,
                 docs::USAGE_AI_WORKFLOW_NODE_GRAPH_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
+                "AI Canvas World Layer (Spike)",
+                "Canvas world layer / nodes as element subtrees (pan/zoom)",
+                "fret-canvas/ui (world layer helper)",
+                CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE,
+                &[
+                    "ai", "workflow", "canvas", "pan", "zoom", "world", "nodes", "spike", "demo",
+                ],
+                docs::DOC_AI_CANVAS_WORLD_LAYER_SPIKE,
+                docs::USAGE_AI_CANVAS_WORLD_LAYER_SPIKE,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
