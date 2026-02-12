@@ -515,63 +515,50 @@ impl AlertDialogFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        use fret_ui::element::LayoutQueryRegionProps;
         use fret_ui_kit::declarative::stack;
 
         let children = self.children;
-        fret_ui_kit::declarative::container_query_region_with_id(
+
+        // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint), so match it via viewport
+        // queries (ADR 0232).
+        let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
             cx,
-            "shadcn.alert_dialog.footer",
-            LayoutQueryRegionProps::default(),
-            move |cx, region_id| {
-                // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint). In editor-grade Fret
-                // layouts we prefer container queries so the footer tracks the dialog's committed
-                // width (ADR 0231).
-                //
-                // Note: layout queries are frame-lagged; default to the desktop-friendly branch
-                // while the first committed width is not yet known.
-                let sm_breakpoint = fret_ui_kit::declarative::container_width_at_least(
-                    cx,
-                    region_id,
-                    Invalidation::Layout,
-                    true,
-                    fret_ui_kit::declarative::tailwind::SM,
-                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-                );
+            Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_tailwind::SM,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
 
-                let props = decl_style::container_props(
-                    Theme::global(&*cx.app),
-                    ChromeRefinement::default(),
-                    LayoutRefinement::default().w_full(),
-                );
+        let props = decl_style::container_props(
+            Theme::global(&*cx.app),
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full(),
+        );
 
-                let mut children = children;
-                if sm_breakpoint {
-                    vec![shadcn_layout::container_hstack(
-                        cx,
-                        props,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_end()
-                            .items_center(),
-                        children,
-                    )]
-                } else {
-                    // Tailwind: `flex-col-reverse gap-2`
-                    children.reverse();
-                    vec![shadcn_layout::container_vstack(
-                        cx,
-                        props,
-                        stack::VStackProps::default()
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_full())
-                            .items_stretch(),
-                        children,
-                    )]
-                }
-            },
-        )
+        let mut children = children;
+        if sm_breakpoint {
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_end()
+                    .items_center(),
+                children,
+            )
+        } else {
+            // Tailwind: `flex-col-reverse gap-2`
+            children.reverse();
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_stretch(),
+                children,
+            )
+        }
     }
 }
 
@@ -795,6 +782,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
+    use fret_ui::elements::bounds_for_element;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -990,6 +978,185 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_alert_dialog_frame_with_footer(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let open_for_dialog = open.clone();
+                let open_for_cancel = open.clone();
+                let open_for_action = open.clone();
+
+                let alert = AlertDialog::new(open_for_dialog).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let cancel = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cx.pressable_set_bool(&open_for_cancel, false);
+                                cancel_id_out.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let action = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(200.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cx.pressable_set_bool(&open_for_action, false);
+                                action_id_out.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let footer = AlertDialogFooter::new(vec![cancel, action]).into_element(cx);
+                        AlertDialogContent::new(vec![footer]).into_element(cx)
+                    },
+                );
+
+                vec![alert]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    #[test]
+    fn alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let cancel_id = Rc::new(Cell::new(None));
+        let action_id = Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+
+        // Base viewport: vertical stack (col-reverse => action above cancel).
+        let base_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(600.0)),
+        );
+        // Viewport queries read the committed per-window environment snapshot, so render two
+        // frames to allow the width to commit before asserting layout.
+        for frame in 1..=2 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_footer(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                base_bounds,
+                open.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, base_bounds, 1.0);
+        }
+
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+        assert!(action_bounds.origin.y.0 < cancel_bounds.origin.y.0);
+
+        // `sm:` viewport: horizontal row (cancel left of action).
+        let sm_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        for frame in 3..=4 {
+            app.set_frame_id(FrameId(frame));
+            render_alert_dialog_frame_with_footer(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                sm_bounds,
+                open.clone(),
+                cancel_id.clone(),
+                action_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, sm_bounds, 1.0);
+        }
+
+        let cancel_bounds = bounds_for_element(
+            &mut app,
+            window,
+            cancel_id.get().expect("cancel element id"),
+        )
+        .expect("cancel bounds");
+        let action_bounds = bounds_for_element(
+            &mut app,
+            window,
+            action_id.get().expect("action element id"),
+        )
+        .expect("action bounds");
+        assert!((cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 0.5);
+        assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
     }
 
     fn render_alert_dialog_frame_with_auto_focus_hooks(
