@@ -40,6 +40,40 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
     .test_id("ui-ai-workflow-toolbar-demo-root")
     .into_element(cx);
 
+    let node = ui_ai::WorkflowNode::new([
+        ui_ai::WorkflowNodeHeader::new([
+            ui_ai::WorkflowNodeTitle::new("Summarize docs").into_element(cx),
+            ui_ai::WorkflowNodeDescription::new("Chrome-only node wrapper.").into_element(cx),
+            ui_ai::WorkflowNodeAction::new([shadcn::Button::new("Details")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .test_id("ui-ai-workflow-node-demo-details")
+                .into_element(cx)])
+            .test_id("ui-ai-workflow-node-demo-action")
+            .into_element(cx),
+        ])
+        .test_id("ui-ai-workflow-node-demo-header")
+        .into_element(cx),
+        ui_ai::WorkflowNodeContent::new([
+            cx.text("Node content is app-owned; this is the shadcn-aligned chrome surface.")
+        ])
+        .test_id("ui-ai-workflow-node-demo-content")
+        .into_element(cx),
+        ui_ai::WorkflowNodeFooter::new([cx.text("Footer area (optional).")])
+            .test_id("ui-ai-workflow-node-demo-footer")
+            .into_element(cx),
+    ])
+    .handles(ui_ai::WorkflowNodeHandles {
+        target: true,
+        source: true,
+    })
+    .test_id("ui-ai-workflow-node-demo-root")
+    .refine_layout(
+        LayoutRefinement::default()
+            .max_w(MetricRef::Px(Px(360.0)))
+            .min_w_0(),
+    )
+    .into_element(cx);
+
     let panel_body = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -57,6 +91,7 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                 ),
                 cx.text("Workflow panel (chrome-only)."),
                 cx.text("Apps own node/canvas engines and interaction policy."),
+                node,
             ]
         },
     );
