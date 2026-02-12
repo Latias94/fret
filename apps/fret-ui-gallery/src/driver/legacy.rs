@@ -2060,7 +2060,9 @@ pub fn build_app() -> App {
     }
 
     let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
+    let mut caps = PlatformCapabilities::default();
+    caps.shell.share_sheet = true;
+    app.set_global(caps);
     app.set_global(UiGalleryRecentItemsService::default());
     shadcn::shadcn_themes::apply_shadcn_new_york_v4(
         &mut app,
