@@ -8682,10 +8682,14 @@ fn ui_gallery_select_suite_scripts() -> [&'static str; 9] {
     ]
 }
 
-fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 13] {
+fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 17] {
     [
+        "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
+        "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
+        "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
+        "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
