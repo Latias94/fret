@@ -177,13 +177,14 @@ Status: Defer until a concrete consumer exists.
 
 Scope:
 
-- `audio-player`, `mic-selector`, `speech-input`, `transcription`, `voice-selector`.
+- `audio-player` (UI-only chrome is ported; playback backend is app-owned).
+- `mic-selector`, `speech-input`, `transcription`, `voice-selector`.
 
 Acceptance criteria:
 
 - Backends/policies are explicit; UI remains intent-driven (apps own side effects).
 
-Status: Defer until a concrete consumer exists.
+Status: Partial (UI-only `audio-player` chrome; backends + other voice surfaces deferred).
 
 ## Next-step checklist (recommended weekly cadence)
 

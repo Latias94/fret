@@ -81,13 +81,13 @@ Legend:
 | `package-info.tsx` | `fret-ui-ai` | `package_info.rs` | Ported (prototype) | Package card (name/change badge + version row + deps list building blocks). |
 | `open-in-chat.tsx` | `fret-ui-ai` | `open_in_chat.rs` | Ported (prototype) | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl` (URLs match upstream). |
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
+| `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
 
 ## Known upstream files not yet ported
 
 As of the snapshot above, these upstream surfaces do not exist as `fret-ui-ai` ports yet:
 
 - `agent.tsx`
-- `audio-player.tsx`
 - `jsx-preview.tsx` (likely out of scope for Rust)
 - `persona.tsx`
 - `sandbox.tsx`

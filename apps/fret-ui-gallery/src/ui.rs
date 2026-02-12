@@ -710,6 +710,7 @@ fn page_preview(
         PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
         PAGE_AI_OPEN_IN_CHAT_DEMO => preview_ai_open_in_chat_demo(cx, theme),
         PAGE_AI_TASK_DEMO => preview_ai_task_demo(cx, theme),
+        PAGE_AI_AUDIO_PLAYER_DEMO => preview_ai_audio_player_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -17880,6 +17881,179 @@ fn preview_ai_task_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Task (AI Elements)"), task],
+    )]
+}
+
+fn preview_ai_audio_player_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+    use fret_ui_shadcn::ButtonGroupItem;
+
+    #[derive(Default)]
+    struct DemoModels {
+        playing: Option<Model<bool>>,
+        muted: Option<Model<bool>>,
+        time: Option<Model<Vec<f32>>>,
+        duration: Option<Model<f32>>,
+        volume: Option<Model<Vec<f32>>>,
+    }
+
+    let needs_init = cx.with_state(DemoModels::default, |st| {
+        st.playing.is_none()
+            || st.muted.is_none()
+            || st.time.is_none()
+            || st.duration.is_none()
+            || st.volume.is_none()
+    });
+    if needs_init {
+        let playing = cx.app.models_mut().insert(false);
+        let muted = cx.app.models_mut().insert(false);
+        let time = cx.app.models_mut().insert(vec![0.0_f32]);
+        let duration = cx.app.models_mut().insert(93.0_f32);
+        let volume = cx.app.models_mut().insert(vec![0.8_f32]);
+        cx.with_state(DemoModels::default, move |st| {
+            st.playing = Some(playing.clone());
+            st.muted = Some(muted.clone());
+            st.time = Some(time.clone());
+            st.duration = Some(duration.clone());
+            st.volume = Some(volume.clone());
+        });
+    }
+
+    let (playing, muted, time, duration, volume) = cx.with_state(DemoModels::default, |st| {
+        (
+            st.playing.clone().expect("playing model"),
+            st.muted.clone().expect("muted model"),
+            st.time.clone().expect("time model"),
+            st.duration.clone().expect("duration model"),
+            st.volume.clone().expect("volume model"),
+        )
+    });
+
+    let playing_now = cx
+        .get_model_copied(&playing, Invalidation::Layout)
+        .unwrap_or(false);
+    let muted_now = cx
+        .get_model_copied(&muted, Invalidation::Layout)
+        .unwrap_or(false);
+    let time_now = cx
+        .get_model_cloned(&time, Invalidation::Layout)
+        .unwrap_or_default()
+        .first()
+        .copied()
+        .unwrap_or(0.0);
+
+    let playing_marker = cx.text(format!("playing={playing_now}")).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if playing_now {
+                "ui-ai-audio-player-demo-playing-true"
+            } else {
+                "ui-ai-audio-player-demo-playing-false"
+            }),
+    );
+
+    let muted_marker = cx.text(format!("muted={muted_now}")).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if muted_now {
+                "ui-ai-audio-player-demo-muted-true"
+            } else {
+                "ui-ai-audio-player-demo-muted-false"
+            }),
+    );
+
+    let time_marker = cx.text(format!("time={time_now:.0}")).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if time_now > 0.5 {
+                "ui-ai-audio-player-demo-time-nonzero"
+            } else {
+                "ui-ai-audio-player-demo-time-zero"
+            }),
+    );
+
+    let player = ui_ai::AudioPlayer::new()
+        .playing_model(playing.clone())
+        .muted_model(muted.clone())
+        .time_model(time.clone())
+        .duration_secs_model(duration.clone())
+        .volume_model(volume.clone())
+        .test_id_root("ui-ai-audio-player-demo-root")
+        .into_element_with_children(cx, move |cx, _controller| {
+            let play: ButtonGroupItem = ui_ai::AudioPlayerPlayButton::new()
+                .test_id("ui-ai-audio-player-demo-play")
+                .into_element(cx)
+                .into();
+
+            let back: ButtonGroupItem = ui_ai::AudioPlayerSeekBackwardButton::new()
+                .test_id("ui-ai-audio-player-demo-seek-back")
+                .into_element(cx)
+                .into();
+
+            let forward: ButtonGroupItem = ui_ai::AudioPlayerSeekForwardButton::new()
+                .test_id("ui-ai-audio-player-demo-seek-forward")
+                .into_element(cx)
+                .into();
+
+            let time_display: ButtonGroupItem = ui_ai::AudioPlayerTimeDisplay::new()
+                .test_id("ui-ai-audio-player-demo-time-display")
+                .into_element(cx)
+                .into();
+
+            let time_range: ButtonGroupItem = ui_ai::AudioPlayerTimeRange::new()
+                .test_id("ui-ai-audio-player-demo-time")
+                .into_element(cx)
+                .into();
+
+            let duration_display: ButtonGroupItem = ui_ai::AudioPlayerDurationDisplay::new()
+                .test_id("ui-ai-audio-player-demo-duration-display")
+                .into_element(cx)
+                .into();
+
+            let mute: ButtonGroupItem = ui_ai::AudioPlayerMuteButton::new()
+                .test_id("ui-ai-audio-player-demo-mute")
+                .into_element(cx)
+                .into();
+
+            let volume: ButtonGroupItem = ui_ai::AudioPlayerVolumeRange::new()
+                .test_id("ui-ai-audio-player-demo-volume")
+                .into_element(cx)
+                .into();
+
+            let bar = ui_ai::AudioPlayerControlBar::new([
+                play,
+                back,
+                forward,
+                time_display,
+                time_range,
+                duration_display,
+                mute,
+                volume,
+            ])
+            .into_element(cx);
+
+            vec![bar, playing_marker, muted_marker, time_marker]
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("AudioPlayer (AI Elements)"),
+                cx.text("UI-only chrome demo (playback is app-owned)."),
+                player,
+            ]
+        },
     )]
 }
 

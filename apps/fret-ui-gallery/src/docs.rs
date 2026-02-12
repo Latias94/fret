@@ -674,6 +674,29 @@ use fret_ui_ai::{Task, TaskContent, TaskItem, TaskItemFile, TaskTrigger};
 ```
 "#;
 
+pub(crate) const DOC_AI_AUDIO_PLAYER_DEMO: &str = r#"
+## AI audio player (demo)
+
+This page demonstrates an AI Elements-aligned `AudioPlayer` chrome surface:
+
+- outline icon controls (play/pause, seek, mute),
+- time + duration labels,
+- time and volume sliders.
+
+Note: this is a UI-only port. Apps are expected to own actual audio playback and drive the exposed
+models (or attach callbacks to mirror changes into a backend).
+"#;
+
+pub(crate) const USAGE_AI_AUDIO_PLAYER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    AudioPlayer, AudioPlayerControlBar, AudioPlayerDurationDisplay, AudioPlayerMuteButton,
+    AudioPlayerPlayButton, AudioPlayerSeekBackwardButton, AudioPlayerSeekForwardButton,
+    AudioPlayerTimeDisplay, AudioPlayerTimeRange, AudioPlayerVolumeRange,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

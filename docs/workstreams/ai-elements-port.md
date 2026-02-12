@@ -113,6 +113,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`
   - `AI task (demo)` (`ai_task_demo`): `Task` collapsible demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`
+  - `AI audio player (demo)` (`ai_audio_player_demo`): `AudioPlayer` chrome demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
@@ -699,7 +701,7 @@ Legend:
 | `file-tree.tsx` | `fret-ui-ai` + `fret-ui-kit` | `ecosystem/fret-ui-ai/src/elements/file_tree.rs` | Done | Nested file tree surface (small trees) + per-row actions + UI Gallery demo + diag gates; future: virtualized outline path via UI Kit tree recipes. |
 | `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Done | Artifact container surface (header + actions + scrollable content) + UI Gallery demo + diag gate. |
 | `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Prototype | Renders an `ImageId` (decode/upload policy remains app-owned). |
-| `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Defer | Depends on audio backend + buffering policy. |
+| `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Prototype | UI-only chrome port (controls + time/volume sliders) + UI Gallery demo + diag gate. Playback remains app-owned. |
 | `shimmer.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/shimmer.rs` | Done | Animated text shimmer surface (`duration` + `spread`) + UI Gallery demo + diag gate. |
 | `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestions.rs` | Done | Suggestions row + pill surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`). |

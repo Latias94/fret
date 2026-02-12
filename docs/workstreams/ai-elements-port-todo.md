@@ -101,7 +101,8 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `audio-player` / `mic-selector` / `speech-input` / `transcription` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+| `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
+| `mic-selector` / `speech-input` / `transcription` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
 
 ### M1 — Chat surfaces (usable app kit)
 
@@ -279,7 +280,8 @@ Only implement if it is mostly “styling recipes over existing crates”:
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
 - [ ] AIEL-MVP5-voice-001 Decide whether voice UI belongs in `fret-ui-ai` or a sibling crate (`fret-ui-voice`).
-- [ ] AIEL-MVP5-voice-002 If in scope: `AudioPlayer`, `MicSelector`, `Transcription`, `VoiceSelector`.
+- [~] AIEL-MVP5-voice-002 Port `AudioPlayer` chrome (UI-only) + UI Gallery demo + diag gate.
+- [ ] AIEL-MVP5-voice-003 If in scope: `MicSelector`, `Transcription`, `VoiceSelector` (backend policy app-owned).
 
 ## Upstream inventory (keep honest)
 
