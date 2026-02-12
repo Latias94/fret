@@ -151,6 +151,9 @@ Recommendation:
   - `ecosystem/fret-canvas/src/ui/input_exempt.rs`: `canvas_input_exempt_region` (`.nowheel` / `.nopan` equivalents).
   - `ecosystem/fret-canvas/src/ui/pan_zoom.rs`: `editor_pan_zoom_canvas_surface_panel_with_marquee_selection`
     (selection-on-drag / marquee overlay).
+  - For **world-layer nodes as element subtrees**, prefer:
+    - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+    - Rationale: marquee chrome must render above node subtrees (canvas-paint marquee would sit behind).
 
 ### Gap F — World-layer node bounds → viewport helpers (fit view) (partially closed)
 
