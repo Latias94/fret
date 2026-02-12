@@ -319,6 +319,50 @@ fn merge_floating_into_rejects_target_inside_same_floating_subtree() {
 }
 
 #[test]
+fn merge_window_into_rejects_non_tabs_target_to_avoid_panel_loss() {
+    let w1 = window(1);
+    let w2 = window(2);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+
+    let source_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w1, source_tabs);
+
+    let target_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c.clone()],
+        active: 0,
+    });
+    let other = g.insert_node(DockNode::Tabs {
+        tabs: vec![PanelKey::new("test.other")],
+        active: 0,
+    });
+    let target_root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![target_tabs, other],
+        fractions: vec![0.5, 0.5],
+    });
+    g.set_window_root(w2, target_root);
+
+    assert!(!g.apply_op(&DockOp::MergeWindowInto {
+        source_window: w1,
+        target_window: w2,
+        target_tabs: target_root,
+    }));
+
+    assert_eq!(g.collect_panels_in_window(w1).len(), 2);
+    assert!(g.find_panel_in_window(w1, &panel_a).is_some());
+    assert!(g.find_panel_in_window(w1, &panel_b).is_some());
+    assert!(g.window_root(w1).is_some());
+    assert_eq!(g.collect_panels_in_window(w2).len(), 2);
+}
+
+#[test]
 fn float_tabs_in_window_creates_floating_container_with_tabs() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
