@@ -1,5 +1,5 @@
 use fret_core::RenderTargetId;
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer};
+use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetMetadata, Renderer};
 
 use super::EngineFrameUpdate;
 
@@ -67,6 +67,7 @@ impl ImportedViewportRenderTarget {
             size,
             format: self.format,
             color_space: self.color_space,
+            metadata: RenderTargetMetadata::default(),
         };
         self.id = renderer.register_render_target(desc);
         self.id
@@ -90,6 +91,7 @@ impl ImportedViewportRenderTarget {
             size,
             format: self.format,
             color_space: self.color_space,
+            metadata: RenderTargetMetadata::default(),
         };
         update.update_render_target(self.id, desc);
     }

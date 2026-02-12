@@ -218,13 +218,15 @@ Done (v1 follow-ups):
   - Evidence: `crates/fret-launch/src/runner/common/engine_frame_update.rs` (`EngineFrameKeepalive`),
     submission boundaries: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`,
     `crates/fret-launch/src/runner/web/render_loop.rs`.
+- Metadata v1: minimal descriptor metadata seam for real imports (alpha semantics, orientation/transform,
+  frame timing hints for diagnostics).
+  - Evidence: `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata`),
+    `crates/fret-render-wgpu/src/targets.rs` (`RenderTargetDescriptor.metadata`).
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
 - Native v1: a decode/import path with an explicit copy/zero-copy policy and deterministic fallback.
-- Metadata v1: decide and implement the minimal descriptor seam needed by real imports (alpha semantics,
-  orientation/transform, frame timing hints for diagnostics).
 
 Acceptance criteria (v1):
 
