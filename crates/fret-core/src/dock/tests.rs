@@ -9,6 +9,173 @@ fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
     Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DockForestStats {
+    reachable_nodes: usize,
+    max_split_depth: usize,
+}
+
+fn assert_canonical_window_forest(g: &DockGraph, window: AppWindowId) -> DockForestStats {
+    use std::collections::HashSet;
+
+    fn assert_canonical_subtree(
+        g: &DockGraph,
+        node: DockNodeId,
+        split_depth: usize,
+        reachable: &mut HashSet<DockNodeId>,
+        max_split_depth: &mut usize,
+    ) {
+        if !reachable.insert(node) {
+            panic!("dock graph has a cycle or duplicated edge: node={node:?}");
+        }
+
+        let Some(n) = g.node(node) else {
+            panic!("dock graph references a missing node: node={node:?}");
+        };
+
+        match n {
+            DockNode::Tabs { tabs, active } => {
+                assert!(!tabs.is_empty(), "Tabs must be non-empty (node={node:?})");
+                assert!(
+                    *active < tabs.len(),
+                    "Tabs.active out of bounds (node={node:?} active={active} len={})",
+                    tabs.len()
+                );
+            }
+            DockNode::Floating { child } => {
+                assert_canonical_subtree(g, *child, split_depth, reachable, max_split_depth);
+            }
+            DockNode::Split {
+                axis,
+                children,
+                fractions,
+            } => {
+                *max_split_depth = (*max_split_depth).max(split_depth.saturating_add(1));
+
+                assert!(
+                    children.len() >= 2,
+                    "Split must have 2+ children (node={node:?} len={})",
+                    children.len()
+                );
+                assert_eq!(
+                    children.len(),
+                    fractions.len(),
+                    "Split children/fractions length mismatch (node={node:?})"
+                );
+
+                let mut sum = 0.0f32;
+                for (i, f) in fractions.iter().enumerate() {
+                    assert!(
+                        f.is_finite(),
+                        "Split fraction must be finite (node={node:?} i={i} f={f})"
+                    );
+                    assert!(
+                        *f >= 0.0,
+                        "Split fraction must be non-negative (node={node:?} i={i} f={f})"
+                    );
+                    sum += *f;
+                }
+                assert!(
+                    (sum - 1.0).abs() <= 1e-3,
+                    "Split fractions must be normalized (node={node:?} sum={sum})"
+                );
+
+                for child in children {
+                    if let Some(DockNode::Split {
+                        axis: child_axis, ..
+                    }) = g.node(*child)
+                    {
+                        assert!(
+                            *child_axis != *axis,
+                            "Nested same-axis splits must be flattened (parent={node:?} axis={axis:?} child={child:?})"
+                        );
+                    }
+                    assert_canonical_subtree(
+                        g,
+                        *child,
+                        split_depth.saturating_add(1),
+                        reachable,
+                        max_split_depth,
+                    );
+                }
+            }
+        }
+    }
+
+    let mut reachable: HashSet<DockNodeId> = HashSet::new();
+    let mut max_split_depth: usize = 0;
+
+    if let Some(root) = g.window_root(window) {
+        assert_canonical_subtree(g, root, 0, &mut reachable, &mut max_split_depth);
+    }
+
+    for w in g.floating_windows(window) {
+        let floating = w.floating;
+        let Some(DockNode::Floating { .. }) = g.node(floating) else {
+            panic!("floating_windows entry must point to a Floating node: node={floating:?}");
+        };
+        assert_canonical_subtree(g, floating, 0, &mut reachable, &mut max_split_depth);
+    }
+
+    DockForestStats {
+        reachable_nodes: reachable.len(),
+        max_split_depth,
+    }
+}
+
+fn assert_canonical_all_windows(g: &DockGraph) -> DockForestStats {
+    use std::collections::HashSet;
+
+    let windows = windows_including_floatings(g);
+    let mut overall = DockForestStats {
+        reachable_nodes: 0,
+        max_split_depth: 0,
+    };
+
+    let mut seen_panels: HashSet<PanelKey> = HashSet::new();
+    for w in windows {
+        let stats = assert_canonical_window_forest(g, w);
+        overall.reachable_nodes = overall.reachable_nodes.max(stats.reachable_nodes);
+        overall.max_split_depth = overall.max_split_depth.max(stats.max_split_depth);
+
+        for panel in g.collect_panels_in_window(w) {
+            assert!(
+                seen_panels.insert(panel.clone()),
+                "panel appears multiple times across windows: {:?}",
+                panel.kind.0
+            );
+            assert!(
+                g.find_panel_in_window(w, &panel).is_some(),
+                "panel lookup must succeed for collected panels: window={w:?} panel={:?}",
+                panel.kind.0
+            );
+        }
+    }
+
+    overall
+}
+
+fn windows_including_floatings(g: &DockGraph) -> Vec<AppWindowId> {
+    use std::collections::HashSet;
+
+    let mut out: Vec<AppWindowId> = Vec::new();
+    let mut seen: HashSet<AppWindowId> = HashSet::new();
+
+    for w in g.window_roots.keys().copied() {
+        if seen.insert(w) {
+            out.push(w);
+        }
+    }
+    for w in g.window_floatings.keys().copied() {
+        if seen.insert(w) {
+            out.push(w);
+        }
+    }
+
+    out.sort_by_key(|w| w.data().as_ffi());
+    out
+}
+
 #[test]
 fn compute_layout_repairs_mismatched_fraction_lengths_without_truncating_children() {
     use std::collections::HashMap;
@@ -280,6 +447,506 @@ fn dock_layout_json_roundtrips_and_validates() {
     let mut g2 = DockGraph::new();
     assert!(g2.import_layout_for_windows(&roundtripped, &windows));
     assert_eq!(g2.collect_panels_in_window(w), vec![panel_a, panel_b]);
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DockOpSequenceSuite {
+    schema_version: u32,
+    cases: Vec<DockOpSequenceCase>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DockOpSequenceCase {
+    id: String,
+    #[serde(flatten)]
+    spec: DockOpSequenceCaseSpec,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum DockOpSequenceCaseSpec {
+    Explicit {
+        panels: Vec<String>,
+        steps: Vec<DockOpSequenceStep>,
+        expect: DockOpSequenceExpect,
+    },
+    Random {
+        random: DockOpSequenceRandom,
+        expect: DockOpSequenceExpect,
+    },
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DockOpSequenceRandom {
+    seed: u64,
+    steps: u32,
+    panel_count: u32,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DockOpSequenceExpect {
+    max_reachable_nodes: usize,
+    max_split_depth: usize,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum DockOpSequenceStep {
+    MovePanel {
+        panel: String,
+        target_panel: String,
+        zone: String,
+    },
+}
+
+#[test]
+fn dock_op_sequence_fixtures_hold_canonical_invariants() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/dock/fixtures/dock_op_sequences_v1.json"
+    ));
+    let suite: DockOpSequenceSuite =
+        serde_json::from_str(raw).expect("parse dock op sequence fixtures");
+    assert_eq!(suite.schema_version, 1);
+
+    for case in suite.cases {
+        run_dock_op_sequence_case(&case);
+    }
+}
+
+fn run_dock_op_sequence_case(case: &DockOpSequenceCase) {
+    match &case.spec {
+        DockOpSequenceCaseSpec::Explicit {
+            panels,
+            steps,
+            expect,
+        } => {
+            let (mut g, main_window, _panels) = make_initial_nary_split_graph(panels);
+            assert_canonical_all_windows(&g);
+
+            for (ix, step) in steps.iter().enumerate() {
+                let ok = apply_fixture_step(&mut g, main_window, step);
+                assert!(
+                    ok,
+                    "fixture step failed (case_id={} step_index={} step={:?})",
+                    case.id, ix, step
+                );
+                let stats = assert_canonical_all_windows(&g);
+                assert!(
+                    stats.reachable_nodes <= expect.max_reachable_nodes,
+                    "reachable_nodes exceeded bound (case_id={} step_index={} reachable_nodes={} max={})",
+                    case.id,
+                    ix,
+                    stats.reachable_nodes,
+                    expect.max_reachable_nodes
+                );
+                assert!(
+                    stats.max_split_depth <= expect.max_split_depth,
+                    "max_split_depth exceeded bound (case_id={} step_index={} max_split_depth={} max={})",
+                    case.id,
+                    ix,
+                    stats.max_split_depth,
+                    expect.max_split_depth
+                );
+            }
+        }
+        DockOpSequenceCaseSpec::Random { random, expect } => {
+            let panels: Vec<String> = (0..random.panel_count)
+                .map(|ix| format!("test.p{ix}"))
+                .collect();
+            let (mut g, _main_window, _panels) = make_initial_nary_split_graph(&panels);
+            assert_canonical_all_windows(&g);
+
+            let mut rng = XorShift64::new(random.seed);
+            let mut successful_steps: u32 = 0;
+            let mut attempts: u32 = 0;
+            let max_attempts = random.steps.saturating_mul(25).max(1);
+            let mut failed_ops: std::collections::BTreeMap<&'static str, u32> =
+                std::collections::BTreeMap::new();
+            let mut last_failed_op: Option<DockOp> = None;
+            let mut last_ops: std::collections::VecDeque<DockOp> =
+                std::collections::VecDeque::new();
+
+            while successful_steps < random.steps && attempts < max_attempts {
+                attempts = attempts.saturating_add(1);
+
+                let total_panels_before: usize = windows_including_floatings(&g)
+                    .iter()
+                    .map(|w| g.collect_panels_in_window(*w).len())
+                    .sum();
+                assert!(
+                    total_panels_before > 0,
+                    "random case lost all panels unexpectedly (case_id={} successful_steps={} attempts={})",
+                    case.id,
+                    successful_steps,
+                    attempts
+                );
+
+                let op = generate_random_op(&mut rng, &g);
+                let ok = g.apply_op(&op);
+                if last_ops.len() >= 32 {
+                    let _ = last_ops.pop_front();
+                }
+                last_ops.push_back(op.clone());
+                let stats = assert_canonical_all_windows(&g);
+                assert!(
+                    stats.reachable_nodes <= expect.max_reachable_nodes,
+                    "reachable_nodes exceeded bound (case_id={} successful_steps={} reachable_nodes={} max={})",
+                    case.id,
+                    successful_steps,
+                    stats.reachable_nodes,
+                    expect.max_reachable_nodes
+                );
+                assert!(
+                    stats.max_split_depth <= expect.max_split_depth,
+                    "max_split_depth exceeded bound (case_id={} successful_steps={} max_split_depth={} max={})",
+                    case.id,
+                    successful_steps,
+                    stats.max_split_depth,
+                    expect.max_split_depth
+                );
+
+                let total_panels_after: usize = windows_including_floatings(&g)
+                    .iter()
+                    .map(|w| g.collect_panels_in_window(*w).len())
+                    .sum();
+                assert_eq!(
+                    total_panels_after,
+                    total_panels_before,
+                    "random case unexpectedly changed panel count (case_id={} successful_steps={} attempts={} before={} after={} op={:?} last_ops={:?})",
+                    case.id,
+                    successful_steps,
+                    attempts,
+                    total_panels_before,
+                    total_panels_after,
+                    op,
+                    last_ops,
+                );
+                if ok {
+                    successful_steps = successful_steps.saturating_add(1);
+                } else {
+                    let kind: &'static str = match &op {
+                        DockOp::SetActiveTab { .. } => "set_active_tab",
+                        DockOp::ClosePanel { .. } => "close_panel",
+                        DockOp::MovePanel { .. } => "move_panel",
+                        DockOp::MoveTabs { .. } => "move_tabs",
+                        DockOp::FloatPanelToWindow { .. } => "float_panel_to_window",
+                        DockOp::RequestFloatPanelToNewWindow { .. } => {
+                            "request_float_panel_to_new_window"
+                        }
+                        DockOp::FloatPanelInWindow { .. } => "float_panel_in_window",
+                        DockOp::FloatTabsInWindow { .. } => "float_tabs_in_window",
+                        DockOp::SetFloatingRect { .. } => "set_floating_rect",
+                        DockOp::RaiseFloating { .. } => "raise_floating",
+                        DockOp::MergeFloatingInto { .. } => "merge_floating_into",
+                        DockOp::MergeWindowInto { .. } => "merge_window_into",
+                        DockOp::SetSplitFractions { .. } => "set_split_fractions",
+                        DockOp::SetSplitFractionsMany { .. } => "set_split_fractions_many",
+                        DockOp::SetSplitFractionTwo { .. } => "set_split_fraction_two",
+                    };
+                    *failed_ops.entry(kind).or_default() += 1;
+                    last_failed_op = Some(op);
+                }
+            }
+
+            if successful_steps != random.steps {
+                panic!(
+                    "random case did not reach desired step count (case_id={} successful_steps={} desired_steps={} attempts={} max_attempts={} failed_ops={:?} last_failed_op={:?})",
+                    case.id,
+                    successful_steps,
+                    random.steps,
+                    attempts,
+                    max_attempts,
+                    failed_ops,
+                    last_failed_op,
+                );
+            }
+        }
+    }
+}
+
+fn make_initial_nary_split_graph(panels: &[String]) -> (DockGraph, AppWindowId, Vec<PanelKey>) {
+    let w = window(1);
+    let panel_keys: Vec<PanelKey> = panels.iter().map(|s| PanelKey::new(s)).collect();
+
+    let mut g = DockGraph::new();
+    if panel_keys.is_empty() {
+        return (g, w, panel_keys);
+    }
+
+    let children: Vec<DockNodeId> = panel_keys
+        .iter()
+        .map(|p| {
+            g.insert_node(DockNode::Tabs {
+                tabs: vec![p.clone()],
+                active: 0,
+            })
+        })
+        .collect();
+
+    let fractions = vec![1.0 / children.len() as f32; children.len()];
+    let root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children,
+        fractions,
+    });
+    g.set_window_root(w, root);
+    g.simplify_window_forest(w);
+
+    (g, w, panel_keys)
+}
+
+fn apply_fixture_step(
+    g: &mut DockGraph,
+    _main_window: AppWindowId,
+    step: &DockOpSequenceStep,
+) -> bool {
+    match step {
+        DockOpSequenceStep::MovePanel {
+            panel,
+            target_panel,
+            zone,
+        } => {
+            let panel = PanelKey::new(panel);
+            let target_panel = PanelKey::new(target_panel);
+            let windows = windows_including_floatings(g);
+            let (source_window, _) =
+                find_panel_any_window(g, &windows, &panel).expect("panel exists");
+            let (target_window, (target_tabs, _)) =
+                find_panel_any_window(g, &windows, &target_panel).expect("target panel exists");
+
+            let zone = parse_drop_zone(zone).unwrap_or(DropZone::Center);
+            g.apply_op(&DockOp::MovePanel {
+                source_window,
+                panel,
+                target_window,
+                target_tabs,
+                zone,
+                insert_index: None,
+            })
+        }
+    }
+}
+
+fn find_panel_any_window(
+    g: &DockGraph,
+    windows: &[AppWindowId],
+    panel: &PanelKey,
+) -> Option<(AppWindowId, (DockNodeId, usize))> {
+    windows
+        .iter()
+        .find_map(|w| g.find_panel_in_window(*w, panel).map(|found| (*w, found)))
+}
+
+fn parse_drop_zone(raw: &str) -> Option<DropZone> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "left" => Some(DropZone::Left),
+        "right" => Some(DropZone::Right),
+        "top" => Some(DropZone::Top),
+        "bottom" => Some(DropZone::Bottom),
+        "center" => Some(DropZone::Center),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct XorShift64 {
+    state: u64,
+}
+
+impl XorShift64 {
+    fn new(seed: u64) -> Self {
+        Self { state: seed.max(1) }
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut x = self.state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        self.state = x;
+        x
+    }
+
+    fn next_f32(&mut self) -> f32 {
+        let v = self.next_u64() >> 40;
+        (v as f32) / ((1u64 << 24) as f32)
+    }
+
+    fn gen_range_usize(&mut self, upper: usize) -> usize {
+        if upper <= 1 {
+            return 0;
+        }
+        (self.next_u64() as usize) % upper
+    }
+}
+
+fn generate_random_op(rng: &mut XorShift64, g: &DockGraph) -> DockOp {
+    let windows = windows_including_floatings(g);
+    if windows.is_empty() {
+        return DockOp::SetSplitFractionsMany {
+            updates: Vec::new(),
+        };
+    }
+
+    let existing_panels: Vec<PanelKey> = windows
+        .iter()
+        .flat_map(|w| g.collect_panels_in_window(*w))
+        .collect();
+    if existing_panels.is_empty() {
+        return DockOp::SetSplitFractionsMany {
+            updates: Vec::new(),
+        };
+    }
+
+    let pick_existing_panel = |rng: &mut XorShift64| -> PanelKey {
+        existing_panels[rng.gen_range_usize(existing_panels.len())].clone()
+    };
+
+    let action = rng.next_f32();
+    if action < 0.60 {
+        // MovePanel (mostly edge docks).
+        let panel = pick_existing_panel(rng);
+        let target_panel = pick_existing_panel(rng);
+
+        let Some((source_window, _)) = find_panel_any_window(g, &windows, &panel) else {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        };
+        let Some((target_window, (target_tabs, _))) =
+            find_panel_any_window(g, &windows, &target_panel)
+        else {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        };
+
+        let zone = if action < 0.45 {
+            if rng.next_f32() < 0.5 {
+                DropZone::Left
+            } else {
+                DropZone::Right
+            }
+        } else if rng.next_f32() < 0.2 {
+            if rng.next_f32() < 0.5 {
+                DropZone::Top
+            } else {
+                DropZone::Bottom
+            }
+        } else {
+            DropZone::Center
+        };
+
+        return DockOp::MovePanel {
+            source_window,
+            panel,
+            target_window,
+            target_tabs,
+            zone,
+            insert_index: None,
+        };
+    }
+
+    if action < 0.75 {
+        // Prefer MovePanel over MoveTabs in randomized sequences to avoid losing reachability
+        // when a tabs node is cleared and then used as an edge-dock target.
+        let panel = pick_existing_panel(rng);
+        let target_panel = pick_existing_panel(rng);
+
+        let Some((source_window, _)) = find_panel_any_window(g, &windows, &panel) else {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        };
+        let Some((target_window, (target_tabs, _))) =
+            find_panel_any_window(g, &windows, &target_panel)
+        else {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        };
+
+        return DockOp::MovePanel {
+            source_window,
+            panel,
+            target_window,
+            target_tabs,
+            zone: DropZone::Center,
+            insert_index: None,
+        };
+    }
+
+    if action < 0.88 {
+        // FloatPanelInWindow (in-window floatings).
+        let panel = pick_existing_panel(rng);
+        let Some((source_window, _)) = find_panel_any_window(g, &windows, &panel) else {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        };
+        let x = (rng.next_f32() * 240.0).max(0.0);
+        let y = (rng.next_f32() * 200.0).max(0.0);
+        let w = 240.0 + rng.next_f32() * 280.0;
+        let h = 160.0 + rng.next_f32() * 240.0;
+        return DockOp::FloatPanelInWindow {
+            source_window,
+            panel,
+            target_window: source_window,
+            rect: rect(x, y, w, h),
+        };
+    }
+
+    if action < 0.96 {
+        // MergeFloatingInto / raise / move rect, if available.
+        let win = windows[rng.gen_range_usize(windows.len())];
+        let floatings = g.floating_windows(win);
+        if floatings.is_empty() {
+            return DockOp::SetSplitFractionsMany {
+                updates: Vec::new(),
+            };
+        }
+        let floating = floatings[rng.gen_range_usize(floatings.len())].floating;
+
+        if rng.next_f32() < 0.5 {
+            let x = rng.next_f32() * 300.0;
+            let y = rng.next_f32() * 200.0;
+            let width = 260.0 + rng.next_f32() * 320.0;
+            let h = 180.0 + rng.next_f32() * 260.0;
+            return DockOp::SetFloatingRect {
+                window: win,
+                floating,
+                rect: rect(x, y, width, h),
+            };
+        }
+        return DockOp::RaiseFloating {
+            window: win,
+            floating,
+        };
+    }
+
+    // Fallback: a center move (should always succeed for an existing panel).
+    let panel = pick_existing_panel(rng);
+    let target_panel = pick_existing_panel(rng);
+    let Some((source_window, _)) = find_panel_any_window(g, &windows, &panel) else {
+        return DockOp::SetSplitFractionsMany {
+            updates: Vec::new(),
+        };
+    };
+    let Some((target_window, (target_tabs, _))) = find_panel_any_window(g, &windows, &target_panel)
+    else {
+        return DockOp::SetSplitFractionsMany {
+            updates: Vec::new(),
+        };
+    };
+    DockOp::MovePanel {
+        source_window,
+        panel,
+        target_window,
+        target_tabs,
+        zone: DropZone::Center,
+        insert_index: None,
+    }
 }
 
 #[test]

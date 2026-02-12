@@ -34,10 +34,12 @@ Each TODO is labeled:
 - [x] DN-P0-core-004 Implement “insert instead of wrap” for `DockGraph::move_tabs_between_windows`.
   - Gate: unit tests for moving whole tab stacks.
 
-- [~] DN-P0-core-005 Add a post-op simplification pipeline.
+- [x] DN-P0-core-005 Add a post-op simplification pipeline.
   - Steps: prune empty tabs, prune single-child splits, flatten nested same-axis splits, normalize fractions.
   - Gate: “round trip” tests with randomized op sequences (bounded depth).
-  - Status: deterministic canonicalization is in place; randomized/fixture op-sequence coverage is still TODO.
+  - Evidence:
+    - `crates/fret-core/src/dock/tests.rs` (`dock_op_sequence_fixtures_hold_canonical_invariants`)
+    - `crates/fret-core/src/dock/fixtures/dock_op_sequences_v1.json`
 
 - [x] DN-P0-core-006 Update `DockGraph::compute_layout` to avoid silent truncation.
   - Repair non-canonical splits locally (mismatched lengths, non-finite shares) for deterministic layout.

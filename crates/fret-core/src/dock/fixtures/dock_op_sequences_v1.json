@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "explicit-repeated-edge-dock-does-not-create-nested-same-axis-splits",
+      "kind": "explicit",
+      "panels": ["test.a", "test.b", "test.c", "test.d", "test.e", "test.f"],
+      "steps": [
+        { "type": "move_panel", "panel": "test.f", "target_panel": "test.b", "zone": "left" },
+        { "type": "move_panel", "panel": "test.e", "target_panel": "test.c", "zone": "right" },
+        { "type": "move_panel", "panel": "test.d", "target_panel": "test.a", "zone": "left" },
+        { "type": "move_panel", "panel": "test.c", "target_panel": "test.b", "zone": "right" },
+        { "type": "move_panel", "panel": "test.b", "target_panel": "test.a", "zone": "right" }
+      ],
+      "expect": {
+        "max_reachable_nodes": 128,
+        "max_split_depth": 10
+      }
+    },
+    {
+      "id": "random-seed-1-400-steps-12-panels",
+      "kind": "random",
+      "random": { "seed": 1, "steps": 400, "panel_count": 12 },
+      "expect": { "max_reachable_nodes": 512, "max_split_depth": 18 }
+    },
+    {
+      "id": "random-seed-2-400-steps-12-panels",
+      "kind": "random",
+      "random": { "seed": 2, "steps": 400, "panel_count": 12 },
+      "expect": { "max_reachable_nodes": 512, "max_split_depth": 18 }
+    },
+    {
+      "id": "random-seed-3-600-steps-16-panels",
+      "kind": "random",
+      "random": { "seed": 3, "steps": 600, "panel_count": 16 },
+      "expect": { "max_reachable_nodes": 768, "max_split_depth": 22 }
+    }
+  ]
+}
+
