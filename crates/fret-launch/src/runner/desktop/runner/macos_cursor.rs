@@ -1,6 +1,8 @@
 use std::fmt;
 
 #[cfg(target_os = "macos")]
+use std::collections::HashMap;
+#[cfg(target_os = "macos")]
 use winit::dpi::PhysicalPosition;
 
 pub(super) fn macos_window_log(_args: fmt::Arguments<'_>) {
@@ -328,7 +330,7 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
     }
 
     #[cfg(target_os = "macos")]
-    fn macos_calibrate_cursor_transform_from_window_sample(
+    pub(super) fn macos_calibrate_cursor_transform_from_window_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
         scale_factor: f64,
@@ -344,7 +346,7 @@ impl<D: super::WinitAppDriver> super::WinitRunner<D> {
     }
 
     #[cfg(target_os = "macos")]
-    fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
+    pub(super) fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
         let Some(cocoa_pos) = macos_mouse_location() else {
             return false;
         };

@@ -105,7 +105,14 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
 
         let ns_window: id = match window.window_handle() {
             Ok(handle) => match handle.as_raw() {
-                winit::raw_window_handle::RawWindowHandle::AppKit(h) => h.ns_window.as_ptr() as id,
+                winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    if ns_view.is_null() {
+                        std::ptr::null_mut()
+                    } else {
+                        msg_send![ns_view, window]
+                    }
+                }
                 _ => std::ptr::null_mut(),
             },
             Err(_) => std::ptr::null_mut(),
@@ -117,7 +124,14 @@ pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Win
 
         let sender_ns_window: id = match sender_window.window_handle() {
             Ok(handle) => match handle.as_raw() {
-                winit::raw_window_handle::RawWindowHandle::AppKit(h) => h.ns_window.as_ptr() as id,
+                winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                    let ns_view: id = h.ns_view.as_ptr() as id;
+                    if ns_view.is_null() {
+                        std::ptr::null_mut()
+                    } else {
+                        msg_send![ns_view, window]
+                    }
+                }
                 _ => std::ptr::null_mut(),
             },
             Err(_) => std::ptr::null_mut(),

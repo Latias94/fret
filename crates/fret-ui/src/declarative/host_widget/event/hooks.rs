@@ -68,6 +68,10 @@ pub(super) fn handle_timer_event<H: UiHost>(
                 self.app.next_clipboard_token()
             }
 
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
+            }
+
             fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
                 crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
             }
@@ -193,6 +197,10 @@ pub(super) fn try_key_hook<H: UiHost>(
 
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
+            }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
             }
 
             fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {

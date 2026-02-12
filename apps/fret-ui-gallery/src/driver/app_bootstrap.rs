@@ -217,6 +217,13 @@ pub(super) fn register_commands_and_menus(app: &mut App) {
             .with_keywords(["copy", "clipboard", "notes", "docs"]),
     );
 
+    app.commands_mut().register(
+        CommandId::new(CMD_SHELL_SHARE_SHEET_SMOKE),
+        CommandMeta::new("Share sheet (smoke)")
+            .with_category("Shell")
+            .with_keywords(["share", "export", "share sheet", "navigator.share"]),
+    );
+
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(app);
     UiGalleryDriver::sync_dynamic_menu_command_metadata(app);

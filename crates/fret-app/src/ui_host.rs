@@ -97,6 +97,10 @@ impl TimeHost for App {
         App::next_clipboard_token(self)
     }
 
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        App::next_share_sheet_token(self)
+    }
+
     fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
         App::next_image_upload_token(self)
     }

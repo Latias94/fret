@@ -8,13 +8,13 @@ use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTrans
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
-    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1,
-    UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
-    UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiImeEventTraceEntryV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1, UiKeyModifiersV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1,
+    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1,
+    UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
+    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
+    UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -895,6 +895,41 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV2::SetClipboardForceUnavailable { enabled } => {
+                output
+                    .effects
+                    .push(Effect::DiagClipboardForceUnavailable { window, enabled });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
+            UiActionStepV2::InjectIncomingOpen { items } => {
+                let items = items
+                    .into_iter()
+                    .map(|item| match item {
+                        UiIncomingOpenInjectItemV1::FileUtf8 {
+                            name,
+                            text,
+                            media_type,
+                        } => fret_runtime::DiagIncomingOpenItem::File {
+                            name,
+                            bytes: text.into_bytes(),
+                            media_type,
+                        },
+                        UiIncomingOpenInjectItemV1::Text { text, media_type } => {
+                            fret_runtime::DiagIncomingOpenItem::Text { text, media_type }
+                        }
+                    })
+                    .collect();
+                output
+                    .effects
+                    .push(Effect::DiagIncomingOpenInject { window, items });
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -1189,99 +1224,120 @@ impl UiDiagnosticsService {
                 predicate,
                 timeout_frames,
             } => {
-                if let Some(snapshot) = semantics_snapshot {
-                    active.screenshot_wait = None;
-                    let state = match active.wait_until.take() {
-                        Some(mut state) if state.step_index == step_index => {
-                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                            state
-                        }
-                        _ => WaitUntilState {
-                            step_index,
-                            remaining_frames: timeout_frames,
-                        },
-                    };
-
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        Some(snapshot),
-                        window,
-                        step_index as u32,
-                        "wait_until",
-                    );
-                    if eval_predicate(
-                        snapshot,
-                        window_bounds,
-                        window,
-                        element_runtime,
-                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                        &predicate,
-                    ) {
-                        active.wait_until = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-wait_until-timeout"));
-                        stop_script = true;
-                        failure_reason = Some("wait_until_timeout".to_string());
-                        active.wait_until = None;
-                        output.request_redraw = true;
-                    } else {
-                        active.wait_until = Some(WaitUntilState {
-                            step_index: state.step_index,
-                            remaining_frames: state.remaining_frames.saturating_sub(1),
-                        });
-                        output.request_redraw = true;
+                active.screenshot_wait = None;
+                let state = match active.wait_until.take() {
+                    Some(mut state) if state.step_index == step_index => {
+                        state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                        state
                     }
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-wait_until-no-semantics"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
-                    output.request_redraw = true;
+                    _ => WaitUntilState {
+                        step_index,
+                        remaining_frames: timeout_frames,
+                    },
+                };
+
+                let ok = match &predicate {
+                    UiPredicateV1::EventKindSeen { event_kind } => self
+                        .per_window
+                        .get(&window)
+                        .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-wait_until-no-semantics"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("no_semantics_snapshot".to_string());
+                            output.request_redraw = true;
+                            active.wait_until = None;
+                            active.screenshot_wait = None;
+                            return output;
+                        };
+
+                        record_overlay_placement_trace(
+                            &mut active.overlay_placement_trace,
+                            element_runtime,
+                            Some(snapshot),
+                            window,
+                            step_index as u32,
+                            "wait_until",
+                        );
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            element_runtime,
+                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                            &predicate,
+                        )
+                    }
+                };
+
+                if ok {
                     active.wait_until = None;
-                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else if state.remaining_frames == 0 {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-wait_until-timeout"));
+                    stop_script = true;
+                    failure_reason = Some("wait_until_timeout".to_string());
+                    active.wait_until = None;
+                    output.request_redraw = true;
+                } else {
+                    active.wait_until = Some(WaitUntilState {
+                        step_index: state.step_index,
+                        remaining_frames: state.remaining_frames.saturating_sub(1),
+                    });
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Assert { predicate } => {
                 active.wait_until = None;
                 active.screenshot_wait = None;
-                if let Some(snapshot) = semantics_snapshot {
-                    record_overlay_placement_trace(
-                        &mut active.overlay_placement_trace,
-                        element_runtime,
-                        Some(snapshot),
-                        window,
-                        step_index as u32,
-                        "assert",
-                    );
-                    if eval_predicate(
-                        snapshot,
-                        window_bounds,
-                        window,
-                        element_runtime,
-                        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                        &predicate,
-                    ) {
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-assert-failed"));
-                        stop_script = true;
-                        failure_reason = Some("assert_failed".to_string());
-                        output.request_redraw = true;
+                let ok = match &predicate {
+                    UiPredicateV1::EventKindSeen { event_kind } => self
+                        .per_window
+                        .get(&window)
+                        .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                            stop_script = true;
+                            failure_reason = Some("no_semantics_snapshot".to_string());
+                            output.request_redraw = true;
+                            return output;
+                        };
+
+                        record_overlay_placement_trace(
+                            &mut active.overlay_placement_trace,
+                            element_runtime,
+                            Some(snapshot),
+                            window,
+                            step_index as u32,
+                            "assert",
+                        );
+                        eval_predicate(
+                            snapshot,
+                            window_bounds,
+                            window,
+                            element_runtime,
+                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                            &predicate,
+                        )
                     }
+                };
+
+                if ok {
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
                 } else {
-                    force_dump_label =
-                        Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                    force_dump_label = Some(format!("script-step-{step_index:04}-assert-failed"));
                     stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    failure_reason = Some("assert_failed".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -3523,6 +3579,8 @@ impl UiDiagnosticsService {
         caps.push("diag.shortcut_routing_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
         caps.push("diag.window_insets_override".to_string());
+        caps.push("diag.clipboard_force_unavailable".to_string());
+        caps.push("diag.incoming_open_inject".to_string());
 
         let path = self.cfg.out_dir.join("capabilities.json");
         if let Some(parent) = path.parent() {
@@ -4079,6 +4137,24 @@ impl UiDiagnosticsService {
                 })
             });
 
+        let (safe_area_insets, occlusion_insets) = app
+            .global::<fret_core::WindowMetricsService>()
+            .map(|svc| {
+                (
+                    svc.safe_area_insets(window).map(ui_edges_from_edges),
+                    svc.occlusion_insets(window).map(ui_edges_from_edges),
+                )
+            })
+            .unwrap_or((None, None));
+
+        let input_ctx = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window));
+
+        let window_text_input_snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -4097,6 +4173,24 @@ impl UiDiagnosticsService {
             changed_model_sources_top,
             resource_caches,
             app_snapshot,
+            safe_area_insets,
+            occlusion_insets,
+            focus_is_text_input: input_ctx.map(|c| c.focus_is_text_input),
+            is_composing: window_text_input_snapshot.map(|s| s.is_composing),
+            primary_pointer_type: ring
+                .last_pointer_type
+                .map(|t| viewport_pointer_type_label(t).to_string()),
+            caps: input_ctx.map(|c| UiPlatformCapabilitiesSummaryV1 {
+                platform: c.platform.as_str().to_string(),
+                ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
+                clipboard_text: c.caps.clipboard.text,
+                clipboard_primary_text: c.caps.clipboard.primary_text,
+                ime: c.caps.ime.enabled,
+                ime_set_cursor_area: c.caps.ime.set_cursor_area,
+                fs_file_dialogs: c.caps.fs.file_dialogs,
+                shell_share_sheet: c.caps.shell.share_sheet,
+                shell_incoming_open: c.caps.shell.incoming_open,
+            }),
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -4716,7 +4810,9 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
-        | UiActionStepV2::SetWindowInsets { .. } => false,
+        | UiActionStepV2::SetWindowInsets { .. }
+        | UiActionStepV2::SetClipboardForceUnavailable { .. }
+        | UiActionStepV2::InjectIncomingOpen { .. } => false,
     }
 }
 
@@ -4738,6 +4834,7 @@ struct PendingPick {
 #[derive(Default)]
 struct WindowRing {
     last_pointer_position: Option<Point>,
+    last_pointer_type: Option<fret_core::PointerType>,
     events: VecDeque<RecordedUiEventV1>,
     snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
     viewport_input_this_frame: Vec<UiViewportInputEventV1>,
@@ -4747,14 +4844,48 @@ struct WindowRing {
 
 impl WindowRing {
     fn update_pointer_position(&mut self, event: &Event) {
-        let Some(pointer) = event.pointer_event() else {
-            return;
-        };
-        self.last_pointer_position = Some(pointer.position());
+        match event {
+            Event::Pointer(e) => match e {
+                fret_core::PointerEvent::Move {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Down {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Up {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Wheel {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::PinchGesture {
+                    position,
+                    pointer_type,
+                    ..
+                } => {
+                    self.last_pointer_position = Some(*position);
+                    self.last_pointer_type = Some(*pointer_type);
+                }
+            },
+            Event::PointerCancel(e) => {
+                self.last_pointer_position = e.position;
+                self.last_pointer_type = Some(e.pointer_type);
+            }
+            _ => {}
+        }
     }
 
     fn clear(&mut self) {
         self.last_pointer_position = None;
+        self.last_pointer_type = None;
         self.events.clear();
         self.snapshots.clear();
         self.viewport_input_this_frame.clear();
@@ -4918,7 +5049,33 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_snapshot: Option<serde_json::Value>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_area_insets: Option<UiEdgesV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occlusion_insets: Option<UiEdgesV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_is_text_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_composing: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_pointer_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub caps: Option<UiPlatformCapabilitiesSummaryV1>,
+
     pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPlatformCapabilitiesSummaryV1 {
+    pub platform: String,
+    pub ui_window_hover_detection: String,
+    pub clipboard_text: bool,
+    pub clipboard_primary_text: bool,
+    pub ime: bool,
+    pub ime_set_cursor_area: bool,
+    pub fs_file_dialogs: bool,
+    pub shell_share_sheet: bool,
+    pub shell_incoming_open: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12314,6 +12471,7 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
+        UiPredicateV1::EventKindSeen { event_kind: _ } => false,
     }
 }
 

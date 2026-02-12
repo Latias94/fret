@@ -30,6 +30,7 @@ Workstream entry:
 - [x] Apply a minimal policy in `apps/fret-ui-gallery` so focused inputs are not obscured by IME.
   - Start with bottom “scroll slack” based on `occlusion_insets.bottom`.
   - Keep a scripted diag gate that simulates keyboard occlusion in CI.
+  - Treat “unknown vs known-but-zero” insets explicitly (ADR 0267) to avoid startup regressions.
 
 ## Android plumbing (runner/backend)
 

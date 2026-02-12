@@ -158,6 +158,13 @@ impl WebPlatformServices {
                         bridge.set_enabled(enabled);
                     }
                 }
+                Effect::ImeRequestVirtualKeyboard { window, visible } => {
+                    if self.ime_active_window == Some(window)
+                        && let Some(bridge) = self.ime.get_mut(&window)
+                    {
+                        bridge.request_virtual_keyboard(visible);
+                    }
+                }
                 Effect::ImeSetCursorArea { window, rect } => {
                     self.last_ime_cursor_area.insert(window, rect);
                     #[cfg(debug_assertions)]

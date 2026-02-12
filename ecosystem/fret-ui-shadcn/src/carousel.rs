@@ -682,10 +682,8 @@ impl Carousel {
             let rotate_controls = orientation == CarouselOrientation::Vertical;
             let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
             let arrow_center = Point::new(Px(8.0), Px(8.0));
-            let arrow_transform = fret_core::Transform2D::rotation_about_degrees(
-                arrow_rotation,
-                arrow_center,
-            );
+            let arrow_transform =
+                fret_core::Transform2D::rotation_about_degrees(arrow_rotation, arrow_center);
             let arrow_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()
