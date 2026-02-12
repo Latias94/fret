@@ -452,6 +452,9 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
+        PAGE_AI_MIC_SELECTOR_DEMO => preview_ai_mic_selector_demo(cx, theme),
+        PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
+        PAGE_AI_VOICE_SELECTOR_DEMO => preview_ai_voice_selector_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -706,6 +709,7 @@ fn page_preview(
         PAGE_MATERIAL3_TOOLTIP => {
             material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
+        other if other.starts_with("ai_") => preview_ai_unwired(cx, theme, other),
         _ => preview_intro(cx, theme),
     };
 
@@ -720,4 +724,23 @@ fn page_preview(
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+}
+
+fn preview_ai_unwired(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+    id: &str,
+) -> Vec<AnyElement> {
+    vec![
+        shadcn::Alert::new(vec![
+            shadcn::AlertTitle::new("AI demo not wired").into_element(cx),
+            shadcn::AlertDescription::new(format!(
+                "Page `{id}` exists in the nav spec, but does not have a preview implementation yet. See `docs/workstreams/ai-elements-port-todo.md`."
+            ))
+            .into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Default)
+        .into_element(cx)
+        .test_id(format!("ui-gallery-ai-unwired-{}", id.replace('_', "-"))),
+    ]
 }

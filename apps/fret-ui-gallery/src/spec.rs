@@ -123,6 +123,9 @@ pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
 pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
 pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
 pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
+pub(crate) const PAGE_AI_SPEECH_INPUT_DEMO: &str = "ai_speech_input_demo";
+pub(crate) const PAGE_AI_MIC_SELECTOR_DEMO: &str = "ai_mic_selector_demo";
+pub(crate) const PAGE_AI_VOICE_SELECTOR_DEMO: &str = "ai_voice_selector_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -291,6 +294,10 @@ pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_dem
 pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str = "ui_gallery.nav.select.ai_audio_player_demo";
 pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
     "ui_gallery.nav.select.ai_transcription_demo";
+pub(crate) const CMD_NAV_AI_SPEECH_INPUT_DEMO: &str = "ui_gallery.nav.select.ai_speech_input_demo";
+pub(crate) const CMD_NAV_AI_MIC_SELECTOR_DEMO: &str = "ui_gallery.nav.select.ai_mic_selector_demo";
+pub(crate) const CMD_NAV_AI_VOICE_SELECTOR_DEMO: &str =
+    "ui_gallery.nav.select.ai_voice_selector_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -972,6 +979,44 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "transcription", "segments", "seek", "voice", "demo"],
                 docs::DOC_AI_TRANSCRIPTION_DEMO,
                 docs::USAGE_AI_TRANSCRIPTION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SPEECH_INPUT_DEMO,
+                "AI Speech Input (Demo)",
+                "AI Elements SpeechInput / Record Button Chrome Demo",
+                "fret-ui-ai (speech input)",
+                CMD_NAV_AI_SPEECH_INPUT_DEMO,
+                &["ai", "speech", "voice", "input", "record", "demo"],
+                docs::DOC_AI_SPEECH_INPUT_DEMO,
+                docs::USAGE_AI_SPEECH_INPUT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MIC_SELECTOR_DEMO,
+                "AI Mic Selector (Demo)",
+                "AI Elements MicSelector / Popover + Search Demo",
+                "fret-ui-ai (voice input chrome)",
+                CMD_NAV_AI_MIC_SELECTOR_DEMO,
+                &[
+                    "ai",
+                    "mic",
+                    "microphone",
+                    "selector",
+                    "popover",
+                    "search",
+                    "demo",
+                ],
+                docs::DOC_AI_MIC_SELECTOR_DEMO,
+                docs::USAGE_AI_MIC_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_VOICE_SELECTOR_DEMO,
+                "AI Voice Selector (Demo)",
+                "AI Elements VoiceSelector / Dialog + Search Demo",
+                "fret-ui-ai (voice input chrome)",
+                CMD_NAV_AI_VOICE_SELECTOR_DEMO,
+                &["ai", "voice", "selector", "dialog", "search", "demo"],
+                docs::DOC_AI_VOICE_SELECTOR_DEMO,
+                docs::USAGE_AI_VOICE_SELECTOR_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,

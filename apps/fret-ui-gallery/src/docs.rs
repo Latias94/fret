@@ -785,6 +785,54 @@ use fret_ui_ai::{Transcription, TranscriptionSegment, TranscriptionSegmentData};
 ```
 "#;
 
+pub(crate) const DOC_AI_SPEECH_INPUT_DEMO: &str = r#"
+## AI speech input (demo)
+
+This page demonstrates an AI Elements-aligned `SpeechInput` surface:
+
+- UI-only record/stop chrome (`mic` ↔ `square`),
+- a `processing` state (spinner),
+- an intent seam (`on_listening_change`) so apps own capture + ASR backends.
+"#;
+
+pub(crate) const USAGE_AI_SPEECH_INPUT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::SpeechInput;
+```
+"#;
+
+pub(crate) const DOC_AI_MIC_SELECTOR_DEMO: &str = r#"
+## AI mic selector (demo)
+
+This page demonstrates an AI Elements-aligned `MicSelector` surface:
+
+- a popover-based selector with search input,
+- stable selection model (`value_model`) and popover open model (`open_model`),
+- app-owned device enumeration (UI-only chrome).
+"#;
+
+pub(crate) const USAGE_AI_MIC_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{MicSelector, MicSelectorContent, MicSelectorInput, MicSelectorList, MicSelectorTrigger, MicSelectorValue};
+```
+"#;
+
+pub(crate) const DOC_AI_VOICE_SELECTOR_DEMO: &str = r#"
+## AI voice selector (demo)
+
+This page demonstrates an AI Elements-aligned `VoiceSelector` surface:
+
+- dialog-based selector with search input,
+- stable selection model (`value_model`) and dialog open model (`open_model`),
+- app-owned voice inventory + preview playback (UI-only chrome).
+"#;
+
+pub(crate) const USAGE_AI_VOICE_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{VoiceSelector, VoiceSelectorButton, VoiceSelectorContent, VoiceSelectorInput, VoiceSelectorList};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 
