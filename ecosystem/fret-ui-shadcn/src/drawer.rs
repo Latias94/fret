@@ -23,7 +23,9 @@ pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::motion::{SpringKick, drive_spring_f32};
+use fret_ui_kit::declarative::motion_value::{
+    MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
+};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
@@ -589,7 +591,6 @@ impl Drawer {
                     let _ = cx.app.models_mut().update(&runtime, |st| {
                         st.needs_snap_init = true;
                         st.settling = false;
-                        st.settle_tick = 0;
                     });
                 }
             }
@@ -599,7 +600,6 @@ impl Drawer {
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     st.needs_snap_init = false;
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
             }
 
@@ -636,66 +636,44 @@ impl Drawer {
             }
 
             let mut offset = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
-            let settling = cx
-                .app
-                .models()
-                .get_copied(&runtime)
-                .map(|st| st.settling)
-                .unwrap_or(false);
-            if settling {
-                let runtime_snapshot = cx.app.models().get_copied(&runtime);
-                if let Some(st) = runtime_snapshot {
-                    let spring = SpringDescription::with_duration_and_bounce(
-                        DRAWER_SNAP_SETTLE_SPRING_DURATION,
-                        DRAWER_SNAP_SETTLE_SPRING_BOUNCE,
-                    );
+            let runtime_snapshot = cx.app.models().get_copied(&runtime);
+            if let Some(st) = runtime_snapshot {
+                let spring = SpringDescription::with_duration_and_bounce(
+                    DRAWER_SNAP_SETTLE_SPRING_DURATION,
+                    DRAWER_SNAP_SETTLE_SPRING_BOUNCE,
+                );
 
-                    if !st.settle_primed {
-                        // Prime the driver at the starting value to avoid a first-frame jump.
-                        let _ = drive_spring_f32(
-                            cx,
-                            st.settle_from.0,
-                            None,
+                let update = if st.settling {
+                    MotionValueF32Update::To {
+                        target: st.settle_to.0,
+                        spec: MotionToSpecF32::Spring(SpringSpecF32 {
                             spring,
-                            Tolerance::default(),
-                            true,
-                        );
-
-                        offset = st.settle_from;
-                        let _ = cx
-                            .app
-                            .models_mut()
-                            .update(&offset_model, |v| *v = st.settle_from);
-                        let _ = cx.app.models_mut().update(&runtime, |st| {
-                            st.settle_primed = true;
-                        });
-                        cx.notify_for_animation_frame();
-                    } else {
-                        let out = drive_spring_f32(
-                            cx,
-                            st.settle_to.0,
-                            Some(SpringKick {
-                                id: st.settle_seq,
-                                velocity: st.settle_velocity,
-                            }),
-                            spring,
-                            Tolerance::default(),
-                            true,
-                        );
-
-                        let next = Px(out.value.max(0.0).min(window_height.0));
-                        offset = next;
-
-                        let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
-                        let _ = cx.app.models_mut().update(&runtime, |st| {
-                            st.settle_tick = 0;
-                            st.settling = out.animating;
-                            if !out.animating {
-                                st.settle_primed = false;
-                                st.settle_velocity = 0.0;
-                            }
-                        });
+                            tolerance: Tolerance::default(),
+                            snap_to_target: true,
+                        }),
+                        kick: Some(MotionKickF32 {
+                            id: st.settle_seq,
+                            velocity: st.settle_velocity,
+                        }),
                     }
+                } else {
+                    MotionValueF32Update::Snap(offset.0)
+                };
+
+                let out = drive_motion_value_f32(cx, offset.0, update);
+                let next = Px(out.value.max(0.0).min(window_height.0));
+                if next != offset {
+                    offset = next;
+                    let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
+                }
+
+                if st.settling {
+                    let _ = cx.app.models_mut().update(&runtime, |st| {
+                        st.settling = out.animating;
+                        if !out.animating {
+                            st.settle_velocity = 0.0;
+                        }
+                    });
                 }
             }
 
@@ -724,8 +702,6 @@ impl Drawer {
                     st.start = Point::new(down.position.x, Px(down.position.y.0 + start_offset.0));
                     st.start_offset = start_offset;
                     st.settling = false;
-                    st.settle_tick = 0;
-                    st.settle_primed = false;
                     st.last_offset = start_offset;
                     st.last_tick = down.tick_id;
                     st.velocity = 0.0;
@@ -873,12 +849,9 @@ impl Drawer {
 
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;
-                            st.settle_from = offset;
                             st.settle_to = nearest;
-                            st.settle_tick = 0;
                             st.settle_seq = st.settle_seq.saturating_add(1).max(1);
                             st.settle_velocity = velocity;
-                            st.settle_primed = false;
                             st.dragging = false;
                         });
                         host.request_redraw(_cx.window);
@@ -892,19 +865,15 @@ impl Drawer {
                     } else {
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;
-                            st.settle_from = offset;
                             st.settle_to = Px(0.0);
-                            st.settle_tick = 0;
                             st.settle_seq = st.settle_seq.saturating_add(1).max(1);
                             st.settle_velocity = velocity;
-                            st.settle_primed = false;
                         });
                     }
                 }
 
                 let _ = host.models_mut().update(&runtime_for_up, |st| {
                     st.dragging = false;
-                    st.settle_primed = false;
                 });
                 host.request_redraw(_cx.window);
                 true
@@ -952,12 +921,9 @@ struct DrawerDragRuntime {
     velocity: f32,
     needs_snap_init: bool,
     settling: bool,
-    settle_from: Px,
     settle_to: Px,
-    settle_tick: u64,
     settle_seq: u64,
     settle_velocity: f32,
-    settle_primed: bool,
 }
 
 impl Default for DrawerDragRuntime {
@@ -971,12 +937,9 @@ impl Default for DrawerDragRuntime {
             velocity: 0.0,
             needs_snap_init: false,
             settling: false,
-            settle_from: Px(0.0),
             settle_to: Px(0.0),
-            settle_tick: 0,
             settle_seq: 0,
             settle_velocity: 0.0,
-            settle_primed: false,
         }
     }
 }
