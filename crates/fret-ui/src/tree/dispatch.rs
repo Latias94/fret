@@ -2753,7 +2753,11 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Event::Pointer(PointerEvent::Down { button, .. }) = event
+        if let Event::Pointer(PointerEvent::Down {
+            button,
+            pointer_type,
+            ..
+        }) = event
             && *button == fret_core::MouseButton::Left
             && !focus_requested
             && !prevented_default_actions.contains(fret_runtime::DefaultAction::FocusOnPointerDown)
@@ -2771,6 +2775,17 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.focus = Some(focus);
                 self.mark_invalidation(focus, Invalidation::Paint);
+
+                // Mobile-friendly best-effort: if touch input focused a text-editing widget,
+                // request the virtual keyboard within the same input turn so platforms that
+                // require user activation can comply (ADR 0261).
+                if *pointer_type == fret_core::PointerType::Touch && self.focus_is_text_input(app) {
+                    app.push_effect(Effect::ImeRequestVirtualKeyboard {
+                        window,
+                        visible: true,
+                    });
+                }
+
                 // Pointer-driven focus should not scroll: the user is already interacting at the
                 // pointer location, and scrolling here can move content under the cursor between
                 // pointer-down and pointer-up.
