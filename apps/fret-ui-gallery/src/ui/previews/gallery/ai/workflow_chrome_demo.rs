@@ -4,10 +4,14 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
     cx: &mut ElementContext<'_, App>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
+    use fret_core::Point;
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
+    use fret_ui_kit::declarative::style as decl_style;
+    use fret_ui_kit::{
+        ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
+    };
 
     let max_w = LayoutRefinement::default()
         .w_full()
@@ -92,6 +96,61 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                 cx.text("Workflow panel (chrome-only)."),
                 cx.text("Apps own node/canvas engines and interaction policy."),
                 node,
+                {
+                    let stage_layout = LayoutRefinement::default()
+                        .w_full()
+                        .h_px(Px(160.0))
+                        .min_w_0()
+                        .relative();
+
+                    let stage_props = decl_style::container_props(
+                        _theme,
+                        ChromeRefinement::default()
+                            .rounded(Radius::Md)
+                            .border_1()
+                            .bg(ColorRef::Token {
+                                key: "card",
+                                fallback: ColorFallback::ThemePanelBackground,
+                            })
+                            .border_color(ColorRef::Token {
+                                key: "border",
+                                fallback: ColorFallback::ThemePanelBorder,
+                            })
+                            .p(Space::N2),
+                        stage_layout,
+                    );
+
+                    let abs = LayoutRefinement::default().absolute().inset(Space::N0);
+
+                    let connection = ui_ai::WorkflowConnection::new(
+                        Point::new(Px(40.0), Px(32.0)),
+                        Point::new(Px(320.0), Px(32.0)),
+                    )
+                    .test_id("ui-ai-workflow-connection-demo-root")
+                    .refine_layout(abs.clone())
+                    .into_element(cx);
+
+                    let edge_temporary = ui_ai::WorkflowEdgeTemporary::new(
+                        Point::new(Px(40.0), Px(80.0)),
+                        Point::new(Px(320.0), Px(80.0)),
+                    )
+                    .test_id("ui-ai-workflow-edge-temporary-demo-root")
+                    .refine_layout(abs.clone())
+                    .into_element(cx);
+
+                    let edge_animated = ui_ai::WorkflowEdgeAnimated::new(
+                        Point::new(Px(40.0), Px(128.0)),
+                        Point::new(Px(320.0), Px(128.0)),
+                    )
+                    .test_id("ui-ai-workflow-edge-animated-demo-root")
+                    .refine_layout(abs)
+                    .into_element(cx);
+
+                    cx.container(stage_props, move |_cx| {
+                        vec![connection, edge_temporary, edge_animated]
+                    })
+                    .test_id("ui-ai-workflow-edge-stage-demo-root")
+                },
             ]
         },
     );
