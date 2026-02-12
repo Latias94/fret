@@ -27,6 +27,7 @@ mod bounds_tree;
 mod commands;
 mod debug;
 mod dispatch;
+mod frame_arena;
 mod hit_test;
 mod layers;
 mod layout;
@@ -57,6 +58,7 @@ pub use debug::{
     UiDebugVirtualListWindowShiftSample, UiDebugVirtualListWindowSource,
     UiDebugWidgetMeasureHotspot, UiInputArbitrationSnapshot,
 };
+use frame_arena::FrameArenaScratch;
 use observation::{GlobalObservationIndex, ObservationIndex, ObservationMask};
 
 #[cfg(feature = "diagnostics")]
@@ -818,50 +820,6 @@ struct TouchPointerDownOutsideCandidate {
     down_event: Event,
     start_pos: Point,
     moved: bool,
-}
-
-#[derive(Default)]
-struct FrameArenaScratch {
-    gc_reachable_from_layers: HashSet<NodeId>,
-    gc_reachable_from_view_cache_roots: HashSet<NodeId>,
-    gc_stack: Vec<NodeId>,
-    semantics_visited: HashSet<NodeId>,
-    semantics_stack: Vec<(NodeId, Transform2D)>,
-
-    gc_reachable_from_layers_cap_on_take: usize,
-    gc_reachable_from_view_cache_roots_cap_on_take: usize,
-    gc_stack_cap_on_take: usize,
-    semantics_visited_cap_on_take: usize,
-    semantics_stack_cap_on_take: usize,
-}
-
-impl FrameArenaScratch {
-    fn capacity_estimate_bytes(&self) -> u64 {
-        let mut bytes: u128 = 0;
-        bytes = bytes.saturating_add(
-            (self.gc_stack.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
-        );
-        bytes = bytes.saturating_add(
-            (self.semantics_stack.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<(NodeId, Transform2D)>() as u128),
-        );
-        // HashSet capacity is the number of elements it can hold without reallocating. We treat
-        // it as `capacity * size_of::<NodeId>` as a lower bound.
-        bytes = bytes.saturating_add(
-            (self.gc_reachable_from_layers.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
-        );
-        bytes = bytes.saturating_add(
-            (self.gc_reachable_from_view_cache_roots.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
-        );
-        bytes = bytes.saturating_add(
-            (self.semantics_visited.capacity() as u128)
-                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
-        );
-        bytes.min(u64::MAX as u128) as u64
-    }
 }
 
 impl<H: UiHost> Default for UiTree<H> {
