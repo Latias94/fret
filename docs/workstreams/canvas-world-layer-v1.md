@@ -100,7 +100,9 @@ To make this substrate usable for real apps (AI Elements “workflow” experien
      - `ecosystem/fret-canvas/src/ui/world_layer.rs`:
        - `CanvasWorldBoundsStore`
        - `canvas_world_bounds_item(...)`
-   - Remaining: provide a small helper/controller for `fit_view_to_canvas_rect(...)` from active keys,
+   - Status: Implemented (M2-003) fit-view helper from active keys:
+     - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
+     - Demo: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-fit-view`)
    - helpers exist to map bounds between screen space and canvas space for:
      - `fitView` math (`fit_view_to_canvas_rect`),
      - selection-in-rect queries,

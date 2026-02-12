@@ -47,4 +47,7 @@ See also:
 - [ ] CWL-M2-002 Decide where selection-on-drag lives:
   - reuse `fret-canvas/ui` marquee recipe,
   - or provide a world-layer aware wrapper.
-- [ ] CWL-M2-003 Add a small helper to compute `fit_view_to_canvas_rect(...)` from a set of bound keys.
+- [x] CWL-M2-003 Add a small helper to compute `fit_view_to_canvas_rect(...)` from a set of bound keys.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (Fit view button)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (click `ui-ai-cwl-fit-view`)

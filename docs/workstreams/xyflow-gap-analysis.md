@@ -165,6 +165,8 @@ Current state (2026-02-12):
   - `ecosystem/fret-canvas/src/ui/world_layer.rs`:
     - `CanvasWorldBoundsStore`
     - `canvas_world_bounds_item(...)`
+- A minimal fit-view helper exists:
+  - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
 - The UI Gallery spike uses this to show a live union rect (proof of wiring):
   - `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
 
@@ -177,8 +179,6 @@ Target outcome:
 
 Still missing:
 
-- A small helper/controller that turns a set of active keys into a `fit_view_to_canvas_rect(...)`
-  request (see `docs/workstreams/canvas-world-layer-v1-todo.md` CWL-M2-003).
 - A clear selection-on-drag integration story for world-layer nodes (CWL-M2-002).
 
 Notes:

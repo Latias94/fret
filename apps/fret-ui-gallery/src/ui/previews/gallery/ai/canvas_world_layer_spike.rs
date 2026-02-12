@@ -9,9 +9,10 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use fret_canvas::ui::{
         CanvasInputExemptRegionProps, CanvasWorldBoundsStore, CanvasWorldScaleMode,
         CanvasWorldSurfacePanelProps, PanZoomInputPreset, canvas_input_exempt_region,
-        canvas_world_bounds_item, canvas_world_surface_panel, use_controllable_model,
+        canvas_world_bounds_item, canvas_world_fit_view_to_keys, canvas_world_surface_panel,
+        use_controllable_model,
     };
-    use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
+    use fret_canvas::view::{FitViewOptions2D, PanZoom2D, visible_canvas_rect};
     use fret_core::scene::Paint;
     use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size};
     use fret_ui::action::OnActivate;
@@ -243,7 +244,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 }),
             ]
         },
-        move |cx, _world_cx| {
+        move |cx, world_cx| {
             let mut overlay_region = CanvasInputExemptRegionProps::default();
             overlay_region.pointer_region.layout.position =
                 fret_ui::element::PositionStyle::Absolute;
@@ -294,6 +295,36 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .on_activate(on_overlay_activate)
                 .into_element(cx);
 
+            let fit_view_view = view.clone();
+            let fit_view_store = bounds_store.clone();
+            let fit_view_bounds = world_cx.bounds;
+            let on_fit_view: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let next: Option<PanZoom2D> = host
+                    .models_mut()
+                    .read(&fit_view_store, |st| {
+                        canvas_world_fit_view_to_keys(
+                            fit_view_bounds,
+                            st,
+                            [1u64, 2u64],
+                            FitViewOptions2D::default(),
+                        )
+                    })
+                    .ok()
+                    .flatten();
+
+                let Some(next) = next else {
+                    return;
+                };
+                let _ = host.models_mut().update(&fit_view_view, |v| *v = next);
+                host.request_redraw(action_cx.window);
+            });
+
+            let fit_view = shadcn::Button::new("Fit view")
+                .test_id("ui-ai-cwl-fit-view")
+                .variant(ButtonVariant::Secondary)
+                .on_activate(on_fit_view)
+                .into_element(cx);
+
             let bounds_text = match bounds_union_canvas {
                 None => "Bounds: (unknown)".to_string(),
                 Some(r) => format!(
@@ -303,7 +334,13 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             };
 
             vec![canvas_input_exempt_region(cx, overlay_region, move |cx| {
-                vec![mode_scale, mode_semantic, overlay, cx.text(bounds_text)]
+                vec![
+                    mode_scale,
+                    mode_semantic,
+                    fit_view,
+                    overlay,
+                    cx.text(bounds_text),
+                ]
             })]
         },
     )

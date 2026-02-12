@@ -42,7 +42,7 @@ Status: Done
 
 ### M2 — App ergonomics (bounds + selection seams)
 
-Status: Open
+Status: In progress
 
 - Apps can query/report node bounds for fit-view.
 - Marquee selection integrates cleanly (recipe reuse or world-layer wrapper).

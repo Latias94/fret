@@ -23,8 +23,8 @@ use crate::ui::use_controllable_model;
 use crate::ui::{
     PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_panel,
 };
-use crate::view::PanZoom2D;
 use crate::view::screen_rect_to_canvas_rect;
+use crate::view::{FitViewOptions2D, PanZoom2D, fit_view_to_canvas_rect};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CanvasWorldScaleMode {
@@ -96,6 +96,36 @@ impl CanvasWorldBoundsStore {
         }
         out
     }
+
+    pub fn union_canvas_bounds_for_key_values(
+        &self,
+        keys: impl IntoIterator<Item = ItemKey>,
+    ) -> Option<Rect> {
+        let mut out: Option<Rect> = None;
+        for key in keys {
+            let Some(item) = self.items.get(&key) else {
+                continue;
+            };
+            out = Some(match out {
+                None => item.canvas_bounds,
+                Some(prev) => rect_union(prev, item.canvas_bounds),
+            });
+        }
+        out
+    }
+}
+
+/// Computes a `PanZoom2D` view that fits the union of the given item keys.
+///
+/// Returns `None` when no keys are present in the store.
+pub fn canvas_world_fit_view_to_keys(
+    surface_bounds: Rect,
+    bounds_store: &CanvasWorldBoundsStore,
+    keys: impl IntoIterator<Item = ItemKey>,
+    options: FitViewOptions2D,
+) -> Option<PanZoom2D> {
+    let target = bounds_store.union_canvas_bounds_for_key_values(keys)?;
+    Some(fit_view_to_canvas_rect(surface_bounds, target, options))
 }
 
 fn rect_union(a: Rect, b: Rect) -> Rect {
