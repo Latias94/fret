@@ -467,6 +467,8 @@ Supported selectors (v1 MVP):
 - `assert`
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_outer_position` (schema v2 only; optional `window` target)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -504,6 +506,17 @@ Supported intent steps (v2):
 - `menu_select_path` (wait + open nested menus + click final item)
 - `drag_to` (drag between two semantics targets)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+- `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
+- `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
+
+For window-targeted steps, the optional `window` field supports:
+
+- `{ "kind": "current" }` (default)
+- `{ "kind": "first_seen" }`
+- `{ "kind": "first_seen_other" }`
+- `{ "kind": "last_seen" }`
+- `{ "kind": "last_seen_other" }`
+- `{ "kind": "window_ffi", "window": 123 }`
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
 
