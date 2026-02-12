@@ -126,6 +126,9 @@ pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
 pub(crate) const PAGE_AI_SPEECH_INPUT_DEMO: &str = "ai_speech_input_demo";
 pub(crate) const PAGE_AI_MIC_SELECTOR_DEMO: &str = "ai_mic_selector_demo";
 pub(crate) const PAGE_AI_VOICE_SELECTOR_DEMO: &str = "ai_voice_selector_demo";
+pub(crate) const PAGE_AI_AGENT_DEMO: &str = "ai_agent_demo";
+pub(crate) const PAGE_AI_SANDBOX_DEMO: &str = "ai_sandbox_demo";
+pub(crate) const PAGE_AI_PERSONA_DEMO: &str = "ai_persona_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -298,6 +301,9 @@ pub(crate) const CMD_NAV_AI_SPEECH_INPUT_DEMO: &str = "ui_gallery.nav.select.ai_
 pub(crate) const CMD_NAV_AI_MIC_SELECTOR_DEMO: &str = "ui_gallery.nav.select.ai_mic_selector_demo";
 pub(crate) const CMD_NAV_AI_VOICE_SELECTOR_DEMO: &str =
     "ui_gallery.nav.select.ai_voice_selector_demo";
+pub(crate) const CMD_NAV_AI_AGENT_DEMO: &str = "ui_gallery.nav.select.ai_agent_demo";
+pub(crate) const CMD_NAV_AI_SANDBOX_DEMO: &str = "ui_gallery.nav.select.ai_sandbox_demo";
+pub(crate) const CMD_NAV_AI_PERSONA_DEMO: &str = "ui_gallery.nav.select.ai_persona_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
@@ -1017,6 +1023,36 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "voice", "selector", "dialog", "search", "demo"],
                 docs::DOC_AI_VOICE_SELECTOR_DEMO,
                 docs::USAGE_AI_VOICE_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_AGENT_DEMO,
+                "AI Agent (Demo)",
+                "AI Elements Agent / Instructions + Tools + Output Schema Demo",
+                "fret-ui-ai (agent chrome)",
+                CMD_NAV_AI_AGENT_DEMO,
+                &["ai", "agent", "tools", "schema", "accordion", "demo"],
+                docs::DOC_AI_AGENT_DEMO,
+                docs::USAGE_AI_AGENT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SANDBOX_DEMO,
+                "AI Sandbox (Demo)",
+                "AI Elements Sandbox / Collapsible + Tabs Demo",
+                "fret-ui-ai (sandbox chrome)",
+                CMD_NAV_AI_SANDBOX_DEMO,
+                &["ai", "sandbox", "collapsible", "tabs", "demo"],
+                docs::DOC_AI_SANDBOX_DEMO,
+                docs::USAGE_AI_SANDBOX_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PERSONA_DEMO,
+                "AI Persona (Demo)",
+                "AI Elements Persona / Visual Placeholder Demo",
+                "fret-ui-ai (persona placeholder)",
+                CMD_NAV_AI_PERSONA_DEMO,
+                &["ai", "persona", "visual", "placeholder", "demo"],
+                docs::DOC_AI_PERSONA_DEMO,
+                docs::USAGE_AI_PERSONA_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,

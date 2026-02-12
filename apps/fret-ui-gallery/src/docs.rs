@@ -833,6 +833,58 @@ use fret_ui_ai::{VoiceSelector, VoiceSelectorButton, VoiceSelectorContent, Voice
 ```
 "#;
 
+pub(crate) const DOC_AI_AGENT_DEMO: &str = r#"
+## AI agent (demo)
+
+This page demonstrates an AI Elements-aligned `Agent` surface:
+
+- header (name + optional model badge),
+- instructions card,
+- tools accordion (schemas rendered as JSON),
+- output schema code block.
+
+Note: this is a UI-only port. Apps own tool execution and schema sources.
+"#;
+
+pub(crate) const USAGE_AI_AGENT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Agent, AgentContent, AgentHeader, AgentInstructions, AgentOutput, AgentTools};
+```
+"#;
+
+pub(crate) const DOC_AI_SANDBOX_DEMO: &str = r#"
+## AI sandbox (demo)
+
+This page demonstrates an AI Elements-aligned `Sandbox` surface:
+
+- collapsible root with status badge,
+- tabs for switching between panels.
+
+Note: this is a UI-only port. Apps own sandbox execution and panel content.
+"#;
+
+pub(crate) const USAGE_AI_SANDBOX_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Sandbox, SandboxContent, SandboxHeader, SandboxTabs};
+```
+"#;
+
+pub(crate) const DOC_AI_PERSONA_DEMO: &str = r#"
+## AI persona (demo)
+
+This page demonstrates an AI Elements-aligned `Persona` surface.
+
+Upstream AI Elements uses a Rive (webgl2) animation loaded from a remote `.riv` asset. The Fret
+port currently provides a UI-only placeholder that preserves the state/variant taxonomy and
+automation anchors.
+"#;
+
+pub(crate) const USAGE_AI_PERSONA_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Persona, PersonaState, PersonaVariant};
+```
+"#;
+
 pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
 ## AI prompt input provider (demo)
 

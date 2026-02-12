@@ -1,14 +1,20 @@
+mod agent_demo;
 mod chat_demo;
 mod file_tree_demo;
 mod mic_selector_demo;
+mod persona_demo;
+mod sandbox_demo;
 mod speech_input_demo;
 mod transcript_torture;
 mod transcription_demo;
 mod voice_selector_demo;
 
+pub(in crate::ui) use agent_demo::*;
 pub(in crate::ui) use chat_demo::*;
 pub(in crate::ui) use file_tree_demo::*;
 pub(in crate::ui) use mic_selector_demo::*;
+pub(in crate::ui) use persona_demo::*;
+pub(in crate::ui) use sandbox_demo::*;
 pub(in crate::ui) use speech_input_demo::*;
 pub(in crate::ui) use transcript_torture::*;
 pub(in crate::ui) use transcription_demo::*;
