@@ -177,7 +177,7 @@ fn sidebar_collapse_motion<H: UiHost>(
         !collapsed,
         SIDEBAR_COLLAPSE_OPEN_TICKS,
         SIDEBAR_COLLAPSE_CLOSE_TICKS,
-        overlay_motion::shadcn_ease,
+        overlay_motion::ease_linear,
         false,
     );
 

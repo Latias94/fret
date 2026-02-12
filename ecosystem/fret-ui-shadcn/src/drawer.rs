@@ -1529,7 +1529,7 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1651,7 +1651,7 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1840,7 +1840,7 @@ mod tests {
             ui.paint_all(app, services, b, &mut scene, 1.0);
         };
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);
@@ -1946,7 +1946,7 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
         let mut frame = FrameId(1);
         for _ in 0..settle_frames {
             app.set_frame_id(frame);

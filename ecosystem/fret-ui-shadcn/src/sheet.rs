@@ -295,7 +295,7 @@ impl Sheet {
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_500,
                 overlay_motion::SHADCN_MOTION_TICKS_300,
-                overlay_motion::shadcn_ease,
+                overlay_motion::ease_in_out,
             );
             let (open_change, open_change_complete) = cx
                 .with_state(SheetOpenChangeCallbackState::default, |state| {
@@ -1494,6 +1494,26 @@ mod tests {
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
         assert!(content_id.get().is_some());
+
+        // Let the enter transition settle so hit-testing lands inside the sheet content for
+        // deterministic pointer tests.
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_500 as usize + 4;
+        for _ in 0..settle_frames {
+            let _ = render_sheet_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                None,
+                true,
+                SheetSide::Right,
+                content_id.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         // Click inside sheet should not close.
         ui.dispatch_event(

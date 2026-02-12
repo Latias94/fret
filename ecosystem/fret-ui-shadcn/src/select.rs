@@ -5827,6 +5827,16 @@ mod tests {
         }
 
         // Reopen and ensure the selected option matches the committed value.
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,

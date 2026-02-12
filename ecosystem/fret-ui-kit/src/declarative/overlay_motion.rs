@@ -27,6 +27,16 @@ pub fn shadcn_ease(x: f32) -> f32 {
     crate::headless::easing::SHADCN_EASE.sample(x)
 }
 
+/// CSS `ease-in-out` (`cubic-bezier(0.42,0,0.58,1)`).
+pub fn ease_in_out(x: f32) -> f32 {
+    crate::headless::easing::EASE_IN_OUT.sample(x)
+}
+
+/// CSS `linear`.
+pub fn ease_linear(x: f32) -> f32 {
+    crate::headless::easing::linear(x)
+}
+
 fn fullscreen_motion_layout() -> LayoutStyle {
     // Motion wrappers are commonly used with absolutely positioned overlay content (popper-style
     // placement). Because absolute-positioned children do not contribute to intrinsic sizing, we

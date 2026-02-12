@@ -1,5 +1,7 @@
 use std::panic::Location;
+use std::time::Duration;
 
+use fret_core::{WindowFrameClockService, WindowMetricsService};
 use fret_ui::ElementContext;
 use fret_ui::Invalidation;
 use fret_ui::UiHost;
@@ -18,6 +20,64 @@ struct TransitionDriverState {
     configured_close_ticks: u64,
     timeline: TransitionTimeline,
     lease: Option<ContinuousFrames>,
+}
+
+const REFERENCE_FRAME_DELTA_NS_60HZ: u64 = 1_000_000_000 / 60;
+
+fn scale_60fps_ticks_to_frame_ticks_rounded(ticks: u64, frame_delta: Duration) -> u64 {
+    if ticks == 0 {
+        return 0;
+    }
+    if frame_delta == Duration::default() {
+        return ticks;
+    }
+    if frame_delta < Duration::from_millis(1) {
+        // When producing frames in a tight loop (common in unit tests), a best-effort frame clock
+        // snapshot may report very small deltas that do not correspond to present-time. Avoid
+        // scaling in that regime to keep tick-driven tests deterministic.
+        return ticks;
+    }
+
+    let ref_secs = (REFERENCE_FRAME_DELTA_NS_60HZ as f64) / 1_000_000_000.0;
+    let delta_secs = frame_delta.as_secs_f64();
+    if delta_secs <= 0.0 {
+        return ticks;
+    }
+
+    // Desired wall time: ticks * (1/60)s. Actual frame time: delta_secs.
+    // Compute how many *frames* we need at this delta to match the intended wall time.
+    let scaled = (ticks as f64 * ref_secs / delta_secs).round();
+    scaled.clamp(1.0, 10_000.0) as u64
+}
+
+pub(crate) fn effective_transition_durations_for_cx<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    open_ticks_60fps: u64,
+    close_ticks_60fps: u64,
+) -> (u64, u64) {
+    let Some(svc) = cx.app.global::<WindowFrameClockService>() else {
+        return (open_ticks_60fps, close_ticks_60fps);
+    };
+
+    let has_window_metrics = cx.app.global::<WindowMetricsService>().is_some();
+    let has_fixed_delta = svc.effective_fixed_delta(cx.window).is_some();
+    if !has_window_metrics && !has_fixed_delta {
+        // Many headless tests drive "frames" without a real window runner. In that setup,
+        // `record_frame` deltas reflect CPU time (not present-time), so duration scaling can
+        // explode and make interaction tests flaky. Only enable scaling when the host provides
+        // real window metrics (runner environment), or when a fixed frame delta is explicitly
+        // configured for determinism.
+        return (open_ticks_60fps, close_ticks_60fps);
+    }
+
+    let Some(frame_delta) = svc.snapshot(cx.window).map(|s| s.delta) else {
+        return (open_ticks_60fps, close_ticks_60fps);
+    };
+
+    (
+        scale_60fps_ticks_to_frame_ticks_rounded(open_ticks_60fps, frame_delta),
+        scale_60fps_ticks_to_frame_ticks_rounded(close_ticks_60fps, frame_delta),
+    )
 }
 
 fn settled_transition_output(open: bool) -> TransitionOutput {
@@ -76,6 +136,9 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
     ease: fn(f32) -> f32,
     animate_on_mount: bool,
 ) -> TransitionOutput {
+    let (open_ticks, close_ticks) =
+        effective_transition_durations_for_cx(cx, open_ticks, close_ticks);
+
     let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
     if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
         let app_tick = cx.app.tick_id().0;
@@ -225,6 +288,9 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
     cx.keyed(
         (loc.file(), loc.line(), loc.column(), "cubic_bezier"),
         |cx| {
+            let (open_ticks, close_ticks) =
+                effective_transition_durations_for_cx(cx, open_ticks, close_ticks);
+
             let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
             if reduced_motion || (open_ticks == 0 && close_ticks == 0) {
                 let app_tick = cx.app.tick_id().0;
@@ -299,8 +365,9 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowFrameClockService};
     use fret_runtime::{Effect, FrameId, TickId};
+    use std::time::Duration;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -426,5 +493,52 @@ mod tests {
         assert!(!out1.animating);
         assert_eq!(out1.progress, 0.0);
         assert!(effects1.is_empty());
+    }
+
+    #[test]
+    fn transition_scales_60fps_ticks_using_fixed_frame_delta() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(8)));
+        });
+
+        // Prime the frame clock so the snapshot delta is non-zero before the first transition
+        // evaluation (otherwise the first call sees a 0 delta and may configure unscaled durations).
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        let mut frames = 0u64;
+        let mut frame_id = 2u64;
+        loop {
+            frames += 1;
+            frame_id += 1;
+            app.set_tick_id(TickId(frames));
+            app.set_frame_id(FrameId(frame_id));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            let out =
+                fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t_scale", |cx| {
+                    drive_transition_with_durations(cx, true, 12, 12)
+                });
+            if !out.animating {
+                break;
+            }
+            assert!(
+                frames < 200,
+                "transition did not settle in a reasonable number of frames"
+            );
+        }
+
+        // With a fixed delta of 8ms (~125Hz), a 12-tick (60Hz) transition targets ~200ms, which
+        // requires ~25 frames.
+        assert_eq!(frames, 25);
     }
 }
