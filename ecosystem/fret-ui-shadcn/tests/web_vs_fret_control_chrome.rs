@@ -17,12 +17,15 @@ mod css_color;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
-fn contains_text(node: &WebNode, needle: &str) -> bool {
-    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
-        return true;
-    }
-    node.children.iter().any(|c| contains_text(c, needle))
-}
+#[path = "support/css_units.rs"]
+mod css_units;
+
+use css_units::parse_px;
+
+#[path = "support/web_tree.rs"]
+mod web_tree;
+
+use web_tree::contains_text;
 
 fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
     if node.attrs.get(key).is_some_and(|v| v == value) {
@@ -31,12 +34,6 @@ fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
     node.children
         .iter()
         .any(|c| has_descendant_attr(c, key, value))
-}
-
-fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
 }
 
 fn parse_calendar_day_aria_label(label: &str) -> Option<(Date, bool)> {

@@ -14,13 +14,12 @@ use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::prelude::LayoutRefinement;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-#[path = "support/repo_root.rs"]
-mod repo_root;
+#[path = "support/radix_web_paths.rs"]
+mod radix_web_paths;
 
-use repo_root::repo_root;
+use radix_web_paths::radix_web_path;
 
 #[derive(Debug, Clone, Deserialize)]
 struct TimelineGolden {
@@ -62,15 +61,6 @@ struct DomNode {
     text: Option<String>,
     #[serde(default)]
     children: Vec<DomNode>,
-}
-
-fn radix_web_path(file_stem: &str) -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("radix-web")
-        .join("v4")
-        .join("radix-vega")
-        .join(format!("{file_stem}.json"))
 }
 
 fn read_timeline(file_stem: &str) -> TimelineGolden {

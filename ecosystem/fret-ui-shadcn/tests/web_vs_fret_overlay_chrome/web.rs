@@ -2,36 +2,27 @@
 mod web_golden_shadcn;
 pub(super) use web_golden_shadcn::*;
 
+#[path = "../support/css_units.rs"]
+mod css_units;
+
+#[path = "../support/web_query.rs"]
+mod web_query;
+
+#[path = "../support/web_portals.rs"]
+mod web_portals;
+
 pub(super) fn find_portal_by_role<'a>(
     theme: &'a WebGoldenTheme,
     role: &str,
 ) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
-        .or_else(|| {
-            theme
-                .portal_wrappers
-                .iter()
-                .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
-        })
+    web_portals::find_portal_by_role(theme, role)
 }
 
 pub(super) fn find_portal_by_slot<'a>(
     theme: &'a WebGoldenTheme,
     slot: &str,
 ) -> Option<&'a WebNode> {
-    theme
-        .portals
-        .iter()
-        .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-        .or_else(|| {
-            theme
-                .portal_wrappers
-                .iter()
-                .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
-        })
+    web_portals::find_portal_by_slot(theme, slot)
 }
 
 pub(super) fn find_by_data_slot_and_state<'a>(
@@ -39,12 +30,7 @@ pub(super) fn find_by_data_slot_and_state<'a>(
     slot: &str,
     state: &str,
 ) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-    })
+    web_query::find_by_data_slot_and_state(root, slot, state)
 }
 
 pub(super) fn find_by_data_slot_and_state_and_text<'a>(
@@ -53,19 +39,11 @@ pub(super) fn find_by_data_slot_and_state_and_text<'a>(
     state: &str,
     text: &str,
 ) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-            && n.attrs
-                .get("data-state")
-                .is_some_and(|v| v.as_str() == state)
-            && n.text.as_deref() == Some(text)
-    })
+    web_query::find_by_data_slot_and_state_and_text(root, slot, state, text)
 }
 
 pub(super) fn parse_px(s: &str) -> Option<f32> {
-    let s = s.trim();
-    let v = s.strip_suffix("px").unwrap_or(s);
-    v.parse::<f32>().ok()
+    css_units::parse_px(s)
 }
 
 pub(super) fn web_border_widths_px(node: &WebNode) -> Option<[f32; 4]> {
@@ -108,9 +86,7 @@ pub(super) fn web_corner_radii_effective_px(node: &WebNode) -> Option<[f32; 4]> 
 }
 
 pub(super) fn find_by_data_slot<'a>(node: &'a WebNode, slot: &str) -> Option<&'a WebNode> {
-    find_first(node, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v.as_str() == slot)
-    })
+    web_query::find_by_data_slot(node, slot)
 }
 
 #[derive(Debug, Clone, Copy)]

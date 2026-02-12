@@ -314,6 +314,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
         self.stack = prev_stack;
         self.callsite_counters = prev_counters;
+        debug_assert_eq!(self.callsite_counters.len(), self.stack.len());
         out
     }
 

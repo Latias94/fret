@@ -114,6 +114,9 @@ fn marquee_respects_reduced_motion_and_does_not_request_frames() {
     app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
         rt.set_window_prefers_reduced_motion(window, Some(true));
     });
+    app.with_global_mut(fret_ui::ElementRuntime::default, |rt, _app| {
+        rt.set_window_prefers_reduced_motion(window, Some(true));
+    });
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

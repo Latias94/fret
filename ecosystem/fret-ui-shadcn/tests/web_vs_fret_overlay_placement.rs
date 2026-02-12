@@ -26,6 +26,9 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[path = "support/css_units.rs"]
+mod css_units;
+
 #[path = "web_vs_fret_overlay_placement/web.rs"]
 mod web;
 pub(crate) use web::*;
@@ -1165,12 +1168,7 @@ fn parse_align(value: &str) -> Option<Align> {
 }
 
 fn parse_px(value: &str) -> Option<f32> {
-    let value = value.trim();
-    if value == "0" {
-        return Some(0.0);
-    }
-    let value = value.strip_suffix("px").unwrap_or(value);
-    value.parse::<f32>().ok()
+    css_units::parse_px(value)
 }
 
 fn rect_right(r: WebRect) -> f32 {

@@ -11,6 +11,10 @@ use chart_test_data::CHART_INTERACTIVE_DESKTOP;
 mod web_golden_shadcn;
 use web_golden_shadcn::*;
 
+#[path = "support/assert.rs"]
+mod test_assert;
+use test_assert::assert_close_px;
+
 fn web_find_chart_tooltip_panel<'a>(root: &'a WebNode) -> &'a WebNode {
     find_first(root, &|n| {
         n.tag == "div"
@@ -202,15 +206,6 @@ fn find_semantics<'a>(
         }
         true
     })
-}
-
-fn assert_close_px(label: &str, a: Px, b: f32, tol: f32) {
-    let delta = (a.0 - b).abs();
-    assert!(
-        delta <= tol,
-        "{label}: expected ~{b:.3}px, got {:.3}px (Δ={delta:.3}px, tol={tol:.3}px)",
-        a.0
-    );
 }
 
 fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
