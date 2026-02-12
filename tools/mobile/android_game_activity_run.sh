@@ -5,12 +5,13 @@ profile="debug"
 device=""
 no_logcat=""
 backend=""
+allow_fallback=""
 diag=""
 diag_dir=""
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--release] [--device <serial>] [--backend <vk|gl|...>] [--diag] [--diag-dir <path>] [--no-logcat]
+Usage: $(basename "$0") [--release] [--device <serial>] [--backend <vk|gl|...>] [--allow-fallback] [--diag] [--diag-dir <path>] [--no-logcat]
 
 Builds and runs the Android APK using the Gradle GameActivity wrapper:
   apps/fret-ui-gallery-mobile/android
@@ -24,6 +25,7 @@ while [[ $# -gt 0 ]]; do
     --release) profile="release"; shift ;;
     --device|-d) device="$2"; shift 2 ;;
     --backend) backend="$2"; shift 2 ;;
+    --allow-fallback) allow_fallback="1"; shift ;;
     --diag) diag="1"; shift ;;
     --diag-dir) diag_dir="$2"; shift 2 ;;
     --no-logcat) no_logcat="1"; shift ;;
@@ -111,6 +113,9 @@ if [[ "${profile}" == "debug" ]]; then
   am_args=(shell am start -n "dev.fret.ui_gallery/dev.fret.ui_gallery.MainActivity")
   if [[ -n "${backend}" ]]; then
     am_args+=(--es "FRET_WGPU_BACKEND" "${backend}")
+  fi
+  if [[ -n "${allow_fallback}" ]]; then
+    am_args+=(--es "FRET_WGPU_ALLOW_FALLBACK" "1")
   fi
   if [[ -n "${diag}" ]]; then
     am_args+=(--es "FRET_DIAG" "1")

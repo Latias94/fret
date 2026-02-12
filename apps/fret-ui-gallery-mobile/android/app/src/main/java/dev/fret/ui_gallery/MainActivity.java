@@ -45,6 +45,15 @@ public class MainActivity extends GameActivity {
                 Log.w("fret", "failed to set FRET_WGPU_BACKEND", e);
             }
         }
+
+        String allowFallback = getIntent().getStringExtra("FRET_WGPU_ALLOW_FALLBACK");
+        if (allowFallback != null && !allowFallback.trim().isEmpty()) {
+            try {
+                Os.setenv("FRET_WGPU_ALLOW_FALLBACK", allowFallback.trim(), true);
+            } catch (ErrnoException e) {
+                Log.w("fret", "failed to set FRET_WGPU_ALLOW_FALLBACK", e);
+            }
+        }
         super.onCreate(savedInstanceState);
     }
 }
