@@ -392,9 +392,17 @@ impl AlertDialogTrigger {
 }
 
 /// shadcn/ui `AlertDialogContent` (v4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AlertDialogContentSize {
+    #[default]
+    Default,
+    Sm,
+}
+
 #[derive(Debug, Clone)]
 pub struct AlertDialogContent {
     children: Vec<AnyElement>,
+    size: AlertDialogContentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -404,9 +412,15 @@ impl AlertDialogContent {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: AlertDialogContentSize::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn size(mut self, size: AlertDialogContentSize) -> Self {
+        self.size = size;
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -437,10 +451,23 @@ impl AlertDialogContent {
             .p(Space::N6)
             .merge(self.chrome);
 
+        let default_max_w = match self.size {
+            AlertDialogContentSize::Default => Px(512.0),
+            AlertDialogContentSize::Sm => Px(320.0),
+        };
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(Px(512.0))
+            .max_w(default_max_w)
             .merge(self.layout);
+
+        if let Some(max_w) = layout
+            .size
+            .as_ref()
+            .and_then(|s| s.max_width.as_ref())
+            .map(|m| m.resolve(&theme))
+        {
+            crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
+        }
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
@@ -472,31 +499,162 @@ impl AlertDialogContent {
 /// shadcn/ui `AlertDialogHeader` (v4).
 #[derive(Debug, Clone)]
 pub struct AlertDialogHeader {
+    media: Option<AnyElement>,
     children: Vec<AnyElement>,
 }
 
 impl AlertDialogHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            media: None,
+            children,
+        }
+    }
+
+    pub fn media(mut self, media: AnyElement) -> Self {
+        self.media = Some(media);
+        self
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::stack;
+
+        let content_max_w = crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app);
+        let content_is_sm = content_max_w.is_some_and(|w| (w.0 - 320.0).abs() < 0.5 || w.0 < 320.0);
+
+        let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_tailwind::SM,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
+
+        // Upstream: `sm:group-data-[size=default]` switches from centered to left-aligned header.
+        // We approximate this by inferring `size` from the committed content max-width.
+        let left_aligned = sm_breakpoint && !content_is_sm;
+
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default(),
             LayoutRefinement::default().w_full(),
         );
+
         let children = self.children;
-        shadcn_layout::container_vstack(
+        let Some(media) = self.media else {
+            return shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N1p5)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items(if left_aligned {
+                        fret_ui_kit::Items::Stretch
+                    } else {
+                        fret_ui_kit::Items::Center
+                    }),
+                children,
+            );
+        };
+
+        if left_aligned {
+            let text = shadcn_layout::container_vstack(
+                cx,
+                decl_style::container_props(
+                    Theme::global(&*cx.app),
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default().w_full().min_w_0(),
+                ),
+                stack::VStackProps::default()
+                    .gap(Space::N1p5)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .items_stretch(),
+                children,
+            );
+
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N6)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_start(),
+                vec![media, text],
+            )
+        } else {
+            let mut children = children;
+            children.insert(0, media);
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N1p5)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_center(),
+                children,
+            )
+        }
+    }
+}
+
+/// shadcn/ui `AlertDialogMedia` (v4).
+#[derive(Debug, Clone)]
+pub struct AlertDialogMedia {
+    child: AnyElement,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl AlertDialogMedia {
+    pub fn new(child: AnyElement) -> Self {
+        Self {
+            child,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::stack;
+
+        let theme = Theme::global(&*cx.app);
+        let bg = theme
+            .color_by_key("muted")
+            .unwrap_or_else(|| theme.color_required("muted"));
+
+        let props = decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(bg))
+                .rounded(Radius::Md)
+                .merge(self.chrome),
+            LayoutRefinement::default()
+                .w_px(Px(64.0))
+                .h_px(Px(64.0))
+                .flex_shrink_0()
+                .merge(self.layout),
+        );
+
+        shadcn_layout::container_hstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full())
-                .items_stretch(),
-            children,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .justify_center()
+                .items_center(),
+            vec![self.child],
         )
     }
 }
@@ -518,6 +676,8 @@ impl AlertDialogFooter {
         use fret_ui_kit::declarative::stack;
 
         let children = self.children;
+        let content_max_w = crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app);
+        let content_is_sm = content_max_w.is_some_and(|w| (w.0 - 320.0).abs() < 0.5 || w.0 < 320.0);
 
         // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint), so match it via viewport
         // queries (ADR 0232).
@@ -544,6 +704,35 @@ impl AlertDialogFooter {
                     .layout(LayoutRefinement::default().w_full())
                     .justify_end()
                     .items_center(),
+                children,
+            )
+        } else if content_is_sm {
+            // Tailwind (size=sm): `grid grid-cols-2 gap-2`
+            let theme = Theme::global(&*cx.app).clone();
+            let layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_1().min_w_0().w_full(),
+            );
+            let children: Vec<AnyElement> = children
+                .into_iter()
+                .map(|child| {
+                    cx.container(
+                        ContainerProps {
+                            layout,
+                            ..Default::default()
+                        },
+                        move |_cx| vec![child],
+                    )
+                })
+                .collect();
+
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_stretch(),
                 children,
             )
         } else {
