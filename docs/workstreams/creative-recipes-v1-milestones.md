@@ -113,7 +113,7 @@ Evidence:
 - Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
 
-Status: Landed (bloom recipe pending)
+Status: Landed
 
 Evidence:
 
@@ -126,9 +126,13 @@ Evidence:
 - `crates/fret-render-wgpu/src/renderer/shaders.rs`
 - `crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`
 
-Evidence (planned):
+Evidence (bloom example):
 
-- `ecosystem/fret-ui-kit/src/recipes/bloom.rs` (or equivalent) + UI gallery/diag evidence
+- `ecosystem/fret-ui-kit/src/recipes/bloom.rs`
+- `ecosystem/fret-ui-kit/src/declarative/bloom.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_BLOOM`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_bloom`)
+- `tools/diag-scripts/ui-gallery-magic-bloom-steady.json`
 
 ## M7 — Sampled materials v2a (catalog textures)
 

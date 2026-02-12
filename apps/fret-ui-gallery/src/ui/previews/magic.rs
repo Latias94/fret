@@ -228,6 +228,75 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec
     )]
 }
 
+pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+
+    let mut panel_layout = LayoutStyle::default();
+    panel_layout.size.width = Length::Px(Px(560.0));
+    panel_layout.size.height = Length::Px(Px(260.0));
+
+    let panel = fret_ui_kit::declarative::bloom::bloom_panel(
+        cx,
+        fret_ui_kit::declarative::bloom::BloomPanelProps {
+            layout: panel_layout,
+            effect: fret_ui_kit::recipes::bloom::BloomEffect {
+                cutoff: 0.6,
+                soft: 0.12,
+                blur_radius_px: Px(18.0),
+                blur_downsample: 1,
+                strength: 1.6,
+            },
+            ..Default::default()
+        },
+        |cx| {
+            let mut target_layout = LayoutStyle::default();
+            target_layout.size.width = Length::Px(Px(240.0));
+            target_layout.size.height = Length::Px(Px(92.0));
+
+            let target = cx
+                .container(
+                    ContainerProps {
+                        layout: target_layout,
+                        background: Some(ring),
+                        corner_radii: Corners::all(Px(18.0)),
+                        ..Default::default()
+                    },
+                    |cx| vec![shadcn::typography::h4(cx, "BLOOM")],
+                )
+                .test_id("ui-gallery-magic-bloom-target");
+
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .justify_center()
+                    .items_center(),
+                |_cx| [target],
+            )]
+        },
+    )
+    .test_id("ui-gallery-magic-bloom");
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start(),
+        |cx| {
+            vec![
+                shadcn::typography::h4(cx, "Bloom (Tier B recipe example)"),
+                shadcn::typography::p(
+                    cx,
+                    "Threshold -> blur -> add compositing (best-effort). \
+                     Intended as an authoring example for creative effects.",
+                ),
+                panel,
+            ]
+        },
+    )]
+}
+
 pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_required("muted"));
     let border = cx.with_theme(|theme| theme.color_required("border"));

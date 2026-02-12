@@ -1,6 +1,7 @@
 pub mod accent_color_queries;
 pub mod action_hooks;
 pub mod active_descendant;
+pub mod bloom;
 pub mod cached_subtree;
 #[cfg(feature = "recipes")]
 pub mod canvas_surface;
@@ -16,7 +17,6 @@ pub mod file_tree;
 pub mod focus_scope;
 pub mod forced_colors_queries;
 pub mod form;
-#[cfg(feature = "recipes")]
 pub mod glass;
 pub mod global_watch;
 pub mod hover_intent;
@@ -25,7 +25,6 @@ pub mod list;
 pub mod model_watch;
 pub mod occlusion_queries;
 pub mod overlay_motion;
-#[cfg(feature = "recipes")]
 pub mod pixelate;
 pub mod pointer_queries;
 pub mod prelude;

@@ -477,6 +477,7 @@ fn page_preview(
         PAGE_MAGIC_CARD => preview_magic_card(cx),
         PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
         PAGE_MAGIC_DOCK => preview_magic_dock(cx),
+        PAGE_MAGIC_BLOOM => preview_magic_bloom(cx),
         PAGE_FIELD => preview_field(cx),
         PAGE_OVERLAY => preview_overlay(
             cx,

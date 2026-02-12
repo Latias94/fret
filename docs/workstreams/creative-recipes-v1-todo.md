@@ -65,7 +65,7 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
 ## P1 — Effect steps extension
 
 - [x] Implement `ColorMatrix` + `AlphaThreshold` steps (ADR 0236).
-- [ ] Add a “bloom-like” recipe example (threshold -> blur -> add) once blend groups exist.
+- [x] Add a “bloom-like” recipe example (threshold -> blur -> add) once blend groups exist.
 
 ## P1 — Sampled materials (v2a, catalog textures)
 

@@ -1,3 +1,4 @@
+pub mod bloom;
 #[cfg(feature = "recipes")]
 pub mod canvas_pan_zoom;
 #[cfg(feature = "recipes")]

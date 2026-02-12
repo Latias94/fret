@@ -159,6 +159,30 @@ let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_BLOOM: &str = r#"
+## Bloom (fret-ui-kit recipe)
+
+This demo is a “bloom-like” example built from:
+
+- `EffectStep::ColorMatrix` (luma-to-alpha),
+- `EffectStep::AlphaThreshold`,
+- `EffectStep::GaussianBlur`,
+- additive compositing groups (ADR 0247).
+
+It is meant as a Tier B authoring example (ADR 0236) rather than a pixel-perfect reproduction of any
+single web implementation.
+"#;
+
+pub(crate) const USAGE_MAGIC_BLOOM: &str = r#"
+```rust
+use fret_ui_kit::declarative::bloom::{BloomPanelProps, bloom_panel};
+
+let panel = bloom_panel(cx, BloomPanelProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_CARD: &str = r#"
 ## MagicCard (fret-ui-magic)
 
