@@ -242,3 +242,15 @@ fn script_v2_roundtrip_bounds_max_size_predicate() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_set_window_outer_position() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_window_outer_position", "x_px": 32.0, "y_px": 64.0 }
+  ]
+}"#,
+    );
+}

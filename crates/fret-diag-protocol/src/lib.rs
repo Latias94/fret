@@ -346,6 +346,14 @@ pub enum UiActionStepV2 {
         width_px: f32,
         height_px: f32,
     },
+    /// Set the OS window outer position (screen-space logical pixels).
+    ///
+    /// This is intended for deterministically arranging windows in scripted repros and for
+    /// best-effort placement restoration (ADR 0017).
+    SetWindowOuterPosition {
+        x_px: f32,
+        y_px: f32,
+    },
 }
 
 impl From<UiActionStepV1> for UiActionStepV2 {

@@ -2714,6 +2714,14 @@ fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
             "height_px": 720.0,
         }),
     });
+    v2.push(StepTemplate {
+        label: "set_window_outer_position",
+        step: serde_json::json!({
+            "type": "set_window_outer_position",
+            "x_px": 100.0,
+            "y_px": 100.0
+        }),
+    });
 
     v2
 }

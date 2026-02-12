@@ -856,6 +856,21 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV2::SetWindowOuterPosition { x_px, y_px } => {
+                output
+                    .effects
+                    .push(Effect::Window(fret_app::WindowRequest::SetOuterPosition {
+                        window,
+                        position: fret_core::WindowLogicalPosition {
+                            x: x_px.round() as i32,
+                            y: y_px.round() as i32,
+                        },
+                    }));
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -4635,7 +4650,8 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
-        | UiActionStepV2::SetWindowInnerSize { .. } => false,
+        | UiActionStepV2::SetWindowInnerSize { .. }
+        | UiActionStepV2::SetWindowOuterPosition { .. } => false,
     }
 }
 
