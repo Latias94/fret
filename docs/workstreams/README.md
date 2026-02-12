@@ -25,6 +25,9 @@ Active workstreams:
 - `docs/workstreams/mobile-bringup-v1.md`
 - `docs/workstreams/mobile-bringup-v1-todo.md`
 - `docs/workstreams/mobile-bringup-v1-milestones.md`
+- `docs/workstreams/mobile-gfx-backend-v1/design.md`
+- `docs/workstreams/mobile-gfx-backend-v1/todo.md`
+- `docs/workstreams/mobile-gfx-backend-v1/milestones.md`
 - `docs/workstreams/mobile-contracts-v1/design.md`
 - `docs/workstreams/mobile-contracts-v1/todo.md`
 - `docs/workstreams/mobile-contracts-v1/milestones.md`
