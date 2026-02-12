@@ -48,7 +48,9 @@ experience (nodes as element subtrees, marquee selection, input filtering), trac
 - [x] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
   - Input exemptions: `ecosystem/fret-canvas/src/ui/input_exempt.rs` (`canvas_input_exempt_region`)
   - Marquee recipe: `ecosystem/fret-canvas/src/ui/pan_zoom.rs` (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`)
-- [ ] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
+- [x] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
+  - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`dash_polyline_segments`)
+  - Applied to AI Elements workflow temporary edge: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
 - [ ] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
 
 ### M0 — Foundations (composition + gates)
