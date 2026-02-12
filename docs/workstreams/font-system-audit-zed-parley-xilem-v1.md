@@ -1,6 +1,6 @@
 # Workstream: Font System Audit Closures (Zed / Parley / Xilem) v1
 
-Status: Planned
+Status: In progress
 
 This workstream turns the Feb 2026 font-system audit into a concrete refactor plan with milestones.
 
@@ -75,9 +75,19 @@ Exit criteria:
   - a stable `fallback_policy_key`,
   - an “explain” snapshot for diagnostics.
 
+Progress (implemented, Feb 2026):
+
+- Introduced a renderer-internal policy object (`TextFallbackPolicyV1`) that owns:
+  - locale + injection mode inputs,
+  - derived common-fallback candidates + stack suffix,
+  - `fallback_policy_key` derivation.
+- The policy is re-applied across font DB change boundaries so behavior does not silently drift:
+  - `TextSystem::apply_system_font_rescan_result` (system font rescan),
+  - `TextSystem::add_fonts` (font injection).
+
 Evidence anchors:
 
-- `crates/fret-render-wgpu/src/text/mod.rs` (`fallback_policy_snapshot`, key derivation)
+- `crates/fret-render-wgpu/src/text/mod.rs` (`TextFallbackPolicyV1`, `fallback_policy_snapshot`, key derivation)
 
 ### M3: Performance hardening (budgets + async)
 
@@ -100,4 +110,3 @@ Evidence anchors:
   (`repo-ref/parley/doc/design.md`).
 - Xilem demonstrates variable font usage via weight; a v1 API can keep most axis usage implicit while keeping instance
   identity correct (`repo-ref/xilem/xilem/examples/variable_clock.rs`).
-
