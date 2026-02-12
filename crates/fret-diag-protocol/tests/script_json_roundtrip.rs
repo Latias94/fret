@@ -436,6 +436,38 @@ fn script_v2_roundtrip_dock_drag_active_is_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_graph_signature_predicates() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[tabs([a]),tabs([b])]);floatings=[])"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_contains",
+        "needle": "tabs([a])"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 42
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_raise_window_last_seen_other() {
     assert_script_v2_roundtrip(
         r#"{

@@ -140,6 +140,89 @@ fn dock_graph_stats_for_window(
     }
 }
 
+fn fnv1a64(bytes: &[u8]) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for b in bytes {
+        hash ^= u64::from(*b);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+fn dock_graph_signature_for_window(
+    graph: &DockGraph,
+    window: fret_core::AppWindowId,
+) -> fret_runtime::DockGraphSignatureDiagnostics {
+    use std::collections::HashSet;
+
+    fn panel_key_sig(p: &PanelKey) -> String {
+        match &p.instance {
+            Some(instance) if !instance.is_empty() => format!("{}#{}", p.kind.0, instance),
+            _ => p.kind.0.clone(),
+        }
+    }
+
+    fn node_sig(graph: &DockGraph, node: DockNodeId, visited: &mut HashSet<DockNodeId>) -> String {
+        if !visited.insert(node) {
+            return "cycle".to_string();
+        }
+
+        let Some(n) = graph.node(node) else {
+            return "missing".to_string();
+        };
+
+        match n {
+            DockNode::Tabs { tabs, active } => {
+                let body = tabs.iter().map(panel_key_sig).collect::<Vec<_>>().join(",");
+                if tabs.len() > 1 {
+                    format!("tabs(a={active}:[{body}])")
+                } else {
+                    format!("tabs([{body}])")
+                }
+            }
+            DockNode::Floating { child } => {
+                let child_sig = node_sig(graph, *child, visited);
+                format!("floating({child_sig})")
+            }
+            DockNode::Split { axis, children, .. } => {
+                let axis = match axis {
+                    fret_core::Axis::Horizontal => "h",
+                    fret_core::Axis::Vertical => "v",
+                };
+                let child_sigs = children
+                    .iter()
+                    .map(|c| node_sig(graph, *c, visited))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                format!("split({axis},[{child_sigs}])")
+            }
+        }
+    }
+
+    let root_sig = graph
+        .window_root(window)
+        .map(|root| node_sig(graph, root, &mut HashSet::new()))
+        .unwrap_or_else(|| "none".to_string());
+
+    let mut floating_sigs: Vec<String> = graph
+        .floating_windows(window)
+        .iter()
+        .map(|f| node_sig(graph, f.floating, &mut HashSet::new()))
+        .collect();
+    floating_sigs.sort();
+
+    let signature = format!(
+        "dock(root={root_sig};floatings=[{}])",
+        floating_sigs.join(",")
+    );
+    let fingerprint64 = fnv1a64(signature.as_bytes());
+
+    fret_runtime::DockGraphSignatureDiagnostics {
+        signature,
+        fingerprint64,
+    }
+}
+
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
     semantics_test_id: Option<&'static str>,
@@ -1210,6 +1293,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .app
                 .global::<DockManager>()
                 .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
+            let dock_graph_signature = cx
+                .app
+                .global::<DockManager>()
+                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -1222,6 +1309,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
+                            dock_graph_signature,
                         },
                     );
                 },
@@ -4362,6 +4450,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .app
                 .global::<DockManager>()
                 .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
+            let dock_graph_signature = cx
+                .app
+                .global::<DockManager>()
+                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -4374,6 +4466,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
+                            dock_graph_signature,
                         },
                     );
                 },
@@ -4548,6 +4641,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .app
                 .global::<DockManager>()
                 .map(|dock| dock_graph_stats_for_window(&dock.graph, self.window));
+            let dock_graph_signature = cx
+                .app
+                .global::<DockManager>()
+                .map(|dock| dock_graph_signature_for_window(&dock.graph, self.window));
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -4560,6 +4657,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             dock_drop_resolve,
                             viewport_capture,
                             dock_graph_stats,
+                            dock_graph_signature,
                         },
                     );
                 },

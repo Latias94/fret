@@ -27,6 +27,23 @@ pub struct DockingInteractionDiagnostics {
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
     /// Best-effort dock graph stats snapshot for the current window.
     pub dock_graph_stats: Option<DockGraphStatsDiagnostics>,
+    /// Best-effort stable signature for the current window's dock graph.
+    ///
+    /// This is intended for scripted regression gates that want to assert an exact layout shape
+    /// (dockview-style) without relying on pixels.
+    pub dock_graph_signature: Option<DockGraphSignatureDiagnostics>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockGraphSignatureDiagnostics {
+    /// Stable, canonical-ish shape signature for the dock graph in a specific window.
+    ///
+    /// Notes:
+    /// - Does not include floating window rects (platform-dependent).
+    /// - Does not include split fractions (pointer-driven and DPI-sensitive).
+    pub signature: String,
+    /// FNV-1a 64-bit hash of `signature` (for compact assertions).
+    pub fingerprint64: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

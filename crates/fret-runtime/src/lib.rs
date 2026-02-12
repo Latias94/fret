@@ -84,7 +84,8 @@ pub use input::{
 pub use interaction_diagnostics::{
     DockDragDiagnostics, DockDropCandidateRectDiagnostics, DockDropCandidateRectKind,
     DockDropPreviewDiagnostics, DockDropPreviewKindDiagnostics, DockDropResolveDiagnostics,
-    DockDropResolveSource, DockDropTargetDiagnostics, DockGraphStatsDiagnostics,
+    DockDropResolveSource, DockDropTargetDiagnostics, DockGraphSignatureDiagnostics,
+    DockGraphStatsDiagnostics,
     DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};

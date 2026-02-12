@@ -7393,6 +7393,8 @@ pub struct UiDockingInteractionSnapshotV1 {
     pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
     #[serde(default)]
     pub dock_graph_stats: Option<UiDockGraphStatsDiagnosticsV1>,
+    #[serde(default)]
+    pub dock_graph_signature: Option<UiDockGraphSignatureDiagnosticsV1>,
 }
 
 impl UiDockingInteractionSnapshotV1 {
@@ -7411,6 +7413,25 @@ impl UiDockingInteractionSnapshotV1 {
             dock_graph_stats: snapshot
                 .dock_graph_stats
                 .map(UiDockGraphStatsDiagnosticsV1::from_snapshot),
+            dock_graph_signature: snapshot
+                .dock_graph_signature
+                .as_ref()
+                .map(UiDockGraphSignatureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockGraphSignatureDiagnosticsV1 {
+    pub signature: String,
+    pub fingerprint64: u64,
+}
+
+impl UiDockGraphSignatureDiagnosticsV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockGraphSignatureDiagnostics) -> Self {
+        Self {
+            signature: snapshot.signature.clone(),
+            fingerprint64: snapshot.fingerprint64,
         }
     }
 }
@@ -13121,6 +13142,15 @@ fn eval_predicate(
         UiPredicateV1::DockGraphMaxSplitDepthLe { max } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.max_split_depth <= *max),
+        UiPredicateV1::DockGraphSignatureIs { signature } => docking
+            .and_then(|d| d.dock_graph_signature.as_ref())
+            .is_some_and(|s| s.signature == *signature),
+        UiPredicateV1::DockGraphSignatureContains { needle } => docking
+            .and_then(|d| d.dock_graph_signature.as_ref())
+            .is_some_and(|s| s.signature.contains(needle)),
+        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => docking
+            .and_then(|d| d.dock_graph_signature.as_ref())
+            .is_some_and(|s| s.fingerprint64 == *fingerprint64),
     }
 }
 
@@ -14712,6 +14742,10 @@ mod tests {
                 canonical_ok: true,
                 has_nested_same_axis_splits: false,
             }),
+            dock_graph_signature: Some(fret_runtime::DockGraphSignatureDiagnostics {
+                signature: "dock(root=split(v,[tabs([a]),tabs([b])]);floatings=[])".to_string(),
+                fingerprint64: 42,
+            }),
             ..Default::default()
         };
 
@@ -14784,6 +14818,43 @@ mod tests {
             ),
             "expected max_split_depth <= 2 to fail when snapshot reports max_split_depth=3"
         );
+
+        let pred = UiPredicateV1::DockGraphSignatureIs {
+            signature: "dock(root=split(v,[tabs([a]),tabs([b])]);floatings=[])".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &[],
+            Some(&docking),
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockGraphSignatureContains {
+            needle: "tabs([a])".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &[],
+            Some(&docking),
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64: 42 };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &[],
+            Some(&docking),
+            &pred
+        ));
 
         let pred = UiPredicateV1::DockGraphCanonicalIs { canonical: false };
         assert!(

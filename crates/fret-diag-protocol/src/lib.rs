@@ -800,6 +800,25 @@ pub enum UiPredicateV1 {
     DockGraphMaxSplitDepthLe {
         max: u32,
     },
+    /// True when the latest dock graph signature snapshot matches `signature`.
+    ///
+    /// This signature is intended to be stable across runs and platforms:
+    /// - it does not include split fractions (pointer-driven and DPI-sensitive),
+    /// - it does not include floating window rects (platform-dependent).
+    DockGraphSignatureIs {
+        signature: String,
+    },
+    /// True when the latest dock graph signature snapshot contains `needle` as a substring.
+    ///
+    /// This is useful for large layouts where asserting the entire signature string would be too
+    /// verbose.
+    DockGraphSignatureContains {
+        needle: String,
+    },
+    /// True when the latest dock graph signature fingerprint matches `fingerprint64`.
+    DockGraphSignatureFingerprint64Is {
+        fingerprint64: u64,
+    },
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
