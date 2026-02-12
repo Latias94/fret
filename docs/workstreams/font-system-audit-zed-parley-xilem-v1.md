@@ -46,7 +46,8 @@ Exit criteria:
 
 Evidence anchors:
 
-- Diag scripts: `tools/diag-scripts/`
+- Diag script (bundled/no-system-font baseline): `tools/diag-scripts/ui-gallery-text-mixed-script-bundled-fallback-conformance.json`
+- UI gallery harness: `apps/fret-ui-gallery/src/ui/previews/pages/editors/text/mixed_script_fallback.rs` (`ui-gallery-text-mixed-script-fallback-root`)
 - Gates: `crates/fret-diag/src/stats.rs`
 - Bundle fields: `UiResourceCachesV1.render_text_fallback_policy` and `render_text_font_trace`
 

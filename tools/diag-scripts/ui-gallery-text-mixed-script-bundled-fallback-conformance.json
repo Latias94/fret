@@ -30,13 +30,13 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "measure overlay" },
+    { "type": "type_text", "text": "mixed script fallback" },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-text-measure-overlay" },
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-text-mixed-script-fallback" },
         "padding_px": 8.0,
         "eps_px": 1.0
       },
@@ -44,13 +44,16 @@
     },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-text-measure-overlay" }
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-text-mixed-script-fallback" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-text-measure-overlay-root" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-text-mixed-script-fallback-root"
+        }
       },
       "timeout_frames": 240
     },

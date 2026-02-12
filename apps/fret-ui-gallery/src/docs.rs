@@ -303,6 +303,27 @@ pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+## Text mixed-script fallback (bundled fonts)
+
+This page is a small correctness harness for **mixed-script fallback**:
+
+- Latin (UI font)
+- CJK (common fallback)
+- Emoji (color font)
+
+It is designed to remain meaningful even when system fonts are disabled (see `FRET_TEXT_SYSTEM_FONTS=0`),
+by explicitly injecting the bundled font set on first render.
+"#;
+
+pub(crate) const USAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+```rust
+// Expectation:
+// - missing/tofu glyphs should remain 0 for the provided sample strings
+// - a font trace should exist if missing glyphs ever regress
+```
+"#;
+
 pub(crate) const DOC_TEXT_MEASURE_OVERLAY: &str = r#"
 ## Text measurement overlay (diagnostic)
 

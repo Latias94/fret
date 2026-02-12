@@ -102,6 +102,7 @@ pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
 pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
 pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
+pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
@@ -229,6 +230,8 @@ pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
 pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
     "ui_gallery.nav.select.text_bidi_rtl_conformance";
+pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
+    "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
@@ -614,6 +617,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["text", "bidi", "rtl", "geometry", "diagnostics", "tli1"],
                 docs::DOC_TEXT_BIDI_RTL_CONFORMANCE,
                 docs::USAGE_TEXT_BIDI_RTL_CONFORMANCE,
+            ),
+            PageSpec::new(
+                PAGE_TEXT_MIXED_SCRIPT_FALLBACK,
+                "Text Mixed Script (Fallback)",
+                "Text / Mixed-Script Fallback (Bundled Fonts)",
+                "Font system workstream",
+                CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK,
+                &[
+                    "text",
+                    "fonts",
+                    "fallback",
+                    "cjk",
+                    "emoji",
+                    "diagnostics",
+                    "no-tofu",
+                ],
+                docs::DOC_TEXT_MIXED_SCRIPT_FALLBACK,
+                docs::USAGE_TEXT_MIXED_SCRIPT_FALLBACK,
             ),
             PageSpec::new(
                 PAGE_TEXT_MEASURE_OVERLAY,
