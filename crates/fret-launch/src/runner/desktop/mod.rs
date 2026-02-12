@@ -1170,6 +1170,11 @@ pub struct WinitRunner<D: WinitAppDriver> {
     main_window: Option<fret_core::AppWindowId>,
     menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
+    /// Best-effort z-order approximation used for "window under cursor" selection during
+    /// cross-window internal drags.
+    ///
+    /// Invariant: the last entry is the most recently focused/raised window.
+    window_hit_test_order: Vec<fret_core::AppWindowId>,
 
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
     /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
@@ -2922,6 +2927,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             main_window: None,
             menu_bar: None,
             windows_pending_front: HashMap::new(),
+            window_hit_test_order: Vec::new(),
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
@@ -3603,6 +3609,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
+        self.promote_window_in_hit_test_order(id);
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -3802,6 +3809,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.remove(window) else {
             return false;
         };
+        self.window_hit_test_order.retain(|w| *w != window);
         #[cfg(windows)]
         windows_menu::unregister_window(state.window.as_ref());
         #[cfg(target_os = "macos")]
@@ -5376,6 +5384,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             window, source_window, now
         ));
 
+        self.promote_window_in_hit_test_order(window);
+
         // macOS may ignore focus changes during an active interaction in the source window.
         // Retry a few times over subsequent event-loop turns (and stop once the window reports
         // `Focused(true)`).
@@ -5838,8 +5848,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
-        let mut fallback: Option<fret_core::AppWindowId> = None;
-        for w in self.windows.keys() {
+        let ordered: Vec<fret_core::AppWindowId> = if self.window_hit_test_order.is_empty() {
+            self.windows.keys().collect()
+        } else {
+            self.window_hit_test_order.clone()
+        };
+
+        let mut rects_front_to_back: Vec<(
+            fret_core::AppWindowId,
+            winit::dpi::PhysicalPosition<f64>,
+            winit::dpi::PhysicalSize<u32>,
+        )> = Vec::new();
+        for w in ordered.into_iter().rev() {
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
@@ -5848,23 +5868,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
             let deco = state.window.surface_position();
             let size = state.window.surface_size();
-            let left = outer.x as f64 + deco.x as f64;
-            let top = outer.y as f64 + deco.y as f64;
-            let right = left + size.width as f64;
-            let bottom = top + size.height as f64;
-            if screen_pos.x >= left
-                && screen_pos.x < right
-                && screen_pos.y >= top
-                && screen_pos.y < bottom
-            {
-                if prefer_not.is_some_and(|p| p == w) {
-                    fallback = Some(w);
-                    continue;
-                }
-                return Some(w);
-            }
+            rects_front_to_back.push((w, client_origin_screen(outer, deco), size));
         }
-        fallback
+
+        pick_window_under_cursor_from_client_rects(screen_pos, prefer_not, rects_front_to_back)
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {
@@ -6003,6 +6010,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new_app(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         Self::new(config, app, driver)
     }
+
+    fn promote_window_in_hit_test_order(&mut self, window: fret_core::AppWindowId) {
+        if let Some(index) = self.window_hit_test_order.iter().position(|w| *w == window) {
+            let w = self.window_hit_test_order.remove(index);
+            self.window_hit_test_order.push(w);
+        } else {
+            self.window_hit_test_order.push(window);
+        }
+    }
 }
 
 fn client_origin_screen(
@@ -6013,6 +6029,37 @@ fn client_origin_screen(
         outer.x as f64 + decoration_offset.x as f64,
         outer.y as f64 + decoration_offset.y as f64,
     )
+}
+
+fn pick_window_under_cursor_from_client_rects<
+    I: IntoIterator<
+        Item = (
+            fret_core::AppWindowId,
+            winit::dpi::PhysicalPosition<f64>,
+            winit::dpi::PhysicalSize<u32>,
+        ),
+    >,
+>(
+    screen_pos: winit::dpi::PhysicalPosition<f64>,
+    prefer_not: Option<fret_core::AppWindowId>,
+    windows_front_to_back: I,
+) -> Option<fret_core::AppWindowId> {
+    let mut fallback: Option<fret_core::AppWindowId> = None;
+
+    for (window, client_origin, client_size) in windows_front_to_back {
+        if !screen_pos_in_client(client_origin, client_size, screen_pos) {
+            continue;
+        }
+
+        if prefer_not.is_some_and(|p| p == window) {
+            fallback = Some(window);
+            continue;
+        }
+
+        return Some(window);
+    }
+
+    fallback
 }
 
 fn screen_pos_in_client(
@@ -6103,6 +6150,7 @@ fn outer_pos_for_cursor_grab(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use slotmap::KeyData;
     use winit::dpi::{PhysicalPosition, PhysicalSize};
 
     #[test]
@@ -6295,5 +6343,54 @@ mod tests {
         let screen_pos = PhysicalPosition::new(120.0, 240.0);
         let local = local_pos_for_screen_pos(origin, scale, screen_pos);
         assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
+    }
+
+    #[test]
+    fn pick_window_under_cursor_prefers_frontmost_window_in_overlap() {
+        let w1 = fret_core::AppWindowId::from(KeyData::from_ffi(1));
+        let w2 = fret_core::AppWindowId::from(KeyData::from_ffi(2));
+
+        let origin = PhysicalPosition::new(0.0, 0.0);
+        let size = PhysicalSize::new(100u32, 100u32);
+        let screen_pos = PhysicalPosition::new(50.0, 50.0);
+
+        let picked = pick_window_under_cursor_from_client_rects(
+            screen_pos,
+            None,
+            vec![(w2, origin, size), (w1, origin, size)],
+        );
+        assert_eq!(picked, Some(w2));
+    }
+
+    #[test]
+    fn pick_window_under_cursor_respects_prefer_not_when_possible() {
+        let w1 = fret_core::AppWindowId::from(KeyData::from_ffi(1));
+        let w2 = fret_core::AppWindowId::from(KeyData::from_ffi(2));
+
+        let origin = PhysicalPosition::new(0.0, 0.0);
+        let size = PhysicalSize::new(100u32, 100u32);
+        let screen_pos = PhysicalPosition::new(50.0, 50.0);
+
+        let picked = pick_window_under_cursor_from_client_rects(
+            screen_pos,
+            Some(w2),
+            vec![(w2, origin, size), (w1, origin, size)],
+        );
+        assert_eq!(picked, Some(w1));
+    }
+
+    #[test]
+    fn pick_window_under_cursor_falls_back_to_prefer_not_if_no_other_matches() {
+        let w1 = fret_core::AppWindowId::from(KeyData::from_ffi(1));
+        let origin = PhysicalPosition::new(0.0, 0.0);
+        let size = PhysicalSize::new(100u32, 100u32);
+        let screen_pos = PhysicalPosition::new(50.0, 50.0);
+
+        let picked = pick_window_under_cursor_from_client_rects(
+            screen_pos,
+            Some(w1),
+            vec![(w1, origin, size)],
+        );
+        assert_eq!(picked, Some(w1));
     }
 }
