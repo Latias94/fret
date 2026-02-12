@@ -62,6 +62,15 @@ On desktop builds, we avoid enumerating the catalog on the UI thread at startup 
 
 Set `FRET_TEXT_SYSTEM_FONT_CATALOG_STARTUP_ASYNC=0` to force the old synchronous startup enumeration path.
 
+### 2.2) Re-apply font-family policy after swapping the font collection
+
+Applying a system font rescan result replaces the underlying fontique collection. The renderer must re-apply the
+current font-family policy (`TextFontFamilyConfig`) after swapping the collection to ensure:
+
+- generic-family injections (UI/mono/emoji stacks) remain in effect,
+- common-fallback injection remains in effect,
+- the effective fallback policy fingerprint stays accurate.
+
 ### 3) Bounded injected font retention (dedupe + LRU eviction)
 
 The renderer retains injected font bytes (from `Effect::TextAddFonts`) so it can re-register them during a system rescan.
@@ -101,6 +110,8 @@ debug-only “no system fonts” mode on native:
 - Renderer seed/result split (background compute + main-thread apply):
   - `crates/fret-render-wgpu/src/text/mod.rs` (`SystemFontRescanSeed`, `SystemFontRescanResult`)
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`run_system_font_rescan`)
+- Renderer policy re-application after rescan:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::apply_system_font_rescan_result`)
 - Injected font blob retention (dedupe + budgets):
   - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`record_registered_font_blob`)
 

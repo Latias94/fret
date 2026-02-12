@@ -150,6 +150,12 @@ Font selection uses three layers:
    - used to keep wasm deterministic and to allow apps to enforce “no tofu” baselines.
    - controlled by `TextFontFamilyConfig.common_fallback_injection` (platform default prefers system fallback on desktop).
 
+Implementation note:
+
+- The renderer’s explicit per-style “common fallback stack suffix” (used for named-family shaping) is derived from the
+  configured/curated candidate list by filtering to families that actually resolve in the current font DB, and is kept
+  bounded via `FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES` (default: `64`).
+
 The effective fallback policy (including locale) must participate in `TextFontStackKey` so cached text cannot reuse
 stale selection behavior.
 

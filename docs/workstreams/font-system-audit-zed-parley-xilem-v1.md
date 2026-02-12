@@ -95,12 +95,15 @@ Exit criteria:
 
 - Desktop catalog refresh and system font rescan remain async-by-default and request-coalesced.
 - Injected font retention remains deduped and budgeted.
+- Explicit “common fallback” stack suffix stays bounded and avoids unresolved families (prevents pathological matching
+  slowdowns in named-family shaping when candidates are large or mostly-missing).
 - Remaining “expensive” probes (e.g. monospace detection) are cached or moved off the UI thread.
 
 Evidence anchors:
 
 - Desktop runner async rescan: `crates/fret-launch/src/runner/desktop/mod.rs`
 - Registered blob retention: `crates/fret-render-wgpu/src/text/parley_shaper.rs`
+- Bounded fallback suffix: `crates/fret-render-wgpu/src/text/mod.rs` (`FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES`)
 
 ## Notes / upstream patterns
 

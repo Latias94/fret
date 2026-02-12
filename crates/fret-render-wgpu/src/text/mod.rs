@@ -455,6 +455,7 @@ fn first_available_family_id(
     None
 }
 
+#[cfg(test)]
 fn common_fallback_stack_suffix(
     common_fallback_config: &[String],
     defaults: &'static [&'static str],
@@ -488,6 +489,20 @@ fn effective_common_fallback_candidates(
     }
 
     families
+}
+
+fn common_fallback_stack_suffix_max_families() -> usize {
+    static MAX: OnceLock<usize> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        // Keep the explicit per-style fallback list bounded to avoid pathological slowdowns when
+        // users copy-paste huge fallback stacks.
+        std::env::var("FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(64)
+            .max(1)
+            .min(256)
+    })
 }
 
 fn normalize_and_hash_family_candidates(
@@ -2269,7 +2284,16 @@ impl TextSystem {
             return false;
         }
 
+        // Re-apply the current font-family policy and generic injections after swapping the
+        // underlying fontique collection (rescan replaces the collection entirely).
+        //
+        // This keeps selection/fallback behavior stable across rescan boundaries and prevents
+        // stale injected FamilyIds from hanging around.
+        self.generic_injected_by_family.clear();
+        let _ = self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
+
         self.font_db_revision = self.font_db_revision.saturating_add(1);
+        self.fallback_policy.recompute_key(&self.parley_shaper);
         self.recompute_font_stack_key();
         self.reset_caches_for_font_change();
         true
@@ -2524,10 +2548,6 @@ impl TextSystem {
         self.fallback_policy.refresh_derived(&self.parley_shaper);
         let mode_changed = self.fallback_policy.common_fallback_mode != prev_mode;
 
-        let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(
-            self.fallback_policy.common_fallback_stack_suffix.clone(),
-        );
-
         let pick_overrides = |shaper: &mut crate::text::parley_shaper::ParleyShaper,
                               overrides: &[String],
                               defaults: &'static [&'static str]| {
@@ -2555,16 +2575,30 @@ impl TextSystem {
             default_monospace_candidates(),
         );
 
+        let mut resolved_common_fallback_suffix: Vec<String> = Vec::new();
         let mut fallback_ids: Vec<ParleyFamilyId> = Vec::new();
         if self.fallback_policy.prefer_common_fallback() {
+            let max = common_fallback_stack_suffix_max_families();
             for family in &self.fallback_policy.common_fallback_candidates {
                 if let Some(id) = self.parley_shaper.resolve_family_id(family) {
-                    if !fallback_ids.contains(&id) {
+                    let pushed = if !fallback_ids.contains(&id) {
                         fallback_ids.push(id);
+                        true
+                    } else {
+                        false
+                    };
+                    if pushed && resolved_common_fallback_suffix.len() < max {
+                        resolved_common_fallback_suffix.push(family.clone());
                     }
                 }
             }
         }
+
+        self.fallback_policy.common_fallback_stack_suffix =
+            resolved_common_fallback_suffix.join(", ");
+        let suffix_changed = self.parley_shaper.set_common_fallback_stack_suffix(
+            self.fallback_policy.common_fallback_stack_suffix.clone(),
+        );
 
         let mut changed = false;
         changed |= self.apply_generic_stack(ParleyGenericFamily::SansSerif, sans, &fallback_ids);
@@ -5716,6 +5750,55 @@ mod tests {
         assert_ne!(k0, k1);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn text_rescan_system_fonts_reapplies_generic_injection() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let generic = super::ParleyGenericFamily::UiSansSerif;
+        let baseline = text.parley_shaper.generic_family_ids(generic);
+
+        let names = text.all_font_names();
+        let requested = names
+            .iter()
+            .take(1024)
+            .find(|name| {
+                text.parley_shaper
+                    .resolve_family_id(name)
+                    .is_some_and(|id| !baseline.contains(&id))
+            })
+            .cloned()
+            .or_else(|| names.first().cloned())
+            .expect("expected at least one system font family name");
+
+        let mut config = fret_core::TextFontFamilyConfig::default();
+        config.ui_sans = vec![requested.clone()];
+        let _ = text.set_font_families(&config);
+
+        let requested_id = text
+            .parley_shaper
+            .resolve_family_id(&requested)
+            .expect("family id after config apply");
+        assert_eq!(
+            text.parley_shaper.generic_family_ids(generic).first(),
+            Some(&requested_id),
+            "expected UI sans stack to be injected with the configured family"
+        );
+
+        assert!(text.rescan_system_fonts());
+
+        let requested_id_after = text
+            .parley_shaper
+            .resolve_family_id(&requested)
+            .expect("family id after rescan");
+        assert_eq!(
+            text.parley_shaper.generic_family_ids(generic).first(),
+            Some(&requested_id_after),
+            "expected UI sans stack injection to be re-applied after rescan"
+        );
+    }
+
     #[test]
     fn text_measure_key_ignores_width_for_wrap_none() {
         let style = TextStyle::default();
@@ -6895,10 +6978,10 @@ mod tests {
 
     #[test]
     fn variable_font_axis_overrides_participate_in_face_key_and_raster_output() {
-        // `repo-ref/` is pinned reference source; use a small variable-font subset as a deterministic fixture.
+        // Use a small variable-font subset as a deterministic fixture.
         const ROBOTO_FLEX_SUBSET: &[u8] = include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../repo-ref/xilem/xilem/resources/fonts/roboto_flex/RobotoFlex-Subset.ttf"
+            "/tests/fixtures/RobotoFlex-Subset.ttf"
         ));
 
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
@@ -7002,10 +7085,10 @@ mod tests {
 
     #[test]
     fn variable_font_weight_changes_face_key_and_raster_output() {
-        // `repo-ref/` is pinned reference source; use a small variable-font subset as a deterministic fixture.
+        // Use a small variable-font subset as a deterministic fixture.
         const ROBOTO_FLEX_SUBSET: &[u8] = include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../repo-ref/xilem/xilem/resources/fonts/roboto_flex/RobotoFlex-Subset.ttf"
+            "/tests/fixtures/RobotoFlex-Subset.ttf"
         ));
 
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
