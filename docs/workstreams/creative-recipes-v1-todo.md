@@ -44,10 +44,19 @@ Next (recommended order):
 - [x] Frame clock snapshot read (ADR 0240) exposed to widget contexts (non-reactive).
 - [x] Pointer motion snapshot + local mapping helper surface (ADR 0243 / ADR 0238).
 
+## P0 — Authoring seams (UI mechanism surface)
+
+These are the `fret-ui` authoring surfaces that make the kernel primitives (mask/composite) usable
+from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
+
+- [ ] Add a mask layer element in `crates/fret-ui` that emits `SceneOp::PushMask/PopMask` (ADR 0239).
+- [ ] Add a compositing group element in `crates/fret-ui` that emits
+      `SceneOp::PushCompositeGroup/PopCompositeGroup` (ADR 0247).
+
 ## P1 — Recipes and demos
 
 - [ ] MagicUI parity recipes/wrappers:
-  - [ ] `MagicCard` (pointer-follow radial gradient fill/border).
+  - [x] `MagicCard` (pointer-follow radial gradient fill/border).
   - [ ] `Lens` (radial mask + content scale + reduced-motion behavior).
   - [ ] `BorderBeam` (beam material + mask/composite; deterministic animation).
   - [ ] Patterns: dot/grid/stripe + animated variants.

@@ -105,5 +105,7 @@ Landed kernel primitives:
 
 Not yet landed (tracked in this workstream):
 
-1. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts (in progress)
-2. External texture imports v1: contract-path demo + a first real backend path (ADR 0234)
+1. UI authoring seams in `fret-ui` for mask/composite (M4a)
+2. A bloom-like Tier B recipe example (threshold -> blur -> add) (M6 gap)
+3. `ecosystem/fret-ui-magic` Phase 0: seed components + diag scripts (M8, in progress)
+4. External texture imports v1: contract-path demo + a first real backend path (M9, ADR 0234)

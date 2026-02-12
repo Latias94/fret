@@ -77,25 +77,42 @@ Evidence:
 - `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushCompositeGroup/PopCompositeGroup`)
 - `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
 
+## M4a — UI authoring seams (mask + composite)
+
+Land `fret-ui` declarative authoring surfaces that expose the kernel mask/composite primitives to
+ecosystem recipes without canvas-only hacks.
+
+- Add a `MaskLayer` element that emits `SceneOp::PushMask/PopMask` (ADR 0239).
+- Add a `CompositeGroup` element that emits `SceneOp::PushCompositeGroup/PopCompositeGroup` (ADR 0247).
+
+Status: Not started
+
+Evidence (planned):
+
+- `crates/fret-ui/src/element.rs` (element kinds + props)
+- `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp emission)
+- `crates/fret-ui/src/declarative/mod.rs` (declarative wrappers)
+
 ## M5 — Motion + pointer snapshots
 
 - Land frame clock reads (non-reactive) and pointer motion snapshot seam (ADR 0240 / ADR 0243).
 - Add a reduced-motion policy helper in `fret-ui-kit` and verify fallback behavior.
 
-Status: Landed (reduced-motion helper pending)
+Status: Landed
 
 Evidence:
 
 - `crates/fret-core/src/window.rs` (`WindowFrameClockService`)
 - `crates/fret-ui/src/pointer_motion.rs`
 - `crates/fret-ui/src/widget.rs` (widget-facing read helpers)
+- `ecosystem/fret-ui-kit/src/declarative/reduced_motion_queries.rs`
 
 ## M6 — Effect steps extension
 
 - Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
 
-Status: Landed
+Status: Landed (bloom recipe pending)
 
 Evidence:
 
@@ -107,6 +124,10 @@ Evidence:
 - `crates/fret-render-wgpu/src/renderer/pipelines/{color_matrix.rs,alpha_threshold.rs}`
 - `crates/fret-render-wgpu/src/renderer/shaders.rs`
 - `crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`
+
+Evidence (planned):
+
+- `ecosystem/fret-ui-kit/src/recipes/bloom.rs` (or equivalent) + UI gallery/diag evidence
 
 ## M7 — Sampled materials v2a (catalog textures)
 
@@ -153,6 +174,14 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_CARD`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_card`)
 - `tools/diag-scripts/ui-gallery-magic-card-pointer-follow.json`
+
+Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
+
+- UI parity targets (4):
+  - `Lens`
+  - `BorderBeam`
+  - Patterns (dot/grid/stripe + animated variants)
+  - `SparklesText`
 
 ## M9 — External texture imports (v1)
 
