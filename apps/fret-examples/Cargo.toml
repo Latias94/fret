@@ -65,3 +65,16 @@ ureq = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "Element",
+    "HtmlCanvasElement",
+    "HtmlImageElement",
+    "Performance",
+    "Window",
+] }
+js-sys = "0.3"
+wasm-bindgen = "0.2"
