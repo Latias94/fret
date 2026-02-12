@@ -54,16 +54,15 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
 
 ## P1 — Recipes and demos
 
-- [ ] MagicUI parity recipes/wrappers:
+- [x] MagicUI parity recipes/wrappers:
   - [x] `MagicCard` (pointer-follow radial gradient fill/border).
   - [x] `Lens` (radial mask + content scale + reduced-motion behavior).
   - [x] `BorderBeam` (animated border highlight + glow; Phase 0 uses gradients + additive composite).
-  - [ ] Patterns:
+  - [x] Patterns:
     - [x] Static dot/grid/stripe backgrounds (Tier B materials) + UI gallery + diag script.
     - [x] Animated variants (phase/offset-driven; reduced-motion fallback).
-  - [ ] Sparkles text (seeded sparkle field; reduced-motion fallback).
-- [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines) for remaining
-      creative parity targets.
+  - [x] Sparkles text (seeded sparkle field; reduced-motion fallback).
+- [ ] Add perf baselines for MagicUI parity pages (optional follow-up).
 
 ## P1 — Effect steps extension
 
@@ -107,6 +106,7 @@ diagnostics, not perfect CSS parity.
     - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
   - Recommended invocation (example):
     - `FRET_DIAG_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
 
