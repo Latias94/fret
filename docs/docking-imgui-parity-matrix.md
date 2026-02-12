@@ -483,6 +483,10 @@ Open parity question:
     - `crates/fret-launch/src/runner/desktop/mod.rs`:
       - `route_internal_drag_hover_from_cursor`
       - `route_internal_drag_drop_from_cursor`
+      - Window-under-cursor selection:
+        - Windows: Win32 z-order walk (`WindowFromPoint` + `GetWindow(GW_HWNDNEXT)`) prefers the true frontmost window.
+        - macOS: `NSApp.orderedWindows` ordering prefers the true frontmost window.
+        - Fallback: focus/raise-based best-effort ordering (`window_hit_test_order`).
 
 ---
 
