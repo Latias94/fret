@@ -43,11 +43,6 @@ jobs:
             --out dist/fret-skills-consumer-app-dev
 
           python3 .agents/skills/fret_skills.py package \
-            --profile app-dev \
-            --bundle-name "fret-skills-app-dev-${suffix}" \
-            --out dist/fret-skills-app-dev
-
-          python3 .agents/skills/fret_skills.py package \
             --profile framework-dev \
             --bundle-name "fret-skills-framework-dev-${suffix}" \
             --out dist/fret-skills-framework-dev
@@ -59,10 +54,8 @@ jobs:
           if-no-files-found: error
           path: |
             dist/fret-skills-consumer-app-dev/*.zip
-            dist/fret-skills-app-dev/*.zip
             dist/fret-skills-framework-dev/*.zip
             dist/fret-skills-consumer-app-dev/manifest.json
-            dist/fret-skills-app-dev/manifest.json
             dist/fret-skills-framework-dev/manifest.json
 
       - name: Upload release assets
@@ -74,6 +67,5 @@ jobs:
           tag="${{ github.event.release.tag_name }}"
           gh release upload "$tag" \
             dist/fret-skills-consumer-app-dev/*.zip \
-            dist/fret-skills-app-dev/*.zip \
             dist/fret-skills-framework-dev/*.zip \
             --clobber

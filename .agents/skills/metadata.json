@@ -1,6 +1,6 @@
 {
   "name": "fret-skills",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
   "last_updated": "2026-02-12",
   "intents": {
@@ -11,28 +11,26 @@
     "build_a_good_app_ui": {
       "primary": "fret-app-ui-builder",
       "also_consider": [
-        "fret-design-system-styles",
-        "fret-ui-ux-guidelines",
-        "fret-shadcn-app-recipes",
-        "fret-commands-and-keymap",
-        "fret-diag-workflow"
+        "fret-ui-review",
+        "fret-diag-workflow",
+        "fret-shadcn-source-alignment"
       ]
     },
     "review_or_audit_ui": {
       "primary": "fret-ui-review",
-      "also_consider": ["fret-ui-ux-guidelines", "fret-design-system-styles", "fret-diag-workflow"]
+      "also_consider": ["fret-app-ui-builder", "fret-diag-workflow", "fret-shadcn-source-alignment"]
     },
     "debug_correctness_regression": {
       "primary": "fret-diag-workflow",
-      "also_consider": ["fret-overlays-and-focus", "fret-text-input-and-ime", "fret-commands-and-keymap"]
+      "also_consider": ["fret-app-ui-builder", "fret-ui-review"]
     },
     "measure_or_gate_performance": {
-      "primary": "fret-perf-workflow",
-      "also_consider": ["fret-perf-attribution", "fret-diag-workflow"]
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-ui-review"]
     },
     "attribute_perf_hitches": {
-      "primary": "fret-perf-attribution",
-      "also_consider": ["fret-perf-workflow", "fret-diag-workflow"]
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-ui-review"]
     },
     "align_with_upstream_shadcn_radix": {
       "primary": "fret-shadcn-source-alignment",
@@ -53,25 +51,8 @@
       "fret-skills-playbook",
       "fret-external-app-mode"
     ],
-    "golden_path": ["fret-app-ui-builder"],
-    "build": [
-      "fret-component-authoring",
-      "fret-action-hooks",
-      "fret-app-architecture-and-effects",
-      "fret-design-system-styles",
-      "fret-ui-ux-guidelines",
-      "fret-shadcn-app-recipes",
-      "fret-commands-and-keymap",
-      "fret-layout-and-style",
-      "fret-overlays-and-focus",
-      "fret-animation-and-scheduling",
-      "fret-scroll-and-virtualization",
-      "fret-text-input-and-ime",
-      "fret-docking-and-viewports"
-    ],
-    "review_audit": ["fret-ui-review"],
-    "debug": ["fret-diag-workflow"],
-    "perf": ["fret-perf-workflow", "fret-perf-attribution"],
+    "ui": ["fret-app-ui-builder", "fret-ui-review"],
+    "diagnostics": ["fret-diag-workflow"],
     "parity": ["fret-shadcn-source-alignment"],
     "quality": [
       "fret-crate-audits",
@@ -332,66 +313,19 @@
       "fret-skills-playbook",
       "fret-external-app-mode",
       "fret-app-ui-builder",
-      "fret-component-authoring",
-      "fret-action-hooks",
-      "fret-app-architecture-and-effects",
-      "fret-design-system-styles",
-      "fret-ui-ux-guidelines",
       "fret-ui-review",
-      "fret-commands-and-keymap",
-      "fret-text-input-and-ime",
-      "fret-scroll-and-virtualization",
-      "fret-layout-and-style",
-      "fret-overlays-and-focus",
-      "fret-animation-and-scheduling",
       "fret-diag-workflow",
       "fret-shadcn-source-alignment",
-      "fret-shadcn-app-recipes"
-    ],
-    "app-dev": [
-      "fret-repo-orientation",
-      "fret-skills-playbook",
-      "fret-external-app-mode",
-      "fret-app-ui-builder",
-      "fret-component-authoring",
-      "fret-action-hooks",
-      "fret-app-architecture-and-effects",
-      "fret-design-system-styles",
-      "fret-ui-ux-guidelines",
-      "fret-ui-review",
-      "fret-commands-and-keymap",
-      "fret-text-input-and-ime",
-      "fret-scroll-and-virtualization",
-      "fret-layout-and-style",
-      "fret-overlays-and-focus",
-      "fret-animation-and-scheduling",
-      "fret-diag-workflow",
-      "fret-shadcn-source-alignment",
-      "fret-shadcn-app-recipes"
+      "fret-shadcn-source-alignment"
     ],
     "framework-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",
       "fret-external-app-mode",
       "fret-app-ui-builder",
-      "fret-component-authoring",
-      "fret-action-hooks",
-      "fret-app-architecture-and-effects",
-      "fret-design-system-styles",
-      "fret-ui-ux-guidelines",
       "fret-ui-review",
-      "fret-commands-and-keymap",
-      "fret-text-input-and-ime",
-      "fret-scroll-and-virtualization",
-      "fret-layout-and-style",
-      "fret-overlays-and-focus",
-      "fret-animation-and-scheduling",
-      "fret-docking-and-viewports",
       "fret-diag-workflow",
-      "fret-perf-workflow",
-      "fret-perf-attribution",
       "fret-shadcn-source-alignment",
-      "fret-shadcn-app-recipes",
       "fret-crate-audits",
       "fret-boundary-checks",
       "fret-fixture-driven-harnesses",

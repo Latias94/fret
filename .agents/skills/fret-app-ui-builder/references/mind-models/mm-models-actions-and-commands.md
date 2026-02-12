@@ -50,7 +50,6 @@ When adding a new interactive surface:
 
 ## See also
 
-- `fret-commands-and-keymap` (command registry, keymap.json, `when` gating)
-- `fret-action-hooks` (component-owned interaction policy)
 - `fret-diag-workflow` (scripted repro + packaging)
-- `fret-app-architecture-and-effects` (typed routing + selector/query + dispatcher/inbox patterns)
+- Command routing and keymaps: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`
+- Action hooks (policy lives in components): `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`

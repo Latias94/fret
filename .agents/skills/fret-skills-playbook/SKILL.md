@@ -109,7 +109,7 @@ Minimum deliverables (3-pack):
 
 - Layering and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Diag scripts and workflows: `tools/diag-scripts/`, `.agents/skills/fret-diag-workflow/SKILL.md`
-- Perf gates and baselines: `.agents/skills/fret-perf-workflow/SKILL.md`, `tools/perf/`, `docs/workstreams/perf-baselines/`
+- Perf gates and baselines: `tools/perf/`, `docs/workstreams/perf-baselines/` (see `.agents/skills/fret-diag-workflow/SKILL.md`)
 
 ## Common pitfalls
 
@@ -122,5 +122,4 @@ Minimum deliverables (3-pack):
 
 - `fret-repo-orientation`
 - `fret-diag-workflow`
-- `fret-perf-workflow`
 - `fret-shadcn-source-alignment`

@@ -46,16 +46,9 @@ NAME_REGEX = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 # Keep the list small and high-signal (avoid brittle exact-line matches).
 SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
     # skill_name: [(relative_file_path, regex_pattern)]
-    "fret-component-authoring": [
-        ("crates/fret-ui/src/elements/cx.rs", r"\bpub\s+struct\s+ElementContext\b"),
-    ],
-    "fret-action-hooks": [
-        ("crates/fret-ui/src/elements/cx.rs", r"\bpressable_on_activate\b"),
-        ("crates/fret-ui/src/elements/cx.rs", r"\bdismissible_on_dismiss_request\b"),
-    ],
-    "fret-overlays-and-focus": [
-        ("ecosystem/fret-ui-kit/src/overlay_controller.rs", r"\bpub\s+struct\s+OverlayController\b"),
-        ("ecosystem/fret-ui-kit/src/overlay_controller.rs", r"\bpub\s+struct\s+OverlayRequest\b"),
+    "fret-app-ui-builder": [
+        (".agents/skills/fret-app-ui-builder/scripts/stylegen.py", r""),
+        (".agents/skills/fret-app-ui-builder/references/recipes/INDEX.md", r""),
     ],
     "fret-diag-workflow": [
         ("apps/fretboard/src/cli.rs", r"\bfretboard\s+diag\s+run\b"),
@@ -71,11 +64,7 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         ("ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs", r"diag\.screenshot_png"),
         ("ecosystem/fret-bootstrap/src/ui_diagnostics.rs", r"\bFRET_DIAG_DEBUG_CLICK_STABLE\b"),
         ("crates/fret-diag/src/lib.rs", r"\bFRET_DIAG_FIXED_FRAME_DELTA_MS\b"),
-    ],
-    "fret-perf-workflow": [
-        ("apps/fretboard/src/cli.rs", r"\bfretboard\s+diag\s+perf\b"),
-        ("tools/perf/diag_resize_probes_gate.sh", r"\bdiag\s+perf\b"),
-        ("tools/perf/diag_perf_baseline_select.sh", r""),
+        (".agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py", r""),
     ],
     "fret-repo-orientation": [
         ("docs/architecture.md", r""),
@@ -784,7 +773,9 @@ def main(argv: list[str]) -> int:
     p_install = sub.add_parser("install", help="Install skills into a target project for a specific agent")
     p_install.add_argument("--agent", default="claude-code", help="claude-code|codex|gemini")
     p_install.add_argument("--target", default=".", help="Target project directory")
-    p_install.add_argument("--profile", help="Profile name from metadata.json (e.g. app-dev, framework-dev)")
+    p_install.add_argument(
+        "--profile", help="Profile name from metadata.json (e.g. consumer-app-dev, framework-dev)"
+    )
     p_install.add_argument("--skills", action="append", default=[], help="Comma-separated skill names (repeatable)")
     p_install.add_argument("--force", action="store_true", help="Overwrite existing installed skills")
     p_install.add_argument("--dry-run", action="store_true", help="Print actions without changing files")
@@ -792,7 +783,7 @@ def main(argv: list[str]) -> int:
 
     p_package = sub.add_parser("package", help="Package a skills bundle (for releases or distribution)")
     p_package.add_argument("--out", required=True, help="Output directory (will be created)")
-    p_package.add_argument("--profile", help="Profile name from metadata.json (e.g. app-dev, framework-dev)")
+    p_package.add_argument("--profile", help="Profile name from metadata.json (e.g. consumer-app-dev, framework-dev)")
     p_package.add_argument("--skills", action="append", default=[], help="Comma-separated skill names (repeatable)")
     p_package.add_argument("--bundle-name", help="Override default bundle name")
     p_package.set_defaults(fn=cmd_package)

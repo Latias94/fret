@@ -40,4 +40,4 @@ Goal: a shadcn-style resizable split layout that feels editor-grade (drag captur
 ## See also
 
 - `references/mind-models/mm-layout-and-sizing.md`
-- `fret-docking-and-viewports` (for editor tab/panel docking, which is a different problem)
+- Docking overview (separate problem from resizable): `docs/architecture.md`, `docs/repo-structure.md`

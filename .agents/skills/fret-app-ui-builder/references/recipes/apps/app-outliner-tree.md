@@ -44,6 +44,6 @@ Use the built-in debug hooks so scripts don’t rely on pixel coordinates:
 
 ## See also
 
-- `fret-scroll-and-virtualization` (stable keys + revisions mindset)
+- Virtualization contracts: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `references/mind-models/mm-a11y-and-testid.md`
 - `fret-diag-workflow`

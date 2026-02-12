@@ -38,4 +38,4 @@ Goal: a shadcn-style sidebar layout suitable for editor apps (navigation + panel
 
 - `references/mind-models/mm-theme-and-tokens.md`
 - `references/mind-models/mm-layout-and-sizing.md`
-- `fret-commands-and-keymap` (for sidebar toggle commands + keybindings)
+- Command routing and keymaps: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`

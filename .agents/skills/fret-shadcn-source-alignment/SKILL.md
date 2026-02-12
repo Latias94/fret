@@ -14,7 +14,7 @@ description: Align Fret’s shadcn/Radix-inspired components with upstream sourc
 ## Choose this vs adjacent skills
 
 - Use this skill when the goal is **upstream parity** (Radix semantics / shadcn composition) plus a regression gate.
-- Use `fret-shadcn-app-recipes` when you just need a good recipe for building UI (not necessarily parity work).
+- Use `fret-app-ui-builder` when you just need a good recipe for building UI (not necessarily parity work).
 - Use `fret-diag-workflow` when the main deliverable is a repro/gate for a bug (and parity is secondary).
 - Use `fret-ui-review` when the request is an audit of app UI code quality and layering (not a specific parity mismatch).
 
@@ -121,6 +121,6 @@ learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering
 
 ## Related skills
 
-- `fret-shadcn-app-recipes` (recipes + stable `test_id` conventions)
-- `fret-overlays-and-focus` (overlay semantics + focus/dismiss correctness)
+- `fret-app-ui-builder` (recipes + stable `test_id` conventions)
 - `fret-diag-workflow` (bundles + scripted repro gates)
+- `fret-ui-review` (audit lens)

@@ -43,6 +43,6 @@ Goal: Radix-like tabs with predictable keyboard navigation, stable selection sta
 
 ## See also
 
-- `fret-action-hooks` (roving/typeahead policies when you need custom behavior)
+- Action hooks (policy lives in components): `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
 - `references/mind-models/mm-a11y-and-testid.md`
 - `fret-shadcn-source-alignment`

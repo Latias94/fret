@@ -1,9 +1,9 @@
 ---
 name: fret-diag-workflow
-description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted interaction automation, diagnostics bundles, screenshots, and triage/compare. Use when authoring or running `tools/diag-scripts/*.json`, turning a flaky UI bug into a stable repro gate, or when you need shareable artifacts for AI/humans."
+description: "Diagnostics workflow for Fret UI: scripted interaction automation (`fretboard diag`), shareable bundles/screenshots, triage/compare, and perf gates (`diag perf`) with worst-bundle attribution. Use to turn flaky UI issues or perf hitches into stable repro gates with evidence."
 ---
 
-# Fret diag workflow
+# Fret diagnostics workflow (correctness + perf)
 
 ## When to use
 
@@ -13,14 +13,13 @@ Use this skill when:
 - You need a **shareable artifact** (bundle + optional screenshots) for triage.
 - You want to convert a bug into a **CI-friendly gate** (script + assertions).
 
-If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
-If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
+This skill covers both correctness diagnostics and performance gating/attribution. Use `fret-ui-review` when your goal
+is an architecture/UX audit rather than producing repro artifacts.
 
 ## Choose this vs adjacent skills
 
 - Use this skill for **correctness repro + regression gating** (scripts, bundles, post-run checks).
-- Use `fret-perf-workflow` when you need numbers/baselines/thresholds (perf gates), not just a repro bundle.
-- Use `fret-perf-attribution` when you already have worst bundles and need to explain the hitch class/root cause.
+- Use this skill for **perf gates + worst-bundle evidence** (`diag perf` + thresholds/baselines).
 - Use `fret-ui-review` when the task is “audit this UI implementation” (not “turn this bug into a script”).
 
 ## Inputs to collect (ask the user)
@@ -110,19 +109,10 @@ Ship a result that is reviewable and reusable:
   - web: `.fret/diag/exports/<timestamp>/bundle.json` via `fret-diag-export`.
 - If you changed behavior: at least one regression gate (script and/or Rust test) linked from the PR/commit message.
 
-## Perf triage handoff (when the “bug” is a hitch)
+## Performance gates (diag perf)
 
-If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a correctness regression:
-
-1. Switch to `fret-perf-workflow` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
-2. When a `diag perf` run fails, start with the thresholds file:
-   - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
-   - Tip: `fret-perf-workflow` includes a compact gate triage helper:
-     `python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir>`
-3. Use the worst bundle for root cause:
-   - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
-4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
-   - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
+Use this section when the issue is “it feels janky” (resize/scroll/pointer-move) and you need **numbers**
+and **worst-bundle evidence** (not only a correctness repro).
 
 ### “Resize jank” fast path (copy/paste)
 
@@ -133,16 +123,59 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
 ```
 
-If a gate fails (or you want the worst bundles even on PASS):
+If a gate fails (or you want the worst bundles even on PASS), triage the out-dir:
 
 ```bash
-python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir> --all --app-snapshot
+python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all --app-snapshot
 ```
 
 Then inspect the worst bundle:
 
 ```bash
 cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
+```
+
+### Steady baseline run (when you want a stable “global sanity”)
+
+Run a suite against a baseline file (under `docs/workstreams/perf-baselines/`):
+
+```bash
+cargo run -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-perf/ui-gallery-steady.<tag> \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json \
+  --perf-baseline <baseline.json> \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+### Baseline selection (anti-outlier)
+
+If you need to generate a new baseline, prefer the baseline-select helper:
+
+- `tools/perf/diag_perf_baseline_select.sh`
+
+## Perf attribution (answer “why did the worst frame hitch?”)
+
+1) Identify the failing script/metric:
+
+- `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
+
+2) Resolve worst bundles quickly:
+
+- `python3 .agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py <out-dir> --all`
+
+3) Attribute the worst frames in a bundle:
+
+- `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+
+4) If the failing threshold is “max of a specific metric”, locate the exact max frame with `jq`:
+
+```bash
+jq -c '
+  .windows[0].snapshots
+  | map({frame_id, tick_id, ts: .timestamp_unix_ms, solve: .debug.stats.layout_engine_solve_time_us, paint: .debug.stats.paint_time_us})
+  | max_by(.solve)
+' <bundle.json> | jq .
 ```
 
 ## Tips
@@ -322,5 +355,5 @@ Where the code lives:
 ## Related skills
 
 - `fret-shadcn-source-alignment` (turn Radix/shadcn mismatches into tests + scripts)
-- `fret-overlays-and-focus` (overlay/dismiss/focus issues)
-- `fret-perf-workflow` (perf baselines/gates)
+- `fret-app-ui-builder` (add stable `test_id` targets and leave gates early)
+- `fret-ui-review` (audit layering/focus/command gating pitfalls that often cause diag failures)

@@ -39,5 +39,5 @@ Goal: Radix-like scroll area with consistent scrollbar styling, correct wheel/tr
 
 ## See also
 
-- `fret-scroll-and-virtualization` (when you need large lists/tables inside a scroll surface)
+- Virtualization contracts: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `references/mind-models/mm-layout-and-sizing.md`

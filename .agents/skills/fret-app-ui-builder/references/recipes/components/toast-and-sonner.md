@@ -40,5 +40,5 @@ Goal: transient notifications that don’t break focus/keyboard flows and remain
 ## See also
 
 - `references/mind-models/mm-overlays-and-focus.md` (overlay layering + dismiss/focus rules)
-- `fret-animation-and-scheduling` (timers/RAF and transition helpers)
+- Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - `fret-diag-workflow` (capture bundles/screenshots when timing regressions happen)

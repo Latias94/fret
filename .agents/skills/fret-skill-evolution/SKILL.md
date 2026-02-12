@@ -43,8 +43,8 @@ Defaults if unclear:
 1. Pick the right destination:
    - UI repro/gates: `fret-diag-workflow` + `tools/diag-scripts/*.json`
    - shadcn/Radix parity: `fret-shadcn-source-alignment` + targeted tests
-   - component authoring gotchas: `fret-component-authoring`
-   - perf baselines/gates: `fret-perf-workflow`
+   - component authoring + recipes: `fret-app-ui-builder` (and its `references/`)
+   - perf baselines/gates + attribution: `fret-diag-workflow`
 2. Update the SKILL.md with the standard headings:
    - `## When to use`, `## Quick start`, `## Workflow`, `## Evidence anchors`, `## Common pitfalls`, `## Related skills`
 3. If content grows, move long writeups into `references/` and link from the skill body.
@@ -65,8 +65,8 @@ Defaults if unclear:
 
 - Interaction correctness + repros: update `fret-diag-workflow` and add/refresh a script under `tools/diag-scripts/`.
 - shadcn/Radix alignment patterns: update `fret-shadcn-source-alignment`.
-- Component authoring gotchas: update `fret-component-authoring`.
-- Performance workflows: update `fret-perf-workflow`.
+- Component authoring + recipes: update `fret-app-ui-builder` (prefer `references/` for long writeups).
+- Performance workflows: update `fret-diag-workflow`.
 
 If the new knowledge is substantial, create a **new** `fret-*` skill folder under `.agents/skills/`.
 
@@ -122,5 +122,4 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 ## Related skills
 
 - `fret-diag-workflow`
-- `fret-perf-workflow`
 - `fret-shadcn-source-alignment`

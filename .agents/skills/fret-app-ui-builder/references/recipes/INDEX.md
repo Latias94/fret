@@ -67,4 +67,4 @@ Each recipe should include:
 2. Add stable `test_id` anchors in the relevant `fret-ui-shadcn` component(s).
 3. Add a small invariant test (geometry/semantics) close to the code.
 4. Add a `tools/diag-scripts/*.json` repro if interaction state machines are involved.
-5. Update `fret-shadcn-app-recipes/SKILL.md` and this index.
+5. Update `fret-app-ui-builder/SKILL.md` (and references if needed) and this index.

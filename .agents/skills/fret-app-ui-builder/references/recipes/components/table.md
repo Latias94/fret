@@ -40,4 +40,4 @@ Goal: shadcn-style table primitives (header/body/rows/cells) with consistent den
 
 - `references/recipes/apps/app-data-table.md` (virtualized, editor-grade data table)
 - `references/recipes/components/scroll-area.md` (wrapping for clipping/scroll)
-- `fret-scroll-and-virtualization` (large collections)
+- Virtualization contracts: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`

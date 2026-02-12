@@ -39,6 +39,6 @@ There is no 1:1 shadcn/Radix primitive for this surface; treat it as an **editor
 
 ## See also
 
-- `fret-scroll-and-virtualization` (windowing + stable keys mindset)
+- Virtualization contracts: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
 - `references/mind-models/mm-overlays-and-focus.md` (edit overlays and focus restore)
 - `references/recipes/apps/app-data-table.md` (table-centric, headless-state approach)

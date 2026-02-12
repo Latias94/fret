@@ -42,6 +42,7 @@ Goal: a dense, long-scrolling inspector surface (like Unity/Unreal/Godot) with s
 
 ## See also
 
-- `fret-text-input-and-ime` (command-vs-text arbitration + IME rules)
-- `fret-overlays-and-focus` (editor popovers, focus trap/restore policies)
-- `fret-scroll-and-virtualization`
+- Text/IME contract: `docs/adr/0012-keyboard-ime-and-text-input.md`
+- Overlay policy split: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`, `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
+- Virtualization contracts: `docs/adr/0042-virtualization-and-large-lists.md`, `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
+- Diagnostics gates: `fret-diag-workflow`

@@ -110,4 +110,3 @@ See: `fret-skills-playbook`.
 - `fret-repo-orientation`
 - `fret-skills-playbook`
 - `fret-diag-workflow`
-- `fret-perf-workflow`

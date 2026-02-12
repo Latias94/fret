@@ -19,7 +19,6 @@ guideline-based skills (e.g. Vercel’s web interface checks), but tailored to F
 - Use this skill when the task is **review/audit** (produce findings + recommended fixes/gates).
 - Use `fret-app-ui-builder` when you want to build/refactor a UI via a golden-path workflow.
 - Use `fret-diag-workflow` when the primary deliverable is a deterministic repro + gate + bundle.
-- Use `fret-design-system-styles` when you already know the issue is tokens/theme and you want to implement it.
 - Use `fret-shadcn-source-alignment` when the issue is “not matching upstream shadcn/Radix semantics”.
 
 ## Inputs to collect (ask the user)
@@ -47,6 +46,12 @@ Audit in this priority order:
 4. **Commands/keymaps**: stable `CommandId` + explicit `when` gating (avoid firing in text inputs/IME).
 5. **Automation stability**: stable `test_id` targets for interactive affordances.
 6. **Regression gates**: at least one script/test for the most fragile interaction.
+
+## Output format (recommended)
+
+Keep findings terse and reviewable (Vercel-style):
+
+- `path:line - category/rule_id - message (what to change + why)`
 
 ## Workflow
 
@@ -93,10 +98,8 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 ## Evidence anchors
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
-- UX hierarchy: `.agents/skills/fret-ui-ux-guidelines/SKILL.md`
-- Tokens/styles: `.agents/skills/fret-design-system-styles/SKILL.md`, `.agents/skills/fret-layout-and-style/SKILL.md`
-- Overlays: `.agents/skills/fret-overlays-and-focus/SKILL.md`
-- Commands: `.agents/skills/fret-commands-and-keymap/SKILL.md`
+- Build playbook (tokens + recipes): `.agents/skills/fret-app-ui-builder/SKILL.md`, `.agents/skills/fret-app-ui-builder/references/`
+- Contracts/ADRs: `docs/architecture.md`, `docs/runtime-contract-matrix.md`, `docs/adr/`
 - Diag gates: `.agents/skills/fret-diag-workflow/SKILL.md`
 
 ## Common pitfalls

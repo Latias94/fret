@@ -127,7 +127,6 @@ If you are changing layout/style parity:
 
 ## Related skills
 
-- `fret-component-authoring`
-- `fret-shadcn-app-recipes`
+- `fret-app-ui-builder` (recipes + mind models + app-level patterns)
 - `fret-shadcn-source-alignment`
 - `fret-diag-workflow`

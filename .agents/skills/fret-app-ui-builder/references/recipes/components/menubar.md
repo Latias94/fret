@@ -56,6 +56,6 @@ Goal: an editor-grade menubar with predictable keyboard navigation, submenu beha
 
 - `references/mind-models/mm-models-actions-and-commands.md`
 - `references/mind-models/mm-overlays-and-focus.md`
-- `fret-commands-and-keymap`
+- Command routing and keymaps: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`, `docs/adr/0023-command-metadata-menus-and-palette.md`
 - `fret-shadcn-source-alignment`
 - `fret-diag-workflow`

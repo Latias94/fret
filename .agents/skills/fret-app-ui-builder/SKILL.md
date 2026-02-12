@@ -8,13 +8,8 @@ description: "Product-oriented workflow for building a good-looking, usable app 
 This skill is the “golden path” for **framework users** and **app developers** who want to build a
 good-looking, editor-grade UI with Fret (not just “it renders”).
 
-It composes the existing skills into one product-oriented workflow:
-
-- style + tokens (`fret-design-system-styles`)
-- visual hierarchy (`fret-ui-ux-guidelines`)
-- shadcn composition recipes (`fret-shadcn-app-recipes`)
-- commands + keymaps (`fret-commands-and-keymap`)
-- debug/gates (`fret-diag-workflow`, `fret-perf-workflow` when perf matters)
+It is intentionally **self-contained**: it includes theming, recipes, and the most common “deep dives”
+(overlays, commands/keymaps, text input/IME, virtualization, scheduling), plus diagnostics gates.
 
 ## When to use
 
@@ -25,8 +20,6 @@ It composes the existing skills into one product-oriented workflow:
 ## Choose this vs adjacent skills
 
 - Use this skill for an end-to-end **product workflow** (style → recipes → UX polish → gates).
-- Use `fret-design-system-styles` when you only need theme/token decisions (`ThemeConfig`), not screen composition.
-- Use `fret-shadcn-app-recipes` when you only need a recipe for one component family / surface.
 - Use `fret-ui-review` when the task is “review/audit this UI” rather than building/refactoring it.
 - Use `fret-diag-workflow` when the primary goal is a deterministic repro + gate (not “make it look good”).
 
@@ -55,16 +48,16 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
 
 1) Pick a baseline style and generate `ThemeConfig` overrides:
 
-- `python3 .agents/skills/fret-design-system-styles/scripts/stylegen.py --suggest "dark compact editor"`
-- `python3 .agents/skills/fret-design-system-styles/scripts/stylegen.py --style editor-compact > theme_overrides.json`
+- `python3 .agents/skills/fret-app-ui-builder/scripts/stylegen.py --suggest "dark compact editor"`
+- `python3 .agents/skills/fret-app-ui-builder/scripts/stylegen.py --style editor-compact > theme_overrides.json`
 
-2) Apply the baseline preset + overrides (see `fret-design-system-styles`).
+2) Apply the baseline preset + overrides (keep it small: density + ring first).
 
-3) Compose one “app surface” recipe and keep it minimal:
+3) Compose one “app surface” recipe and keep it minimal (start from the in-skill references):
 
-- command palette: `fret-shadcn-app-recipes` → `references/recipes/apps/app-command-palette.md`
-- settings: `fret-shadcn-app-recipes` → `references/recipes/apps/app-settings-form.md`
-- workspace shell/docking: `fret-shadcn-app-recipes` → `references/recipes/apps/app-docking-workspace.md`
+- command palette: `references/recipes/apps/app-command-palette.md`
+- settings: `references/recipes/apps/app-settings-form.md`
+- workspace shell/docking: `references/recipes/apps/app-docking-workspace.md`
 
 4) Add stable `test_id` to interactive affordances and leave a diag script gate:
 
@@ -84,11 +77,63 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
    - Focus-visible is consistent (ring width/offset).
 4) **Use recipes for interaction-heavy components.**
    - Overlays (select/menu/dialog/combobox) must follow Radix-aligned policy.
-   - Put policy in `ecosystem/` layers (hooks + primitives), not runtime.
+   - Put policy in `ecosystem/` layers (action hooks + policy helpers), not runtime.
 5) **Leave gates early (don’t wait).**
    - Add `test_id` targets.
    - Add one diag script per interaction state machine (open → interact → dismiss).
    - If perf is a concern, run a small perf probe before landing.
+
+## Engineering notes (the “deep dives” you will hit)
+
+These are the most common places app authors get stuck. Keep the work **layered**:
+
+- `crates/*`: mechanisms and hard contracts
+- `ecosystem/*`: policy and recipes
+
+### Theme/tokens (make it cohesive fast)
+
+- Prefer “theme-first”: one preset + small overrides. Avoid per-component magic numbers.
+- Generator helper:
+  - `python3 .agents/skills/fret-app-ui-builder/scripts/stylegen.py --suggest "<keywords>"`
+
+### Layout/overflow (avoid clipped focus rings)
+
+- Use token-driven layout/chrome via `UiBuilder` (declarative-only).
+- Don’t clip focus rings by accident: keep the pressable/root overflow visible; clip only inside chrome.
+
+### Interaction policy (press/dismiss/roving/typeahead/timers)
+
+Rule: `crates/fret-ui` is mechanism-only; policy belongs in components via action hooks.
+
+- Pressable activate/toggle: prefer `fret-ui-kit` helpers such as `cx.pressable_toggle_bool(&open)`
+- Dismiss policy for overlays: attach a dismiss hook (component-owned), don’t bake dismissal into runtime widgets
+
+### Overlays + focus (Radix-aligned outcomes)
+
+- Pick the correct family: menu vs popover vs modal.
+- Menus are usually non-click-through on outside press.
+- Focus restore to the trigger on close (unless explicitly overridden).
+
+### Commands/keymaps (keyboard-first without breaking typing)
+
+- Treat `CommandId` as stable contracts.
+- Always add explicit `when` gating for global shortcuts (block inside text inputs / IME composition).
+
+### Text input + IME (don’t break composition)
+
+- Keep channels separate: `KeyDown` vs `TextInput` vs `ImeEvent` (ADR 0012).
+- While composing, IME gets first refusal on Tab/Escape/arrows/etc.
+- Provide caret rect feedback for candidate window placement.
+
+### Virtualized lists (stable identity is non-negotiable)
+
+- Use keyed virtualization; keys must come from the model (never the row index).
+- Prefer fixed row heights when possible (editor UIs).
+
+### Scheduling/animation (don’t leak continuous frames)
+
+- Tie continuous frames leases to element lifetime (store in element-local state).
+- Prefer runner-owned timers/effects (deterministic and diagnosable).
 
 ## Definition of done (what to leave behind)
 
@@ -103,9 +148,9 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 ## Evidence anchors
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
-- Style generation: `.agents/skills/fret-design-system-styles/scripts/stylegen.py`
-- Recipes + mind models: `.agents/skills/fret-shadcn-app-recipes/references/`
-- Diag gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`
+- Style generation: `.agents/skills/fret-app-ui-builder/scripts/stylegen.py`
+- Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
+- Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
 ## Common pitfalls
 
@@ -118,7 +163,6 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 
 - `fret-external-app-mode`
 - `fret-skills-playbook`
-- `fret-design-system-styles`
-- `fret-ui-ux-guidelines`
-- `fret-shadcn-app-recipes`
 - `fret-diag-workflow`
+- `fret-ui-review`
+- `fret-shadcn-source-alignment`

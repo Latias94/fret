@@ -105,4 +105,4 @@ Prefer producing:
 
 - `fret-boundary-checks` (fast guardrails)
 - `fret-diag-workflow` (turn behavior bugs into repro gates)
-- `fret-perf-workflow` (numbers/baselines for hot path changes)
+- `fret-diag-workflow` (perf gates + worst-bundle evidence for hot path changes)
