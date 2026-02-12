@@ -1,18 +1,15 @@
 use anyhow::Context as _;
-use fret_app::{App, Effect, WindowRequest};
+use fret_app::App;
 use fret_core::scene::Paint;
-use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
-use fret_launch::{
-    EngineFrameUpdate, ImportedViewportRenderTarget, WinitAppDriver, WinitEventContext,
-    WinitRenderContext, WinitRunnerConfig,
-};
+use fret_core::{AppWindowId, Event, KeyCode, Px};
+use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ViewportSurfaceProps,
+    ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
+    ViewportSurfaceProps,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, Theme};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -138,7 +135,12 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
-                ..Default::default()
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
@@ -154,8 +156,7 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     }
 }
 
-struct ExternalTextureImportsWindowState {
-    ui: UiTree<App>,
+struct ExternalTextureImportsState {
     show: fret_runtime::Model<bool>,
 
     target: ImportedViewportRenderTarget,
@@ -166,394 +167,226 @@ struct ExternalTextureImportsWindowState {
     checker: Option<CheckerPipeline>,
 }
 
-#[derive(Default)]
-struct ExternalTextureImportsDriver;
+fn init_window(app: &mut App, _window: AppWindowId) -> ExternalTextureImportsState {
+    ExternalTextureImportsState {
+        show: app.models_mut().insert(true),
+        target: ImportedViewportRenderTarget::new(
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+            RenderTargetColorSpace::Srgb,
+        ),
+        target_px_size: (1, 1),
+        desired_target_px_size: (1280, 720),
+        texture: None,
+        checker: None,
+    }
+}
 
-impl ExternalTextureImportsDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> ExternalTextureImportsWindowState {
-        let show = app.models_mut().insert(true);
+fn on_event(
+    app: &mut App,
+    _services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    st: &mut ExternalTextureImportsState,
+    event: &Event,
+) {
+    if let Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyV
+    {
+        let _ = app.models_mut().update(&st.show, |v| *v = !*v);
+        app.request_redraw(window);
+    }
+}
 
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
+fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalTextureImportsState) -> Elements {
+    cx.observe_model(&st.show, Invalidation::Layout);
 
-        ExternalTextureImportsWindowState {
-            ui,
-            show,
-            target: ImportedViewportRenderTarget::new(
-                wgpu::TextureFormat::Bgra8UnormSrgb,
-                RenderTargetColorSpace::Srgb,
-            ),
-            target_px_size: (1, 1),
-            desired_target_px_size: (1280, 720),
-            texture: None,
-            checker: None,
-        }
+    let scale_factor = cx.environment_scale_factor(Invalidation::Layout);
+    let w_px = (cx.bounds.size.width.0.max(1.0) * scale_factor).round() as u32;
+    let h_px = (cx.bounds.size.height.0.max(1.0) * scale_factor).round() as u32;
+    st.desired_target_px_size = (w_px.max(1).min(4096), h_px.max(1).min(4096));
+
+    let show = cx.app.models().read(&st.show, |v| *v).unwrap_or(true);
+
+    let theme = Theme::global(&*cx.app).snapshot();
+
+    let mut fill = LayoutStyle::default();
+    fill.size.width = Length::Fill;
+    fill.size.height = Length::Fill;
+
+    let mut panel_layout = LayoutStyle::default();
+    panel_layout.size.width = Length::Px(Px(360.0));
+    panel_layout.size.height = Length::Px(Px(240.0));
+
+    let mut row = FlexProps {
+        layout: fill,
+        direction: fret_core::Axis::Horizontal,
+        gap: Px(12.0),
+        padding: fret_core::Edges::all(Px(16.0)),
+        justify: MainAlign::Start,
+        align: CrossAlign::Start,
+        wrap: true,
+    };
+    row.layout.size.width = Length::Fill;
+    row.layout.size.height = Length::Fill;
+
+    let target = st.target.id();
+    let target_px_size = st.target_px_size;
+
+    let make_panel =
+        |cx: &mut ElementContext<'_, App>, fit: fret_core::ViewportFit, test_id: &'static str| {
+            cx.container(
+                ContainerProps {
+                    layout: panel_layout,
+                    border: fret_core::Edges::all(Px(1.0)),
+                    border_paint: Some(Paint::Solid(theme.color_required("border"))),
+                    background: Some(theme.color_required("muted")),
+                    corner_radii: fret_core::Corners::all(Px(10.0)),
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    vec![
+                        cx.viewport_surface_props(ViewportSurfaceProps {
+                            layout,
+                            target,
+                            target_px_size,
+                            fit,
+                            opacity: if show { 1.0 } else { 0.0 },
+                        })
+                        .test_id(test_id),
+                    ]
+                },
+            )
+        };
+
+    vec![
+        cx.container(
+            ContainerProps {
+                layout: fill,
+                background: Some(theme.color_required("background")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.flex(row, |cx| {
+                    vec![
+                        make_panel(cx, fret_core::ViewportFit::Contain, "ext-tex-fit-contain"),
+                        make_panel(cx, fret_core::ViewportFit::Cover, "ext-tex-fit-cover"),
+                        make_panel(cx, fret_core::ViewportFit::Stretch, "ext-tex-fit-stretch"),
+                    ]
+                })]
+            },
+        )
+        .test_id("external-texture-imports-root"),
+    ]
+    .into()
+}
+
+fn record_engine_frame(
+    app: &mut App,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    st: &mut ExternalTextureImportsState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    _scale_factor: f32,
+    _tick_id: fret_runtime::TickId,
+    frame_id: fret_runtime::FrameId,
+) -> EngineFrameUpdate {
+    let show = app.models().read(&st.show, |v| *v).unwrap_or(true);
+
+    let mut update = EngineFrameUpdate::default();
+
+    if !show {
+        st.target.push_unregister(&mut update);
+        st.texture = None;
+        st.target_px_size = (1, 1);
+        return update;
     }
 
-    fn ensure_target_registered(
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut ExternalTextureImportsWindowState,
-        context: &WgpuContext,
-        renderer: &mut Renderer,
-    ) {
-        let show = app.models().read(&state.show, |v| *v).unwrap_or(true);
-        if !show {
-            return;
-        }
+    if st.checker.is_none() {
+        st.checker = Some(CheckerPipeline::new(&context.device, st.target.format()));
+    }
 
-        if state.checker.is_none() {
-            state.checker = Some(CheckerPipeline::new(&context.device, state.target.format()));
-        }
-
-        if state.target.is_registered() && state.texture.is_some() {
-            return;
-        }
-
-        let size = state.desired_target_px_size;
+    let desired = st.desired_target_px_size;
+    let needs_realloc = st.texture.is_none() || st.target_px_size != desired;
+    if needs_realloc {
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("external texture imports contract-path texture"),
             size: wgpu::Extent3d {
-                width: size.0.max(1),
-                height: size.1.max(1),
+                width: desired.0.max(1),
+                height: desired.1.max(1),
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: state.target.format(),
+            format: st.target.format(),
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let _id = state.target.ensure_registered(renderer, view, size);
 
-        state.texture = Some(texture);
-        state.target_px_size = size;
-        app.request_redraw(window);
+        if !st.target.is_registered() {
+            let _ = st.target.ensure_registered(renderer, view.clone(), desired);
+        }
+
+        st.texture = Some(texture);
+        st.target_px_size = desired;
     }
 
-    fn render_root(
-        app: &mut App,
-        ui: &mut UiTree<App>,
-        services: &mut dyn UiServices,
-        window: AppWindowId,
-        bounds: Rect,
-        show_model: fret_runtime::Model<bool>,
-        show: bool,
-        target: fret_core::RenderTargetId,
-        target_px_size: (u32, u32),
-    ) {
-        let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
-            .render_root("external-texture-imports", |cx| {
-                cx.observe_model(&show_model, Invalidation::Layout);
+    let texture = st
+        .texture
+        .as_ref()
+        .expect("texture must exist after allocation");
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-                let theme = Theme::global(&*cx.app).snapshot();
+    st.target
+        .push_update(&mut update, view.clone(), st.target_px_size);
 
-                let mut fill = LayoutStyle::default();
-                fill.size.width = Length::Fill;
-                fill.size.height = Length::Fill;
+    if let Some(checker) = st.checker.as_ref() {
+        let t = frame_id.0 as f32 * (1.0 / 60.0);
+        let uniforms = CheckerUniforms {
+            resolution: [st.target_px_size.0 as f32, st.target_px_size.1 as f32],
+            t,
+            _pad: 0.0,
+        };
+        context
+            .queue
+            .write_buffer(&checker.uniforms, 0, bytemuck::bytes_of(&uniforms));
 
-                let mut panel_layout = LayoutStyle::default();
-                panel_layout.size.width = Length::Px(Px(360.0));
-                panel_layout.size.height = Length::Px(Px(240.0));
-
-                let mut row = FlexProps {
-                    layout: fill,
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(12.0),
-                    padding: fret_core::Edges::all(Px(16.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Start,
-                    wrap: true,
-                };
-                row.layout.size.width = Length::Fill;
-                row.layout.size.height = Length::Fill;
-
-                let make_panel = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                  fit: fret_core::ViewportFit,
-                                  test_id: &'static str|
-                 -> fret_ui::element::AnyElement {
-                    cx.container(
-                        ContainerProps {
-                            layout: panel_layout,
-                            border: fret_core::Edges::all(Px(1.0)),
-                            border_paint: Some(Paint::Solid(theme.color_required("border"))),
-                            background: Some(theme.color_required("muted")),
-                            corner_radii: fret_core::Corners::all(Px(10.0)),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            vec![
-                                cx.viewport_surface_props(ViewportSurfaceProps {
-                                    layout,
-                                    target,
-                                    target_px_size,
-                                    fit,
-                                    opacity: if show { 1.0 } else { 0.0 },
-                                })
-                                .test_id(test_id),
-                            ]
-                        },
-                    )
-                };
-
-                vec![
-                    cx.container(
-                        ContainerProps {
-                            layout: fill,
-                            background: Some(theme.color_required("background")),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![cx.flex(row, |cx| {
-                                vec![
-                                    make_panel(
-                                        cx,
-                                        fret_core::ViewportFit::Contain,
-                                        "ext-tex-fit-contain",
-                                    ),
-                                    make_panel(
-                                        cx,
-                                        fret_core::ViewportFit::Cover,
-                                        "ext-tex-fit-cover",
-                                    ),
-                                    make_panel(
-                                        cx,
-                                        fret_core::ViewportFit::Stretch,
-                                        "ext-tex-fit-stretch",
-                                    ),
-                                ]
-                            })]
-                        },
-                    )
-                    .test_id("external-texture-imports-root"),
-                ]
+        let mut encoder = context
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("external texture imports contract-path encoder"),
             });
-
-        ui.set_root(root);
-    }
-}
-
-impl WinitAppDriver for ExternalTextureImportsDriver {
-    type WindowState = ExternalTextureImportsWindowState;
-
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
-
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-            ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyV,
-                ..
-            } => {
-                let _ = app.models_mut().update(&state.show, |v| *v = !*v);
-                app.request_redraw(window);
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
-        }
-    }
-
-    fn gpu_frame_prepare(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        Self::ensure_target_registered(app, window, state, context, renderer);
-    }
-
-    fn record_engine_frame(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        context: &WgpuContext,
-        _renderer: &mut Renderer,
-        _scale_factor: f32,
-        _tick_id: fret_runtime::TickId,
-        frame_id: fret_runtime::FrameId,
-    ) -> EngineFrameUpdate {
-        let show = app.models().read(&state.show, |v| *v).unwrap_or(true);
-
-        let mut update = EngineFrameUpdate::default();
-
-        if !show {
-            state.target.push_unregister(&mut update);
-            state.texture = None;
-            state.target_px_size = (1, 1);
-            return update;
-        }
-
-        let desired = state.desired_target_px_size;
-        if state.target_px_size != desired {
-            let new_texture = context.device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("external texture imports contract-path texture"),
-                size: wgpu::Extent3d {
-                    width: desired.0.max(1),
-                    height: desired.1.max(1),
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: state.target.format(),
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::TEXTURE_BINDING,
-                view_formats: &[],
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("external texture imports contract-path pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    depth_slice: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
             });
-            state.texture = Some(new_texture);
-            state.target_px_size = desired;
+            pass.set_pipeline(&checker.pipeline);
+            pass.set_bind_group(0, &checker.bind_group, &[]);
+            pass.draw(0..3, 0..1);
         }
-
-        let texture = state
-            .texture
-            .as_ref()
-            .expect("texture must exist after resize");
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-        state
-            .target
-            .push_update(&mut update, view.clone(), state.target_px_size);
-
-        if let Some(checker) = state.checker.as_ref() {
-            let t = frame_id.0 as f32 * (1.0 / 60.0);
-            let uniforms = CheckerUniforms {
-                resolution: [state.target_px_size.0 as f32, state.target_px_size.1 as f32],
-                t,
-                _pad: 0.0,
-            };
-            context
-                .queue
-                .write_buffer(&checker.uniforms, 0, bytemuck::bytes_of(&uniforms));
-
-            let mut encoder =
-                context
-                    .device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("external texture imports contract-path encoder"),
-                    });
-            {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("external texture imports contract-path pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        resolve_target: None,
-                        depth_slice: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
-                pass.set_pipeline(&checker.pipeline);
-                pass.set_bind_group(0, &checker.bind_group, &[]);
-                pass.draw(0..3, 0..1);
-            }
-            update.push_command_buffer(encoder.finish());
-        }
-
-        app.push_effect(Effect::RequestAnimationFrame(window));
-        update
+        update.push_command_buffer(encoder.finish());
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        let w_px = (bounds.size.width.0.max(1.0) * scale_factor).round() as u32;
-        let h_px = (bounds.size.height.0.max(1.0) * scale_factor).round() as u32;
-        state.desired_target_px_size = (w_px.max(1).min(4096), h_px.max(1).min(4096));
-
-        let show_model = state.show.clone();
-        let show = app.models().read(&show_model, |v| *v).unwrap_or(true);
-        let target = state.target.id();
-        let target_px_size = state.target_px_size;
-
-        Self::render_root(
-            app,
-            &mut state.ui,
-            services,
-            window,
-            bounds,
-            show_model,
-            show,
-            target,
-            target_px_size,
-        );
-
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-}
-
-pub fn build_app() -> App {
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
-    app
-}
-
-pub fn build_runner_config() -> WinitRunnerConfig {
-    WinitRunnerConfig {
-        main_window_title: "fret-demo external_texture_imports_demo (V toggles target)".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
-        ..Default::default()
-    }
-}
-
-pub fn build_driver() -> impl WinitAppDriver {
-    ExternalTextureImportsDriver::default()
+    app.push_effect(fret_app::Effect::RequestAnimationFrame(window));
+    update
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -566,9 +399,19 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let app = build_app();
-    let config = build_runner_config();
-    let driver = build_driver();
+    let builder =
+        fret_kit::app_with_hooks("external-texture-imports", init_window, view, |driver| {
+            driver
+                .on_event(on_event)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            app.set_global(PlatformCapabilities::default());
+        })
+        .with_main_window(
+            "fret-demo external_texture_imports_demo (V toggles target)",
+            (960.0, 640.0),
+        );
 
-    crate::run_native_demo(config, app, driver).context("run external_texture_imports_demo app")
+    builder.run().context("run external_texture_imports_demo")
 }

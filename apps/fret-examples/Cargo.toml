@@ -15,6 +15,7 @@ alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
 hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
 node-graph-demos = ["fret-node/imui"]
+devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 
 [dependencies]
 anyhow.workspace = true
