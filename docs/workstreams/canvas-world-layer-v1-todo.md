@@ -66,10 +66,12 @@ build XYFlow-like interactions on top of the world-layer substrate.
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (bounds-store-based filter)
   - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-marquee-blocked`)
   - Reference: `docs/workstreams/xyflow-gap-analysis.md` (Gap B)
-- [ ] CWL-M3-002 Provide a minimal node-drag recipe (app-owned model edits):
+- [x] CWL-M3-002 Provide a minimal node-drag recipe (app-owned model edits):
   - capture pointer in a node subtree,
   - translate screen delta → canvas delta,
   - update node canvas positions.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-drag-handle`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (assert `ui-ai-cwl-node-dragged`)
   - Reference: `repo-ref/xyflow/packages/system/src/xydrag/*`
 - [ ] CWL-M3-003 Provide a minimal connect-drag recipe surface:
   - start drag from a handle,

@@ -91,6 +91,22 @@
     },
     {
       "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-node-a-drag-handle" },
+      "button": "left",
+      "delta_x": 120.0,
+      "delta_y": 60.0,
+      "steps": 8
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-cwl-node-dragged" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
       "target": { "kind": "test_id", "id": "ui-ai-cwl-node-a" },
       "button": "left",
       "delta_x": 30.0,

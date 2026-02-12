@@ -54,9 +54,10 @@ Status: Done (with known gaps)
 
 ### M3 — Interaction glue (optional, XYFlow-style)
 
-Status: Planned
+Status: In progress (partial)
 
 - Background-only marquee start filtering exists (node subtrees do not trigger selection-on-drag).
 - Node dragging recipe exists (app-owned position edits; canvas-space deltas).
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-node-a-drag-handle`)
 - Connection dragging recipe exists (handles + preview + validity checks).
 - Input arbitration recipe exists (background-hit only marquee start).

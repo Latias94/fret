@@ -133,6 +133,14 @@ world-layer substrate, the remaining work is mostly **interaction glue**:
 - Selection model updates (click vs marquee, shift-add/remove, connected-edges selection policy).
 - Optional snap tuning (grid snap, snaplines).
 
+Current state:
+
+- A minimal node-drag recipe exists as a UI Gallery spike:
+  - Drag handle: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+    (`ui-ai-cwl-node-a-drag-handle`)
+  - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
+    (assert `ui-ai-cwl-node-dragged`)
+
 Input arbitration note:
 
 - XYFlow-style marquee selection should only start from “background” hits (pane), not when the down

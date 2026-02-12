@@ -114,17 +114,20 @@ In Fret today (2026-02-12):
 
 What is still missing (v1 ergonomics gaps):
 
-- **Bounds reporting seam**: apps need node bounds (canvas-space and/or screen-space) to implement:
-  - fit-view to nodes,
-  - selection-in-rect queries,
-  - minimap extents.
 - **Interaction glue**: a world-layer-only solution still needs app-level policies for:
-  - node dragging (including snaplines / snap-to-grid),
+  - node dragging (beyond the minimal recipe; snaplines / snap-to-grid / auto-pan),
   - connection-drag (handles, loose/strict targeting),
   - selection model updates (click vs marquee).
 - **Current bounds latency caveat**: the v0 world layer derives the transform from a
   `LayoutQueryRegion` using `layout_query_bounds(...)` (last-frame bounds). This can produce a
   one-frame mismatch on resize/layout changes. See `docs/workstreams/canvas-world-layer-v1.md`.
+
+Notes:
+
+- A minimal bounds store seam exists (frame-lagged) for fit-view + selection queries:
+  - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
+- A minimal node dragging spike exists (still app-owned):
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
 
 Recommendation:
 

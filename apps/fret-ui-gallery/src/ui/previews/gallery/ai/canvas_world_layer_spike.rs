@@ -51,6 +51,12 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         use_controllable_model(cx, None, || 0u64).model();
     let marquee_blocked_count: fret_runtime::Model<u64> =
         use_controllable_model(cx, None, || 0u64).model();
+    let node_a_canvas_pos: fret_runtime::Model<Point> =
+        use_controllable_model(cx, None, || Point::new(Px(80.0), Px(80.0))).model();
+    let node_b_canvas_pos: fret_runtime::Model<Point> =
+        use_controllable_model(cx, None, || Point::new(Px(420.0), Px(260.0))).model();
+    let node_dragged_count: fret_runtime::Model<u64> =
+        use_controllable_model(cx, None, || 0u64).model();
 
     let scale_mode_value = cx
         .get_model_copied(&scale_mode, fret_ui::Invalidation::Layout)
@@ -66,6 +72,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         .unwrap_or(0);
     let marquee_blocked_count_value = cx
         .get_model_copied(&marquee_blocked_count, fret_ui::Invalidation::Layout)
+        .unwrap_or(0);
+    let node_dragged_count_value = cx
+        .get_model_copied(&node_dragged_count, fret_ui::Invalidation::Layout)
         .unwrap_or(0);
 
     let (bounds_count, bounds_union_canvas) = cx
@@ -272,7 +281,16 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         marquee,
         paint,
         move |cx, world_cx| {
-            let abs = LayoutRefinement::default().absolute();
+            #[derive(Debug, Clone, Copy, PartialEq)]
+            struct NodeDragState {
+                pointer_id: fret_core::PointerId,
+                start_screen: Point,
+                current_screen: Point,
+                start_canvas: Point,
+                view_at_start: PanZoom2D,
+                modifiers: fret_core::Modifiers,
+                active: bool,
+            }
 
             let on_node_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
                 let _ = host
@@ -281,8 +299,12 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 host.request_redraw(action_cx.window);
             });
 
-            let a_canvas = Point::new(Px(80.0), Px(80.0));
-            let b_canvas = Point::new(Px(420.0), Px(260.0));
+            let a_canvas = cx
+                .get_model_copied(&node_a_canvas_pos, fret_ui::Invalidation::Layout)
+                .unwrap_or(Point::new(Px(80.0), Px(80.0)));
+            let b_canvas = cx
+                .get_model_copied(&node_b_canvas_pos, fret_ui::Invalidation::Layout)
+                .unwrap_or(Point::new(Px(420.0), Px(260.0)));
 
             let (a_left, a_top, b_left, b_top) = match world_cx.scale_mode {
                 CanvasWorldScaleMode::ScaleWithZoom => {
@@ -300,44 +322,352 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 }
             };
 
-            let node_a = ui_ai::WorkflowNode::new([
-                ui_ai::WorkflowNodeHeader::new([
-                    ui_ai::WorkflowNodeTitle::new("Node A").into_element(cx)
-                ])
-                .into_element(cx),
-                ui_ai::WorkflowNodeContent::new([cx.text(format!("Clicks: {node_clicks_value}"))])
-                    .into_element(cx),
-                ui_ai::WorkflowNodeFooter::new([shadcn::Button::new("Click node")
-                    .test_id("ui-ai-cwl-node-click")
-                    .on_activate(on_node_activate.clone())
-                    .variant(ButtonVariant::Secondary)
-                    .into_element(cx)])
-                .into_element(cx),
-            ])
-            .test_id("ui-ai-cwl-node-a")
-            .refine_layout(abs.clone().left_px(a_left).top_px(a_top).w_px(Px(260.0)))
-            .into_element(cx);
+            let drag_min_px = Px(3.0);
+            let drag_handle_height_px = Px(32.0);
+            let surface_bounds = world_cx.bounds;
+            let default_view = world_cx.view;
+            let node_dragged_count_a = node_dragged_count.clone();
+            let node_dragged_count_b = node_dragged_count.clone();
 
-            let node_b = ui_ai::WorkflowNode::new([
-                ui_ai::WorkflowNodeHeader::new([
-                    ui_ai::WorkflowNodeTitle::new("Node B").into_element(cx)
-                ])
-                .into_element(cx),
-                ui_ai::WorkflowNodeContent::new([cx.text("Try zooming/panning and click again.")])
-                    .into_element(cx),
-            ])
-            .test_id("ui-ai-cwl-node-b")
-            .refine_layout(abs.clone().left_px(b_left).top_px(b_top).w_px(Px(260.0)))
-            .into_element(cx);
+            let node_a_item =
+                canvas_world_bounds_item(cx, bounds_store_c.clone(), 1, world_cx, move |cx| {
+                    let drag_state: fret_runtime::Model<Option<NodeDragState>> =
+                        use_controllable_model(cx, None, || None).model();
 
-            vec![
-                canvas_world_bounds_item(cx, bounds_store_c.clone(), 1, world_cx, move |_cx| {
-                    vec![node_a]
-                }),
-                canvas_world_bounds_item(cx, bounds_store_c.clone(), 2, world_cx, move |_cx| {
-                    vec![node_b]
-                }),
-            ]
+                    let node_a = ui_ai::WorkflowNode::new([
+                        ui_ai::WorkflowNodeHeader::new([
+                            ui_ai::WorkflowNodeTitle::new("Node A").into_element(cx)
+                        ])
+                        .into_element(cx),
+                        ui_ai::WorkflowNodeContent::new([
+                            cx.text(format!("Clicks: {node_clicks_value}"))
+                        ])
+                        .into_element(cx),
+                        ui_ai::WorkflowNodeFooter::new([shadcn::Button::new("Click node")
+                            .test_id("ui-ai-cwl-node-click")
+                            .on_activate(on_node_activate.clone())
+                            .variant(ButtonVariant::Secondary)
+                            .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .test_id("ui-ai-cwl-node-a")
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
+
+                    let mut handle_props = PointerRegionProps::default();
+                    handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+                    handle_props.layout.inset = fret_ui::element::InsetStyle {
+                        top: Some(Px(0.0)),
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        ..Default::default()
+                    };
+                    handle_props.layout.size.width = Length::Fill;
+                    handle_props.layout.size.height = Length::Px(drag_handle_height_px);
+
+                    let on_down_state = drag_state.clone();
+                    let node_a_canvas_pos_for_down = node_a_canvas_pos.clone();
+                    let on_down: fret_ui::action::OnPointerDown =
+                        Arc::new(move |host, action_cx, down| {
+                            if down.button != fret_core::MouseButton::Left {
+                                return false;
+                            }
+
+                            host.capture_pointer();
+                            let start_canvas = host
+                                .models_mut()
+                                .read(&node_a_canvas_pos_for_down, |p| *p)
+                                .ok()
+                                .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                            let _ = host.models_mut().update(&on_down_state, |st| {
+                                *st = Some(NodeDragState {
+                                    pointer_id: down.pointer_id,
+                                    start_screen: down.position,
+                                    current_screen: down.position,
+                                    start_canvas,
+                                    view_at_start: default_view,
+                                    modifiers: down.modifiers,
+                                    active: false,
+                                });
+                            });
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let on_move_state = drag_state.clone();
+                    let node_a_canvas_pos_for_move = node_a_canvas_pos.clone();
+                    let on_move: fret_ui::action::OnPointerMove =
+                        Arc::new(move |host, action_cx, mv| {
+                            let mut drag = host
+                                .models_mut()
+                                .read(&on_move_state, |st| *st)
+                                .ok()
+                                .flatten();
+                            let Some(mut drag) = drag.take() else {
+                                return false;
+                            };
+                            if mv.pointer_id != drag.pointer_id {
+                                return false;
+                            }
+                            if !mv.buttons.left {
+                                host.release_pointer_capture();
+                                let _ = host.models_mut().update(&on_move_state, |st| *st = None);
+                                host.request_redraw(action_cx.window);
+                                return true;
+                            }
+
+                            drag.current_screen = mv.position;
+                            if !drag.active {
+                                let dx = drag.current_screen.x.0 - drag.start_screen.x.0;
+                                let dy = drag.current_screen.y.0 - drag.start_screen.y.0;
+                                let dist_sq = dx * dx + dy * dy;
+                                if dist_sq >= drag_min_px.0 * drag_min_px.0 {
+                                    drag.active = true;
+                                }
+                            }
+
+                            if drag.active {
+                                let c0 = drag
+                                    .view_at_start
+                                    .screen_to_canvas(surface_bounds, drag.start_screen);
+                                let c1 = drag
+                                    .view_at_start
+                                    .screen_to_canvas(surface_bounds, drag.current_screen);
+                                let delta = Point::new(Px(c1.x.0 - c0.x.0), Px(c1.y.0 - c0.y.0));
+                                let next = Point::new(
+                                    Px(drag.start_canvas.x.0 + delta.x.0),
+                                    Px(drag.start_canvas.y.0 + delta.y.0),
+                                );
+                                let _ = host
+                                    .models_mut()
+                                    .update(&node_a_canvas_pos_for_move, |p| *p = next);
+                            }
+
+                            let _ = host
+                                .models_mut()
+                                .update(&on_move_state, |st| *st = Some(drag));
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let on_up_state = drag_state.clone();
+                    let node_dragged_count = node_dragged_count_a.clone();
+                    let on_up: fret_ui::action::OnPointerUp =
+                        Arc::new(move |host, action_cx, up| {
+                            let drag = host
+                                .models_mut()
+                                .read(&on_up_state, |st| *st)
+                                .ok()
+                                .flatten();
+                            let Some(drag) = drag else {
+                                return false;
+                            };
+                            if up.pointer_id != drag.pointer_id {
+                                return false;
+                            }
+                            if up.button != fret_core::MouseButton::Left {
+                                return false;
+                            }
+
+                            host.release_pointer_capture();
+                            let _ = host.models_mut().update(&on_up_state, |st| *st = None);
+                            if drag.active {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&node_dragged_count, |v| *v = v.saturating_add(1));
+                            }
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let handle = cx
+                        .pointer_region(handle_props, move |cx| {
+                            cx.pointer_region_on_pointer_down(on_down.clone());
+                            cx.pointer_region_on_pointer_move(on_move.clone());
+                            cx.pointer_region_on_pointer_up(on_up.clone());
+                            std::iter::empty()
+                        })
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Group)
+                                .test_id("ui-ai-cwl-node-a-drag-handle"),
+                        );
+
+                    let mut wrapper = fret_ui::element::ContainerProps::default();
+                    wrapper.layout.position = fret_ui::element::PositionStyle::Absolute;
+                    wrapper.layout.inset.left = Some(a_left);
+                    wrapper.layout.inset.top = Some(a_top);
+                    wrapper.layout.size.width = Length::Px(Px(260.0));
+                    vec![cx.container(wrapper, move |_cx| [node_a, handle])]
+                });
+
+            let node_b_item =
+                canvas_world_bounds_item(cx, bounds_store_c.clone(), 2, world_cx, move |cx| {
+                    let drag_state: fret_runtime::Model<Option<NodeDragState>> =
+                        use_controllable_model(cx, None, || None).model();
+
+                    let node_b = ui_ai::WorkflowNode::new([
+                        ui_ai::WorkflowNodeHeader::new([
+                            ui_ai::WorkflowNodeTitle::new("Node B").into_element(cx)
+                        ])
+                        .into_element(cx),
+                        ui_ai::WorkflowNodeContent::new([
+                            cx.text("Try zooming/panning and click again.")
+                        ])
+                        .into_element(cx),
+                    ])
+                    .test_id("ui-ai-cwl-node-b")
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx);
+
+                    let mut handle_props = PointerRegionProps::default();
+                    handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
+                    handle_props.layout.inset = fret_ui::element::InsetStyle {
+                        top: Some(Px(0.0)),
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        ..Default::default()
+                    };
+                    handle_props.layout.size.width = Length::Fill;
+                    handle_props.layout.size.height = Length::Px(drag_handle_height_px);
+
+                    let on_down_state = drag_state.clone();
+                    let node_b_canvas_pos_for_down = node_b_canvas_pos.clone();
+                    let on_down: fret_ui::action::OnPointerDown =
+                        Arc::new(move |host, action_cx, down| {
+                            if down.button != fret_core::MouseButton::Left {
+                                return false;
+                            }
+
+                            host.capture_pointer();
+                            let start_canvas = host
+                                .models_mut()
+                                .read(&node_b_canvas_pos_for_down, |p| *p)
+                                .ok()
+                                .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                            let _ = host.models_mut().update(&on_down_state, |st| {
+                                *st = Some(NodeDragState {
+                                    pointer_id: down.pointer_id,
+                                    start_screen: down.position,
+                                    current_screen: down.position,
+                                    start_canvas,
+                                    view_at_start: default_view,
+                                    modifiers: down.modifiers,
+                                    active: false,
+                                });
+                            });
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let on_move_state = drag_state.clone();
+                    let node_b_canvas_pos_for_move = node_b_canvas_pos.clone();
+                    let on_move: fret_ui::action::OnPointerMove =
+                        Arc::new(move |host, action_cx, mv| {
+                            let mut drag = host
+                                .models_mut()
+                                .read(&on_move_state, |st| *st)
+                                .ok()
+                                .flatten();
+                            let Some(mut drag) = drag.take() else {
+                                return false;
+                            };
+                            if mv.pointer_id != drag.pointer_id {
+                                return false;
+                            }
+                            if !mv.buttons.left {
+                                host.release_pointer_capture();
+                                let _ = host.models_mut().update(&on_move_state, |st| *st = None);
+                                host.request_redraw(action_cx.window);
+                                return true;
+                            }
+
+                            drag.current_screen = mv.position;
+                            if !drag.active {
+                                let dx = drag.current_screen.x.0 - drag.start_screen.x.0;
+                                let dy = drag.current_screen.y.0 - drag.start_screen.y.0;
+                                let dist_sq = dx * dx + dy * dy;
+                                if dist_sq >= drag_min_px.0 * drag_min_px.0 {
+                                    drag.active = true;
+                                }
+                            }
+
+                            if drag.active {
+                                let c0 = drag
+                                    .view_at_start
+                                    .screen_to_canvas(surface_bounds, drag.start_screen);
+                                let c1 = drag
+                                    .view_at_start
+                                    .screen_to_canvas(surface_bounds, drag.current_screen);
+                                let delta = Point::new(Px(c1.x.0 - c0.x.0), Px(c1.y.0 - c0.y.0));
+                                let next = Point::new(
+                                    Px(drag.start_canvas.x.0 + delta.x.0),
+                                    Px(drag.start_canvas.y.0 + delta.y.0),
+                                );
+                                let _ = host
+                                    .models_mut()
+                                    .update(&node_b_canvas_pos_for_move, |p| *p = next);
+                            }
+
+                            let _ = host
+                                .models_mut()
+                                .update(&on_move_state, |st| *st = Some(drag));
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let on_up_state = drag_state.clone();
+                    let node_dragged_count = node_dragged_count_b.clone();
+                    let on_up: fret_ui::action::OnPointerUp =
+                        Arc::new(move |host, action_cx, up| {
+                            let drag = host
+                                .models_mut()
+                                .read(&on_up_state, |st| *st)
+                                .ok()
+                                .flatten();
+                            let Some(drag) = drag else {
+                                return false;
+                            };
+                            if up.pointer_id != drag.pointer_id {
+                                return false;
+                            }
+                            if up.button != fret_core::MouseButton::Left {
+                                return false;
+                            }
+
+                            host.release_pointer_capture();
+                            let _ = host.models_mut().update(&on_up_state, |st| *st = None);
+                            if drag.active {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&node_dragged_count, |v| *v = v.saturating_add(1));
+                            }
+                            host.request_redraw(action_cx.window);
+                            true
+                        });
+
+                    let handle = cx
+                        .pointer_region(handle_props, move |cx| {
+                            cx.pointer_region_on_pointer_down(on_down.clone());
+                            cx.pointer_region_on_pointer_move(on_move.clone());
+                            cx.pointer_region_on_pointer_up(on_up.clone());
+                            std::iter::empty()
+                        })
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Group)
+                                .test_id("ui-ai-cwl-node-b-drag-handle"),
+                        );
+
+                    let mut wrapper = fret_ui::element::ContainerProps::default();
+                    wrapper.layout.position = fret_ui::element::PositionStyle::Absolute;
+                    wrapper.layout.inset.left = Some(b_left);
+                    wrapper.layout.inset.top = Some(b_top);
+                    wrapper.layout.size.width = Length::Px(Px(260.0));
+                    vec![cx.container(wrapper, move |_cx| [node_b, handle])]
+                });
+
+            vec![node_a_item, node_b_item]
         },
         move |cx, world_cx| {
             let mut overlay_region = CanvasInputExemptRegionProps::default();
@@ -468,6 +798,15 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                             )
                     });
 
+                    let node_dragged = (node_dragged_count_value > 0).then(|| {
+                        cx.text(format!("Node dragged count: {node_dragged_count_value}"))
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(fret_core::SemanticsRole::Text)
+                                    .test_id("ui-ai-cwl-node-dragged"),
+                            )
+                    });
+
                     vec![
                         mode_scale,
                         mode_semantic,
@@ -481,6 +820,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     ]
                     .into_iter()
                     .chain(bounds_ready)
+                    .chain(node_dragged)
                     .chain(blocked)
                     .collect::<Vec<_>>()
                 }),
