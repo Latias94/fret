@@ -34,11 +34,14 @@ Notes:
 cargo run -p fretboard -- diag perf ui-gallery-steady \
   --dir target/fret-diag-perf/ui-gallery-steady.<tag> \
   --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json \
-  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.<machine-tag>.v*.json \
+  --perf-baseline <baseline.json> \
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
   --launch -- target/release/fret-ui-gallery
 ```
+
+Notes:
+- `--perf-baseline` requires an explicit file path (pick one under `docs/workstreams/perf-baselines/`).
 
 ### Append results to the perf log (commit-addressable)
 
@@ -205,7 +208,7 @@ FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 \
 
 ## Evidence anchors (where to look)
 
-- CLI entry: `apps/fretboard/src/diag.rs` (perf subcommands)
+- CLI entry + flags: `apps/fretboard/src/cli.rs`, `crates/fret-diag/src/lib.rs` (perf subcommands)
 - Perf helpers: `tools/perf/`
 - Baselines: `docs/workstreams/perf-baselines/`
 - Perf logs (commit-addressable evidence): `docs/workstreams/*perf*log*.md`

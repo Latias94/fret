@@ -8,6 +8,12 @@ description: "Crate-by-crate code-quality audits for fearless refactors: produce
 This skill is for the **second pass** of the Bottom-Up Fearless Refactor program: reading crates and
 reviewing them for Rust best practices, boundary hygiene, and refactor hazards.
 
+## When to use
+
+- You want a structured “audit note” for a crate before a refactor.
+- You need to check public API surface hygiene (exports/re-exports) and dependency posture.
+- You are about to touch hot paths (dispatch/layout/paint) and want a minimal gate set.
+
 ## Inputs
 
 - Target crate name (package name), e.g. `fret-runtime`
@@ -21,17 +27,34 @@ reviewing them for Rust best practices, boundary hygiene, and refactor hazards.
 ## Quick start (L0 audit)
 
 1. Generate a quick audit report (facts + evidence anchors):
-   - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-runtime`
+   - `python3 tools/audit_crate.py --crate fret-runtime`
 2. Create (or update) a crate audit note using the template:
    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
 3. Update the audits index:
    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
 
+## Workflow
+
+1. Snapshot facts (exports, deps, size, hotspots):
+   - `python3 tools/audit_crate.py --crate <crate>`
+2. Read the crate with one focus at a time:
+   - boundary posture (can this crate stay portable?)
+   - public surface hygiene (what is accidentally public?)
+   - hot paths (what is per-frame / per-event?)
+3. Turn findings into landable steps:
+   - 3–8 small refactors with clear “done” criteria
+4. Add at least one regression artifact when behavior changes:
+   - unit/integration test and/or `fretboard diag` script for state machines
+5. Run minimum gates and re-check layering:
+   - `cargo fmt`
+   - `cargo nextest run -p <crate>`
+   - `python3 tools/check_layering.py`
+
 ## Minimum gates (recommended)
 
 - Format (touched crates only): `cargo fmt`
 - Tests (touched crate): `cargo nextest run -p <crate>`
-- Layering: `pwsh -NoProfile -File tools/check_layering.ps1`
+- Layering: `python3 tools/check_layering.py`
 
 If you touch hot paths, add at least one additional regression gate (unit/integration/diag).
 
@@ -43,3 +66,20 @@ Prefer producing:
 - 3–8 concrete, landable refactor steps
 - 1–3 evidence anchors per major claim (paths + key functions/tests)
 
+## Evidence anchors
+
+- Crate audit snapshot: `tools/audit_crate.py`
+- Layering policy: `docs/dependency-policy.md`
+- Audit note template: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+
+## Common pitfalls
+
+- Writing a long narrative without extracting landable refactor steps.
+- Touching public API surfaces without an explicit “surface diff” and a gate.
+- Fixing a layering violation by adding allowlists instead of moving code.
+
+## Related skills
+
+- `fret-boundary-checks` (fast guardrails)
+- `fret-diag-workflow` (turn behavior bugs into repro gates)
+- `fret-perf-workflow` (numbers/baselines for hot path changes)

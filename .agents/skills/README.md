@@ -11,10 +11,16 @@ Project-local (recommended):
 - Claude Code: copy skill folders into `<project>/.claude/skills/`
 - Codex CLI: copy skill folders into `<project>/.agents/skills/`, or use the global location below
 
-Install scripts (recommended for consistency):
+Install script (recommended for consistency, cross-platform via Python):
 
-- PowerShell (Windows): `powershell -ExecutionPolicy Bypass -File .\\.agents\\skills\\install.ps1 -Agent claude -Force`
-- Bash (macOS/Linux): `./.agents/skills/install.sh --agent claude-code --force`
+- List available skills:
+  - `python3 .agents/skills/fret_skills.py list`
+- Install all skills into a target project:
+  - Claude Code: `python3 .agents/skills/fret_skills.py install --agent claude-code --target <project> --force`
+  - Codex CLI: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --force`
+  - Gemini CLI: `python3 .agents/skills/fret_skills.py install --agent gemini --target <project> --force`
+- Install a subset:
+  - `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --skills fret-diag-workflow,fret-shadcn-app-recipes --force`
 
 Global (user-local):
 
@@ -32,8 +38,19 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 
 - Skills point to **public upstream docs and source URLs** by default.
 - Some developer checkouts may include optional pinned snapshots under `repo-ref/` for quick local diffs; this folder is not necessarily present on GitHub checkouts of this repo.
+- If you are using these skills in an external app repo (not inside the Fret mono-repo), consider keeping a lightweight Fret source checkout available so “evidence anchors” (paths) remain clickable.
+  - Option A (recommended): add the Fret repo as a git submodule or keep a sibling checkout for browsing.
+  - Option B (fallback): browse dependency sources in the Cargo registry (`~/.cargo/registry/src/...`) for published crates.
 
-## Validate skills (agentskills spec)
+## Validate skills
+
+Primary (fast, cross-platform, no dependencies):
+
+```bash
+python3 .agents/skills/fret_skills.py validate --strict
+```
+
+Optional (upstream Agent Skills reference validator):
 
 This repo vendors the Agent Skills reference implementation under `repo-ref/agentskills/skills-ref`.
 
@@ -47,8 +64,33 @@ skills-ref validate ../../../.agents/skills/fret-diag-workflow
 skills-ref validate ../../../.agents/skills/fret-perf-workflow
 ```
 
+Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
+
+```bash
+python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-symbols
+```
+
+## Public distribution (recommended approach)
+
+If you want a lightweight “skills-only” artifact (for framework users who do not want to clone the full repo),
+export a bundle zip and attach it to a GitHub Release:
+
+CI helper (recommended): `.github/workflows/skills-bundles.yml` builds and uploads `app-dev` + `framework-dev`
+bundles on every published GitHub Release (and supports manual runs via `workflow_dispatch`).
+
+```bash
+python3 .agents/skills/fret_skills.py package --profile app-dev --out dist/fret-skills-app-dev
+python3 .agents/skills/fret_skills.py package --profile framework-dev --out dist/fret-skills-framework-dev
+```
+
+Each bundle contains only skill folders and can be installed by unzipping and copying into:
+
+- Codex CLI: `<project>/.agents/skills/`
+- Claude Code: `<project>/.claude/skills/`
+
 ## Skill map (what to use when)
 
+- Get oriented / find the right layer: `fret-repo-orientation`
 - Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`
 - App architecture + side effects (persistence, background work): `fret-app-architecture-and-effects`
 - State stack defaults (typed routing + selector + query): `fret-app-architecture-and-effects` + `fret-component-authoring`
@@ -63,6 +105,7 @@ skills-ref validate ../../../.agents/skills/fret-perf-workflow
 
 ## Skills
 
+- `fret-repo-orientation`: Find the right layer/crate fast (mono-repo vs external app repo), choose the smallest runnable target, and keep contract-first navigation.
 - `fret-component-authoring`: Declarative component authoring in `fret-ui` + `fret-ui-kit` (identity, element-local state, model observation, `ui()` builder surface).
 - `fret-action-hooks`: Component-owned interaction policy (press/dismiss/roving/typeahead/timers) via runtime action hooks (ADR 0074).
 - `fret-app-architecture-and-effects`: App-level structure (Models + Commands + Effects), typed routing (`MessageRouter`/`KeyedMessageRouter`), and async state (`fret-query`/`fret-selector`) on top of runner-owned concurrency (Dispatcher + Inbox).

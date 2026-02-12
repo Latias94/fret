@@ -7,21 +7,38 @@ description: "Run and interpret boundary/portability guardrails for fearless ref
 
 This skill is for **quick guardrails** that keep bottom-up refactors safe and portable.
 
-## Core guardrails (always-run)
+## When to use
+
+- Before/after refactors that move code across crates.
+- When you suspect an accidental dependency edge (e.g. backend deps leaking into contract crates).
+- When a file/module is drifting into a “god file” and you want an early warning.
+
+## Quick start
+
+Run the always-on guardrails:
 
 - Layering (workspace crate boundaries):
-  - `pwsh -NoProfile -File tools/check_layering.ps1`
+  - `python3 tools/check_layering.py`
 - Module size drift (keep god files visible):
-  - `pwsh -NoProfile -File tools/report_largest_files.ps1 -Top 30 -MinLines 800`
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
 
-## Crate-focused checks (when auditing one crate)
+## Workflow
+
+### Core guardrails (always-run)
+
+- Layering (workspace crate boundaries):
+  - `python3 tools/check_layering.py`
+- Module size drift (keep god files visible):
+  - `python3 tools/report_largest_files.py --top 30 --min-lines 800`
+
+### Crate-focused checks (when auditing one crate)
 
 - Quick audit snapshot:
-  - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate <crate>`
+  - `python3 tools/audit_crate.py --crate <crate>`
 
-## Interpreting failures (common cases)
+### Interpreting failures (common cases)
 
-- `check_layering.ps1` failures mean a **workspace->workspace** dependency edge violates ADR policy.
+- `check_layering.py` failures mean a **workspace->workspace** dependency edge violates ADR policy.
   - Fix by moving code to the correct layer, or by adding an explicit allowlist entry only when
     the crate is intentionally “wiring heavy”.
 - Huge-file drift means you should split by responsibility before expanding behavior surface.
@@ -32,3 +49,19 @@ This skill is for **quick guardrails** that keep bottom-up refactors safe and po
 - If a guardrail needs to become normative (CI gate), document it in the workstream and add a
   stable “Fast vs Full” command set.
 
+## Evidence anchors
+
+- Layering checks: `tools/check_layering.py`, `docs/dependency-policy.md`
+- Crate audit snapshot: `tools/audit_crate.py`
+- Module-size drift: `tools/report_largest_files.py`
+
+## Common pitfalls
+
+- Treating allowlists as a first-choice fix (prefer moving code to the correct layer).
+- Ignoring a “small” layering violation during a refactor (it compounds quickly).
+- Measuring file-size drift after the refactor lands (run guardrails early).
+
+## Related skills
+
+- `fret-crate-audits` (deeper crate-by-crate review)
+- `fret-fixture-driven-harnesses` (when large test matrices become unreviewable)

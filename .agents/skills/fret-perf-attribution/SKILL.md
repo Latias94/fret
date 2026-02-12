@@ -5,6 +5,8 @@ description: "Attribute and explain Fret performance hitches using diag bundles 
 
 # Fret perf attribution workflow
 
+## When to use
+
 Use this skill when you already have a **perf gate result** (PASS/FAIL) and need to answer:
 
 - *What made the worst frame slow?*
@@ -43,6 +45,14 @@ Record the result in the perf log:
 - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 
 ---
+
+## Workflow
+
+1. Identify the failing attempt/script/metric and the worst bundle.
+2. Attribute the maxed metric (not only “worst total time”).
+3. Classify the hitch (layout vs paint vs renderer vs allocator/GPU).
+4. Choose the next profiler/capture that reduces uncertainty.
+5. Record evidence (commit/command/out-dir/worst bundle) so the work stays reversible.
 
 ## How to read `diag stats` (high-signal fields)
 
@@ -191,3 +201,20 @@ When you finish attribution:
 
 - Record the **commit hash**, **command**, **out-dir**, and **worst bundle** in the perf log.
 - If you introduce a new probe/script, add a baseline and wire it into a gate before moving on.
+
+## Evidence anchors
+
+- Perf gates + baselines: `.agents/skills/fret-perf-workflow/SKILL.md`, `docs/workstreams/perf-baselines/`
+- Bundle inspection: `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+- Tracing/captures: `docs/tracy.md`, `docs/renderdoc-inspection.md`
+
+## Common pitfalls
+
+- Looking only at the “worst total” frame when the threshold is max-of-metric.
+- Doing attribution on a noisy protocol (mixed diffs, changing env knobs in a reused process).
+- Changing behavior without recording the failing bundle path and command (not reversible).
+
+## Related skills
+
+- `fret-perf-workflow` (numbers/baselines/gates)
+- `fret-diag-workflow` (minimal repro scripts + packaged bundles)

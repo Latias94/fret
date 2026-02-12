@@ -36,7 +36,7 @@ Goal: convert “we figured it out once” into “the agent can do it reliably 
    - `tools/diag-scripts/*.json` scripted repro, and/or
    - web-vs-fret parity harness entry.
 5. Validate skills locally:
-   - `pwsh -File tools/validate_skills.ps1` (use `-Strict` for “no warnings” mode)
+   - `python3 .agents/skills/fret_skills.py validate --strict`
 
 ## What to capture (pick one)
 
@@ -84,7 +84,7 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 ## Evidence anchors
 
 - Skills root + index: `.agents/skills/`, `.agents/skills/README.md`
-- Skill validator: `tools/validate_skills.ps1`
+- Skill validator: `python3 .agents/skills/fret_skills.py validate`
 - Diagnostics scripts/gates: `tools/diag-scripts/`, `docs/ui-diagnostics-and-scripted-tests.md`
 - Parity harness and goldens (when applicable): `ecosystem/fret-ui-shadcn/tests/`, `goldens/`
 

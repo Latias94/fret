@@ -79,8 +79,8 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
 - Code entry points:
   - `crates/fret-runtime/src/platform_text_input.rs` (`PlatformTextInputQuery`, `Utf16Range`)
   - `crates/fret-runtime/src/window_text_input_snapshot.rs` (snapshots / platform bridge)
-  - `crates/fret-ui/src/text_edit.rs` (editing model)
-  - `crates/fret-ui/src/text_input/mod.rs` / `crates/fret-ui/src/text_area/mod.rs` (element internals)
+  - `crates/fret-ui/src/text/edit.rs` (editing helpers + normalization/UTF-8 boundary helpers)
+  - `crates/fret-ui/src/text/input/mod.rs` / `crates/fret-ui/src/text/area/mod.rs` (element internals)
   - `ecosystem/fret-ui-shadcn/src/input.rs` / `ecosystem/fret-ui-shadcn/src/textarea.rs`
   - `ecosystem/fret-ui-shadcn/src/combobox.rs` (active descendant + overlay patterns)
 

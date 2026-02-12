@@ -19,14 +19,20 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
 
-- Web runner (WASM): export bundles via devtools-ws (headless-friendly):
+- Web runner (WASM): export bundles via DevTools WS (no filesystem access in-browser):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
   - Serve the WASM app: `cd apps/fret-ui-gallery-web && trunk serve --port 8080`
   - Open (note the query params): `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
-  - Run the script and materialize `.fret/diag/exports/<timestamp>/bundle.json`:
+  - Run a script that includes `capture_bundle` and materialize bundles under `.fret/diag/exports/<timestamp>/bundle.json`:
     - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --token <token>`
+  - Optional: run a script over WS via `fretboard` for pass/fail + post-run checks (but note transport limitations):
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
+    - Notes:
+      - `--launch/--reuse-launch` is not supported with `--devtools-ws-url` (you run the web app separately).
+      - `--pack` is not supported with `--devtools-ws-url` yet; run `fretboard diag pack <bundle_dir|bundle.json>` after.
+      - `capture_bundle` steps do not currently auto-materialize a local `bundle.json` in this mode; prefer `fret-diag-export` when you need the bundle artifact.
 
 ## Workflow
 
@@ -34,20 +40,29 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Prefer a UI gallery page or a dedicated demo binary.
 2. Create or edit a script in `tools/diag-scripts/`.
    - Use stable `test_id` targets instead of pixel coordinates.
-   - Common steps: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`.
+   - Prefer schema v2 for new scripts (more intent-level steps; less flake).
+   - Optional: generate scripts from typed Rust templates via `fret-diag-scriptgen` (portable JSON output).
+   - Common steps:
+     - v1: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`
+     - v2: `click_stable`, `ensure_visible`, `scroll_into_view`, `type_text_into`, `press_shortcut`, `menu_select_path`
    - If the target moves/animates during navigation, prefer `click_stable` (schema v2) to avoid “stale click” flake.
-     - Example: click only after the target’s center stays within `eps_px` for `stable_frames`.
+     - Key knobs: `stable_frames` and `max_move_px`.
    - Prefer declaring `meta.required_capabilities` for any non-trivial evidence requirements (screenshots, window targeting, etc).
 3. Ensure diagnostics are enabled in the running app.
-   - Minimum: `FRET_DIAG=1`
+   - If you run via `fretboard diag run ... --launch -- <cmd...>`, the launcher injects `FRET_DIAG=1` for you.
+   - Otherwise, set `FRET_DIAG=1` in the target environment.
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
+   - If you want a best-effort BMP screenshot alongside bundle dumps (manual `diag poke` / auto-dumps): set `FRET_DIAG_SCREENSHOT=1`.
    - While authoring scripts, consider disabling text redaction: `FRET_DIAG_REDACT_TEXT=0`.
    - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
 4. Run the script via `fretboard` and collect artifacts.
    - Prefer `fretboard diag run ... --launch -- <cmd...>` so env vars are applied consistently.
-   - Web runner note: `fretboard diag run` uses the filesystem-trigger transport; for web/WASM use
-     devtools-ws + `fret-diag-export` (or `apps/fret-devtools`) to export bundles under
-     `.fret/diag/exports/`.
+   - Reserved env note (when using `--launch`): do not pass `--env FRET_DIAG=1` / `--env FRET_DIAG_DIR=...` etc.
+     The launcher sets them and treats them as reserved.
+   - Web runner note: use DevTools WS transport via `--devtools-ws-url` / `--devtools-token`.
+   - If timing flake is the problem, prefer fixed frame delta:
+     - CLI: `--fixed-frame-delta-ms 16` (when launching), or
+     - env: `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`
 5. Turn the repro into a gate (stable assertions first).
    - Prefer geometry/semantics invariants over pixel diffs when possible.
    - If you need pixel diffs, add `capture_screenshot` steps and use `--check-pixels-changed <test_id>`.
@@ -99,7 +114,55 @@ cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
 - When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
   rather than retrying `click` with arbitrary sleeps.
+- If `click_stable` flakes, set `FRET_DIAG_DEBUG_CLICK_STABLE=1` to capture additional debug context in traces/bundles.
 - If a script fails, start from `script.result.json` (reason code + evidence) before opening screenshots.
+
+## Minimal script template (schema v2)
+
+Use schema v2 for new scripts. Start with stable `test_id` selectors and one `capture_bundle`.
+
+Good in-tree examples to copy from:
+
+- `tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json` (press_shortcut + exists assertions)
+- `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json` (click_stable on jittery targets)
+- `tools/diag-scripts/ui-gallery-dropdown-submenu-safe-corridor-sweep.json` (move_pointer_sweep hover corridor)
+- `tools/diag-scripts/ui-gallery-material3-select-rich-options-screenshots.json` (ensure_visible + screenshot)
+
+```json
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "my-scenario",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "my-trigger" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "my-trigger" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "my-input" },
+      "text": "hello",
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "after" }
+  ]
+}
+```
+
+If you add `capture_screenshot`, require screenshot capability and enable screenshots:
+
+- Script: add `diag.screenshot_png` to `meta.required_capabilities`
+- Native/filesystem: set `FRET_DIAG_SCREENSHOTS=1`
 
 ## Capabilities & fail-fast gating
 
@@ -199,10 +262,11 @@ Where the code lives:
 
 - Doc: `docs/ui-diagnostics-and-scripted-tests.md`
 - In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- CLI entry: `apps/fretboard/src/diag.rs`
+- CLI entry + flags: `apps/fretboard/src/cli.rs`, `crates/fret-diag/src/lib.rs`
 - Headless exporter (devtools-ws -> `.fret/diag/exports/`): `apps/fret-diag-export`
 - Loopback WS hub: `apps/fret-devtools-ws`
 - DevTools GUI (optional): `apps/fret-devtools`
+- DevTools WS bridge (in-app): `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`
 - Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
 - Triage/compare engine: `crates/fret-diag`
 

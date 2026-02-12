@@ -80,7 +80,7 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 ## Regression gates (recommended defaults)
 
 - Add a small invariant test for:
-  - “scroll offset clamps to content bounds” (baseline already exists in `crates/fret-ui/src/scroll.rs`).
+  - “scroll offset clamps to content bounds” (see `crates/fret-ui/src/scroll/mod.rs` and scroll tests under `crates/fret-ui/src/tree/tests/`).
   - “duplicate keys are detected / warned” (key collisions are catastrophic for state).
 - Add a `tools/diag-scripts/*.json` scenario that:
   - scrolls, selects an item, reorders data, then asserts the selected row is still the same `test_id`.
@@ -95,9 +95,10 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 ## Evidence anchors (where to look)
 
 - Runtime:
-  - `crates/fret-ui/src/scroll.rs` (`ScrollHandle`, `VirtualListScrollHandle`)
-  - `crates/fret-ui/src/virtual_list.rs` (metrics/windowing)
+  - `crates/fret-ui/src/scroll/mod.rs` (`ScrollHandle`, `VirtualListScrollHandle`)
+  - `crates/fret-ui/src/virtual_list/mod.rs` (metrics/windowing)
   - `crates/fret-ui/src/elements/cx.rs` (`virtual_list_keyed*` helpers)
+  - Virtual list tests: `crates/fret-ui/src/declarative/tests/virtual_list/`
 - Ecosystem usage:
   - `ecosystem/fret-ui-shadcn/src/data_table.rs` (real usage)
   - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (virtual list diagnostics surface)

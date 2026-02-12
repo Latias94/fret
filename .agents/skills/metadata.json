@@ -1,9 +1,12 @@
 {
   "name": "fret-skills",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-09",
+  "last_updated": "2026-02-12",
   "skills": {
+    "onboarding": [
+      "fret-repo-orientation"
+    ],
     "foundation": [
       "fret-component-authoring",
       "fret-action-hooks"
@@ -289,8 +292,63 @@
       "防抖",
       "定时器"
     ]
+    ,
+    "onboarding": [
+      "what is fret",
+      "where is",
+      "entry point",
+      "repo structure",
+      "architecture",
+      "where to change",
+      "which crate",
+      "layering"
+    ]
   },
   "notes": {
     "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
+  },
+  "profiles": {
+    "app-dev": [
+      "fret-repo-orientation",
+      "fret-component-authoring",
+      "fret-action-hooks",
+      "fret-app-architecture-and-effects",
+      "fret-design-system-styles",
+      "fret-ui-ux-guidelines",
+      "fret-commands-and-keymap",
+      "fret-text-input-and-ime",
+      "fret-scroll-and-virtualization",
+      "fret-layout-and-style",
+      "fret-overlays-and-focus",
+      "fret-animation-and-scheduling",
+      "fret-diag-workflow",
+      "fret-shadcn-source-alignment",
+      "fret-shadcn-app-recipes"
+    ],
+    "framework-dev": [
+      "fret-repo-orientation",
+      "fret-component-authoring",
+      "fret-action-hooks",
+      "fret-app-architecture-and-effects",
+      "fret-design-system-styles",
+      "fret-ui-ux-guidelines",
+      "fret-commands-and-keymap",
+      "fret-text-input-and-ime",
+      "fret-scroll-and-virtualization",
+      "fret-layout-and-style",
+      "fret-overlays-and-focus",
+      "fret-animation-and-scheduling",
+      "fret-docking-and-viewports",
+      "fret-diag-workflow",
+      "fret-perf-workflow",
+      "fret-perf-attribution",
+      "fret-shadcn-source-alignment",
+      "fret-shadcn-app-recipes",
+      "fret-crate-audits",
+      "fret-boundary-checks",
+      "fret-fixture-driven-harnesses",
+      "fret-release-check-and-publish",
+      "fret-skill-evolution"
+    ]
   }
 }

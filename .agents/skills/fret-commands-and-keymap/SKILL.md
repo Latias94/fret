@@ -88,15 +88,16 @@ Notes:
   - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
 - Code entry points:
   - `crates/fret-runtime/src/commands.rs` (`CommandRegistry`, `CommandMeta`)
-  - `crates/fret-runtime/src/keymap.rs` (`Keymap`, parsing, resolution, conflict detection)
-  - `crates/fret-runtime/src/menu.rs` (data-only menu model)
+  - `crates/fret-runtime/src/keymap/mod.rs` (`Keymap`, parsing, resolution, conflict detection)
+  - `crates/fret-runtime/src/menu/mod.rs` (data-only menu model)
   - `crates/fret-app/src/keymap.rs` (layered keymap loading + reverse lookup)
+  - `crates/fret-app/src/menu.rs` (app-side menu loading/patching)
   - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (config watcher + hot reload)
 
 ## Evidence anchors
 
 - ADRs: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`
-- Parsing/resolution: `crates/fret-runtime/src/keymap.rs`
+- Parsing/resolution: `crates/fret-runtime/src/keymap/mod.rs`, `crates/fret-runtime/src/when_expr/mod.rs`
 - Command metadata + routing: `crates/fret-runtime/src/commands.rs`
 
 ## Related skills
