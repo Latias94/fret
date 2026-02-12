@@ -62,7 +62,15 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
     - [x] Static dot/grid/stripe backgrounds (Tier B materials) + UI gallery + diag script.
     - [x] Animated variants (phase/offset-driven; reduced-motion fallback).
   - [x] Sparkles text (seeded sparkle field; reduced-motion fallback).
-- [ ] Add perf baselines for MagicUI parity pages (optional follow-up).
+- [ ] Add perf baselines for MagicUI parity pages (optional follow-up):
+  - [ ] Perf scripts:
+    - `tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json`
+    - `tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json`
+  - [ ] Seed policy preset:
+    - `docs/workstreams/perf-baselines/policies/ui-gallery-magic-recipes.v1.json`
+  - [ ] Windows-local baselines:
+    - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns.windows-local.v1.json`
+    - `docs/workstreams/perf-baselines/ui-gallery-magic-sparkles-text.windows-local.v1.json`
 
 ## P1 — Effect steps extension
 
