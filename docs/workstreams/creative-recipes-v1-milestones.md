@@ -161,7 +161,7 @@ Status: In progress
 
 Done (so far):
 
-- Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`
+- Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
 - UI gallery pages + diag scripts exist for the above (see Evidence below)
 
 Evidence (planned):
@@ -188,11 +188,13 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_CARD`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_card`)
 - `tools/diag-scripts/ui-gallery-magic-card-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/dock.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_DOCK`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_dock`)
+- `tools/diag-scripts/ui-gallery-magic-dock-pointer-follow.json`
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
-- Seed component parity targets:
-  - `Dock` (Phase 0)
 - Next creative parity targets:
   - Patterns (dot/grid/stripe + animated variants)
   - `SparklesText`

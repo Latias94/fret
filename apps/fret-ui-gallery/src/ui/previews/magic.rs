@@ -168,6 +168,66 @@ pub(in crate::ui) fn preview_magic_border_beam(
     )]
 }
 
+pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let muted = cx.with_theme(|theme| theme.color_required("muted"));
+    let border = cx.with_theme(|theme| theme.color_required("border"));
+
+    let mut dock_layout = LayoutStyle::default();
+    dock_layout.size.width = Length::Px(Px(620.0));
+    dock_layout.size.height = Length::Px(Px(92.0));
+
+    let dock = magic::dock(
+        cx,
+        magic::DockProps {
+            layout: dock_layout,
+            background: Some(muted),
+            border_color: Some(border),
+            ..Default::default()
+        },
+        |cx| {
+            (0..9)
+                .map(|i| {
+                    shadcn::Badge::new(format!("APP-{i}"))
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx)
+                        .test_id(match i {
+                            1 => "ui-gallery-magic-dock-target-left",
+                            4 => "ui-gallery-magic-dock-target-middle",
+                            7 => "ui-gallery-magic-dock-target-right",
+                            _ => "ui-gallery-magic-dock-target",
+                        })
+                })
+                .collect::<Vec<_>>()
+        },
+    )
+    .test_id("ui-gallery-magic-dock");
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start(),
+        |cx| {
+            vec![
+                shadcn::typography::h4(cx, "Dock (Phase 0)"),
+                shadcn::typography::p(
+                    cx,
+                    "Pointer-proximity magnification. Phase 0 uses a fixed-size layout; \
+                     hover gates magnification and reduced-motion is respected for ambient motion.",
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_center(),
+                    |_cx| [dock],
+                ),
+            ]
+        },
+    )]
+}
+
 pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let muted = cx.with_theme(|theme| theme.color_required("muted"));
     let border = cx.with_theme(|theme| theme.color_required("border"));

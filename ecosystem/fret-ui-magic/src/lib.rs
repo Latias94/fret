@@ -9,11 +9,13 @@
 //! - Components are built out of the stable primitives (paint/materials/masks/effects/compositing).
 
 pub mod border_beam;
+pub mod dock;
 pub mod lens;
 pub mod magic_card;
 pub mod marquee;
 
 pub use border_beam::{BorderBeamProps, border_beam};
+pub use dock::{DockProps, dock};
 pub use lens::{LensProps, lens};
 pub use magic_card::{MagicCardProps, magic_card};
 pub use marquee::{MarqueeDirection, MarqueeProps, marquee};

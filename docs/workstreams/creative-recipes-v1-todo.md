@@ -91,13 +91,13 @@ diagnostics, not perfect CSS parity.
   - [x] `MagicCard`
   - [x] `BorderBeam`
   - [x] `Marquee`
-  - [ ] `Dock`
+  - [x] `Dock`
 - [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
   - [x] `Marquee`
   - [x] `Lens`
   - [x] `MagicCard`
   - [x] `BorderBeam`
-  - [ ] `Dock`
+  - [x] `Dock`
 - [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
 
 ## P1 — External texture imports (v1)

@@ -130,6 +130,35 @@ let card = magic::border_beam(cx, magic::BorderBeamProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_DOCK: &str = r#"
+## Dock (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI / macOS dock-style affordances:
+
+- Items are magnified based on pointer proximity.
+- The implementation uses a pointer region + a small model to store the last pointer position.
+- Hover is used to gate magnification without needing pointer-leave callbacks.
+
+Non-goals (v1):
+
+- Pixel-perfect spring smoothing and bounce physics (can be layered on later).
+- A full “roving focus + typeahead” dock interaction policy.
+"#;
+
+pub(crate) const USAGE_MAGIC_DOCK: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
+    vec![
+        cx.text(\"A\"),
+        cx.text(\"B\"),
+        cx.text(\"C\"),
+    ]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_CARD: &str = r#"
 ## MagicCard (fret-ui-magic)
 
