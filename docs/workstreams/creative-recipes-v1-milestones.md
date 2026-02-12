@@ -85,13 +85,14 @@ ecosystem recipes without canvas-only hacks.
 - Add a `MaskLayer` element that emits `SceneOp::PushMask/PopMask` (ADR 0239).
 - Add a `CompositeGroup` element that emits `SceneOp::PushCompositeGroup/PopCompositeGroup` (ADR 0247).
 
-Status: Not started
+Status: Landed
 
-Evidence (planned):
+Evidence:
 
-- `crates/fret-ui/src/element.rs` (element kinds + props)
+- `crates/fret-ui/src/element.rs` (`MaskLayerProps` / `CompositeGroupProps`)
+- `crates/fret-ui/src/elements/cx.rs` (`mask_layer` / `composite_group`)
 - `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp emission)
-- `crates/fret-ui/src/declarative/mod.rs` (declarative wrappers)
+- `crates/fret-ui/src/declarative/tests/core.rs` (stack op emission tests)
 
 ## M5 — Motion + pointer snapshots
 

@@ -49,8 +49,8 @@ Next (recommended order):
 These are the `fret-ui` authoring surfaces that make the kernel primitives (mask/composite) usable
 from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
 
-- [ ] Add a mask layer element in `crates/fret-ui` that emits `SceneOp::PushMask/PopMask` (ADR 0239).
-- [ ] Add a compositing group element in `crates/fret-ui` that emits
+- [x] Add a mask layer element in `crates/fret-ui` that emits `SceneOp::PushMask/PopMask` (ADR 0239).
+- [x] Add a compositing group element in `crates/fret-ui` that emits
       `SceneOp::PushCompositeGroup/PopCompositeGroup` (ADR 0247).
 
 ## P1 — Recipes and demos
