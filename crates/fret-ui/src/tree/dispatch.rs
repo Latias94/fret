@@ -1811,6 +1811,8 @@ impl<H: UiHost> UiTree<H> {
                     // layer remains mounted for a close transition.
                     pointer_down_outside = PointerDownOutsideOutcome::default();
                 } else {
+                    let active_pointer_down_outside_layers =
+                        self.active_pointer_down_outside_layer_roots(barrier_root);
                     pointer_down_outside = self.dispatch_pointer_down_outside(
                         app,
                         services,

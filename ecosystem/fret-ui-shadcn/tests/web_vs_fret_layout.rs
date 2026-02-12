@@ -27,8 +27,6 @@ pub(crate) use fret_ui_shadcn::empty::{
 pub(crate) use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 pub(crate) use serde::Deserialize;
 pub(crate) use std::cell::Cell;
-pub(crate) use std::collections::BTreeMap;
-pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::rc::Rc;
 pub(crate) use std::sync::Arc;
 

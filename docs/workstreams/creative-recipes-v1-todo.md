@@ -106,11 +106,26 @@ This closes the loop for “real import and run” beyond `ImageId` uploads: pla
 external systems produce GPU textures and the runner imports them without leaking backend handles
 to `fret-ui` (ADR 0234).
 
-- [ ] Land a “contract-path demo” that imports a renderer-owned `wgpu::TextureView` via
-      `ImportedViewportRenderTarget` and shows it in the UI as a `ViewportSurface`:
-  - [ ] resize + fit + lifecycle
-  - [ ] diag bundle evidence (snapshot + screenshot)
-  - [ ] perf baseline for steady-state updates
-- [ ] Add capability gating for a first real backend path:
-  - [ ] web: `VideoFrame`/WebCodecs (if available), or a copy-based fallback
-  - [ ] native: a decode path (software or hardware) with a clear copy/zero-copy policy
+- [x] Land a “contract-path demo” that imports a per-frame `wgpu::TextureView` via runner deltas
+      (`EngineFrameUpdate.target_updates`) and shows it in the UI as a `ViewportSurface`:
+  - [x] Provide a small helper (`fret-launch`) that owns a stable `RenderTargetId` but updates the
+        registry via `RenderTargetUpdate::Update` (not direct `renderer.update_render_target` calls).
+  - [x] Demo app: `external_texture_imports_demo` (`apps/fret-demo --bin external_texture_imports_demo`)
+        with:
+    - [x] resize coverage (target reallocates on window resize)
+    - [x] fit coverage (contain/cover/stretch panels)
+    - [x] lifecycle coverage (toggle unregister/register via `V`)
+  - [x] Diagnostics evidence (script v2 + screenshots):
+    - [x] `fretboard diag run` works in `--launch` mode. Recommended build: `--features devtools-ws`.
+    - [x] Script is verified to produce bundles + screenshots:
+      - `tools/diag-scripts/external-texture-imports-contract-path.json`
+  - [x] Perf evidence (steady-state baseline):
+    - [x] `fretboard diag perf` steady-state script:
+      - `tools/diag-scripts/external-texture-imports-contract-path-perf-steady.json`
+    - [x] Seed policy preset is committed:
+      - `docs/workstreams/perf-baselines/policies/external-texture-imports-contract-path.v1.json`
+    - [x] A windows-local baseline JSON is committed:
+      - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
+- [ ] Add capability gating for a first “true external import” backend path (optional v1 follow-up):
+  - [ ] web: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback
+  - [ ] native: a decode path (software or hardware) with an explicit copy/zero-copy policy
