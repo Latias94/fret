@@ -2879,6 +2879,7 @@ Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
 pub(crate) const USAGE_ALERT: &str = r#"
 ```rust
 let alert = shadcn::Alert::new(vec![
+    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.terminal")),
     shadcn::AlertTitle::new("Heads up!").into_element(cx),
     shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
 ])
