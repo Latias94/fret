@@ -131,10 +131,14 @@
       "type": "wait_until"
     },
     {
+      "text": "ban",
+      "type": "type_text"
+    },
+    {
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+          "id": "ui-gallery-combobox-demo-item-banana",
           "kind": "test_id"
         }
       },
@@ -143,30 +147,35 @@
     },
     {
       "predicate": {
-        "eps_px": 0.5,
-        "kind": "bounds_within_window",
-        "padding_px": 2.0,
-        "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+        "container": {
+          "id": "ui-gallery-combobox-demo-input",
           "kind": "test_id"
-        }
+        },
+        "item": {
+          "id": "ui-gallery-combobox-demo-item-banana",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
       },
       "timeout_frames": 240,
       "type": "wait_until"
     },
     {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-combobox-demo-item-apple",
-        "kind": "test_id"
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "type": "click"
+      "repeat": false,
+      "type": "press_key"
     },
     {
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+          "id": "ui-gallery-combobox-demo-item-banana",
           "kind": "test_id"
         }
       },
@@ -196,7 +205,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-item-apple",
+          "id": "ui-gallery-combobox-demo-item-banana",
           "kind": "test_id"
         }
       },
@@ -208,7 +217,7 @@
         "kind": "selected_is",
         "selected": true,
         "target": {
-          "id": "ui-gallery-combobox-demo-item-apple",
+          "id": "ui-gallery-combobox-demo-item-banana",
           "kind": "test_id"
         }
       },
@@ -230,7 +239,7 @@
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+          "id": "ui-gallery-combobox-demo-item-banana",
           "kind": "test_id"
         }
       },
@@ -238,7 +247,7 @@
       "type": "wait_until"
     },
     {
-      "label": "ui-gallery-combobox-open-select-focus-restore",
+      "label": "ui-gallery-combobox-typeahead-commit-banana",
       "type": "capture_bundle"
     }
   ]

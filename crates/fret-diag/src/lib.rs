@@ -4525,6 +4525,8 @@ See: `docs/tracy.md`.\n";
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-layout";
             let is_ui_gallery_date_picker_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
+            let is_ui_gallery_combobox_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-combobox";
             let is_ui_gallery_select_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-select";
             let is_ui_gallery_shadcn_conformance_suite =
@@ -4657,6 +4659,14 @@ See: `docs/tracy.md`.\n";
                     // so we can share bundles by default without leaking labels/values.
                     (
                         ui_gallery_select_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_combobox_suite {
+                    (
+                        ui_gallery_combobox_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -10160,6 +10170,17 @@ fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
 
 fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
+}
+
+fn ui_gallery_combobox_suite_scripts() -> [&'static str; 6] {
+    [
+        "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
+        "tools/diag-scripts/ui-gallery-combobox-typeahead-commit-banana.json",
+        "tools/diag-scripts/ui-gallery-combobox-escape-dismiss-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-combobox-dismiss-outside-press.json",
+        "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
+    ]
 }
 
 fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {

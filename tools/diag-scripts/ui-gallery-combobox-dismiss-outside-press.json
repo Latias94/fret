@@ -1,10 +1,10 @@
 {
   "meta": {
     "required_capabilities": [
-      "diag.screenshot_png"
+      "diag.script_v2"
     ]
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
       "predicate": {
@@ -19,6 +19,13 @@
     },
     {
       "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {
@@ -26,6 +33,7 @@
       "type": "wait_frames"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
@@ -35,12 +43,23 @@
     {
       "key": "a",
       "modifiers": {
-        "ctrl": true
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
       },
+      "repeat": false,
       "type": "press_key"
     },
     {
       "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {
@@ -52,6 +71,18 @@
       "type": "wait_frames"
     },
     {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-combobox",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-combobox",
         "kind": "test_id"
@@ -73,7 +104,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-trigger",
+          "id": "ui-gallery-combobox-demo-trigger",
           "kind": "test_id"
         }
       },
@@ -81,83 +112,56 @@
       "type": "wait_until"
     },
     {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "ui-gallery-combobox-selected-label",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 600,
-      "type": "wait_until"
-    },
-    {
-      "key": "escape",
-      "type": "press_key"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
+      "button": "left",
       "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
-      },
-      "type": "move_pointer"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "label": "ui-gallery-combobox-commit-before",
-      "type": "capture_screenshot"
-    },
-    {
-      "target": {
-        "id": "ui-gallery-combobox-trigger",
+        "id": "ui-gallery-combobox-demo-trigger",
         "kind": "test_id"
       },
       "type": "click"
     },
     {
-      "n": 10,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "text": "banana",
-      "type": "type_text"
-    },
-    {
-      "n": 10,
-      "type": "wait_frames"
-    },
-    {
-      "key": "enter",
-      "type": "press_key"
-    },
-    {
-      "n": 20,
-      "type": "wait_frames"
-    },
-    {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
       },
-      "type": "move_pointer"
+      "type": "click"
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "label": "ui-gallery-combobox-commit-after",
-      "type": "capture_screenshot"
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-combobox-demo-trigger",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "label": "ui-gallery-combobox-commit",
+      "label": "ui-gallery-combobox-dismiss-outside-press",
       "type": "capture_bundle"
     }
   ]

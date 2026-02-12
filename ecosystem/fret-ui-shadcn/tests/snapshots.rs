@@ -315,6 +315,12 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             rect: snap_rect(rect),
             opacity: round3(opacity),
         },
+        SceneOp::PushMask { .. }
+        | SceneOp::PopMask
+        | SceneOp::PushCompositeGroup { .. }
+        | SceneOp::PopCompositeGroup => {
+            unreachable!("mask/composite ops are not expected in fret-ui-shadcn snapshots")
+        }
         SceneOp::PushEffect { .. } | SceneOp::PopEffect => {
             unreachable!("effect ops are not expected in fret-ui-shadcn snapshots")
         }

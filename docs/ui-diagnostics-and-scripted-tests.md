@@ -688,6 +688,16 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+For component-focused conformance scripts (built-in suites), run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+
+To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
+
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
+
 The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
 
 - `tools/diag-scripts/ui-gallery-table-smoke.json`

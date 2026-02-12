@@ -138,6 +138,12 @@ fn template_names() -> &'static [&'static str] {
     &[
         "todo-baseline-v2",
         "ui-gallery-command-palette-shortcut-primary-v2",
+        "ui-gallery-combobox-open-select-focus-restore-v2",
+        "ui-gallery-combobox-keyboard-commit-apple-v2",
+        "ui-gallery-combobox-typeahead-commit-banana-v2",
+        "ui-gallery-combobox-escape-dismiss-focus-restore-v2",
+        "ui-gallery-combobox-dismiss-outside-press-v2",
+        "ui-gallery-combobox-roving-skips-disabled-v2",
         "ui-gallery-select-commit-and-label-update-bundle-v2",
         "ui-gallery-select-keyboard-commit-apple-v2",
         "ui-gallery-select-typeahead-commit-banana-v2",
@@ -157,6 +163,24 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         "todo-baseline-v2" => Ok(todo_baseline_v2()),
         "ui-gallery-command-palette-shortcut-primary-v2" => {
             Ok(ui_gallery_command_palette_shortcut_primary_v2())
+        }
+        "ui-gallery-combobox-open-select-focus-restore-v2" => {
+            Ok(ui_gallery_combobox_open_select_focus_restore_v2())
+        }
+        "ui-gallery-combobox-keyboard-commit-apple-v2" => {
+            Ok(ui_gallery_combobox_keyboard_commit_apple_v2())
+        }
+        "ui-gallery-combobox-typeahead-commit-banana-v2" => {
+            Ok(ui_gallery_combobox_typeahead_commit_banana_v2())
+        }
+        "ui-gallery-combobox-escape-dismiss-focus-restore-v2" => {
+            Ok(ui_gallery_combobox_escape_dismiss_focus_restore_v2())
+        }
+        "ui-gallery-combobox-dismiss-outside-press-v2" => {
+            Ok(ui_gallery_combobox_dismiss_outside_press_v2())
+        }
+        "ui-gallery-combobox-roving-skips-disabled-v2" => {
+            Ok(ui_gallery_combobox_roving_skips_disabled_v2())
         }
         "ui-gallery-select-commit-and-label-update-bundle-v2" => {
             Ok(ui_gallery_select_commit_and_label_update_bundle_v2())
@@ -275,12 +299,205 @@ fn ui_gallery_nav_to_select_page_no_escape() -> ScriptV2Builder {
         .wait_exists(test_id("ui-gallery-select-trigger"), 600)
 }
 
+fn ui_gallery_nav_to_combobox_page() -> ScriptV2Builder {
+    ScriptV2Builder::new()
+        .wait_exists(test_id("ui-gallery-nav-search"), 600)
+        .press_key("escape")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(ctrl_a_step())
+        .press_key("backspace")
+        .type_text("combobox")
+        .wait_frames(2)
+        .wait_exists(test_id("ui-gallery-nav-combobox"), 600)
+        .click(test_id("ui-gallery-nav-combobox"))
+        .wait_exists(test_id("ui-gallery-page-combobox"), 600)
+        .wait_exists(test_id("ui-gallery-combobox-demo-trigger"), 600)
+}
+
 fn with_required_caps(mut script: UiActionScriptV2, caps: &[&str]) -> UiActionScriptV2 {
     script.meta = Some(UiScriptMetaV1 {
         required_capabilities: caps.iter().map(|s| (*s).to_string()).collect(),
         ..Default::default()
     });
     script
+}
+
+fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .click(test_id("ui-gallery-combobox-demo-item-apple"))
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-combobox-demo-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-combobox-demo-item-apple"),
+                selected: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("escape")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-combobox-open-select-focus-restore".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .press_key("home")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("ui-gallery-combobox-demo-input"),
+                item: test_id("ui-gallery-combobox-demo-item-apple"),
+            },
+            timeout_frames: 240,
+        })
+        .press_key("enter")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-combobox-demo-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-combobox-demo-item-apple"),
+                selected: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("escape")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-combobox-keyboard-commit-apple".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .type_text("ban")
+        .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("ui-gallery-combobox-demo-input"),
+                item: test_id("ui-gallery-combobox-demo-item-banana"),
+            },
+            timeout_frames: 240,
+        })
+        .press_key("enter")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-combobox-demo-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::SelectedIs {
+                target: test_id("ui-gallery-combobox-demo-item-banana"),
+                selected: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("escape")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-combobox-typeahead-commit-banana".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .press_key("escape")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-combobox-demo-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some(
+            "ui-gallery-combobox-escape-dismiss-focus-restore".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .click(test_id("ui-gallery-nav-search"))
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: test_id("ui-gallery-combobox-demo-trigger"),
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some(
+            "ui-gallery-combobox-dismiss-outside-press".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
+}
+
+fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
+    let script = ui_gallery_nav_to_combobox_page()
+        .click(test_id("ui-gallery-combobox-demo-trigger"))
+        .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-item-disabled"), 240)
+        .press_key("end")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::ActiveItemIs {
+                container: test_id("ui-gallery-combobox-demo-input"),
+                item: test_id("ui-gallery-combobox-demo-item-orange"),
+            },
+            timeout_frames: 240,
+        })
+        .press_key("escape")
+        .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .capture_bundle(Some(
+            "ui-gallery-combobox-roving-skips-disabled".to_string(),
+        ))
+        .build();
+    with_required_caps(script, &["diag.script_v2"])
 }
 
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
@@ -676,6 +893,32 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
     let mut checked: u64 = 0;
 
     let items: &[(&str, &str)] = match suite {
+        "ui-gallery-combobox" => &[
+            (
+                "ui-gallery-combobox-open-select-focus-restore-v2",
+                "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+            ),
+            (
+                "ui-gallery-combobox-keyboard-commit-apple-v2",
+                "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
+            ),
+            (
+                "ui-gallery-combobox-typeahead-commit-banana-v2",
+                "tools/diag-scripts/ui-gallery-combobox-typeahead-commit-banana.json",
+            ),
+            (
+                "ui-gallery-combobox-escape-dismiss-focus-restore-v2",
+                "tools/diag-scripts/ui-gallery-combobox-escape-dismiss-focus-restore.json",
+            ),
+            (
+                "ui-gallery-combobox-dismiss-outside-press-v2",
+                "tools/diag-scripts/ui-gallery-combobox-dismiss-outside-press.json",
+            ),
+            (
+                "ui-gallery-combobox-roving-skips-disabled-v2",
+                "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
+            ),
+        ],
         "ui-gallery-select" => &[
             (
                 "ui-gallery-select-commit-and-label-update-bundle-v2",

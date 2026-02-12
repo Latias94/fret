@@ -155,18 +155,47 @@
       "type": "wait_until"
     },
     {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-combobox-demo-item-apple",
-        "kind": "test_id"
+      "key": "home",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "type": "click"
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-combobox-demo-item-apple",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
     },
     {
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+          "id": "ui-gallery-combobox-demo-item-apple",
           "kind": "test_id"
         }
       },
@@ -230,7 +259,7 @@
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-listbox",
+          "id": "ui-gallery-combobox-demo-item-apple",
           "kind": "test_id"
         }
       },
@@ -238,7 +267,7 @@
       "type": "wait_until"
     },
     {
-      "label": "ui-gallery-combobox-open-select-focus-restore",
+      "label": "ui-gallery-combobox-keyboard-commit-apple",
       "type": "capture_bundle"
     }
   ]

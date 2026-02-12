@@ -11,6 +11,7 @@ description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted
   - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --timeout-ms 240000 --pack --launch -- cargo run -p fret-ui-gallery --release"`
 - Suite run (batch scripts):
   - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_REDACT_TEXT=1; cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release"`
 - Web/WASM: see `references/web-runner.md`.
 
 ## Common commands (copy/paste)
@@ -41,8 +42,9 @@ description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted
 - Compare bundles:
   - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
-- Select conformance suite “template ↔ JSON” closure:
+- Component conformance “template ↔ JSON” closure:
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+  - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
 
 ## Capabilities & fail-fast gating
 

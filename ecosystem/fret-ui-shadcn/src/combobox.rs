@@ -831,22 +831,37 @@ fn combobox_with_patch<H: UiHost>(
                                 command_items.push(cmd_item);
                             }
 
-                            CommandPalette::new(query_model.clone(), command_items)
-                                .a11y_label("Combobox list")
-                                .input_role(SemanticsRole::ComboBox)
-                                .input_expanded(true)
-                                .placeholder(search_placeholder.clone())
-                                .disabled(disabled)
-                                .empty_text(empty_text.clone())
-                                .refine_style(
-                                    ChromeRefinement::default()
-                                        .radius(Px(0.0))
-                                        .border_width(Px(0.0))
-                                        .bg(ColorRef::Color(transparent))
-                                        .border_color(ColorRef::Color(transparent)),
-                                )
-                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                                .into_element(cx)
+                            {
+                                let mut palette =
+                                    CommandPalette::new(query_model.clone(), command_items)
+                                        .a11y_label("Combobox list")
+                                        .input_role(SemanticsRole::ComboBox)
+                                        .input_expanded(true)
+                                        .a11y_selected_mode(
+                                            crate::command::CommandPaletteA11ySelectedMode::Checked,
+                                        )
+                                        .placeholder(search_placeholder.clone())
+                                        .disabled(disabled)
+                                        .empty_text(empty_text.clone())
+                                        .refine_style(
+                                            ChromeRefinement::default()
+                                                .radius(Px(0.0))
+                                                .border_width(Px(0.0))
+                                                .bg(ColorRef::Color(transparent))
+                                                .border_color(ColorRef::Color(transparent)),
+                                        )
+                                        .refine_scroll_layout(
+                                            LayoutRefinement::default().max_h(max_list_h),
+                                        );
+
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    palette = palette
+                                        .input_test_id(format!("{prefix}-input"))
+                                        .list_test_id(format!("{prefix}-listbox"));
+                                }
+
+                                palette.into_element(cx)
+                            }
                         } else {
                             let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
@@ -1130,22 +1145,37 @@ fn combobox_with_patch<H: UiHost>(
                             command_items.push(cmd_item);
                         }
 
-                        CommandPalette::new(query_model.clone(), command_items)
-                            .a11y_label("Combobox list")
-                            .input_role(SemanticsRole::ComboBox)
-                            .input_expanded(true)
-                            .placeholder(search_placeholder.clone())
-                            .disabled(disabled)
-                            .empty_text(empty_text)
-                            .refine_style(
-                                ChromeRefinement::default()
-                                    .radius(Px(0.0))
-                                    .border_width(Px(0.0))
-                                    .bg(ColorRef::Color(transparent))
-                                    .border_color(ColorRef::Color(transparent)),
-                            )
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                            .into_element(cx)
+                        {
+                            let mut palette =
+                                CommandPalette::new(query_model.clone(), command_items)
+                                    .a11y_label("Combobox list")
+                                    .input_role(SemanticsRole::ComboBox)
+                                    .input_expanded(true)
+                                    .a11y_selected_mode(
+                                        crate::command::CommandPaletteA11ySelectedMode::Checked,
+                                    )
+                                    .placeholder(search_placeholder.clone())
+                                    .disabled(disabled)
+                                    .empty_text(empty_text)
+                                    .refine_style(
+                                        ChromeRefinement::default()
+                                            .radius(Px(0.0))
+                                            .border_width(Px(0.0))
+                                            .bg(ColorRef::Color(transparent))
+                                            .border_color(ColorRef::Color(transparent)),
+                                    )
+                                    .refine_scroll_layout(
+                                        LayoutRefinement::default().max_h(max_list_h),
+                                    );
+
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                palette = palette
+                                    .input_test_id(format!("{prefix}-input"))
+                                    .list_test_id(format!("{prefix}-listbox"));
+                            }
+
+                            palette.into_element(cx)
+                        }
                     } else {
                         let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
