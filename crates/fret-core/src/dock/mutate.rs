@@ -749,19 +749,24 @@ impl DockGraph {
             }
         }
 
-        let Some(root) = self.window_root(window) else {
-            return;
-        };
-        if let Some(parent) = self.find_parent_in_subtree(root, old) {
-            self.replace_child_in_node(parent, old, new);
-            return;
+        if let Some(root) = self.window_root(window) {
+            if let Some(parent) = self.find_parent_in_subtree(root, old) {
+                self.replace_child_in_node(parent, old, new);
+                return;
+            }
         }
-        if let Some(list) = self.window_floatings.get(&window) {
-            for w in list {
-                if let Some(parent) = self.find_parent_in_subtree(w.floating, old) {
-                    self.replace_child_in_node(parent, old, new);
-                    return;
-                }
+
+        // Window roots are optional (e.g. a window may only contain floating dock containers).
+        // We still need to be able to replace nodes within floating subtrees in that case.
+        let floating_roots: Vec<DockNodeId> = self
+            .window_floatings
+            .get(&window)
+            .map(|list| list.iter().map(|w| w.floating).collect())
+            .unwrap_or_default();
+        for floating in floating_roots {
+            if let Some(parent) = self.find_parent_in_subtree(floating, old) {
+                self.replace_child_in_node(parent, old, new);
+                return;
             }
         }
     }
