@@ -196,6 +196,7 @@ fn nary_split_handle_hit_test_reports_correct_handle_index() {
             settings.split_handle_gap,
             settings.split_handle_hit_thickness,
             pos,
+            |_split, _axis, _children| Vec::new(),
         )
         .expect("expected split handle hit");
 

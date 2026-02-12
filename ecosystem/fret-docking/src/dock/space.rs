@@ -387,15 +387,10 @@ impl DockSpace {
         axis: fret_core::Axis,
         split_handle_gap: Px,
     ) -> Vec<Px> {
-        let Some(DockNode::Split {
-            children,
-            fractions,
-            ..
-        }) = dock.graph.node(split)
-        else {
+        let Some(DockNode::Split { children, .. }) = dock.graph.node(split) else {
             return Vec::new();
         };
-        if children.is_empty() || children.len() != fractions.len() {
+        if children.is_empty() {
             return Vec::new();
         }
 
@@ -2438,6 +2433,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             split_handle_gap,
                                             split_handle_hit_thickness,
                                             *position,
+                                            |split, axis, _children| {
+                                                Self::split_child_min_px(
+                                                    docking_policy.as_deref(),
+                                                    dock,
+                                                    split,
+                                                    axis,
+                                                    split_handle_gap,
+                                                )
+                                            },
                                         )
                                 {
                                     let min_px = Self::split_child_min_px(
@@ -3050,6 +3054,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             split_handle_gap,
                                             split_handle_hit_thickness,
                                             *position,
+                                            |_split, _axis, _children| Vec::new(),
                                         )
                                     {
                                         request_cursor = Some(match handle.axis {
