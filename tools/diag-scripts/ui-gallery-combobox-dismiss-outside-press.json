@@ -1,168 +1,202 @@
 {
+  "schema_version": 2,
   "meta": {
     "required_capabilities": [
       "diag.script_v2"
     ]
   },
-  "schema_version": 2,
   "steps": [
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-nav-search",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
         }
       },
-      "timeout_frames": 600,
-      "type": "wait_until"
+      "timeout_frames": 600
     },
     {
+      "type": "press_key",
       "key": "escape",
       "modifiers": {
-        "alt": false,
+        "shift": false,
         "ctrl": false,
-        "meta": false,
-        "shift": false
+        "alt": false,
+        "meta": false
       },
-      "repeat": false,
-      "type": "press_key"
+      "repeat": false
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "type": "wait_frames",
+      "n": 2
     },
     {
-      "button": "left",
+      "type": "click",
       "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
       },
-      "type": "click"
+      "button": "left"
     },
     {
+      "type": "press_key",
       "key": "a",
       "modifiers": {
-        "alt": false,
+        "shift": false,
         "ctrl": true,
-        "meta": false,
-        "shift": false
+        "alt": false,
+        "meta": false
       },
-      "repeat": false,
-      "type": "press_key"
+      "repeat": false
     },
     {
+      "type": "press_key",
       "key": "backspace",
       "modifiers": {
-        "alt": false,
+        "shift": false,
         "ctrl": false,
-        "meta": false,
-        "shift": false
+        "alt": false,
+        "meta": false
       },
-      "repeat": false,
-      "type": "press_key"
+      "repeat": false
     },
     {
-      "text": "combobox",
-      "type": "type_text"
+      "type": "type_text",
+      "text": "combobox"
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "type": "wait_frames",
+      "n": 2
     },
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-nav-combobox",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-nav-combobox"
         }
       },
-      "timeout_frames": 600,
-      "type": "wait_until"
+      "timeout_frames": 600
     },
     {
-      "button": "left",
+      "type": "click",
       "target": {
-        "id": "ui-gallery-nav-combobox",
-        "kind": "test_id"
+        "kind": "test_id",
+        "id": "ui-gallery-nav-combobox"
       },
-      "type": "click"
+      "button": "left"
     },
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-page-combobox",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-page-combobox"
         }
       },
-      "timeout_frames": 600,
-      "type": "wait_until"
+      "timeout_frames": 600
     },
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-trigger",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-trigger"
         }
       },
-      "timeout_frames": 600,
-      "type": "wait_until"
+      "timeout_frames": 600
     },
     {
-      "button": "left",
+      "type": "click",
       "target": {
-        "id": "ui-gallery-combobox-demo-trigger",
-        "kind": "test_id"
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-demo-trigger"
       },
-      "type": "click"
+      "button": "left"
     },
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-input",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "timeout_frames": 240
     },
     {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-listbox"
+        }
       },
-      "type": "click"
+      "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-listbox"
+        },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-combobox-demo-listbox"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 180
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      },
+      "button": "left"
+    },
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-combobox-demo-input",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "timeout_frames": 240
     },
     {
+      "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
         "target": {
-          "id": "ui-gallery-combobox-demo-trigger",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-trigger"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "timeout_frames": 240
     },
     {
-      "label": "ui-gallery-combobox-dismiss-outside-press",
-      "type": "capture_bundle"
+      "type": "capture_bundle",
+      "label": "ui-gallery-combobox-dismiss-outside-press"
     }
   ]
 }

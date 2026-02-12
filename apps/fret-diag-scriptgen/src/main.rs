@@ -332,6 +332,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
         ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .click(test_id("ui-gallery-combobox-demo-item-apple"))
         .wait_not_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -367,6 +368,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
         ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .press_key("home")
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::ActiveItemIs {
@@ -405,6 +407,12 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_combobox_page()
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .type_text("ban")
         .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -444,6 +452,12 @@ fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_combobox_page()
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -463,6 +477,12 @@ fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_combobox_page()
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .click(test_id("ui-gallery-nav-search"))
         .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .push(UiActionStepV2::WaitUntil {
@@ -482,6 +502,12 @@ fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_combobox_page()
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
+        .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .push(wait_bounds_within_window_step(
+            test_id("ui-gallery-combobox-demo-listbox"),
+            240,
+        ))
+        .wait_bounds_stable(test_id("ui-gallery-combobox-demo-listbox"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-disabled"), 240)
         .press_key("end")
         .push(UiActionStepV2::WaitUntil {
