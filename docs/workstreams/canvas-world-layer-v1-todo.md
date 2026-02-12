@@ -47,8 +47,8 @@ See also:
 - [x] CWL-M2-002 Decide where selection-on-drag lives:
   - Decision: provide a world-layer-aware wrapper (marquee chrome must render above node subtrees).
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
-  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (simulated commit + wiring)
-  - Note: `fretboard diag` currently cannot drag; the spike page includes a simulate button for gating.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`ui-ai-cwl-marquee-anchor`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (`drag_pointer`)
 - [x] CWL-M2-003 Add a small helper to compute `fit_view_to_canvas_rect(...)` from a set of bound keys.
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (Fit view button)

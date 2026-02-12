@@ -81,9 +81,14 @@
       "target": { "kind": "test_id", "id": "ui-ai-cwl-fit-view" }
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-ai-cwl-marquee-simulate" }
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-marquee-anchor" },
+      "button": "left",
+      "delta_x": -720.0,
+      "delta_y": -480.0,
+      "steps": 10
     },
+    { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-ai-canvas-world-layer-spike" }
   ]

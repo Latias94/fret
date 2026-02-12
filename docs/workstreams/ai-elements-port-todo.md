@@ -44,9 +44,13 @@ Each TODO is labeled:
 AI Elements is now fully accounted for. If we want an XYFlow/ReactFlow-like workflow editor
 experience (nodes as element subtrees, marquee selection, input filtering), track it separately:
 
-- [~] AIEL-FLOW-001 Land a declarative “world layer” substrate for canvas-space element subtrees.
-  - Done (M0/M1): `ecosystem/fret-canvas/src/ui/world_layer.rs` + UI Gallery spike + diag gate.
-  - Remaining (M2): bounds reporting + selection seams.
+- [x] AIEL-FLOW-001 Land a declarative “world layer” substrate for canvas-space element subtrees.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
+  - Status: done for v1 substrate (pan/zoom + nodes as element subtrees + basic wiring).
+  - Known gaps: interaction glue remains app-owned (node drag/connect-drag/selection model updates). See
+    `docs/workstreams/xyflow-gap-analysis.md`.
   - Workstream: `docs/workstreams/canvas-world-layer-v1.md`
   - TODO tracker: `docs/workstreams/canvas-world-layer-v1-todo.md`
 - [x] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
@@ -62,9 +66,12 @@ experience (nodes as element subtrees, marquee selection, input filtering), trac
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
   - Anchor: `docs/workstreams/xyflow-gap-analysis.md` (Gap F)
   - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
-- [ ] AIEL-FLOW-006 Decide/implement selection-on-drag integration for world-layer nodes.
-  - Option A: reuse existing marquee recipe (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`).
-  - Option B: world-layer wrapper that emits canonical canvas-space selection rects + events.
+- [x] AIEL-FLOW-006 Decide/implement selection-on-drag integration for world-layer nodes.
+  - Decision: provide a world-layer wrapper so marquee chrome renders above node element subtrees.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (`OnCanvasMarqueeCommit`)
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (`drag_pointer`)
+  - Note: selection model updates remain app-owned; the wrapper exposes the canonical canvas-space rect.
   - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
 
 ### M0 — Foundations (composition + gates)

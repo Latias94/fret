@@ -112,8 +112,8 @@ To make this substrate usable for real apps (AI Elements “workflow” experien
    - Status: Implemented (M2-002) via a world-layer-aware wrapper:
      - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
    - Rationale: canvas-paint marquee chrome would render behind node element subtrees.
-   - Diagnostics note: `fretboard diag` currently does not support pointer drag steps, so the UI Gallery
-     spike includes a "Simulate marquee commit" button as a gate.
+   - Diagnostics note: the UI Gallery spike is gated with a real pointer drag:
+     - `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (`drag_pointer`)
 
 3. **Input arbitration recipes**
    - document (and ideally provide helpers for) common patterns:

@@ -372,53 +372,6 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .on_activate(on_fit_view)
                 .into_element(cx);
 
-            let simulate_selected_store = bounds_store.clone();
-            let simulate_selected_out = selected_count.clone();
-            let on_simulate_selected: OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let count = host
-                    .models_mut()
-                    .read(&simulate_selected_store, |st| {
-                        let rect = st.union_canvas_bounds_for_key_values([1u64, 2u64]);
-                        let Some(rect) = rect else {
-                            return 0u64;
-                        };
-
-                        let mut count = 0u64;
-                        for item in st.items.values() {
-                            let (ax0, ay0, ax1, ay1) = (
-                                item.canvas_bounds.origin.x.0,
-                                item.canvas_bounds.origin.y.0,
-                                item.canvas_bounds.origin.x.0 + item.canvas_bounds.size.width.0,
-                                item.canvas_bounds.origin.y.0 + item.canvas_bounds.size.height.0,
-                            );
-                            let (bx0, by0, bx1, by1) = (
-                                rect.origin.x.0,
-                                rect.origin.y.0,
-                                rect.origin.x.0 + rect.size.width.0,
-                                rect.origin.y.0 + rect.size.height.0,
-                            );
-                            let intersects = ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0;
-                            if intersects {
-                                count = count.saturating_add(1);
-                            }
-                        }
-                        count
-                    })
-                    .ok()
-                    .unwrap_or(0);
-
-                let _ = host
-                    .models_mut()
-                    .update(&simulate_selected_out, |v| *v = count);
-                host.request_redraw(action_cx.window);
-            });
-
-            let simulate = shadcn::Button::new("Simulate marquee commit")
-                .test_id("ui-ai-cwl-marquee-simulate")
-                .variant(ButtonVariant::Secondary)
-                .on_activate(on_simulate_selected)
-                .into_element(cx);
-
             let bounds_text = match bounds_union_canvas {
                 None => "Bounds: (unknown)".to_string(),
                 Some(r) => format!(
@@ -427,17 +380,39 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 ),
             };
 
-            vec![canvas_input_exempt_region(cx, overlay_region, move |cx| {
-                vec![
-                    mode_scale,
-                    mode_semantic,
-                    fit_view,
-                    simulate,
-                    overlay,
-                    cx.text(format!("Selected: {selected_count_value}")),
-                    cx.text(bounds_text),
-                ]
-            })]
+            let mut anchor_layout = fret_ui::element::LayoutStyle::default();
+            anchor_layout.position = fret_ui::element::PositionStyle::Absolute;
+            anchor_layout.inset.right = Some(Px(12.0));
+            anchor_layout.inset.bottom = Some(Px(12.0));
+            anchor_layout.size.width = fret_ui::element::Length::Px(Px(20.0));
+            anchor_layout.size.height = fret_ui::element::Length::Px(Px(20.0));
+            let anchor = cx
+                .container(
+                    fret_ui::element::ContainerProps {
+                        layout: anchor_layout,
+                        ..Default::default()
+                    },
+                    |_cx| std::iter::empty(),
+                )
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-ai-cwl-marquee-anchor"),
+                );
+
+            vec![
+                anchor,
+                canvas_input_exempt_region(cx, overlay_region, move |cx| {
+                    vec![
+                        mode_scale,
+                        mode_semantic,
+                        fit_view,
+                        overlay,
+                        cx.text(format!("Selected: {selected_count_value}")),
+                        cx.text(bounds_text),
+                    ]
+                }),
+            ]
         },
     )
     .attach_semantics(
