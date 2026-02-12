@@ -98,6 +98,14 @@ impl FrictionSimulation {
     pub fn tolerance(&self) -> Tolerance {
         self.tolerance
     }
+
+    pub fn drag(&self) -> f64 {
+        self.drag
+    }
+
+    pub fn drag_log(&self) -> f64 {
+        self.drag_log
+    }
 }
 
 impl Simulation1D for FrictionSimulation {
