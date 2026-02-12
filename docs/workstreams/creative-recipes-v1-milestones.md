@@ -210,7 +210,7 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native/zero-copy pending)
+Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native copy policy landed; web zero-copy pending)
 
 Done (v1 follow-ups):
 
@@ -222,12 +222,14 @@ Done (v1 follow-ups):
   frame timing hints for diagnostics).
   - Evidence: `crates/fret-render-core/src/lib.rs` (`RenderTargetMetadata`),
     `crates/fret-render-wgpu/src/targets.rs` (`RenderTargetDescriptor.metadata`).
+- Native v1 (copy policy): a decode/import path with an explicit CPU upload policy and deterministic
+  fallback.
+  - Evidence: `apps/fret-examples/src/external_texture_imports_demo.rs` (`I` toggles source).
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Web v1: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback.
   (Currently blocked on wgpu WebGPU backend implementing `ExternalTexture`.)
-- Native v1: a decode/import path with an explicit copy/zero-copy policy and deterministic fallback.
 
 Acceptance criteria (v1):
 
