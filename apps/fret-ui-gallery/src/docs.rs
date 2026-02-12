@@ -2873,7 +2873,7 @@ let field = shadcn::Field::new(vec![
 pub(crate) const DOC_ALERT: &str = r#"
 ## Alert
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT: &str = r#"
@@ -2890,7 +2890,7 @@ let alert = shadcn::Alert::new(vec![
 pub(crate) const DOC_ALERT_DIALOG: &str = r#"
 ## Alert Dialog
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx`.
 "#;
 
 pub(crate) const USAGE_ALERT_DIALOG: &str = r#"
