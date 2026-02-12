@@ -16,6 +16,20 @@ Use this skill when:
 - Adding timed behavior (debounce, hover intent delays, auto-close).
 - Deciding between one-shot redraw, RAF, and continuous frames leases.
 
+## Inputs to collect (ask the user)
+
+Ask these up front so scheduling stays deterministic and doesn’t leak:
+
+- Behavior class: one-shot redraw, timed delay, continuous animation, or transition/presence?
+- Lifecycle: when should the animation start/stop (what is the controlling state)?
+- Ownership: which element should own the continuous frames lease (and how is it stored/dropped)?
+- Timing constraints: is a fixed frame delta needed for tests/repros?
+- Regression gate: do we need a diag script to lock down timing-sensitive behavior?
+
+Defaults if unclear:
+
+- Use `presence`/`transition` helpers and tie continuous frames to element-local state so unmount drops the lease.
+
 ## Quick start
 
 ### Redraw primitives (what to reach for)
@@ -70,6 +84,13 @@ pub fn spinner_like<H: UiHost>(cx: &mut ElementContext<'_, H>, spinning: bool) -
    - Store the lease in element-local state so unmount drops it (no leaked RAF requests).
 3. Prefer tokened, runner-owned timers (`Effect::SetTimer` / `CancelTimer`) for UI-visible time.
 4. For delays and long-lived callbacks, prefer weak models to avoid keeping state alive.
+
+## Definition of done (what to leave behind)
+
+- The chosen primitive matches the intent (redraw vs RAF vs continuous frames vs timer).
+- Any continuous frames lease is tied to element lifetime (no leaked scheduling after unmount).
+- Timed behavior uses runner-owned timers (no ad-hoc threads/timers for UI-visible time).
+- If behavior is timing-sensitive, there is at least one stable repro gate (unit test or `tools/diag-scripts/*.json`).
 
 ## Timers (delays, hover intent, auto-close)
 

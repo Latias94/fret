@@ -21,6 +21,18 @@ Use this skill when:
 - Re-skinning an app (density/radius/shadows/rings) without touching every component.
 - Translating “style keywords” into concrete token changes.
 
+## Inputs to collect (ask the user)
+
+- **Scheme**: `light` / `dark`
+- **Vibe keywords**: e.g. `minimal`, `soft`, `neubrutal`, `glass`, `hud`, `high-contrast`
+- **Density**: `compact` / `default` / `comfortable`
+- **Accent**: primary color intent (brand vs neutral)
+- **Target surface**: editor workspace, settings forms, dashboards, etc.
+
+Defaults if unclear:
+
+- `dark` + `compact` editor style, then adjust ring + radius.
+
 ## Quick start
 
 1. Pick a baseline preset: `apply_shadcn_new_york_v4(...)`.
@@ -36,13 +48,12 @@ Use the rest of this doc in order:
 3. Apply token overrides for density/radius/shadows/ring.
 4. Only then consider component-level overrides (and keep them rare).
 
-## Inputs to collect (ask the user)
+## Definition of done (what to leave behind)
 
-- **Scheme**: `light` / `dark`
-- **Vibe keywords**: e.g. `minimal`, `soft`, `neubrutal`, `glass`, `hud`, `high-contrast`
-- **Density**: `compact` / `default` / `comfortable`
-- **Accent**: primary color intent (brand vs neutral)
-- **Target surface**: editor workspace, settings forms, dashboards, etc.
+- Baseline preset is explicit (`apply_shadcn_new_york_v4(...)`) and checked into the app setup.
+- A small, reviewable `ThemeConfig` override exists (JSON patch), scoped to 1–2 axes at a time.
+- The change is validated in the smallest target UI surface (UI gallery page/demo).
+- Per-component magic numbers are minimized; deviations are expressed as token overrides or documented style overrides.
 
 ## Baseline (recommended)
 

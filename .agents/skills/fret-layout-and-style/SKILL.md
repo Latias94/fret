@@ -17,6 +17,20 @@ Use this skill when:
 - Debugging overflow/clipping/focus ring issues (things disappear or hit-testing feels wrong).
 - Applying token-driven styling (`Space`, `Radius`, `MetricRef`, `ColorRef`) consistently.
 
+## Inputs to collect (ask the user)
+
+Ask these before touching layout/styling (most bugs are “wrong overflow root” or “wrong patch layer”):
+
+- Target surface: toolbar/inspector/panel shell/list/table/overlay content?
+- Problem class: sizing/layout (LayoutRefinement) vs visual chrome (ChromeRefinement)?
+- Overflow intent: should the control clip content, or should focus rings remain visible?
+- Constraints: scroll root ownership (which container scrolls) and max size constraints?
+- Token policy: is this a one-off tweak or should it become a token override?
+
+Defaults if unclear:
+
+- Use `UiBuilder` patches with tokens, keep pressable/root overflow visible, and clip only inside chrome when needed.
+
 ## Quick start
 
 **Key concepts:**
@@ -25,8 +39,6 @@ Use this skill when:
 - `ChromeRefinement`: padding/radius/border/shadow/colors (not layout-affecting)
 - `Space` / `Radius` / `MetricRef` / `ColorRef`: token-driven values (theme-resolved)
 - `UiBuilder`: `value.ui().px_3().w_full().rounded_md().into_element(cx)` (ADR 0145)
-
-## Quick start
 
 ### A “card” container with padding + border + radius
 
@@ -74,6 +86,14 @@ pub fn toolbar<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
    - Don’t clip focus rings accidentally.
    - Clip only on the chrome container when needed.
 4. When something “does nothing”, verify you’re on declarative-only surfaces (refinements do not apply to retained widgets).
+
+## Definition of done (what to leave behind)
+
+- Layout vs chrome responsibilities are explicit (no “mystery no-op” refinements).
+- Spacing/radius/colors use tokens (`Space`/`Radius`/`MetricRef`/`ColorRef`) unless there is a clear exception.
+- Overflow/clipping is correct (focus rings not accidentally clipped; hit-testing matches visuals).
+- If you changed a reusable pattern, it’s expressed as a recipe/helper (not repeated magic numbers).
+- If this fixes a regression, there is a small repro artifact (unit test or `tools/diag-scripts/*.json` with `test_id`).
 
 ## Practical rules (prevents common regressions)
 

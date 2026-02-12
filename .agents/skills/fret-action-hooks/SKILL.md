@@ -16,6 +16,20 @@ Use this skill when:
 - You’re migrating legacy code away from runtime-owned policy fields on props.
 - You’re debugging why a press/dismiss/typeahead behavior is inconsistent across components.
 
+## Inputs to collect (ask the user)
+
+Ask these before adding hooks (policy bugs are often “wrong scope” or “wrong ownership layer”):
+
+- Which interaction family: press/activate, dismiss, roving focus, typeahead, timers?
+- What is the policy state: which `Model<T>` (or `WeakModel<T>`) should change?
+- What is the element scope where the hook must be installed (pressable scope, overlay content scope, etc)?
+- What invariants must hold (e.g., menus are non-click-through, focus restores to trigger)?
+- What regression gate is appropriate: unit test for policy vs diag script for event sequences?
+
+Defaults if unclear:
+
+- Keep policy in `ecosystem/`, install hooks in the narrowest correct scope, and add a `tools/diag-scripts/*.json` repro for state machines.
+
 ## Overview
 
 **Why hooks exist:**
@@ -95,6 +109,15 @@ Use the `ActionHooksExt` helpers:
 4. Add a regression gate:
    - Unit test for the headless policy when possible, or
    - `fretboard diag` script when event sequences matter.
+
+## Definition of done (what to leave behind)
+
+- Policy is expressed as hooks (no runtime flags/props that encode policy).
+- Hooks are installed inside the correct element scope (they actually fire).
+- Long-lived callbacks use `WeakModel<T>` where appropriate (no accidental “keep alive”).
+- One regression artifact exists:
+  - unit test for pure policy logic, and/or
+  - `tools/diag-scripts/*.json` for multi-event sequences (dismiss/focus/roving/typeahead).
 
 ## Best practices
 
