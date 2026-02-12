@@ -63,14 +63,19 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
     - [x] Animated variants (phase/offset-driven; reduced-motion fallback).
   - [x] Sparkles text (seeded sparkle field; reduced-motion fallback).
 - [ ] Add perf baselines for MagicUI parity pages (optional follow-up):
-  - [ ] Perf scripts:
+  - [x] Perf scripts:
     - `tools/diag-scripts/ui-gallery-magic-patterns-perf-steady.json`
     - `tools/diag-scripts/ui-gallery-magic-sparkles-text-perf-steady.json`
-  - [ ] Seed policy preset:
+  - [x] Seed policy preset:
     - `docs/workstreams/perf-baselines/policies/ui-gallery-magic-recipes.v1.json`
-  - [ ] Windows-local baselines:
+  - [x] Windows-local baselines (initial):
     - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/ui-gallery-magic-sparkles-text.windows-local.v1.json`
+  - [ ] Extend coverage (optional):
+    - Lens (`tools/diag-scripts/ui-gallery-magic-lens-*-perf-steady.json`)
+    - BorderBeam (`tools/diag-scripts/ui-gallery-magic-border-beam-*-perf-steady.json`)
+    - Dock (`tools/diag-scripts/ui-gallery-magic-dock-*-perf-steady.json`)
+    - Marquee (`tools/diag-scripts/ui-gallery-magic-marquee-*-perf-steady.json`)
 
 ## P1 — Effect steps extension
 
