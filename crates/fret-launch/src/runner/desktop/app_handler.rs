@@ -479,6 +479,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         };
         self.main_window = Some(main_window);
         self.driver.init(&mut self.app, main_window);
+        self.maybe_deliver_startup_incoming_open(main_window);
         self.app.request_redraw(main_window);
         if startup_async {
             self.request_system_font_rescan();

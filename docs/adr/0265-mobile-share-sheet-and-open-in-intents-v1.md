@@ -161,6 +161,9 @@ As of 2026-02-12:
   - Incoming-open supports diag-only request injection plus bounded `ReadAll*` and explicit `Release`; there is no OS-produced request plumbing yet.
 - Desktop:
   - Share sheet is currently a stub (completes as `Unavailable`).
+  - Incoming-open is partially implemented:
+    - the desktop runner can surface a startup file-argument list as an `IncomingOpenRequest` (best-effort),
+    - and supports bounded `ReadAll*` plus explicit `Release` for those tokens.
 
 ## Consequences
 

@@ -115,6 +115,20 @@ pub fn windows_msg_hook(msg: *const std::ffi::c_void) -> bool {
     windows_menu::msg_hook(msg)
 }
 
+fn read_startup_incoming_open_paths_from_args() -> Vec<std::path::PathBuf> {
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    for arg in std::env::args_os().skip(1) {
+        if arg.is_empty() {
+            continue;
+        }
+        let path = std::path::PathBuf::from(arg);
+        if path.is_file() {
+            paths.push(path);
+        }
+    }
+    paths
+}
+
 #[derive(Debug, Clone)]
 pub enum RunnerUserEvent {
     PlatformCompletion {
@@ -1245,6 +1259,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     file_dialog: NativeFileDialog,
     diag_incoming_open_next_token: u64,
     diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
+    startup_incoming_open_paths: Vec<std::path::PathBuf>,
+    startup_incoming_open_delivered: bool,
+    incoming_open_path_payloads: HashMap<fret_core::IncomingOpenToken, IncomingOpenPathPayload>,
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
@@ -1273,6 +1290,11 @@ pub struct WinitRunner<D: WinitAppDriver> {
 struct DiagIncomingOpenPayload {
     files: Vec<fret_core::ExternalDropFileData>,
     texts: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+struct IncomingOpenPathPayload {
+    paths: Vec<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -2957,6 +2979,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         let mut app = app;
         let now = Instant::now();
+        let startup_incoming_open_paths = read_startup_incoming_open_paths_from_args();
         let requested = match app.global::<PlatformCapabilities>().cloned() {
             Some(caps) => caps,
             None => {
@@ -3017,6 +3040,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             file_dialog: NativeFileDialog::default(),
             diag_incoming_open_next_token: 1,
             diag_incoming_open_payloads: HashMap::new(),
+            startup_incoming_open_paths,
+            startup_incoming_open_delivered: false,
+            incoming_open_path_payloads: HashMap::new(),
             #[cfg(target_os = "ios")]
             ios_keyboard: None,
             cursor_screen_pos: None,
@@ -3124,6 +3150,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.fs.file_dialogs = true;
 
             caps.shell.open_url = true;
+            caps.shell.incoming_open = true;
 
             caps.gfx.native_gpu = true;
             caps.gfx.webgpu = false;
@@ -3260,6 +3287,63 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.gfx.webgpu &= available.gfx.webgpu;
 
         caps
+    }
+
+    fn allocate_incoming_open_token(&mut self) -> fret_core::IncomingOpenToken {
+        let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+        self.diag_incoming_open_next_token = self.diag_incoming_open_next_token.saturating_add(1);
+        token
+    }
+
+    fn maybe_deliver_startup_incoming_open(&mut self, window: fret_core::AppWindowId) {
+        if self.startup_incoming_open_delivered {
+            return;
+        }
+        self.startup_incoming_open_delivered = true;
+
+        if self.startup_incoming_open_paths.is_empty() {
+            return;
+        }
+
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        if !caps.shell.incoming_open {
+            return;
+        }
+
+        let token = self.allocate_incoming_open_token();
+
+        let mut items: Vec<fret_core::IncomingOpenItem> = Vec::new();
+        for path in self.startup_incoming_open_paths.iter() {
+            let name = path
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "file".to_string());
+            let size_bytes = std::fs::metadata(path).ok().map(|m| m.len());
+            items.push(fret_core::IncomingOpenItem::File(
+                fret_core::ExternalDragFile {
+                    name,
+                    size_bytes,
+                    media_type: None,
+                },
+            ));
+        }
+
+        self.incoming_open_path_payloads.insert(
+            token,
+            IncomingOpenPathPayload {
+                paths: std::mem::take(&mut self.startup_incoming_open_paths),
+            },
+        );
+
+        self.deliver_window_event_now(window, &Event::IncomingOpenRequest { token, items });
+        if let Some(state) = self.windows.get(window) {
+            state.window.request_redraw();
+            self.raf_windows.insert(window);
+        }
     }
 
     /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the
@@ -4844,10 +4928,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let token =
-                            fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
-                        self.diag_incoming_open_next_token =
-                            self.diag_incoming_open_next_token.saturating_add(1);
+                        let token = self.allocate_incoming_open_token();
 
                         let mut payload = DiagIncomingOpenPayload::default();
                         let mut request_items: Vec<fret_core::IncomingOpenItem> = Vec::new();
@@ -5081,6 +5162,86 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         self.file_dialog.release(token);
                     }
                     Effect::IncomingOpenReadAll { window, token } => {
+                        if let Some(payload) = self.incoming_open_path_payloads.get(&token) {
+                            let limits = fret_core::ExternalDropReadLimits {
+                                max_total_bytes: self.config.file_dialog_max_total_bytes,
+                                max_file_bytes: self.config.file_dialog_max_file_bytes,
+                                max_files: self.config.file_dialog_max_files,
+                            };
+
+                            let mut total_bytes: u64 = 0;
+                            let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                            let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                            for path in payload.paths.iter().take(limits.max_files) {
+                                let name = path
+                                    .file_name()
+                                    .map(|s| s.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| "file".to_string());
+
+                                if let Some(size_bytes) =
+                                    std::fs::metadata(path).ok().map(|m| m.len())
+                                {
+                                    if size_bytes > limits.max_file_bytes {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: "file exceeds max_file_bytes".to_string(),
+                                        });
+                                        continue;
+                                    }
+                                    if total_bytes.saturating_add(size_bytes)
+                                        > limits.max_total_bytes
+                                    {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: "read exceeds max_total_bytes".to_string(),
+                                        });
+                                        continue;
+                                    }
+                                }
+
+                                let bytes = match std::fs::read(path) {
+                                    Ok(v) => v,
+                                    Err(err) => {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: format!("read failed: {err}"),
+                                        });
+                                        continue;
+                                    }
+                                };
+                                let len = bytes.len() as u64;
+                                if len > limits.max_file_bytes {
+                                    errors.push(fret_core::ExternalDropReadError {
+                                        name,
+                                        message: "file exceeds max_file_bytes".to_string(),
+                                    });
+                                    continue;
+                                }
+                                if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                    errors.push(fret_core::ExternalDropReadError {
+                                        name,
+                                        message: "read exceeds max_total_bytes".to_string(),
+                                    });
+                                    continue;
+                                }
+                                total_bytes = total_bytes.saturating_add(len);
+                                files.push(fret_core::ExternalDropFileData { name, bytes });
+                            }
+
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
+                                    token,
+                                    files,
+                                    texts: Vec::new(),
+                                    errors,
+                                    limits: Some(limits),
+                                }),
+                            );
+                            continue;
+                        }
+
                         let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
                             self.deliver_window_event_now(
                                 window,
@@ -5157,6 +5318,87 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         token,
                         limits,
                     } => {
+                        if let Some(payload) = self.incoming_open_path_payloads.get(&token) {
+                            let cap = fret_core::ExternalDropReadLimits {
+                                max_total_bytes: self.config.file_dialog_max_total_bytes,
+                                max_file_bytes: self.config.file_dialog_max_file_bytes,
+                                max_files: self.config.file_dialog_max_files,
+                            };
+                            let limits = limits.capped_by(cap);
+
+                            let mut total_bytes: u64 = 0;
+                            let mut files: Vec<fret_core::ExternalDropFileData> = Vec::new();
+                            let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
+
+                            for path in payload.paths.iter().take(limits.max_files) {
+                                let name = path
+                                    .file_name()
+                                    .map(|s| s.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| "file".to_string());
+
+                                if let Some(size_bytes) =
+                                    std::fs::metadata(path).ok().map(|m| m.len())
+                                {
+                                    if size_bytes > limits.max_file_bytes {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: "file exceeds max_file_bytes".to_string(),
+                                        });
+                                        continue;
+                                    }
+                                    if total_bytes.saturating_add(size_bytes)
+                                        > limits.max_total_bytes
+                                    {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: "read exceeds max_total_bytes".to_string(),
+                                        });
+                                        continue;
+                                    }
+                                }
+
+                                let bytes = match std::fs::read(path) {
+                                    Ok(v) => v,
+                                    Err(err) => {
+                                        errors.push(fret_core::ExternalDropReadError {
+                                            name,
+                                            message: format!("read failed: {err}"),
+                                        });
+                                        continue;
+                                    }
+                                };
+                                let len = bytes.len() as u64;
+                                if len > limits.max_file_bytes {
+                                    errors.push(fret_core::ExternalDropReadError {
+                                        name,
+                                        message: "file exceeds max_file_bytes".to_string(),
+                                    });
+                                    continue;
+                                }
+                                if total_bytes.saturating_add(len) > limits.max_total_bytes {
+                                    errors.push(fret_core::ExternalDropReadError {
+                                        name,
+                                        message: "read exceeds max_total_bytes".to_string(),
+                                    });
+                                    continue;
+                                }
+                                total_bytes = total_bytes.saturating_add(len);
+                                files.push(fret_core::ExternalDropFileData { name, bytes });
+                            }
+
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenData(fret_core::IncomingOpenDataEvent {
+                                    token,
+                                    files,
+                                    texts: Vec::new(),
+                                    errors,
+                                    limits: Some(limits),
+                                }),
+                            );
+                            continue;
+                        }
+
                         let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
                             self.deliver_window_event_now(
                                 window,
@@ -5231,6 +5473,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     Effect::IncomingOpenRelease { token } => {
                         self.diag_incoming_open_payloads.remove(&token);
+                        self.incoming_open_path_payloads.remove(&token);
                     }
                     Effect::TextAddFonts { fonts } => {
                         let Some(renderer) = self.renderer.as_mut() else {
