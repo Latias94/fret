@@ -870,6 +870,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }
+                | UiActionStepV2::DragPointerUntil { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
                 | UiActionStepV2::MovePointerSweep { .. }
@@ -941,6 +942,53 @@ impl UiDiagnosticsService {
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::SetCursorScreenPos { x_px, y_px } => {
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "x_px": x_px,
+                    "y_px": y_px,
+                });
+                let json_path = self.cfg.out_dir.join("cursor_screen_pos.json");
+                let trigger_path = self.cfg.out_dir.join("cursor_screen_pos.touch");
+                if write_json(json_path, &payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_cursor_screen_pos-write-failed"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("cursor_override_write_failed".to_string());
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::RaiseWindow {
+                window: target_window,
+            } => {
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    output
+                        .effects
+                        .push(Effect::Window(fret_app::WindowRequest::Raise {
+                            window: target_window,
+                            sender: Some(window),
+                        }));
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-raise_window-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
                     output.request_redraw = true;
                 }
             }
@@ -1267,6 +1315,7 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        self.known_windows.as_slice(),
                         docking_diag,
                         &predicate,
                     ) {
@@ -1318,6 +1367,7 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        self.known_windows.as_slice(),
                         docking_diag,
                         &predicate,
                     ) {
@@ -2161,6 +2211,139 @@ impl UiDiagnosticsService {
                     active.v2_step_state = Some(V2StepState::DragPointer(state));
                 }
             }
+            UiActionStepV2::DragPointerUntil {
+                target,
+                button,
+                delta_x,
+                delta_y,
+                steps,
+                predicate,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
+                let docking_diag = app
+                    .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                    .and_then(|store| store.docking_latest_for_window(window));
+
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::DragPointerUntil(state))
+                        if state.step_index == step_index =>
+                    {
+                        state
+                    }
+                    _ => V2DragPointerUntilState {
+                        step_index,
+                        remaining_frames: timeout_frames,
+                        playback: V2DragPointerState {
+                            step_index,
+                            steps: steps.max(1),
+                            button,
+                            start: Point::default(),
+                            end: Point::default(),
+                            frame: 0,
+                        },
+                        predicate: predicate.clone(),
+                        down_issued: false,
+                    },
+                };
+
+                // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
+                // previous frame), release immediately.
+                if let Some(snapshot) = semantics_snapshot
+                    && eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        self.known_windows.as_slice(),
+                        docking_diag,
+                        &state.predicate,
+                    )
+                {
+                    if state.down_issued {
+                        output.events.extend(pointer_up_with_internal_drop_events(
+                            state.playback.button,
+                            state.playback.end,
+                        ));
+                    }
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-drag_pointer_until"));
+                    }
+                } else if state.remaining_frames == 0 {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-drag_pointer_until-timeout"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("drag_pointer_until_timeout".to_string());
+                    active.v2_step_state = None;
+                } else {
+                    let Some(snapshot) = semantics_snapshot else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-drag_pointer_until-no-semantics"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("no_semantics_snapshot".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                        return output;
+                    };
+
+                    // Initialize start/end positions on the first frame.
+                    if state.playback.frame == 0 && state.playback.start == Point::default() {
+                        let Some(node) = select_semantics_node_with_trace(
+                            snapshot,
+                            window,
+                            element_runtime,
+                            &target,
+                            step_index as u32,
+                            self.cfg.redact_text,
+                            &mut active.selector_resolution_trace,
+                        ) else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-drag_pointer_until-no-semantics-match"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("drag_pointer_until_no_match".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                            return output;
+                        };
+
+                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        let end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        state.playback.start = start;
+                        state.playback.end = end;
+                    }
+
+                    let done = push_drag_playback_frame(&mut state.playback, &mut output.events);
+                    if state.playback.frame >= 1 {
+                        state.down_issued = true;
+                    }
+
+                    // Keep polling for the predicate across frames; hold at end if playback is done.
+                    if done {
+                        // Hold: emit an `Over` tick at the end position to keep drag routing alive.
+                        output.events.extend(pointer_move_with_internal_over_events(
+                            state.playback.button,
+                            state.playback.end,
+                        ));
+                    }
+
+                    state.remaining_frames = state.remaining_frames.saturating_sub(1);
+
+                    active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::MovePointerSweep {
                 target,
                 delta_x,
@@ -2428,6 +2611,7 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        self.known_windows.as_slice(),
                         docking_diag,
                         &predicate,
                     ) {
@@ -2508,6 +2692,7 @@ impl UiDiagnosticsService {
                         window_bounds,
                         window,
                         element_runtime,
+                        self.known_windows.as_slice(),
                         docking_diag,
                         &target_predicate,
                     );
@@ -5928,6 +6113,7 @@ enum V2StepState {
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
     DragPointer(V2DragPointerState),
+    DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
@@ -5990,6 +6176,16 @@ struct V2DragPointerState {
     /// - `1..=steps`: emit a pressed `move` (and `InternalDrag::Over`) at interpolated positions
     /// - `steps + 1`: emit `up` at `end` (and `InternalDrag::Drop`)
     frame: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2DragPointerUntilState {
+    step_index: usize,
+    remaining_frames: u32,
+    playback: V2DragPointerState,
+    predicate: UiPredicateV1,
+    /// If true, the step has issued a pointer down and should release on completion.
+    down_issued: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -11917,6 +12113,7 @@ fn eval_predicate(
     window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
+    known_windows: &[AppWindowId],
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     pred: &UiPredicateV1,
 ) -> bool {
@@ -12170,6 +12367,20 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
+        UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
+        UiPredicateV1::DockDragCurrentWindowIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            let Some(drag) = docking.and_then(|d| d.dock_drag) else {
+                return false;
+            };
+            drag.dragging && drag.current_window == target_window
+        }
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let Some(preview) = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())
@@ -12220,6 +12431,30 @@ fn eval_predicate(
         UiPredicateV1::DockGraphMaxSplitDepthLe { max } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.max_split_depth <= *max),
+    }
+}
+
+fn resolve_window_target_from_known_windows(
+    current_window: AppWindowId,
+    known_windows: &[AppWindowId],
+    target: UiWindowTargetV1,
+) -> Option<AppWindowId> {
+    match target {
+        UiWindowTargetV1::Current => Some(current_window),
+        UiWindowTargetV1::FirstSeen => known_windows.first().copied(),
+        UiWindowTargetV1::FirstSeenOther => {
+            known_windows.iter().copied().find(|w| *w != current_window)
+        }
+        UiWindowTargetV1::LastSeen => known_windows.last().copied(),
+        UiWindowTargetV1::LastSeenOther => known_windows
+            .iter()
+            .rev()
+            .copied()
+            .find(|w| *w != current_window),
+        UiWindowTargetV1::WindowFfi { window } => {
+            let want = AppWindowId::from(KeyData::from_ffi(window));
+            known_windows.contains(&want).then_some(want)
+        }
     }
 }
 
@@ -13445,6 +13680,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             None,
             &pred
         ));
@@ -13457,7 +13693,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected padding to shrink the allowed window rect"
         );
     }
@@ -13498,7 +13742,15 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected node to satisfy the min-size gate"
         );
     }
@@ -13557,7 +13809,15 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected roving focus to satisfy active_item_is"
         );
 
@@ -13588,7 +13848,15 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected active_descendant to satisfy active_item_is"
         );
     }
@@ -13628,6 +13896,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13651,6 +13920,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13689,6 +13959,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13699,6 +13970,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13720,6 +13992,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13758,6 +14031,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13768,6 +14042,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13778,6 +14053,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13788,6 +14064,7 @@ mod tests {
                 window_bounds,
                 window_id(1),
                 None,
+                &[],
                 Some(&docking),
                 &pred
             ),
@@ -13800,6 +14077,7 @@ mod tests {
             window_bounds,
             window_id(1),
             None,
+            &[],
             Some(&docking),
             &pred
         ));
@@ -13810,6 +14088,7 @@ mod tests {
                 window_bounds,
                 window_id(1),
                 None,
+                &[],
                 Some(&docking),
                 &pred
             ),
@@ -13823,6 +14102,7 @@ mod tests {
                 window_bounds,
                 window_id(1),
                 None,
+                &[],
                 Some(&docking),
                 &pred
             ),
@@ -13866,7 +14146,15 @@ mod tests {
         };
 
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "collapsed node should fail the min-size gate"
         );
     }
@@ -13924,7 +14212,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected overlap (a right edge > b left edge) to fail"
         );
 
@@ -13938,7 +14234,15 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected eps_px to tolerate a small overlap"
         );
     }
@@ -13974,7 +14278,15 @@ mod tests {
             },
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected missing test id to satisfy NotExists"
         );
     }
@@ -14032,7 +14344,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected overlap (a right edge > b left edge) to pass"
         );
 
@@ -14046,7 +14366,15 @@ mod tests {
             eps_px: 16.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected eps_px to require more overlap than available"
         );
     }
@@ -14104,7 +14432,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected x overlap to pass even when y does not overlap"
         );
 
@@ -14118,7 +14454,15 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected eps_px to require more x overlap than available"
         );
     }
@@ -14176,7 +14520,15 @@ mod tests {
             eps_px: 0.0,
         };
         assert!(
-            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected y overlap to pass even when x does not overlap"
         );
 
@@ -14190,7 +14542,15 @@ mod tests {
             eps_px: 8.0,
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                &[],
+                None,
+                &pred
+            ),
             "expected eps_px to require more y overlap than available"
         );
     }
@@ -14342,7 +14702,7 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            eval_predicate(&snapshot, window_bounds, window, None, &[], None, &pred),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
         );
 
@@ -14352,7 +14712,7 @@ mod tests {
             require_equal: Some(true),
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            !eval_predicate(&snapshot, window_bounds, window, None, &[], None, &pred),
             "expected require_equal=true to fail when the roots differ"
         );
     }

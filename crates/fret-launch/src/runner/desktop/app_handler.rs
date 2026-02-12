@@ -1294,6 +1294,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
         self.drain_effects(event_loop);
 
+        // Diagnostics hook: during cross-window dock drags, runner-owned hover routing depends on
+        // cursor screen position. Scripted runs inject pointer events directly into the UI tree
+        // (bypassing OS cursor events), so poll a best-effort cursor override surface once per
+        // event-loop turn while a dock drag is active.
+        if self.dock_drag_pointer_id().is_some() {
+            let _ = self.poll_diag_cursor_screen_pos_override();
+            let _ = self.route_internal_drag_hover_from_cursor();
+            let _ = self.update_dock_tearoff_follow();
+            self.drain_effects(event_loop);
+        }
+
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;

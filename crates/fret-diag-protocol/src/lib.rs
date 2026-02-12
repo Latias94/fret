@@ -375,6 +375,34 @@ pub enum UiActionStepV2 {
         x_px: f32,
         y_px: f32,
     },
+    /// Set a runner-level cursor screen position override (screen-space physical pixels).
+    ///
+    /// Desktop runners may use this during scripted diagnostics to drive hover routing that is
+    /// normally owned by OS cursor events (e.g. cross-window docking).
+    SetCursorScreenPos {
+        x_px: f32,
+        y_px: f32,
+    },
+    RaiseWindow {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+    },
+    /// Drag with pointer down across frames until `predicate` passes, or timeout.
+    ///
+    /// This is intended for runner-owned cross-window routing: scripts can keep a drag session
+    /// active while polling diagnostics predicates that are only updated between frames.
+    DragPointerUntil {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        predicate: UiPredicateV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
 }
 
 impl From<UiActionStepV1> for UiActionStepV2 {
@@ -633,6 +661,17 @@ pub enum UiPredicateV1 {
         b: UiSelectorV1,
         #[serde(default)]
         eps_px: f32,
+    },
+    /// True when the diagnostics runtime has observed at least `n` windows.
+    ///
+    /// This is intended for multi-window scripted repros (tear-off, auxiliary windows).
+    KnownWindowCountGe {
+        n: u32,
+    },
+    /// True when the latest docking diagnostics report an active dock drag whose `current_window`
+    /// matches `window`.
+    DockDragCurrentWindowIs {
+        window: UiWindowTargetV1,
     },
     /// True when the current docking drop preview kind matches `kind`.
     ///

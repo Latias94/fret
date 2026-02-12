@@ -1205,6 +1205,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     internal_drag_hover_pos: Option<Point>,
     internal_drag_pointer_id: Option<fret_core::PointerId>,
 
+    diag_cursor_screen_pos_override: Option<DiagCursorScreenPosOverride>,
+    diag_cursor_screen_pos_override_active: bool,
+
     external_drop: NativeExternalDrop,
 
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
@@ -1229,6 +1232,57 @@ struct DesktopEnvironmentSnapshot {
     accent_color: Option<fret_core::Color>,
     contrast_preference: Option<ContrastPreference>,
     forced_colors_mode: Option<ForcedColorsMode>,
+}
+
+#[derive(Debug, Clone)]
+struct DiagCursorScreenPosOverride {
+    json_path: std::path::PathBuf,
+    trigger_path: std::path::PathBuf,
+    last_stamp: Option<u64>,
+}
+
+fn diag_dir_from_env() -> Option<std::path::PathBuf> {
+    let dir = std::env::var_os("FRET_DIAG_DIR")?;
+    if dir.is_empty() {
+        return None;
+    }
+    Some(std::path::PathBuf::from(dir))
+}
+
+fn read_touch_stamp(path: &std::path::Path) -> Option<u64> {
+    let bytes = std::fs::read(path).ok()?;
+    let s = std::str::from_utf8(&bytes).ok()?;
+    s.lines()
+        .rev()
+        .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
+fn parse_cursor_screen_pos_override_json(bytes: &[u8]) -> Option<(f64, f64)> {
+    let s = std::str::from_utf8(bytes).ok()?;
+    let x = parse_json_f64_field(s, "x_px")?;
+    let y = parse_json_f64_field(s, "y_px")?;
+    Some((x, y))
+}
+
+fn parse_json_f64_field(s: &str, field: &str) -> Option<f64> {
+    let key = format!("\"{}\"", field);
+    let i = s.find(&key)?;
+    let after_key = &s[i + key.len()..];
+    let (_before, after_colon) = after_key.split_once(':')?;
+    let after_colon = after_colon.trim_start();
+
+    let mut end = 0;
+    for (idx, ch) in after_colon.char_indices() {
+        let ok = matches!(ch, '0'..='9' | '-' | '+' | '.' | 'e' | 'E');
+        if !ok {
+            break;
+        }
+        end = idx + ch.len_utf8();
+    }
+    if end == 0 {
+        return None;
+    }
+    after_colon[..end].parse::<f64>().ok()
 }
 
 #[cfg(target_os = "linux")]
@@ -2950,6 +3004,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             internal_drag_pointer_id: None,
+            diag_cursor_screen_pos_override: diag_dir_from_env().map(|dir| {
+                DiagCursorScreenPosOverride {
+                    json_path: dir.join("cursor_screen_pos.json"),
+                    trigger_path: dir.join("cursor_screen_pos.touch"),
+                    last_stamp: None,
+                }
+            }),
+            diag_cursor_screen_pos_override_active: false,
             external_drop: NativeExternalDrop::default(),
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
@@ -5488,6 +5550,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .min()
     }
 
+    fn poll_diag_cursor_screen_pos_override(&mut self) -> bool {
+        let Some(cfg) = self.diag_cursor_screen_pos_override.as_mut() else {
+            self.diag_cursor_screen_pos_override_active = false;
+            return false;
+        };
+
+        let Some(stamp) = read_touch_stamp(&cfg.trigger_path) else {
+            self.diag_cursor_screen_pos_override_active = false;
+            return false;
+        };
+        let is_newer = match cfg.last_stamp {
+            None => true,
+            Some(prev) => stamp > prev,
+        };
+        if !is_newer {
+            self.diag_cursor_screen_pos_override_active = false;
+            return false;
+        }
+        cfg.last_stamp = Some(stamp);
+
+        let Ok(bytes) = std::fs::read(&cfg.json_path) else {
+            self.diag_cursor_screen_pos_override_active = false;
+            return false;
+        };
+        let Some((x, y)) = parse_cursor_screen_pos_override_json(&bytes) else {
+            self.diag_cursor_screen_pos_override_active = false;
+            return false;
+        };
+
+        self.cursor_screen_pos = Some(PhysicalPosition::new(x, y));
+        self.diag_cursor_screen_pos_override_active = true;
+        true
+    }
+
     fn dock_drag_pointer_id(&self) -> Option<fret_core::PointerId> {
         use fret_runtime::DragHost as _;
         self.app.find_drag_pointer_id(|d| {
@@ -5594,7 +5690,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
-        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        if !self.diag_cursor_screen_pos_override_active {
+            self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        }
 
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
@@ -5719,7 +5817,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
-        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        if !self.diag_cursor_screen_pos_override_active {
+            self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        }
 
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;

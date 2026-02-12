@@ -288,3 +288,65 @@ fn script_v2_roundtrip_set_window_inner_size_first_seen() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_set_cursor_screen_pos() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_cursor_screen_pos", "x_px": 100.0, "y_px": 120.0 }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_raise_window_last_seen_other() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "raise_window", "window": { "kind": "last_seen_other" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_known_window_count() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_drag_pointer_until_dock_drag_current_window_is() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "x" },
+      "delta_x": 10.0,
+      "delta_y": 0.0,
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "timeout_frames": 10
+    }
+  ]
+}"#,
+    );
+}
