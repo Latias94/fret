@@ -93,6 +93,7 @@ Each bundle contains only skill folders and can be installed by unzipping and co
 - Get oriented / find the right layer: `fret-repo-orientation`
 - Shared conventions (layering, gates, evidence): `fret-skills-playbook`
 - Using skills from an external app repo (framework users): `fret-external-app-mode`
+- Build a cohesive app UI fast (product-oriented): `fret-app-ui-builder`
 - Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`
 - App architecture + side effects (persistence, background work): `fret-app-architecture-and-effects`
 - State stack defaults (typed routing + selector + query): `fret-app-architecture-and-effects` + `fret-component-authoring`
@@ -110,6 +111,7 @@ Each bundle contains only skill folders and can be installed by unzipping and co
 - `fret-repo-orientation`: Find the right layer/crate fast (mono-repo vs external app repo), choose the smallest runnable target, and keep contract-first navigation.
 - `fret-skills-playbook`: Shared conventions for layering decisions, regression gates, `test_id`/diag script style, and evidence discipline across all skills.
 - `fret-external-app-mode`: Use the skills from an external app repo (outside the mono-repo): what works without `tools/` and `fretboard`, and how to keep anchors and tooling usable via a Fret checkout.
+- `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-component-authoring`: Declarative component authoring in `fret-ui` + `fret-ui-kit` (identity, element-local state, model observation, `ui()` builder surface).
 - `fret-action-hooks`: Component-owned interaction policy (press/dismiss/roving/typeahead/timers) via runtime action hooks (ADR 0074).
 - `fret-app-architecture-and-effects`: App-level structure (Models + Commands + Effects), typed routing (`MessageRouter`/`KeyedMessageRouter`), and async state (`fret-query`/`fret-selector`) on top of runner-owned concurrency (Dispatcher + Inbox).
