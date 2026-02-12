@@ -766,6 +766,15 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("ui-gallery-select-item-banana"), 240)
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -781,6 +790,15 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
@@ -794,13 +812,22 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
             "ui-gallery-select-commit-and-label-update".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -823,6 +850,15 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-apple"),
@@ -834,13 +870,22 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .capture_bundle(Some("ui-gallery-select-keyboard-commit-apple".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -857,6 +902,15 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
@@ -870,13 +924,22 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
             "ui-gallery-select-typeahead-commit-banana".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -892,6 +955,15 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .wait_exists(test_id("ui-gallery-select-item-item-15"), 240)
         .click(test_id("ui-gallery-select-item-item-15"))
         .wait_frames(5)
@@ -906,6 +978,15 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(UiActionStepV2::WaitUntil {
             predicate: UiPredicateV1::SelectedIs {
                 target: test_id("ui-gallery-select-item-banana"),
@@ -919,13 +1000,22 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
             "ui-gallery-select-disabled-item-no-commit".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -958,7 +1048,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
             "ui-gallery-select-roving-skips-disabled-orange".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
@@ -966,6 +1056,15 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("ui-gallery-select-item-apple"), 240)
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -982,13 +1081,22 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .wait_not_exists(test_id("ui-gallery-select-item-apple"), 240)
         .capture_bundle(Some("ui-gallery-select-dismiss-outside-press".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -1005,13 +1113,22 @@ fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
             "ui-gallery-select-escape-dismiss-focus-restore".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
     let script = ui_gallery_nav_to_select_page()
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -1027,7 +1144,7 @@ fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
         })
         .capture_bundle(Some("ui-gallery-select-trigger-toggle-close".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
@@ -1035,6 +1152,15 @@ fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("ui-gallery-select-item-apple"), 60)
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -1062,7 +1188,7 @@ fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
         .wait_frames(5)
         .capture_bundle(Some("ui-gallery-select-wheel-scroll".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
@@ -1070,6 +1196,15 @@ fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("ui-gallery-select-item-apple"), 240)
         .wait_exists(test_id("select-scroll-viewport"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-select-trigger".to_string()),
+                content_test_id: Some("select-scroll-viewport".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("select-scroll-viewport"),
             240,
@@ -1089,7 +1224,7 @@ fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
         .wait_frames(5)
         .capture_bundle(Some("ui-gallery-select-wheel-up-from-bottom".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), String> {
