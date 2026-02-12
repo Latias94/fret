@@ -51,3 +51,11 @@ Status: Done (with known gaps)
 - Marquee selection integrates cleanly for world-layer nodes (chrome above nodes).
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
   - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (`drag_pointer`)
+
+### M3 — Interaction glue (optional, XYFlow-style)
+
+Status: Planned
+
+- Node dragging recipe exists (app-owned position edits; canvas-space deltas).
+- Connection dragging recipe exists (handles + preview + validity checks).
+- Input arbitration recipe exists (background-hit only marquee start).

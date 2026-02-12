@@ -120,6 +120,24 @@ To make this substrate usable for real apps (AI Elements “workflow” experien
      - “node subtree has an inner scroll area: wheel scroll should not pan the canvas”,
      - “text input inside a node: drag/select gestures should not start a canvas pan”.
 
+## Next (M3) — Interaction glue (optional)
+
+The v1 substrate is intentionally “mechanism-first”: it enables nodes-as-elements under pan/zoom,
+but it does not provide a node-graph editing engine.
+
+If we want an XYFlow/ReactFlow-like *component-first workflow editor* experience on top of the
+world-layer substrate, the remaining work is mostly **interaction glue**:
+
+- Node dragging (screen-space pointer deltas → canvas-space position edits).
+- Connection dragging (handles, strict/loose targeting, validity checks, previews).
+- Selection model updates (click vs marquee, shift-add/remove, connected-edges selection policy).
+- Optional snap tuning (grid snap, snaplines).
+
+Reference implementations:
+
+- XyFlow substrate: `repo-ref/xyflow/packages/system/src/*` (`xydrag`, `xyhandle`, `xyresizer`)
+- fret-node (retained engine today): `ecosystem/fret-node` and `docs/workstreams/fret-node-xyflow-parity.md`
+
 ## Quality gates
 
 Minimum:

@@ -53,3 +53,24 @@ See also:
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (Fit view button)
   - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json` (click `ui-ai-cwl-fit-view`)
+
+## M3 — Interaction glue (optional, XYFlow-style)
+
+This milestone is *not* a node-graph engine. It is a set of composable recipes/helpers so apps can
+build XYFlow-like interactions on top of the world-layer substrate.
+
+- [ ] CWL-M3-001 Document an input arbitration recipe:
+  - marquee selection should only start from “background” hits (not when clicking a node subtree).
+  - Reference: `docs/workstreams/xyflow-gap-analysis.md` (Gap B)
+- [ ] CWL-M3-002 Provide a minimal node-drag recipe (app-owned model edits):
+  - capture pointer in a node subtree,
+  - translate screen delta → canvas delta,
+  - update node canvas positions.
+  - Reference: `repo-ref/xyflow/packages/system/src/xydrag/*`
+- [ ] CWL-M3-003 Provide a minimal connect-drag recipe surface:
+  - start drag from a handle,
+  - preview path,
+  - validate + commit/cancel.
+  - Reference: `repo-ref/xyflow/packages/system/src/xyhandle/*`
+- [ ] CWL-M3-004 Optional snap helpers (grid snap + snapline scaffolding).
+  - Reference: `repo-ref/xyflow/packages/system/src/xydrag/*` (`snapGrid`, `snapToGrid`)
