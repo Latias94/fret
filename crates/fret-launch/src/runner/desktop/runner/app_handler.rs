@@ -3,8 +3,6 @@
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
-use fret_platform::external_drop::ExternalDropProvider as _;
-
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
 
@@ -136,6 +134,67 @@ fn write_redraw_hitch_log(line: &str) {
     let state = STATE.get_or_init(|| Mutex::new(HitchLogState::new()));
     let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
     state.write_line(&msg);
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    fn try_create_missing_surfaces(&mut self) {
+        let Some(context) = self.context.as_ref() else {
+            return;
+        };
+
+        let surface_usage = {
+            let base = self.diag_bundle_screenshots.surface_usage();
+            #[cfg(feature = "diag-screenshots")]
+            {
+                if self.diag_screenshots.is_some() {
+                    base | wgpu::TextureUsages::COPY_SRC
+                } else {
+                    base
+                }
+            }
+            #[cfg(not(feature = "diag-screenshots"))]
+            {
+                base
+            }
+        };
+
+        for (app_window, state) in self.windows.iter_mut() {
+            if state.surface.is_some() {
+                continue;
+            }
+
+            let surface = match context.create_surface(state.window.clone()) {
+                Ok(surface) => surface,
+                Err(e) => {
+                    error!(window = ?app_window, error = ?e, "failed to create surface");
+                    continue;
+                }
+            };
+
+            let size = state.window.surface_size();
+            let surface_state = match SurfaceState::new_with_usage(
+                &context.adapter,
+                &context.device,
+                surface,
+                size.width,
+                size.height,
+                surface_usage,
+            ) {
+                Ok(state) => state,
+                Err(e) => {
+                    error!(
+                        window = ?app_window,
+                        error = ?e,
+                        "failed to configure surface"
+                    );
+                    continue;
+                }
+            };
+
+            state.surface = Some(surface_state);
+            state.window.request_redraw();
+        }
+    }
 }
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
@@ -298,195 +357,368 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             },
         );
 
+        if self.wgpu_init_blocked {
+            return;
+        }
+
         if self.context.is_some() {
-            let Some(context) = self.context.as_ref() else {
-                return;
-            };
-
-            let surface_usage = {
-                let base = self.diag_bundle_screenshots.surface_usage();
-                #[cfg(feature = "diag-screenshots")]
-                {
-                    if self.diag_screenshots.is_some() {
-                        base | wgpu::TextureUsages::COPY_SRC
-                    } else {
-                        base
-                    }
-                }
-                #[cfg(not(feature = "diag-screenshots"))]
-                {
-                    base
-                }
-            };
-
-            for (app_window, state) in self.windows.iter_mut() {
-                if state.surface.is_some() {
-                    continue;
-                }
-
-                let surface = match context.create_surface(state.window.clone()) {
-                    Ok(surface) => surface,
-                    Err(e) => {
-                        error!(window = ?app_window, error = ?e, "failed to recreate surface");
-                        continue;
-                    }
-                };
-
-                let size = state.window.surface_size();
-                let surface_state = match SurfaceState::new_with_usage(
-                    &context.adapter,
-                    &context.device,
-                    surface,
-                    size.width,
-                    size.height,
-                    surface_usage,
-                ) {
-                    Ok(state) => state,
-                    Err(e) => {
-                        error!(
-                            window = ?app_window,
-                            error = ?e,
-                            "failed to configure recreated surface"
-                        );
-                        continue;
-                    }
-                };
-
-                state.surface = Some(surface_state);
-                state.window.request_redraw();
-            }
-
+            self.try_create_missing_surfaces();
             self.drain_effects(event_loop);
             return;
         }
 
-        let spec = self.config.main_window_spec();
-        let window = match self.create_os_window(
-            event_loop,
-            spec,
-            fret_runtime::WindowStyleRequest::default(),
-            None,
-        ) {
-            Ok(w) => w,
-            Err(e) => {
-                error!(error = ?e, "failed to create main window");
-                return;
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            if self.main_window.is_none() {
+                let spec = self.config.main_window_spec();
+                let window = match self.create_os_window(
+                    event_loop,
+                    spec,
+                    fret_runtime::WindowStyleRequest::default(),
+                    None,
+                ) {
+                    Ok(w) => w,
+                    Err(e) => {
+                        error!(error = ?e, "failed to create main window");
+                        return;
+                    }
+                };
+
+                let main_window = match self.insert_window(window.0, window.1, None) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        error!(error = ?e, "failed to insert main window runtime");
+                        return;
+                    }
+                };
+                self.main_window = Some(main_window);
             }
-        };
 
-        // RenderDoc must be loaded/injected before the graphics API is initialized to reliably
-        // hook Vulkan/D3D. Initialize capture integration before we create the wgpu context.
-        self.init_renderdoc_if_needed();
+            self.init_renderdoc_if_needed();
 
-        let (context, surface) =
-            match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
-                WgpuInit::CreateDefault => {
-                    match pollster::block_on(WgpuContext::new_with_surface(window.0.clone())) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!(error = ?e, "failed to initialize wgpu context");
+            if self.context.is_none() {
+                let mut main_surface: Option<wgpu::Surface<'static>> = None;
+                let context = match std::mem::replace(
+                    &mut self.config.wgpu_init,
+                    WgpuInit::CreateDefault,
+                ) {
+                    WgpuInit::CreateDefault => {
+                        let context = match pollster::block_on(WgpuContext::new()) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!(error = ?e, "failed to initialize wgpu context");
+                                return;
+                            }
+                        };
+
+                        #[cfg(target_os = "android")]
+                        {
+                            let explicitly_requested_backend =
+                                std::env::var_os("FRET_WGPU_BACKEND")
+                                    .is_some_and(|v| !v.is_empty());
+                            if !explicitly_requested_backend {
+                                let info = context.adapter.get_info();
+                                let name = info.name.to_ascii_lowercase();
+                                let is_swiftshader = name.contains("swiftshader");
+                                if is_swiftshader && info.backend == wgpu::Backend::Vulkan {
+                                    error!(
+                                        adapter = info.name,
+                                        "wgpu Vulkan SwiftShader detected; Android emulator Vulkan is currently unstable (SIGSEGV in Renderer::new). Run on a real device or configure the emulator to use host Vulkan. Set FRET_WGPU_BACKEND to override."
+                                    );
+                                    self.wgpu_init_blocked = true;
+                                    return;
+                                }
+                            }
+                        }
+
+                        context
+                    }
+                    WgpuInit::Provided(context) => context,
+                    WgpuInit::Factory(factory) => {
+                        let Some(main_window) = self.main_window else {
                             return;
+                        };
+                        let Some(window_ref) =
+                            self.windows.get(main_window).map(|w| w.window.clone())
+                        else {
+                            return;
+                        };
+
+                        match factory(window_ref) {
+                            Ok((context, surface)) => {
+                                main_surface = Some(surface);
+                                context
+                            }
+                            Err(e) => {
+                                error!(error = ?e, "wgpu factory failed");
+                                return;
+                            }
                         }
                     }
+                };
+
+                if let Some(raw) = std::env::var_os("FRET_WGPU_BACKEND")
+                    && !raw.is_empty()
+                {
+                    tracing::info!(requested = ?raw, "wgpu backend requested");
                 }
-                WgpuInit::Provided(context) => {
-                    let surface = match context.create_surface(window.0.clone()) {
+                let info = context.adapter.get_info();
+                tracing::info!(
+                    backend = ?info.backend,
+                    name = info.name,
+                    driver = info.driver,
+                    driver_info = info.driver_info,
+                    vendor = info.vendor,
+                    device = info.device,
+                    "wgpu adapter selected"
+                );
+
+                let mut renderer = Renderer::new(&context.adapter, &context.device);
+
+                let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
+                self.app
+                    .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
+
+                renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
+                renderer
+                    .set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
+                renderer.set_path_msaa_samples(self.config.path_msaa_samples);
+                let _ = renderer.set_text_font_families(&self.config.text_font_families);
+                let locale = self
+                    .app
+                    .global::<fret_runtime::fret_i18n::I18nService>()
+                    .and_then(|service| service.preferred_locales().first())
+                    .map(|locale| locale.to_string());
+                let _ = renderer.set_text_locale(locale.as_deref());
+                self.app.set_global::<fret_core::TextFontFamilyConfig>(
+                    self.config.text_font_families.clone(),
+                );
+                self.app.set_global::<fret_runtime::TextFontStackKey>(
+                    fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
+                );
+
+                let startup_async = Self::system_font_rescan_async_enabled()
+                    && Self::system_font_catalog_startup_async_enabled();
+                if startup_async {
+                    let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                        &mut self.app,
+                        Vec::new(),
+                        fret_runtime::FontFamilyDefaultsPolicy::None,
+                    );
+                } else {
+                    super::super::super::font_catalog::apply_renderer_font_catalog_update(
+                        &mut self.app,
+                        &mut renderer,
+                        fret_runtime::FontFamilyDefaultsPolicy::None,
+                    );
+                }
+
+                self.context = Some(context);
+                self.renderer = Some(renderer);
+                self.renderer_caps = Some(renderer_caps);
+
+                if let (Some(context), Some(renderer)) =
+                    (self.context.as_ref(), self.renderer.as_mut())
+                {
+                    self.driver.gpu_ready(&mut self.app, context, renderer);
+                }
+
+                if let Some(main_window) = self.main_window
+                    && let Some(surface) = main_surface
+                    && let Some(context) = self.context.as_ref()
+                    && let Some(state) = self.windows.get_mut(main_window)
+                {
+                    let surface_usage = {
+                        let base = self.diag_bundle_screenshots.surface_usage();
+                        #[cfg(feature = "diag-screenshots")]
+                        {
+                            if self.diag_screenshots.is_some() {
+                                base | wgpu::TextureUsages::COPY_SRC
+                            } else {
+                                base
+                            }
+                        }
+                        #[cfg(not(feature = "diag-screenshots"))]
+                        {
+                            base
+                        }
+                    };
+                    let size = state.window.surface_size();
+                    let surface_state = match SurfaceState::new_with_usage(
+                        &context.adapter,
+                        &context.device,
+                        surface,
+                        size.width,
+                        size.height,
+                        surface_usage,
+                    ) {
                         Ok(v) => v,
                         Err(e) => {
-                            error!(error = ?e, "failed to create surface from provided context");
+                            error!(
+                                window = ?main_window,
+                                error = ?e,
+                                "failed to configure factory surface"
+                            );
                             return;
                         }
                     };
-                    (context, surface)
+                    state.surface = Some(surface_state);
                 }
-                WgpuInit::Factory(factory) => match factory(window.0.clone()) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        error!(error = ?e, "wgpu factory failed");
-                        return;
+
+                if let Some(main_window) = self.main_window {
+                    if !self.driver_initialized {
+                        self.driver.init(&mut self.app, main_window);
+                        self.driver_initialized = true;
+                        self.maybe_deliver_startup_incoming_open(main_window);
+                        self.app.request_redraw(main_window);
+                        if startup_async {
+                            self.request_system_font_rescan();
+                        }
                     }
-                },
-            };
-        let mut renderer = Renderer::new(&context.adapter, &context.device);
-
-        if let Some(raw) = std::env::var_os("FRET_WGPU_BACKEND")
-            && !raw.is_empty()
-        {
-            tracing::info!(requested = ?raw, "wgpu backend requested");
-        }
-        let info = context.adapter.get_info();
-        tracing::info!(
-            backend = ?info.backend,
-            name = info.name,
-            driver = info.driver,
-            driver_info = info.driver_info,
-            vendor = info.vendor,
-            device = info.device,
-            "wgpu adapter selected"
-        );
-
-        let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
-        self.app
-            .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
-
-        renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
-        renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
-        renderer.set_path_msaa_samples(self.config.path_msaa_samples);
-        let _ = renderer.set_text_font_families(&self.config.text_font_families);
-        let locale = self
-            .app
-            .global::<fret_runtime::fret_i18n::I18nService>()
-            .and_then(|service| service.preferred_locales().first())
-            .map(|locale| locale.to_string());
-        let _ = renderer.set_text_locale(locale.as_deref());
-        self.app
-            .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
-        self.app
-            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-                renderer.text_font_stack_key(),
-            ));
-
-        let startup_async = Self::system_font_rescan_async_enabled()
-            && Self::system_font_catalog_startup_async_enabled();
-        if startup_async {
-            // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
-            // empty picker snapshot and populate it asynchronously via the rescan pipeline.
-            let _ = fret_runtime::apply_font_catalog_update_with_metadata(
-                &mut self.app,
-                Vec::new(),
-                fret_runtime::FontFamilyDefaultsPolicy::None,
-            );
-        } else {
-            // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
-            super::super::super::font_catalog::apply_renderer_font_catalog_update(
-                &mut self.app,
-                &mut renderer,
-                fret_runtime::FontFamilyDefaultsPolicy::None,
-            );
-        }
-
-        self.context = Some(context);
-        self.renderer = Some(renderer);
-        self.renderer_caps = Some(renderer_caps);
-        if let (Some(context), Some(renderer)) = (self.context.as_ref(), self.renderer.as_mut()) {
-            self.driver.gpu_ready(&mut self.app, context, renderer);
-        }
-
-        let main_window = match self.insert_window(window.0, window.1, surface) {
-            Ok(id) => id,
-            Err(e) => {
-                error!(error = ?e, "failed to insert main window runtime");
-                return;
+                }
             }
-        };
-        self.main_window = Some(main_window);
-        self.driver.init(&mut self.app, main_window);
-        self.maybe_deliver_startup_incoming_open(main_window);
-        self.app.request_redraw(main_window);
-        if startup_async {
-            self.request_system_font_rescan();
+
+            self.try_create_missing_surfaces();
+            self.drain_effects(event_loop);
+            return;
         }
-        self.drain_effects(event_loop);
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            let spec = self.config.main_window_spec();
+            let window = match self.create_os_window(
+                event_loop,
+                spec,
+                fret_runtime::WindowStyleRequest::default(),
+                None,
+            ) {
+                Ok(w) => w,
+                Err(e) => {
+                    error!(error = ?e, "failed to create main window");
+                    return;
+                }
+            };
+
+            // RenderDoc must be loaded/injected before the graphics API is initialized to reliably
+            // hook Vulkan/D3D. Initialize capture integration before we create the wgpu context.
+            self.init_renderdoc_if_needed();
+
+            let (context, surface) =
+                match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
+                    WgpuInit::CreateDefault => {
+                        match pollster::block_on(WgpuContext::new_with_surface(window.0.clone())) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!(error = ?e, "failed to initialize wgpu context");
+                                return;
+                            }
+                        }
+                    }
+                    WgpuInit::Provided(context) => {
+                        let surface = match context.create_surface(window.0.clone()) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!(
+                                    error = ?e,
+                                    "failed to create surface from provided context"
+                                );
+                                return;
+                            }
+                        };
+                        (context, surface)
+                    }
+                    WgpuInit::Factory(factory) => match factory(window.0.clone()) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error!(error = ?e, "wgpu factory failed");
+                            return;
+                        }
+                    },
+                };
+            if let Some(raw) = std::env::var_os("FRET_WGPU_BACKEND")
+                && !raw.is_empty()
+            {
+                tracing::info!(requested = ?raw, "wgpu backend requested");
+            }
+            let info = context.adapter.get_info();
+            tracing::info!(
+                backend = ?info.backend,
+                name = info.name,
+                driver = info.driver,
+                driver_info = info.driver_info,
+                vendor = info.vendor,
+                device = info.device,
+                "wgpu adapter selected"
+            );
+
+            let mut renderer = Renderer::new(&context.adapter, &context.device);
+
+            let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
+            self.app
+                .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
+
+            renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
+            renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
+            renderer.set_path_msaa_samples(self.config.path_msaa_samples);
+            let _ = renderer.set_text_font_families(&self.config.text_font_families);
+            let locale = self
+                .app
+                .global::<fret_runtime::fret_i18n::I18nService>()
+                .and_then(|service| service.preferred_locales().first())
+                .map(|locale| locale.to_string());
+            let _ = renderer.set_text_locale(locale.as_deref());
+            self.app.set_global::<fret_core::TextFontFamilyConfig>(
+                self.config.text_font_families.clone(),
+            );
+            self.app
+                .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                    renderer.text_font_stack_key(),
+                ));
+
+            let startup_async = Self::system_font_rescan_async_enabled()
+                && Self::system_font_catalog_startup_async_enabled();
+            if startup_async {
+                // Avoid enumerating the full system font catalog on the UI thread at startup. Seed an
+                // empty picker snapshot and populate it asynchronously via the rescan pipeline.
+                let _ = fret_runtime::apply_font_catalog_update_with_metadata(
+                    &mut self.app,
+                    Vec::new(),
+                    fret_runtime::FontFamilyDefaultsPolicy::None,
+                );
+            } else {
+                // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
+                super::super::super::font_catalog::apply_renderer_font_catalog_update(
+                    &mut self.app,
+                    &mut renderer,
+                    fret_runtime::FontFamilyDefaultsPolicy::None,
+                );
+            }
+
+            self.context = Some(context);
+            self.renderer = Some(renderer);
+            self.renderer_caps = Some(renderer_caps);
+            if let (Some(context), Some(renderer)) = (self.context.as_ref(), self.renderer.as_mut())
+            {
+                self.driver.gpu_ready(&mut self.app, context, renderer);
+            }
+
+            let main_window = match self.insert_window(window.0, window.1, Some(surface)) {
+                Ok(id) => id,
+                Err(e) => {
+                    error!(error = ?e, "failed to insert main window runtime");
+                    return;
+                }
+            };
+            self.main_window = Some(main_window);
+            self.driver.init(&mut self.app, main_window);
+            self.driver_initialized = true;
+            self.maybe_deliver_startup_incoming_open(main_window);
+            self.app.request_redraw(main_window);
+            if startup_async {
+                self.request_system_font_rescan();
+            }
+            self.drain_effects(event_loop);
+        }
     }
 
     fn destroy_surfaces(&mut self, _event_loop: &dyn ActiveEventLoop) {
@@ -970,6 +1202,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 }
 
+                #[cfg(target_os = "android")]
+                let mut android_soft_input_request: Option<bool> = None;
+
                 {
                     let (Some(context), Some(renderer)) =
                         (self.context.as_ref(), self.renderer.as_mut())
@@ -1063,7 +1298,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         dirty |= ime_changed;
                         #[cfg(target_os = "android")]
                         if ime_changed {
-                            self.android_force_soft_input(snapshot.focus_is_text_input);
+                            android_soft_input_request = Some(snapshot.focus_is_text_input);
                         }
                         if snapshot.focus_is_text_input
                             && let Some(rect) = snapshot.ime_cursor_area
@@ -1409,6 +1644,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.app.set_frame_id(self.frame_id);
                 }
 
+                #[cfg(target_os = "android")]
+                if let Some(enabled) = android_soft_input_request {
+                    self.android_force_soft_input(enabled);
+                }
+
                 // Drain effects produced during rendering so they don't lag by a frame (e.g. IME
                 // cursor updates, timer-driven docking invalidations, window raise/create effects).
                 self.drain_effects(event_loop);
@@ -1490,6 +1730,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         if self.is_suspended {
             event_loop.set_control_flow(ControlFlow::Wait);
             return;
+        }
+
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        {
+            let needs_surfaces = self.context.is_none()
+                || self
+                    .windows
+                    .iter()
+                    .any(|(_app_window, state)| state.surface.is_none());
+            if needs_surfaces {
+                self.can_create_surfaces(event_loop);
+            }
         }
 
         self.tick_id.0 = self.tick_id.0.saturating_add(1);

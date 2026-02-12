@@ -43,9 +43,6 @@ use winit::{
     window::{Window, WindowId, WindowLevel},
 };
 
-#[cfg(target_os = "android")]
-use winit::platform::android::EventLoopExtAndroid as _;
-
 use crate::RunnerError;
 
 type WindowAnchor = fret_core::WindowAnchor;
@@ -157,6 +154,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
     is_suspended: bool,
+    driver_initialized: bool,
+    wgpu_init_blocked: bool,
     #[cfg(target_os = "android")]
     android_app: Option<winit::platform::android::activity::AndroidApp>,
 
@@ -1229,7 +1228,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
+            #[cfg(any(target_os = "android", target_os = "ios"))]
+            is_suspended: true,
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             is_suspended: false,
+            driver_initialized: false,
+            wgpu_init_blocked: false,
             #[cfg(target_os = "android")]
             android_app: None,
             renderdoc: None,
@@ -1938,36 +1942,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         &mut self,
         window: Arc<dyn Window>,
         accessibility: Option<accessibility::WinitAccessibility>,
-        surface: wgpu::Surface<'static>,
+        surface: Option<wgpu::Surface<'static>>,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
-        let Some(context) = self.context.as_ref() else {
-            return Err(RunnerError::WgpuNotInitialized);
-        };
+        let surface = if let Some(surface) = surface {
+            let Some(context) = self.context.as_ref() else {
+                return Err(RunnerError::WgpuNotInitialized);
+            };
 
-        let size = window.surface_size();
-        let surface_usage = {
-            let base = self.diag_bundle_screenshots.surface_usage();
-            #[cfg(feature = "diag-screenshots")]
-            {
-                if self.diag_screenshots.is_some() {
-                    base | wgpu::TextureUsages::COPY_SRC
-                } else {
+            let size = window.surface_size();
+            let surface_usage = {
+                let base = self.diag_bundle_screenshots.surface_usage();
+                #[cfg(feature = "diag-screenshots")]
+                {
+                    if self.diag_screenshots.is_some() {
+                        base | wgpu::TextureUsages::COPY_SRC
+                    } else {
+                        base
+                    }
+                }
+                #[cfg(not(feature = "diag-screenshots"))]
+                {
                     base
                 }
-            }
-            #[cfg(not(feature = "diag-screenshots"))]
-            {
-                base
-            }
+            };
+            Some(SurfaceState::new_with_usage(
+                &context.adapter,
+                &context.device,
+                surface,
+                size.width,
+                size.height,
+                surface_usage,
+            )?)
+        } else {
+            None
         };
-        let surface = SurfaceState::new_with_usage(
-            &context.adapter,
-            &context.device,
-            surface,
-            size.width,
-            size.height,
-            surface_usage,
-        )?;
 
         let id = self.windows.insert_with_key(|id| {
             let user = self.driver.create_window_state(&mut self.app, id);
@@ -1975,7 +1983,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window,
                 accessibility,
                 last_accessibility_snapshot: None,
-                surface: Some(surface),
+                surface,
                 scene: Scene::default(),
                 platform: fret_runner_winit::WinitPlatform {
                     wheel: fret_runner_winit::WheelConfig {
@@ -2596,7 +2604,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
             context.create_surface(window.clone())?
         };
-        self.insert_window(window, accessibility, surface)
+        self.insert_window(window, accessibility, Some(surface))
     }
 
     fn schedule_timer(&mut self, now: Instant, effect: &Effect) {
@@ -3398,7 +3406,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     .map(|s| s.to_string_lossy().to_string())
                                     .unwrap_or_else(|| "file".to_string());
 
-                                if let Some(size_bytes) = std::fs::metadata(path).ok().map(|m| m.len())
+                                if let Some(size_bytes) =
+                                    std::fs::metadata(path).ok().map(|m| m.len())
                                 {
                                     if size_bytes > limits.max_file_bytes {
                                         errors.push(fret_core::ExternalDropReadError {
@@ -3407,7 +3416,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                         });
                                         continue;
                                     }
-                                    if total_bytes.saturating_add(size_bytes) > limits.max_total_bytes {
+                                    if total_bytes.saturating_add(size_bytes)
+                                        > limits.max_total_bytes
+                                    {
                                         errors.push(fret_core::ExternalDropReadError {
                                             name,
                                             message: "read exceeds max_total_bytes".to_string(),
@@ -3459,7 +3470,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
 
                         let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
-                            self.deliver_window_event_now(window, &Event::IncomingOpenUnavailable { token });
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenUnavailable { token },
+                            );
                             continue;
                         };
 
@@ -3549,7 +3563,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     .map(|s| s.to_string_lossy().to_string())
                                     .unwrap_or_else(|| "file".to_string());
 
-                                if let Some(size_bytes) = std::fs::metadata(path).ok().map(|m| m.len())
+                                if let Some(size_bytes) =
+                                    std::fs::metadata(path).ok().map(|m| m.len())
                                 {
                                     if size_bytes > limits.max_file_bytes {
                                         errors.push(fret_core::ExternalDropReadError {
@@ -3558,7 +3573,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                         });
                                         continue;
                                     }
-                                    if total_bytes.saturating_add(size_bytes) > limits.max_total_bytes {
+                                    if total_bytes.saturating_add(size_bytes)
+                                        > limits.max_total_bytes
+                                    {
                                         errors.push(fret_core::ExternalDropReadError {
                                             name,
                                             message: "read exceeds max_total_bytes".to_string(),
@@ -3610,7 +3627,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
 
                         let Some(payload) = self.diag_incoming_open_payloads.get(&token) else {
-                            self.deliver_window_event_now(window, &Event::IncomingOpenUnavailable { token });
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::IncomingOpenUnavailable { token },
+                            );
                             continue;
                         };
 

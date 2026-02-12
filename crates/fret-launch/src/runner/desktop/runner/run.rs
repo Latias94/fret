@@ -1,6 +1,8 @@
 use fret_app::App;
 use fret_render::{Renderer, WgpuContext};
 use winit::event_loop::{EventLoop, EventLoopBuilder};
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopExtAndroid as _;
 
 use crate::RunnerError;
 
@@ -129,7 +131,7 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
             config,
             app,
             driver,
-            windows_ime_msg_hook_enabled,
+            windows_ime_msg_hook_enabled: _windows_ime_msg_hook_enabled,
             on_main_window_created,
             on_gpu_ready,
             event_loop_builder_hook,
@@ -154,7 +156,7 @@ impl<D: super::WinitAppDriver + 'static> WinitAppBuilder<D> {
                 {
                     use winit::platform::windows::EventLoopBuilderExtWindows as _;
                     super::event_loop::set_windows_ime_msg_hook_enabled(
-                        windows_ime_msg_hook_enabled,
+                        _windows_ime_msg_hook_enabled,
                     );
                     builder.with_msg_hook(super::windows_msg_hook);
                 }
