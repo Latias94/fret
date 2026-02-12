@@ -78,11 +78,12 @@ print_ios() {
   echo "== iOS =="
   check_cmd cargo "install Rust toolchain"
   check_cmd xcrun "install Xcode or Xcode Command Line Tools"
+  check_cmd xcodebuild "install Xcode (required for real devices)"
   check_cmd python3 "required by tools/mobile/ios_sim_run.sh to pick a simulator"
 
   if have rustup; then
     local target="aarch64-apple-ios-sim"
-    if rustup target list --installed 2>/dev/null | rg -q "^${target}$"; then
+    if rustup target list --installed 2>/dev/null | grep -q "^${target}$"; then
       ok "rust target ${target}"
     else
       warn "rust target ${target} not installed — run: rustup target add ${target}"
@@ -112,4 +113,3 @@ case "${platform}" in
     exit 2
     ;;
 esac
-

@@ -8,17 +8,18 @@ usage() {
   cat <<EOF
 Usage:
   tools/mobile/run.sh android --app <name> [--device <serial>] [--release] [--no-logcat]
-  tools/mobile/run.sh ios --app <name> [--sim] [--udid <sim-udid>] [--release]
+  tools/mobile/run.sh ios --app <name> [--sim] [--udid <sim-udid>] [--device <udid>] [--team <team-id>] [--release]
   tools/mobile/run.sh doctor [android|ios|all]
 
 Notes:
   - Android uses the Gradle GameActivity wrapper.
-  - iOS currently supports the simulator loop.
+  - iOS supports simulator and real devices (real devices require codesigning).
 
 Examples:
   tools/mobile/run.sh doctor
   tools/mobile/run.sh android --app ui-gallery -d <serial>
   tools/mobile/run.sh ios --app ui-gallery --sim
+  IOS_TEAM_ID=<team> tools/mobile/run.sh ios --app ui-gallery --device <udid>
 EOF
 }
 
@@ -37,6 +38,7 @@ device=""
 no_logcat=""
 udid=""
 ios_sim=""
+team=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -46,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --no-logcat) no_logcat="--no-logcat"; shift ;;
     --udid) udid="$2"; shift 2 ;;
     --sim) ios_sim="1"; shift ;;
+    --team|-t) team="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
   esac
@@ -82,24 +85,31 @@ case "${platform}" in
       echo "Unknown iOS app: ${app} (supported: ui-gallery)" >&2
       exit 2
     fi
-    if [[ -z "${ios_sim}" ]]; then
-      echo "Only the simulator loop is implemented right now. Pass --sim." >&2
-      exit 2
+    if [[ -n "${ios_sim}" ]]; then
+      args=()
+      if [[ "${profile}" == "release" ]]; then
+        args+=(--release)
+      fi
+      if [[ -n "${udid}" ]]; then
+        args+=(--udid "${udid}")
+      fi
+      exec tools/mobile/ios_sim_run.sh "${args[@]}"
     fi
 
     args=()
     if [[ "${profile}" == "release" ]]; then
       args+=(--release)
     fi
-    if [[ -n "${udid}" ]]; then
-      args+=(--udid "${udid}")
+    if [[ -n "${device}" ]]; then
+      args+=(--device "${device}")
     fi
-
-    exec tools/mobile/ios_sim_run.sh "${args[@]}"
+    if [[ -n "${team}" ]]; then
+      args+=(--team "${team}")
+    fi
+    exec tools/mobile/ios_device_run.sh "${args[@]}"
     ;;
   *)
     usage >&2
     exit 2
     ;;
 esac
-

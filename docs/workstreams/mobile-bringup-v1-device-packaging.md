@@ -38,26 +38,36 @@ For real devices we need **codesigning**, which typically implies an Xcode proje
 
 ### Option A: Xcode wrapper app (recommended for now)
 
-Use `apps/fret-ui-gallery-mobile` as the Rust entrypoint and call into it from Swift/ObjC.
-That crate exports:
+Use a thin Xcode wrapper that calls into the Rust entrypoint *before* `UIApplicationMain`.
 
-- `fret_ui_gallery_ios_main()` (C ABI, no args)
+Wrapper:
+
+- Xcode project: `apps/fret-ui-gallery-mobile/ios`
+- Entrypoint source: `apps/fret-ui-gallery-mobile/ios/FretUIGalleryMobile/main.m`
+
+The Rust entry crate exports:
+
+- `fret_ui_gallery_ios_main()` (C ABI, no args; expected to call into winit which calls `UIApplicationMain`).
 
 High-level steps:
 
-1. Create an Xcode iOS App project (Swift UI or UIKit).
-2. Add the Rust static library output to the project:
-   - Build Rust for device: `cargo build -p fret-ui-gallery-mobile --target aarch64-apple-ios --release`
-   - The artifact is `target/aarch64-apple-ios/release/libfret_ui_gallery_mobile.a`
-3. Add a bridging header (or module map) that declares:
-   - `void fret_ui_gallery_ios_main(void);`
-4. Call `fret_ui_gallery_ios_main()` from the app’s startup path **on the main thread**.
-5. Enable Automatic Signing in Xcode and run on device.
+1. Build + copy the Rust static library:
+   - `cargo build -p fret-ui-gallery-mobile --target aarch64-apple-ios --release`
+   - Copy `target/aarch64-apple-ios/release/libfret_ui_gallery_mobile.a` into
+     `apps/fret-ui-gallery-mobile/ios/RustLibs/`
+2. Open `apps/fret-ui-gallery-mobile/ios/FretUIGalleryMobile.xcodeproj` in Xcode.
+3. Enable Automatic Signing (select your team).
+4. Run on device.
+
+Scripted:
+
+- `IOS_TEAM_ID=<team-id> tools/mobile/run.sh ios --app ui-gallery --device <udid> --release`
 
 Notes:
 
-- Winit’s iOS backend must run on the main thread. Keep the call site in `@main` / `UIApplicationMain` flow.
-- This wrapper app is intentionally minimal; once stable we can automate it (XcodeGen / tuist / xbuild).
+- Winit’s iOS backend starts the application via `UIApplicationMain`. The wrapper must not call
+  `UIApplicationMain` itself.
+- The wrapper app is intentionally minimal; we can migrate to generated projects later if desired.
 
 ### Option B: Adopt a generator tool
 
