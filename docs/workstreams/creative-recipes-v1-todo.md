@@ -17,10 +17,9 @@ See:
 
 Next (recommended order):
 
-1. `VisualCatalog`/`MaterialCatalog` skeleton (P0 ecosystem foundation)
-2. M7: sampled materials v2a (catalog textures; ADR 0242)
-3. M8: `ecosystem/fret-ui-magic` Phase 0
-4. M9: external texture imports (contract-path demo + capability-gated backend)
+1. M8: `ecosystem/fret-ui-magic` Phase 0 (finish seed components + UI gallery + diag)
+2. M6 gap: “bloom-like” Tier B recipe example (threshold -> blur -> add)
+3. M9: external texture imports (contract-path demo + capability-gated backend)
 
 ## P0 — Kernel primitives (scene + renderer)
 
@@ -58,7 +57,7 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
 - [ ] MagicUI parity recipes/wrappers:
   - [x] `MagicCard` (pointer-follow radial gradient fill/border).
   - [x] `Lens` (radial mask + content scale + reduced-motion behavior).
-  - [ ] `BorderBeam` (beam material + mask/composite; deterministic animation).
+  - [x] `BorderBeam` (animated border highlight + glow; Phase 0 uses gradients + additive composite).
   - [ ] Patterns: dot/grid/stripe + animated variants.
   - [ ] Sparkles text (seeded sparkle field; reduced-motion fallback).
 - [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines).
@@ -90,14 +89,14 @@ diagnostics, not perfect CSS parity.
 - [ ] Implement 3–5 seed components (Phase 0):
   - [x] `Lens`
   - [x] `MagicCard`
-  - [ ] `BorderBeam`
+  - [x] `BorderBeam`
   - [x] `Marquee`
   - [ ] `Dock`
 - [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
   - [x] `Marquee`
   - [x] `Lens`
   - [x] `MagicCard`
-  - [ ] `BorderBeam`
+  - [x] `BorderBeam`
   - [ ] `Dock`
 - [ ] Verify deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time).
 

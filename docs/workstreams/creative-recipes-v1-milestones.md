@@ -159,6 +159,11 @@ Evidence:
 
 Status: In progress
 
+Done (so far):
+
+- Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`
+- UI gallery pages + diag scripts exist for the above (see Evidence below)
+
 Evidence (planned):
 
 - `ecosystem/fret-ui-magic/` (crate surface + recipes)
@@ -171,6 +176,10 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_LENS`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_lens`)
 - `tools/diag-scripts/ui-gallery-magic-lens-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/border_beam.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_BORDER_BEAM`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_border_beam`)
+- `tools/diag-scripts/ui-gallery-magic-border-beam-steady.json`
 - `ecosystem/fret-ui-magic/src/marquee.rs`
 - `ecosystem/fret-ui-magic/src/magic_card.rs`
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
@@ -182,11 +191,13 @@ Evidence (partial):
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
-- UI parity targets (4):
-  - `Lens`
-  - `BorderBeam`
+- Seed component parity targets:
+  - `Dock` (Phase 0)
+- Next creative parity targets:
   - Patterns (dot/grid/stripe + animated variants)
   - `SparklesText`
+- Verification:
+  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
 
 ## M9 — External texture imports (v1)
 
