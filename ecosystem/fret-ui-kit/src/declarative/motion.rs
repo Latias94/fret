@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use fret_core::{WindowFrameClockService, WindowMetricsService};
 use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::spring::{SpringDescription, SpringSimulation};
 use fret_ui_headless::motion::tolerance::Tolerance;
@@ -18,6 +19,12 @@ pub struct DrivenMotionF32 {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SpringKick {
+    pub id: u64,
+    pub velocity: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InertiaKick {
     pub id: u64,
     pub velocity: f32,
 }
@@ -187,6 +194,161 @@ pub fn drive_tween_f32<H: UiHost>(
 
                     if st.elapsed >= st.duration {
                         st.value = st.target;
+                        st.velocity = 0.0;
+                        st.animating = false;
+                    }
+                } else if st.last_frame_id == 0 {
+                    st.last_frame_id = frame_id;
+                }
+
+                DrivenMotionF32 {
+                    value: st.value,
+                    velocity: st.velocity,
+                    animating: st.animating,
+                }
+            });
+
+            set_continuous_frames(cx, out.animating);
+            if out.animating {
+                cx.notify_for_animation_frame();
+            }
+            out
+        },
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+struct InertiaF32State {
+    initialized: bool,
+    last_frame_id: u64,
+    start: f32,
+    start_velocity: f32,
+    value: f32,
+    velocity: f32,
+    elapsed: Duration,
+    drag: f64,
+    bounds: Option<(f32, f32)>,
+    bounce_spring: SpringDescription,
+    tolerance: Tolerance,
+    last_kick_id: u64,
+    animating: bool,
+}
+
+impl Default for InertiaF32State {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            last_frame_id: 0,
+            start: 0.0,
+            start_velocity: 0.0,
+            value: 0.0,
+            velocity: 0.0,
+            elapsed: Duration::ZERO,
+            drag: 0.135,
+            bounds: None,
+            bounce_spring: SpringDescription::with_duration_and_bounce(
+                Duration::from_millis(240),
+                0.25,
+            ),
+            tolerance: Tolerance::default(),
+            last_kick_id: 0,
+            animating: false,
+        }
+    }
+}
+
+#[track_caller]
+pub fn drive_inertia_f32<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    kick: Option<InertiaKick>,
+    drag: f64,
+    bounds: Option<(f32, f32)>,
+    bounce_spring: SpringDescription,
+    tolerance: Tolerance,
+) -> DrivenMotionF32 {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion {
+        set_continuous_frames(cx, false);
+        return DrivenMotionF32 {
+            value: cx.with_state(InertiaF32State::default, |st| st.value),
+            velocity: 0.0,
+            animating: false,
+        };
+    }
+
+    let loc = Location::caller();
+    cx.keyed(
+        (loc.file(), loc.line(), loc.column(), "drive_inertia_f32"),
+        |cx| {
+            let frame_id = cx.frame_id.0;
+            let dt = effective_frame_delta_for_cx(cx);
+
+            let out = cx.with_state(InertiaF32State::default, |st| {
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_frame_id = frame_id;
+                    st.start = 0.0;
+                    st.start_velocity = 0.0;
+                    st.value = 0.0;
+                    st.velocity = 0.0;
+                    st.elapsed = Duration::ZERO;
+                    st.drag = drag;
+                    st.bounds = bounds;
+                    st.bounce_spring = bounce_spring;
+                    st.tolerance = tolerance;
+                    st.last_kick_id = kick.map(|k| k.id).unwrap_or(0);
+                    st.animating = false;
+                }
+
+                let kick_retarget =
+                    kick.is_some() && kick.map(|k| k.id).unwrap_or(0) != st.last_kick_id;
+                if kick_retarget
+                    || st.drag != drag
+                    || st.bounds != bounds
+                    || st.bounce_spring != bounce_spring
+                    || st.tolerance != tolerance
+                {
+                    if let Some(kick) = kick {
+                        st.last_kick_id = kick.id;
+                        st.start = st.value;
+                        st.start_velocity = kick.velocity;
+                        st.velocity = kick.velocity;
+                        st.animating = true;
+                        st.elapsed = Duration::ZERO;
+                    } else if st.animating {
+                        // Parameter change while animating: rebase from current state.
+                        st.start = st.value;
+                        st.start_velocity = st.velocity;
+                        st.elapsed = Duration::ZERO;
+                    }
+                    st.drag = drag;
+                    st.bounds = bounds;
+                    st.bounce_spring = bounce_spring;
+                    st.tolerance = tolerance;
+                }
+
+                if st.animating && st.last_frame_id != frame_id {
+                    st.last_frame_id = frame_id;
+                    st.elapsed = st.elapsed.saturating_add(dt);
+
+                    let inertia_bounds = st.bounds.map(|(min, max)| InertiaBounds {
+                        min: min as f64,
+                        max: max as f64,
+                    });
+
+                    let sim = InertiaSimulation::new(
+                        st.start as f64,
+                        st.start_velocity as f64,
+                        st.drag,
+                        inertia_bounds,
+                        st.bounce_spring,
+                        st.tolerance,
+                    );
+
+                    st.value = sim.x(st.elapsed) as f32;
+                    st.velocity = sim.dx(st.elapsed) as f32;
+                    if sim.is_done(st.elapsed) {
+                        st.value = sim.final_x() as f32;
                         st.velocity = 0.0;
                         st.animating = false;
                     }
@@ -491,6 +653,78 @@ mod tests {
                 frames < 200,
                 "spring did not settle in a reasonable number of frames"
             );
+        }
+    }
+
+    #[test]
+    fn inertia_decays_and_respects_bounds_under_fixed_delta() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(8)));
+        });
+
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        fn drive<H: UiHost>(
+            cx: &mut ElementContext<'_, H>,
+            kick: Option<InertiaKick>,
+        ) -> DrivenMotionF32 {
+            drive_inertia_f32(
+                cx,
+                kick,
+                0.135,
+                Some((0.0, 1.0)),
+                SpringDescription::with_duration_and_bounce(Duration::from_millis(240), 0.25),
+                Tolerance::default(),
+            )
+        }
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(2));
+        let _ = with_element_cx(&mut app, window, bounds(), "inertia", |cx| drive(cx, None));
+
+        let kick = InertiaKick {
+            id: 1,
+            velocity: 5000.0,
+        };
+
+        let mut frames = 0u64;
+        let mut frame_id = 2u64;
+        let mut saw_motion = false;
+        loop {
+            frames += 1;
+            frame_id += 1;
+            app.set_tick_id(TickId(frames));
+            app.set_frame_id(FrameId(frame_id));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            let out = with_element_cx(&mut app, window, bounds(), "inertia", |cx| {
+                drive(cx, Some(kick))
+            });
+            if out.animating {
+                saw_motion = true;
+            }
+            assert!(
+                (0.0..=1.0).contains(&out.value) || out.value.is_finite(),
+                "inertia output must be finite; got value={:?}",
+                out.value
+            );
+            if !out.animating {
+                assert!(saw_motion, "expected inertia to animate at least one frame");
+                assert!((out.value - 1.0).abs() < 1e-3);
+                break;
+            }
+
+            assert!(frames < 800, "inertia did not settle in time");
         }
     }
 }
