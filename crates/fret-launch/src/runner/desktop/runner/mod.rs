@@ -3253,6 +3253,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.fs.file_dialogs &= available.fs.file_dialogs;
 
         caps.shell.open_url &= available.shell.open_url;
+        caps.shell.share_sheet &= available.shell.share_sheet;
+        caps.shell.incoming_open &= available.shell.incoming_open;
 
         caps.gfx.native_gpu &= available.gfx.native_gpu;
         caps.gfx.webgpu &= available.gfx.webgpu;
