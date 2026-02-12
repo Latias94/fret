@@ -11,6 +11,7 @@ documentation.workspace = true
 
 [features]
 default = []
+webview = ["dep:fret-webview"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
@@ -20,5 +21,10 @@ fret-ui-kit = { path = "../fret-ui-kit" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn" }
 fret-icons = { path = "../fret-icons" }
 fret-markdown = { path = "../fret-markdown" }
+fret-code-view = { path = "../fret-code-view" }
+fret-webview = { path = "../../crates/fret-webview", optional = true }
 serde_json.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

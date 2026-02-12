@@ -4,9 +4,9 @@ use fret_core::{Color, Edges, FontId, FontWeight, Point, Px, TextStyle, Transfor
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutStyle, MainAlign,
-    OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
-    VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, InteractivityGateProps,
+    LayoutStyle, MainAlign, OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps,
+    RowProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -787,14 +787,24 @@ pub mod composable {
                                                 move |cx| vec![content.clone().into_element(cx)],
                                             )];
 
-                                            let wrapper_el = AnyElement::new(
-                                                content_id,
-                                                ElementKind::Container(ContainerProps {
-                                                    layout: wrapper_layout,
-                                                    ..Default::default()
-                                                }),
-                                                children,
-                                            );
+                                            let wrapper_kind =
+                                                if motion_for_wrapper.wants_measurement {
+                                                    ElementKind::InteractivityGate(
+                                                        InteractivityGateProps {
+                                                            layout: wrapper_layout,
+                                                            present: true,
+                                                            interactive: false,
+                                                        },
+                                                    )
+                                                } else {
+                                                    ElementKind::Container(ContainerProps {
+                                                        layout: wrapper_layout,
+                                                        ..Default::default()
+                                                    })
+                                                };
+
+                                            let wrapper_el =
+                                                AnyElement::new(content_id, wrapper_kind, children);
 
                                             (content_id, Some(wrapper_el))
                                         });
@@ -1506,14 +1516,21 @@ impl Accordion {
                                             move |cx| vec![content.clone().into_element(cx)],
                                         )];
 
-                                        let wrapper_el = AnyElement::new(
-                                            content_id,
+                                        let wrapper_kind = if motion_for_wrapper.wants_measurement {
+                                            ElementKind::InteractivityGate(InteractivityGateProps {
+                                                layout: wrapper_layout,
+                                                present: true,
+                                                interactive: false,
+                                            })
+                                        } else {
                                             ElementKind::Container(ContainerProps {
                                                 layout: wrapper_layout,
                                                 ..Default::default()
-                                            }),
-                                            children,
-                                        );
+                                            })
+                                        };
+
+                                        let wrapper_el =
+                                            AnyElement::new(content_id, wrapper_kind, children);
 
                                         (content_id, Some(wrapper_el))
                                     });

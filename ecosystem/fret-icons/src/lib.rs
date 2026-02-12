@@ -40,21 +40,27 @@ pub mod ids {
     pub mod ui {
         use super::IconId;
 
+        pub const ALERT_TRIANGLE: IconId = IconId::new_static("ui.alert.triangle");
         pub const ARROW_LEFT: IconId = IconId::new_static("ui.arrow.left");
         pub const ARROW_RIGHT: IconId = IconId::new_static("ui.arrow.right");
         pub const BOOK: IconId = IconId::new_static("ui.book");
         pub const CHECK: IconId = IconId::new_static("ui.check");
+        pub const COPY: IconId = IconId::new_static("ui.copy");
         pub const CHEVRON_LEFT: IconId = IconId::new_static("ui.chevron.left");
         pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
+        pub const EYE: IconId = IconId::new_static("ui.eye");
+        pub const EYE_OFF: IconId = IconId::new_static("ui.eye.off");
         pub const FILE: IconId = IconId::new_static("ui.file");
+        pub const GIT_COMMIT: IconId = IconId::new_static("ui.git.commit");
         pub const FOLDER: IconId = IconId::new_static("ui.folder");
         pub const FOLDER_OPEN: IconId = IconId::new_static("ui.folder.open");
         pub const LOADER: IconId = IconId::new_static("ui.loader");
         pub const MORE_HORIZONTAL: IconId = IconId::new_static("ui.more.horizontal");
         pub const MINUS: IconId = IconId::new_static("ui.minus");
+        pub const PLUS: IconId = IconId::new_static("ui.plus");
         pub const PLAY: IconId = IconId::new_static("ui.play");
         pub const SEARCH: IconId = IconId::new_static("ui.search");
         pub const SETTINGS: IconId = IconId::new_static("ui.settings");

@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::stack;

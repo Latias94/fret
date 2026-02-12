@@ -1,0 +1,90 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai commit large" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-commit-large-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-commit-large-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-content" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-commit-large-header" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-file-0000-path" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-ai-commit-large-file-0150-path" },
+      "delta_y": -720.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-file-0150-path" }
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-commit-large-file-0150-path" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-commit-large-opened-marker" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-commit-large-scroll" }
+  ]
+}

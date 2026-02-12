@@ -8,7 +8,9 @@ use smallvec::SmallVec;
 
 use fret_core::input::PointerType;
 use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
-use fret_core::{AppWindowId, Color, Edges, EffectChain, EffectMode, NodeId, Px, Rect};
+use fret_core::{
+    AppWindowId, Color, Edges, EffectChain, EffectMode, EffectQuality, NodeId, Px, Rect,
+};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -23,13 +25,14 @@ use crate::action::{
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
-    AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
-    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, OpacityProps, PointerRegionProps,
-    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
-    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
-    SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
-    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
+    AnyElement, CanvasProps, ColumnProps, CompositeGroupProps, ContainerProps, EffectLayerProps,
+    ElementKind, FlexProps, FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps,
+    ImageProps, InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps,
+    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
+    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
+    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
+    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -287,15 +290,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         out
     }
 
+    /// Runs `f` and then restores the current callsite counters to their previous state.
+    ///
+    /// This is useful when you need to "probe-render" a subtree (e.g. to compute derived
+    /// information like `focus_within`) without consuming callsite slots and disturbing
+    /// subsequent element identity in the real render pass.
     pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
         let prev_stack = self.stack.clone();
         let prev_counters = self.callsite_counters.clone();
 
         let out = f(self);
 
+        debug_assert_eq!(
+            self.stack.len(),
+            prev_stack.len(),
+            "element stack depth must be balanced"
+        );
+        debug_assert_eq!(
+            self.callsite_counters.len(),
+            prev_counters.len(),
+            "callsite counters stack depth must be balanced"
+        );
+
         self.stack = prev_stack;
         self.callsite_counters = prev_counters;
-
         out
     }
 
@@ -1147,6 +1165,77 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn mask_layer<I>(
+        &mut self,
+        mask: fret_core::scene::Mask,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.mask_layer_props(
+            MaskLayerProps {
+                layout: LayoutStyle::default(),
+                mask,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn mask_layer_props<I>(
+        &mut self,
+        props: MaskLayerProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::MaskLayer(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn composite_group<I>(
+        &mut self,
+        mode: fret_core::scene::BlendMode,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.composite_group_props(
+            CompositeGroupProps {
+                layout: LayoutStyle::default(),
+                mode,
+                quality: EffectQuality::Auto,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn composite_group_props<I>(
+        &mut self,
+        props: CompositeGroupProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::CompositeGroup(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn visual_transform<I>(
         &mut self,
         transform: fret_core::Transform2D,
@@ -1842,6 +1931,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn external_drag_region<I>(
+        &mut self,
+        props: crate::element::ExternalDragRegionProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.external_drag_region_clear_on_external_drag();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::ExternalDragRegion(props), children)
+        })
+    }
+
+    pub fn external_drag_region_on_external_drag(
+        &mut self,
+        handler: crate::action::OnExternalDrag,
+    ) {
+        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+            hooks.on_external_drag = Some(handler);
+        });
+    }
+
+    pub fn external_drag_region_clear_on_external_drag(&mut self) {
+        self.with_state(crate::action::ExternalDragActionHooks::default, |hooks| {
+            hooks.on_external_drag = None;
+        });
+    }
+
     /// Register a component-owned pointer down handler for the current pointer region element.
     ///
     /// This is a mechanism-only hook point: components decide what a pointer down does (open a
@@ -2133,6 +2254,54 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
+        });
+    }
+
+    pub fn key_on_key_down_capture_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = Some(handler);
+        });
+    }
+
+    pub fn key_add_on_key_down_capture_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnKeyDown,
+    ) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        prev(host, cx, down) || next(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_prepend_on_key_down_capture_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnKeyDown,
+    ) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = match hooks.on_key_down_capture.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        next(host, cx, down) || prev(host, cx, down)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn key_clear_on_key_down_capture_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_capture = None;
         });
     }
 

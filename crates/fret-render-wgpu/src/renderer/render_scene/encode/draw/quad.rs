@@ -51,6 +51,13 @@ pub(in super::super) fn encode_quad(
         }
     }
 
+    fn catalog_texture_kind_to_layer(kind: fret_core::MaterialCatalogTextureKind) -> u32 {
+        match kind {
+            fret_core::MaterialCatalogTextureKind::BlueNoise64x64R8 => 0,
+            fret_core::MaterialCatalogTextureKind::Bayer8x8R8 => 1,
+        }
+    }
+
     fn material_colors_from_params(params: MaterialParams) -> (Color, Color) {
         let base = params.vec4s[0];
         let fg = params.vec4s[1];
@@ -212,6 +219,19 @@ pub(in super::super) fn encode_quad(
 
                 out.kind = 3;
                 out.tile_mode = material_kind_to_u32(entry.desc.kind);
+                match entry.desc.binding {
+                    fret_core::MaterialBindingShape::ParamsOnly => {
+                        out.stop_count = 0;
+                        out.color_space = 0;
+                    }
+                    fret_core::MaterialBindingShape::ParamsPlusCatalogTexture { texture } => {
+                        // For materials, `stop_count` and `color_space` are repurposed as a small
+                        // aux channel to select the fixed v2 binding behavior without changing the
+                        // instance payload size.
+                        out.stop_count = 1;
+                        out.color_space = catalog_texture_kind_to_layer(texture);
+                    }
+                }
                 out.params0 = color_to_linear_rgba_premul(mul_alpha(base, opacity));
                 out.params1 = color_to_linear_rgba_premul(mul_alpha(fg, opacity));
 
@@ -263,6 +283,11 @@ pub(in super::super) fn encode_quad(
     let border_paint_gpu = paint_to_gpu(renderer, state, border_paint, opacity, state.scale_factor);
     if fill_paint_gpu.kind == 3 || border_paint_gpu.kind == 3 {
         *state.material_quad_ops = state.material_quad_ops.saturating_add(1);
+        if (fill_paint_gpu.kind == 3 && fill_paint_gpu.stop_count == 1)
+            || (border_paint_gpu.kind == 3 && border_paint_gpu.stop_count == 1)
+        {
+            *state.material_sampled_quad_ops = state.material_sampled_quad_ops.saturating_add(1);
+        }
     }
     state.instances.push(QuadInstance {
         rect: [x, y, w, h],

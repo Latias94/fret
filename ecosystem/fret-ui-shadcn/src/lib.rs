@@ -192,7 +192,7 @@ pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };
-pub use input::{Input, input};
+pub use input::{Input, OnInputSubmit, input};
 pub use input_group::{
     InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
     input_group,

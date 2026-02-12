@@ -246,6 +246,7 @@ pub struct RenderPerfSnapshot {
 
     // Tier B materials (ADR 0235) observability (best-effort).
     pub material_quad_ops: u64,
+    pub material_sampled_quad_ops: u64,
     pub material_distinct: u64,
     pub material_unknown_ids: u64,
     pub material_degraded_due_to_budget: u64,
@@ -331,6 +332,7 @@ pub(super) struct RenderPerfStats {
     pub(super) scene_encoding_cache_misses: u64,
 
     pub(super) material_quad_ops: u64,
+    pub(super) material_sampled_quad_ops: u64,
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
@@ -579,6 +581,7 @@ pub(super) struct SceneEncoding {
     pub(super) effect_markers: Vec<EffectMarker>,
 
     pub(super) material_quad_ops: u64,
+    pub(super) material_sampled_quad_ops: u64,
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
@@ -596,6 +599,7 @@ impl SceneEncoding {
         self.ordered_draws.clear();
         self.effect_markers.clear();
         self.material_quad_ops = 0;
+        self.material_sampled_quad_ops = 0;
         self.material_distinct = 0;
         self.material_unknown_ids = 0;
         self.material_degraded_due_to_budget = 0;

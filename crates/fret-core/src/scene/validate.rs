@@ -296,6 +296,10 @@ impl SceneRecording {
                                     && brightness.is_finite()
                                     && contrast.is_finite()
                             }
+                            EffectStep::ColorMatrix { m } => m.iter().all(|v| v.is_finite()),
+                            EffectStep::AlphaThreshold { cutoff, soft } => {
+                                cutoff.is_finite() && soft.is_finite() && soft >= 0.0
+                            }
                             EffectStep::Pixelate { scale } => scale > 0,
                             EffectStep::Dither { .. } => true,
                         };

@@ -38,6 +38,21 @@ pub struct EventCx<'a, H: UiHost> {
     pub layer_root: Option<NodeId>,
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
+    /// Window scale factor recorded by the UI tree on the most recent layout pass.
+    ///
+    /// This is best-effort: events may arrive before the first layout, in which case the value
+    /// defaults to `1.0`.
+    pub scale_factor: f32,
+    /// The incoming pointer position in window-local logical pixels (before any transform-aware
+    /// mapping performed by the UI runtime).
+    ///
+    /// When an event does not carry a pointer position, this is `None`.
+    pub event_window_position: Option<Point>,
+    /// The incoming wheel delta in window-local logical pixels (before any transform-aware
+    /// mapping performed by the UI runtime).
+    ///
+    /// When the current event is not a wheel event, this is `None`.
+    pub event_window_wheel_delta: Option<Point>,
     pub input_ctx: InputContext,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
@@ -56,6 +71,102 @@ pub struct EventCx<'a, H: UiHost> {
 impl<'a, H: UiHost> EventCx<'a, H> {
     pub fn theme(&self) -> &Theme {
         Theme::global(&*self.app)
+    }
+
+    /// Returns the pointer position in the current widget's local coordinate space (origin at
+    /// `(0, 0)`), derived from the mapped event position.
+    ///
+    /// Notes:
+    /// - The UI runtime maps pointer event positions into each widget's untransformed layout
+    ///   space (ADR 0238), so `event.position` is in the same space as `self.bounds`.
+    /// - This helper is purely derived and does not introduce state.
+    pub fn pointer_position_local(&self, event: &Event) -> Option<Point> {
+        let pos = Self::pointer_position_mapped(event)?;
+        Some(Point::new(
+            fret_core::Px(pos.x.0 - self.bounds.origin.x.0),
+            fret_core::Px(pos.y.0 - self.bounds.origin.y.0),
+        ))
+    }
+
+    /// Returns the pointer position in window-local logical pixels (pre-mapping).
+    pub fn pointer_position_window(&self, event: &Event) -> Option<Point> {
+        Self::pointer_position_mapped(event).and(self.event_window_position)
+    }
+
+    /// Returns the wheel delta in the current widget's local coordinate space (origin at
+    /// `(0, 0)`), derived from the mapped event delta.
+    pub fn pointer_delta_local(&self, event: &Event) -> Option<Point> {
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Wheel { delta, .. }) => Some(*delta),
+            _ => None,
+        }
+    }
+
+    /// Returns the wheel delta in window-local logical pixels (pre-mapping).
+    pub fn pointer_delta_window(&self, event: &Event) -> Option<Point> {
+        self.pointer_delta_local(event)
+            .and(self.event_window_wheel_delta)
+    }
+
+    fn pointer_position_mapped(event: &Event) -> Option<Point> {
+        match event {
+            Event::Pointer(e) => match e {
+                fret_core::PointerEvent::Move { position, .. }
+                | fret_core::PointerEvent::Down { position, .. }
+                | fret_core::PointerEvent::Up { position, .. }
+                | fret_core::PointerEvent::Wheel { position, .. }
+                | fret_core::PointerEvent::PinchGesture { position, .. } => Some(*position),
+            },
+            Event::PointerCancel(e) => e.position,
+            Event::ExternalDrag(e) => Some(e.position),
+            Event::InternalDrag(e) => Some(e.position),
+            _ => None,
+        }
+    }
+
+    /// Best-effort frame clock snapshot for the current window (ADR 0240).
+    ///
+    /// This is intentionally a plain read (non-reactive): it does not participate in view-cache
+    /// dependency tracking.
+    pub fn frame_clock(&self) -> Option<fret_core::WindowFrameClockSnapshot> {
+        let window = self.window?;
+        self.app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| svc.snapshot(window))
+    }
+
+    /// Best-effort reduced-motion preference for the current window (ADR 0232 / ADR 0240).
+    pub fn prefers_reduced_motion(&self) -> Option<bool> {
+        let window = self.window?;
+        self.app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| {
+                svc.prefers_reduced_motion_is_known(window)
+                    .then(|| svc.prefers_reduced_motion(window))
+                    .flatten()
+            })
+    }
+
+    /// Latest pointer position snapshot in window-local logical pixels (ADR 0243).
+    pub fn pointer_position_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.position_window(window, pointer_id))
+    }
+
+    /// Latest pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub fn pointer_velocity_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.velocity_window(window, pointer_id))
     }
 
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
@@ -344,6 +455,65 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         self.app.push_effect(Effect::RequestAnimationFrame(window));
     }
 
+    /// Best-effort frame clock snapshot for the current window (ADR 0240).
+    ///
+    /// This is intentionally a plain read (non-reactive): it does not participate in view-cache
+    /// dependency tracking.
+    pub fn frame_clock(&self) -> Option<fret_core::WindowFrameClockSnapshot> {
+        let window = self.window?;
+        self.app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| svc.snapshot(window))
+    }
+
+    /// Latest pointer position snapshot in window-local logical pixels (ADR 0243).
+    pub fn pointer_position_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.position_window(window, pointer_id))
+    }
+
+    /// Latest pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub fn pointer_velocity_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.velocity_window(window, pointer_id))
+    }
+
+    /// Latest pointer position snapshot mapped into this node's local coordinate space
+    /// (origin at `(0, 0)`), transform-aware (ADR 0238 / ADR 0243).
+    pub fn pointer_position_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_pos = self.pointer_position_window_snapshot(pointer_id)?;
+        let mapped = self
+            .tree
+            .map_window_point_to_node_layout_space(self.node, window_pos)?;
+        Some(Point::new(
+            fret_core::Px(mapped.x.0 - self.bounds.origin.x.0),
+            fret_core::Px(mapped.y.0 - self.bounds.origin.y.0),
+        ))
+    }
+
+    /// Latest pointer velocity snapshot mapped into this node's local coordinate space (ADR 0238 / ADR 0243).
+    pub fn pointer_velocity_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_vec = self.pointer_velocity_window_snapshot(pointer_id)?;
+        self.tree
+            .map_window_vector_to_node_layout_space(self.node, window_vec)
+    }
+
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
     }
@@ -499,6 +669,66 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
             return;
         };
         self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    /// Best-effort frame clock snapshot for the current window (ADR 0240).
+    ///
+    /// This is intentionally a plain read (non-reactive): it does not participate in view-cache
+    /// dependency tracking.
+    pub fn frame_clock(&self) -> Option<fret_core::WindowFrameClockSnapshot> {
+        let window = self.window?;
+        self.app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| svc.snapshot(window))
+    }
+
+    /// Latest pointer position snapshot in window-local logical pixels (ADR 0243).
+    pub fn pointer_position_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.position_window(window, pointer_id))
+    }
+
+    /// Latest pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub fn pointer_velocity_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.velocity_window(window, pointer_id))
+    }
+
+    /// Latest pointer position snapshot mapped into this node's local coordinate space
+    /// (origin at `(0, 0)`), transform-aware (ADR 0238 / ADR 0243).
+    pub fn pointer_position_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_pos = self.pointer_position_window_snapshot(pointer_id)?;
+        let bounds = self.tree.node_bounds(self.node)?;
+        let mapped = self
+            .tree
+            .map_window_point_to_node_layout_space(self.node, window_pos)?;
+        Some(Point::new(
+            fret_core::Px(mapped.x.0 - bounds.origin.x.0),
+            fret_core::Px(mapped.y.0 - bounds.origin.y.0),
+        ))
+    }
+
+    /// Latest pointer velocity snapshot mapped into this node's local coordinate space (ADR 0238 / ADR 0243).
+    pub fn pointer_velocity_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_vec = self.pointer_velocity_window_snapshot(pointer_id)?;
+        self.tree
+            .map_window_vector_to_node_layout_space(self.node, window_vec)
     }
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
@@ -720,6 +950,65 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Paint);
         Theme::global(&*self.app)
+    }
+
+    /// Best-effort frame clock snapshot for the current window (ADR 0240).
+    ///
+    /// This is intentionally a plain read (non-reactive): it does not participate in view-cache
+    /// dependency tracking.
+    pub fn frame_clock(&self) -> Option<fret_core::WindowFrameClockSnapshot> {
+        let window = self.window?;
+        self.app
+            .global::<fret_core::WindowFrameClockService>()
+            .and_then(|svc| svc.snapshot(window))
+    }
+
+    /// Latest pointer position snapshot in window-local logical pixels (ADR 0243).
+    pub fn pointer_position_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.position_window(window, pointer_id))
+    }
+
+    /// Latest pointer velocity snapshot in window-local logical pixels per second (ADR 0243).
+    pub fn pointer_velocity_window_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window = self.window?;
+        self.app
+            .global::<crate::pointer_motion::WindowPointerMotionService>()
+            .and_then(|svc| svc.velocity_window(window, pointer_id))
+    }
+
+    /// Latest pointer position snapshot mapped into this node's local coordinate space
+    /// (origin at `(0, 0)`), transform-aware (ADR 0238 / ADR 0243).
+    pub fn pointer_position_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_pos = self.pointer_position_window_snapshot(pointer_id)?;
+        let mapped = self
+            .tree
+            .map_window_point_to_node_layout_space(self.node, window_pos)?;
+        Some(Point::new(
+            fret_core::Px(mapped.x.0 - self.bounds.origin.x.0),
+            fret_core::Px(mapped.y.0 - self.bounds.origin.y.0),
+        ))
+    }
+
+    /// Latest pointer velocity snapshot mapped into this node's local coordinate space (ADR 0238 / ADR 0243).
+    pub fn pointer_velocity_local_snapshot(
+        &self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<Point> {
+        let window_vec = self.pointer_velocity_window_snapshot(pointer_id)?;
+        self.tree
+            .map_window_vector_to_node_layout_space(self.node, window_vec)
     }
 
     /// Convert a layout-space rect into the visual rect (AABB) after accumulated render transforms.

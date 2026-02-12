@@ -74,6 +74,12 @@ enum SnapSceneOp {
         corner_radii: SnapCorners,
     },
     PopClip,
+    PushMask {
+        bounds: SnapRect,
+    },
+    PopMask,
+    PushCompositeGroup,
+    PopCompositeGroup,
     Quad {
         rect: SnapRect,
         background: SnapColor,
@@ -244,6 +250,12 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             corner_radii: snap_corners(corner_radii),
         },
         SceneOp::PopClip => SnapSceneOp::PopClip,
+        SceneOp::PushMask { bounds, .. } => SnapSceneOp::PushMask {
+            bounds: snap_rect(bounds),
+        },
+        SceneOp::PopMask => SnapSceneOp::PopMask,
+        SceneOp::PushCompositeGroup { .. } => SnapSceneOp::PushCompositeGroup,
+        SceneOp::PopCompositeGroup => SnapSceneOp::PopCompositeGroup,
         SceneOp::Quad {
             rect,
             background,

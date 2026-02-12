@@ -53,6 +53,22 @@ impl Renderer {
                         },
                         count: None,
                     },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2Array,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
                 ],
             });
 
@@ -75,6 +91,37 @@ impl Renderer {
             size: mask_entry_size.saturating_mul(mask_capacity as u64).max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
+        });
+
+        let material_catalog_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret material catalog texture array"),
+            size: wgpu::Extent3d {
+                width: 64,
+                height: 64,
+                depth_or_array_layers: 2,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let material_catalog_view =
+            material_catalog_texture.create_view(&wgpu::TextureViewDescriptor {
+                label: Some("fret material catalog texture array view"),
+                dimension: Some(wgpu::TextureViewDimension::D2Array),
+                ..Default::default()
+            });
+        let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret material catalog sampler"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
         });
 
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -104,6 +151,14 @@ impl Renderer {
                         offset: 0,
                         size: None,
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
             ],
         });
@@ -277,6 +332,20 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let color_matrix_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret color-matrix params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let alpha_threshold_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret alpha-threshold params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -288,6 +357,8 @@ impl Renderer {
             clip_capacity,
             mask_buffer,
             mask_capacity,
+            material_catalog_texture,
+            material_catalog_uploaded: false,
             quad_pipeline_format: None,
             quad_pipeline: None,
             viewport_pipeline_format: None,
@@ -354,6 +425,20 @@ impl Renderer {
             color_adjust_bind_group_layout: None,
             color_adjust_mask_bind_group_layout: None,
             color_adjust_param_buffer,
+            color_matrix_pipeline_format: None,
+            color_matrix_pipeline: None,
+            color_matrix_masked_pipeline: None,
+            color_matrix_mask_pipeline: None,
+            color_matrix_bind_group_layout: None,
+            color_matrix_mask_bind_group_layout: None,
+            color_matrix_param_buffer,
+            alpha_threshold_pipeline_format: None,
+            alpha_threshold_pipeline: None,
+            alpha_threshold_masked_pipeline: None,
+            alpha_threshold_mask_pipeline: None,
+            alpha_threshold_bind_group_layout: None,
+            alpha_threshold_mask_bind_group_layout: None,
+            alpha_threshold_param_buffer,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,
@@ -511,5 +596,85 @@ impl Renderer {
         self.viewport_bind_groups.remove(&id);
         self.render_targets_generation = self.render_targets_generation.saturating_add(1);
         true
+    }
+
+    pub(super) fn ensure_material_catalog_uploaded(&mut self, queue: &wgpu::Queue) {
+        if self.material_catalog_uploaded {
+            return;
+        }
+
+        // Layer 0: hash noise (portable and deterministic).
+        // Layer 1: Bayer 8x8 repeated (portable and deterministic).
+        let w = 64u32;
+        let h = 64u32;
+        let bytes_per_pixel = 4usize;
+        let bytes_per_row = (w as usize) * bytes_per_pixel;
+
+        fn bayer8x8(x: u32, y: u32) -> u8 {
+            const M: [[u8; 8]; 8] = [
+                [0, 48, 12, 60, 3, 51, 15, 63],
+                [32, 16, 44, 28, 35, 19, 47, 31],
+                [8, 56, 4, 52, 11, 59, 7, 55],
+                [40, 24, 36, 20, 43, 27, 39, 23],
+                [2, 50, 14, 62, 1, 49, 13, 61],
+                [34, 18, 46, 30, 33, 17, 45, 29],
+                [10, 58, 6, 54, 9, 57, 5, 53],
+                [42, 26, 38, 22, 41, 25, 37, 21],
+            ];
+            M[(y & 7) as usize][(x & 7) as usize]
+        }
+
+        fn hash_noise_u8(x: u32, y: u32) -> u8 {
+            let mut v = x ^ (y.wrapping_mul(0x9e3779b9));
+            v ^= v >> 16;
+            v = v.wrapping_mul(0x7feb352d);
+            v ^= v >> 15;
+            v = v.wrapping_mul(0x846ca68b);
+            v ^= v >> 16;
+            (v & 0xff) as u8
+        }
+
+        for layer in 0..2u32 {
+            let mut rgba = vec![0u8; (w as usize) * (h as usize) * bytes_per_pixel];
+            for yy in 0..h {
+                for xx in 0..w {
+                    let v = match layer {
+                        0 => hash_noise_u8(xx, yy),
+                        _ => bayer8x8(xx, yy).saturating_mul(4),
+                    };
+                    let i = (yy as usize) * bytes_per_row + (xx as usize) * bytes_per_pixel;
+                    rgba[i] = v;
+                    rgba[i + 1] = v;
+                    rgba[i + 2] = v;
+                    rgba[i + 3] = 255;
+                }
+            }
+
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &self.material_catalog_texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: 0,
+                        y: 0,
+                        z: layer,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &rgba,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some((w as usize * bytes_per_pixel) as u32),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
+
+        self.material_catalog_uploaded = true;
     }
 }

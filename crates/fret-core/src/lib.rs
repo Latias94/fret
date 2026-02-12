@@ -68,7 +68,10 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
-pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
+pub use materials::{
+    MaterialBindingShape, MaterialCatalogTextureKind, MaterialDescriptor, MaterialKind,
+    MaterialRegistrationError, MaterialService,
+};
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{
     RendererGlyphAtlasPerfSnapshot, RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
@@ -100,6 +103,6 @@ pub use vector_path::{
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{
-    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowLogicalPosition,
-    WindowMetricsService,
+    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowFrameClockService,
+    WindowFrameClockSnapshot, WindowLogicalPosition, WindowMetricsService,
 };

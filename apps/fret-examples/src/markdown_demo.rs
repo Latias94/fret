@@ -17,6 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, Space, ui};
 use fret_ui_shadcn as shadcn;

@@ -1,6 +1,7 @@
 use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
+use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
     ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
@@ -98,6 +99,16 @@ pub enum ElementKind {
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0117).
     EffectLayer(EffectLayerProps),
+    /// A scoped alpha mask layer wrapper (ADR 0239).
+    ///
+    /// This emits a `SceneOp::PushMask/PopMask` pair around the subtree during painting. The
+    /// mask's computation bounds are the wrapper's final layout bounds.
+    MaskLayer(MaskLayerProps),
+    /// A scoped isolated compositing group wrapper (ADR 0247).
+    ///
+    /// This emits a `SceneOp::PushCompositeGroup/PopCompositeGroup` pair around the subtree during
+    /// painting. The compositing group's computation bounds are the wrapper's final layout bounds.
+    CompositeGroup(CompositeGroupProps),
     /// Experimental view-level cache boundary wrapper.
     ///
     /// When enabled by the runtime, this marks a subtree as a cache root for range-replay and
@@ -121,6 +132,11 @@ pub enum ElementKind {
     /// This is a mechanism-only building block: it does not own policy for any particular drag
     /// kind, and is intended to be used by higher-level layers (workspace, docking, etc.).
     InternalDragRegion(InternalDragRegionProps),
+    /// An external OS drag-and-drop event listener region primitive.
+    ///
+    /// This receives `Event::ExternalDrag` (Enter/Over/Drop/Leave) events and is intended to be
+    /// used by higher-level layers to implement portable file-drop workflows (ADR 0053).
+    ExternalDragRegion(ExternalDragRegionProps),
     RovingFlex(RovingFlexProps),
     Stack(StackProps),
     Column(ColumnProps),
@@ -204,7 +220,25 @@ pub struct InternalDragRegionProps {
     pub enabled: bool,
 }
 
+/// An external drag event listener region primitive.
+///
+/// This is a mechanism-only building block for external file drop workflows.
+#[derive(Debug, Clone, Copy)]
+pub struct ExternalDragRegionProps {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+}
+
 impl Default for InternalDragRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            enabled: true,
+        }
+    }
+}
+
+impl Default for ExternalDragRegionProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
@@ -379,9 +413,18 @@ pub struct ContainerProps {
     pub layout: LayoutStyle,
     pub padding: Edges,
     pub background: Option<Color>,
+    /// Optional paint override for the container background (ADR 0233).
+    ///
+    /// When set, this takes precedence over `background` and enables gradients/materials for
+    /// declarative container chrome.
+    pub background_paint: Option<Paint>,
     pub shadow: Option<ShadowStyle>,
     pub border: Edges,
     pub border_color: Option<Color>,
+    /// Optional paint override for the container border (ADR 0233).
+    ///
+    /// When set, this takes precedence over `border_color`.
+    pub border_paint: Option<Paint>,
     /// Optional focus-visible ring decoration.
     pub focus_ring: Option<RingStyle>,
     /// Optional border-color override applied when focus-visible is active.
@@ -402,9 +445,11 @@ impl Default for ContainerProps {
             layout: LayoutStyle::default(),
             padding: Edges::all(Px(0.0)),
             background: None,
+            background_paint: None,
             shadow: None,
             border: Edges::all(Px(0.0)),
             border_color: None,
+            border_paint: None,
             focus_ring: None,
             focus_border_color: None,
             focus_within: false,
@@ -725,6 +770,37 @@ impl Default for EffectLayerProps {
             layout: LayoutStyle::default(),
             mode: EffectMode::FilterContent,
             chain: EffectChain::EMPTY,
+            quality: EffectQuality::Auto,
+        }
+    }
+}
+
+/// Scoped alpha mask wrapper for declarative element subtrees (ADR 0239).
+///
+/// This emits a `SceneOp::PushMask/PopMask` pair around the subtree during painting. The mask's
+/// computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaskLayerProps {
+    pub layout: LayoutStyle,
+    pub mask: Mask,
+}
+
+/// Scoped isolated compositing group wrapper for declarative element subtrees (ADR 0247).
+///
+/// This emits a `SceneOp::PushCompositeGroup/PopCompositeGroup` pair around the subtree during
+/// painting. The group's computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CompositeGroupProps {
+    pub layout: LayoutStyle,
+    pub mode: BlendMode,
+    pub quality: EffectQuality,
+}
+
+impl Default for CompositeGroupProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            mode: BlendMode::Over,
             quality: EffectQuality::Auto,
         }
     }

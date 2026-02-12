@@ -4,6 +4,8 @@ default-members = ["crates/*", "ecosystem/*"]
 exclude = [
     # Not part of the default workspace yet (maybe promoted or moved to `apps/` later).
     # Incomplete / incubating.
+    "ecosystem/fret-webview",
+    "ecosystem/fret-webview-wry",
 ]
 resolver = "2"
 
