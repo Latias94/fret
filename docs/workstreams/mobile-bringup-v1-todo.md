@@ -43,10 +43,12 @@ Workstream entry:
 - [x] Android packaging loop (dev):
   - `apps/fret-ui-gallery-mobile` provides `android_main()` entrypoint.
   - `apps/fret-ui-gallery-mobile/android` provides a `GameActivity` wrapper.
-  - `tools/mobile/android_game_activity_run.sh` can build + install + launch on a device/emulator.
+  - `tools/mobile/android_game_activity_run.sh` can build + install + launch on a device (emulator is best-effort).
 
 Notes:
 
+- Android Emulator caveat: the default Vulkan adapter is often GFXStream/SwiftShader and may be unstable
+  for our `wgpu` path. Prefer a real device for the first end-to-end smoke test.
 - Winit’s Android backend receives `InsetsChanged` internally but does not currently forward it as
   a public winit event (upstream TODO). Treat insets as “best-effort platform glue” and commit via
   `WindowMetricsService` when available.
