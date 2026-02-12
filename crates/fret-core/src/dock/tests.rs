@@ -281,6 +281,44 @@ fn merge_floating_into_moves_panels_and_removes_floating_entry() {
 }
 
 #[test]
+fn merge_floating_into_rejects_target_inside_same_floating_subtree() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let main_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, main_tabs);
+
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w,
+        panel: panel_b.clone(),
+        target_window: w,
+        rect: rect(0.0, 0.0, 200.0, 160.0),
+    }));
+
+    let floating = g.floating_windows(w).first().unwrap().floating;
+    let DockNode::Floating {
+        child: floating_tabs,
+    } = g.node(floating).unwrap()
+    else {
+        unreachable!();
+    };
+
+    assert!(!g.apply_op(&DockOp::MergeFloatingInto {
+        window: w,
+        floating,
+        target_tabs: *floating_tabs,
+    }));
+    assert_eq!(g.collect_panels_in_window(w).len(), 2);
+    assert_eq!(g.floating_windows(w).len(), 1);
+    assert!(g.find_panel_in_window(w, &panel_b).is_some());
+}
+
+#[test]
 fn float_tabs_in_window_creates_floating_container_with_tabs() {
     let w = window(1);
     let panel_a = PanelKey::new("test.a");
@@ -876,6 +914,34 @@ fn generate_random_op(rng: &mut XorShift64, g: &DockGraph) -> DockOp {
         existing_panels[rng.gen_range_usize(existing_panels.len())].clone()
     };
 
+    fn collect_tabs_in_subtree(g: &DockGraph, node: DockNodeId, out: &mut Vec<DockNodeId>) {
+        let Some(n) = g.node(node) else {
+            return;
+        };
+        match n {
+            DockNode::Tabs { .. } => out.push(node),
+            DockNode::Split { children, .. } => {
+                for child in children {
+                    collect_tabs_in_subtree(g, *child, out);
+                }
+            }
+            DockNode::Floating { child } => collect_tabs_in_subtree(g, *child, out),
+        }
+    }
+
+    fn tabs_nodes_in_window_forest(g: &DockGraph, window: AppWindowId) -> Vec<DockNodeId> {
+        let mut out: Vec<DockNodeId> = Vec::new();
+        if let Some(root) = g.window_root(window) {
+            collect_tabs_in_subtree(g, root, &mut out);
+        }
+        for f in g.floating_windows(window) {
+            collect_tabs_in_subtree(g, f.floating, &mut out);
+        }
+        out.sort_by_key(|id| id.data().as_ffi());
+        out.dedup();
+        out
+    }
+
     let action = rng.next_f32();
     if action < 0.60 {
         // MovePanel (mostly edge docks).
@@ -921,13 +987,14 @@ fn generate_random_op(rng: &mut XorShift64, g: &DockGraph) -> DockOp {
         };
     }
 
-    if action < 0.75 {
-        // Prefer MovePanel over MoveTabs in randomized sequences to avoid losing reachability
-        // when a tabs node is cleared and then used as an edge-dock target.
+    if action < 0.78 {
+        // MoveTabs (center only): higher-level operation, but keep it conservative for randomized
+        // invariants gates.
         let panel = pick_existing_panel(rng);
         let target_panel = pick_existing_panel(rng);
 
-        let Some((source_window, _)) = find_panel_any_window(g, &windows, &panel) else {
+        let Some((source_window, (source_tabs, _))) = find_panel_any_window(g, &windows, &panel)
+        else {
             return DockOp::SetSplitFractionsMany {
                 updates: Vec::new(),
             };
@@ -940,9 +1007,9 @@ fn generate_random_op(rng: &mut XorShift64, g: &DockGraph) -> DockOp {
             };
         };
 
-        return DockOp::MovePanel {
+        return DockOp::MoveTabs {
             source_window,
-            panel,
+            source_tabs,
             target_window,
             target_tabs,
             zone: DropZone::Center,
@@ -980,6 +1047,25 @@ fn generate_random_op(rng: &mut XorShift64, g: &DockGraph) -> DockOp {
             };
         }
         let floating = floatings[rng.gen_range_usize(floatings.len())].floating;
+
+        // Merge only when we can find a target tabs node outside the source floating subtree.
+        if rng.next_f32() < 0.35 {
+            let tabs = tabs_nodes_in_window_forest(g, win);
+            let mut candidates: Vec<DockNodeId> = Vec::new();
+            for t in tabs {
+                if g.root_for_node_in_window_forest(win, t) != Some(floating) {
+                    candidates.push(t);
+                }
+            }
+            if !candidates.is_empty() {
+                let target_tabs = candidates[rng.gen_range_usize(candidates.len())];
+                return DockOp::MergeFloatingInto {
+                    window: win,
+                    floating,
+                    target_tabs,
+                };
+            }
+        }
 
         if rng.next_f32() < 0.5 {
             let x = rng.next_f32() * 300.0;

@@ -517,6 +517,18 @@ impl DockGraph {
             return false;
         }
 
+        let Some(DockNode::Tabs { .. }) = self.nodes.get(target_tabs) else {
+            return false;
+        };
+        let Some(target_root) = self.root_for_node_in_window_forest(window, target_tabs) else {
+            return false;
+        };
+        // Reject merges into the same floating subtree (would drop panels by removing the floating
+        // entry without actually moving anything).
+        if target_root == floating {
+            return false;
+        }
+
         let panels = self.collect_panels_in_subtree(floating);
         for panel in panels {
             let _ = self.move_panel_between_windows(
