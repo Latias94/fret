@@ -438,3 +438,89 @@ pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec
         |_cx| [card],
     )]
 }
+
+pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_required("card"));
+    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+
+    let mut panel_layout = LayoutStyle::default();
+    panel_layout.size.width = Length::Px(Px(320.0));
+    panel_layout.size.height = Length::Px(Px(200.0));
+
+    let dot = magic::dot_pattern(
+        cx,
+        magic::DotPatternProps {
+            layout: panel_layout,
+            base,
+            dots: {
+                let mut c = ring;
+                c.a = (c.a * 0.18).clamp(0.0, 1.0);
+                c
+            },
+            ..Default::default()
+        },
+        |cx| vec![shadcn::typography::p(cx, "DotGrid").test_id("ui-gallery-magic-pattern-dot")],
+    );
+
+    let grid = magic::grid_pattern(
+        cx,
+        magic::GridPatternProps {
+            layout: panel_layout,
+            base,
+            lines: {
+                let mut c = border;
+                c.a = (c.a * 0.85).clamp(0.0, 1.0);
+                c
+            },
+            ..Default::default()
+        },
+        |cx| vec![shadcn::typography::p(cx, "Grid").test_id("ui-gallery-magic-pattern-grid")],
+    );
+
+    let stripe = magic::stripe_pattern(
+        cx,
+        magic::StripePatternProps {
+            layout: panel_layout,
+            base,
+            stripes: {
+                let mut c = ring;
+                c.a = (c.a * 0.12).clamp(0.0, 1.0);
+                c
+            },
+            ..Default::default()
+        },
+        |cx| vec![shadcn::typography::p(cx, "Stripe").test_id("ui-gallery-magic-pattern-stripe")],
+    );
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start(),
+        |_cx| [dot, grid, stripe],
+    );
+
+    vec![
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start(),
+            |cx| {
+                vec![
+                    shadcn::typography::h4(cx, "Patterns (Tier B materials)"),
+                    shadcn::typography::p(
+                        cx,
+                        "These backgrounds are Tier B procedural paints registered by the renderer \
+                     and referenced via an app-owned VisualCatalog.",
+                    ),
+                    row,
+                ]
+            },
+        )
+        .test_id("ui-gallery-magic-patterns"),
+    ]
+}

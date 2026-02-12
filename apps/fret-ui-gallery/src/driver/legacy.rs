@@ -2209,26 +2209,27 @@ impl WinitAppDriver for UiGalleryDriver {
     ) {
         let wants_bootstrap_fonts =
             std::env::var_os("FRET_UI_GALLERY_BOOTSTRAP_FONTS").is_some_and(|v| !v.is_empty());
-        if !wants_bootstrap_fonts {
-            return;
+        if wants_bootstrap_fonts {
+            let fonts = fret_fonts::default_fonts()
+                .iter()
+                .map(|bytes| bytes.to_vec())
+                .collect::<Vec<_>>();
+            let _ = renderer.add_fonts(fonts);
+
+            let update = fret_runtime::apply_font_catalog_update(
+                app,
+                renderer.all_font_names(),
+                fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
+            );
+            let _ = renderer.set_text_font_families(&update.config);
+            app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
+            app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                renderer.text_font_stack_key(),
+            ));
         }
 
-        let fonts = fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        let _ = renderer.add_fonts(fonts);
-
-        let update = fret_runtime::apply_font_catalog_update(
-            app,
-            renderer.all_font_names(),
-            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
-        );
-        let _ = renderer.set_text_font_families(&update.config);
-        app.set_global::<fret_core::TextFontFamilyConfig>(update.config.clone());
-        app.set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
-            renderer.text_font_stack_key(),
-        ));
+        // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
+        fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {

@@ -159,6 +159,32 @@ let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_PATTERNS: &str = r#"
+## Patterns (fret-ui-magic)
+
+This page demonstrates a small set of “creative parity” pattern backgrounds built on Tier B
+procedural materials (ADR 0235).
+
+- Patterns are expressed as `Paint::Material { id, params }` on `ContainerProps.background_paint`.
+- `MaterialId`s are renderer-controlled and registered via an app-owned `VisualCatalog` (ADR 0245).
+- Determinism is explicit: authors provide `seed` (and optionally `phase`), and no hidden time is used.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS/SVG pattern parity.
+- Arbitrary shader authoring at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_PATTERNS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dot = magic::dot_pattern(cx, magic::DotPatternProps::default(), |cx| {
+    vec![cx.text(\"DotGrid\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_BLOOM: &str = r#"
 ## Bloom (fret-ui-kit recipe)
 
