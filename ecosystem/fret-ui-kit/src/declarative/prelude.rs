@@ -12,7 +12,7 @@ pub use super::forced_colors_queries::{forced_colors_active, forced_colors_mode}
 pub use super::global_watch::GlobalWatchExt;
 pub use super::keyboard_avoidance::window_insets_padding_refinement_or_zero;
 pub use super::model_watch::ModelWatchExt;
-pub use super::motion::{DrivenMotionF32, drive_tween_f32};
+pub use super::motion::{DrivenMotionF32, SpringKick, drive_spring_f32, drive_tween_f32};
 pub use super::occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use super::pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,

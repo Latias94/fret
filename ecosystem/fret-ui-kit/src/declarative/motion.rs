@@ -3,6 +3,9 @@ use std::time::Duration;
 
 use fret_core::{WindowFrameClockService, WindowMetricsService};
 use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui_headless::motion::simulation::Simulation1D;
+use fret_ui_headless::motion::spring::{SpringDescription, SpringSimulation};
+use fret_ui_headless::motion::tolerance::Tolerance;
 
 use crate::declarative::scheduling::set_continuous_frames;
 
@@ -11,6 +14,12 @@ pub struct DrivenMotionF32 {
     pub value: f32,
     pub velocity: f32,
     pub animating: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpringKick {
+    pub id: u64,
+    pub velocity: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -201,6 +210,149 @@ pub fn drive_tween_f32<H: UiHost>(
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+struct SpringF32State {
+    initialized: bool,
+    last_frame_id: u64,
+    start: f32,
+    target: f32,
+    value: f32,
+    velocity: f32,
+    elapsed: Duration,
+    spring: SpringDescription,
+    tolerance: Tolerance,
+    snap_to_target: bool,
+    last_kick_id: u64,
+    animating: bool,
+}
+
+impl Default for SpringF32State {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            last_frame_id: 0,
+            start: 0.0,
+            target: 0.0,
+            value: 0.0,
+            velocity: 0.0,
+            elapsed: Duration::ZERO,
+            spring: SpringDescription::with_duration_and_bounce(Duration::from_millis(240), 0.0),
+            tolerance: Tolerance::default(),
+            snap_to_target: true,
+            last_kick_id: 0,
+            animating: false,
+        }
+    }
+}
+
+#[track_caller]
+pub fn drive_spring_f32<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    target: f32,
+    kick: Option<SpringKick>,
+    spring: SpringDescription,
+    tolerance: Tolerance,
+    snap_to_target: bool,
+) -> DrivenMotionF32 {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion {
+        set_continuous_frames(cx, false);
+        return DrivenMotionF32 {
+            value: target,
+            velocity: 0.0,
+            animating: false,
+        };
+    }
+
+    let loc = Location::caller();
+    cx.keyed(
+        (loc.file(), loc.line(), loc.column(), "drive_spring_f32"),
+        |cx| {
+            let frame_id = cx.frame_id.0;
+            let dt = effective_frame_delta_for_cx(cx);
+
+            let out = cx.with_state(SpringF32State::default, |st| {
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_frame_id = frame_id;
+                    st.start = target;
+                    st.target = target;
+                    st.value = target;
+                    st.velocity = 0.0;
+                    st.elapsed = Duration::ZERO;
+                    st.spring = spring;
+                    st.tolerance = tolerance;
+                    st.snap_to_target = snap_to_target;
+                    st.last_kick_id = kick.map(|k| k.id).unwrap_or(0);
+                    st.animating = false;
+                }
+
+                let kick_retarget =
+                    kick.is_some() && kick.map(|k| k.id).unwrap_or(0) != st.last_kick_id;
+
+                if target != st.target
+                    || st.spring != spring
+                    || st.tolerance != tolerance
+                    || st.snap_to_target != snap_to_target
+                    || kick_retarget
+                {
+                    st.start = st.value;
+                    st.target = target;
+                    st.elapsed = Duration::ZERO;
+                    st.spring = spring;
+                    st.tolerance = tolerance;
+                    st.snap_to_target = snap_to_target;
+                    st.animating = true;
+
+                    if let Some(kick) = kick {
+                        if kick.id != st.last_kick_id {
+                            st.velocity = kick.velocity;
+                            st.last_kick_id = kick.id;
+                        }
+                    }
+                }
+
+                if st.animating && st.last_frame_id != frame_id {
+                    st.last_frame_id = frame_id;
+                    st.elapsed = st.elapsed.saturating_add(dt);
+
+                    let sim = SpringSimulation::new(
+                        st.spring,
+                        st.start as f64,
+                        st.target as f64,
+                        st.velocity as f64,
+                        st.snap_to_target,
+                        st.tolerance,
+                    );
+
+                    st.value = sim.x(st.elapsed) as f32;
+                    st.velocity = sim.dx(st.elapsed) as f32;
+
+                    if sim.is_done(st.elapsed) {
+                        st.value = st.target;
+                        st.velocity = 0.0;
+                        st.animating = false;
+                    }
+                } else if st.last_frame_id == 0 {
+                    st.last_frame_id = frame_id;
+                }
+
+                DrivenMotionF32 {
+                    value: st.value,
+                    velocity: st.velocity,
+                    animating: st.animating,
+                }
+            });
+
+            set_continuous_frames(cx, out.animating);
+            if out.animating {
+                cx.notify_for_animation_frame();
+            }
+            out
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,5 +422,75 @@ mod tests {
 
         // 200ms / 8ms ~= 25 frames.
         assert_eq!(frames, 25);
+    }
+
+    #[test]
+    fn spring_settles_with_fixed_delta_and_kick_velocity() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(8)));
+        });
+
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        fn drive<H: UiHost>(
+            cx: &mut ElementContext<'_, H>,
+            target: f32,
+            kick: Option<SpringKick>,
+        ) -> DrivenMotionF32 {
+            drive_spring_f32(
+                cx,
+                target,
+                kick,
+                SpringDescription::with_duration_and_bounce(Duration::from_millis(240), 0.0),
+                Tolerance::default(),
+                true,
+            )
+        }
+
+        // Initialize at rest.
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(2));
+        let _ = with_element_cx(&mut app, window, bounds(), "spring", |cx| {
+            drive(cx, 0.0, None)
+        });
+
+        let kick = SpringKick {
+            id: 1,
+            velocity: 1200.0,
+        };
+        let mut frame_id = 2u64;
+        let mut frames = 0u64;
+        loop {
+            frames += 1;
+            frame_id += 1;
+            app.set_tick_id(TickId(frames));
+            app.set_frame_id(FrameId(frame_id));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            let out = with_element_cx(&mut app, window, bounds(), "spring", |cx| {
+                drive(cx, 1.0, Some(kick))
+            });
+
+            if !out.animating {
+                assert!((out.value - 1.0).abs() < 1e-4);
+                assert!(out.velocity.abs() < 1e-3);
+                break;
+            }
+
+            assert!(
+                frames < 200,
+                "spring did not settle in a reasonable number of frames"
+            );
+        }
     }
 }

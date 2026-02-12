@@ -172,7 +172,7 @@ pub use dialog::{
 };
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,
-    DrawerTitle, DrawerTrigger, drawer,
+    DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
