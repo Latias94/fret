@@ -488,9 +488,16 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
                 c.a = (c.a * 0.12).clamp(0.0, 1.0);
                 c
             },
+            motion: magic::PatternMotionProps {
+                enabled: true,
+                scroll_px_per_s: (60.0, 0.0),
+            },
             ..Default::default()
         },
-        |cx| vec![shadcn::typography::p(cx, "Stripe").test_id("ui-gallery-magic-pattern-stripe")],
+        |cx| {
+            vec![shadcn::typography::p(cx, "Stripe (animated)")
+                .test_id("ui-gallery-magic-pattern-stripe")]
+        },
     );
 
     let row = stack::hstack(

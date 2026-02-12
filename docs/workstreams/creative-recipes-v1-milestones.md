@@ -167,7 +167,7 @@ Done (so far):
 
 - Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
 - UI gallery pages + diag scripts exist for the above (see Evidence below)
-- Tier B patterns: static dot/grid/stripe backgrounds (UI gallery page + steady script)
+- Tier B patterns: dot/grid/stripe backgrounds (static + animated variants) (UI gallery page + steady script)
 
 Evidence (planned):
 
@@ -205,7 +205,6 @@ Evidence (partial):
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Next creative parity targets:
-  - Patterns (animated variants; phase/offset-driven)
   - `SparklesText`
 - Verification:
   - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)

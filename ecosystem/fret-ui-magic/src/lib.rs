@@ -21,8 +21,8 @@ pub use lens::{LensProps, lens};
 pub use magic_card::{MagicCardProps, magic_card};
 pub use marquee::{MarqueeDirection, MarqueeProps, marquee};
 pub use patterns::{
-    DotPatternProps, GridPatternProps, StripePatternProps, dot_pattern, grid_pattern,
-    stripe_pattern,
+    DotPatternProps, GridPatternProps, PatternMotionProps, StripePatternProps, dot_pattern,
+    grid_pattern, stripe_pattern,
 };
 
 #[cfg(feature = "app-integration")]

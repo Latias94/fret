@@ -2,8 +2,10 @@ use fret_core::geometry::{Corners, Edges};
 use fret_core::scene::{MaterialParams, Paint};
 use fret_core::{Color, MaterialDescriptor, MaterialId, MaterialKind, Px};
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
+use fret_ui_kit::declarative::reduced_motion_queries;
+use fret_ui_kit::declarative::scheduling::set_continuous_frames;
 use fret_ui_kit::recipes::catalog::VisualCatalog;
 use fret_ui_kit::recipes::resolve::{
     DegradationReason, RecipeDegradedEvent, report_recipe_degraded,
@@ -36,6 +38,55 @@ fn rgba(c: Color) -> [f32; 4] {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct PatternMotionProps {
+    /// If true and the runner provides a frame clock snapshot, the pattern will animate by
+    /// requesting continuous frames.
+    pub enabled: bool,
+    /// Pattern scroll speed in pixels per second, in the pattern's local coordinate space.
+    pub scroll_px_per_s: (f32, f32),
+}
+
+impl Default for PatternMotionProps {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            scroll_px_per_s: (0.0, 0.0),
+        }
+    }
+}
+
+fn resolve_pattern_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    motion: PatternMotionProps,
+) -> (f32, (f32, f32)) {
+    if !motion.enabled {
+        return (0.0, (0.0, 0.0));
+    }
+
+    let prefers_reduced_motion =
+        reduced_motion_queries::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    let clock = cx
+        .app
+        .global::<fret_core::WindowFrameClockService>()
+        .and_then(|svc| svc.snapshot(cx.window));
+
+    let (vx, vy) = motion.scroll_px_per_s;
+    let can_animate = !prefers_reduced_motion && clock.is_some() && (vx != 0.0 || vy != 0.0);
+
+    set_continuous_frames(cx, can_animate);
+    if can_animate {
+        cx.notify_for_animation_frame();
+    }
+
+    let Some(clock) = clock.filter(|_| can_animate) else {
+        return (0.0, (0.0, 0.0));
+    };
+
+    let seconds = clock.now_monotonic.as_secs_f32();
+    (seconds, (seconds * vx, seconds * vy))
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct DotPatternProps {
     pub layout: LayoutStyle,
     pub padding: Edges,
@@ -45,6 +96,7 @@ pub struct DotPatternProps {
     pub spacing: Px,
     pub radius: Px,
     pub seed: u32,
+    pub motion: PatternMotionProps,
 }
 
 impl Default for DotPatternProps {
@@ -66,6 +118,7 @@ impl Default for DotPatternProps {
             spacing: Px(18.0),
             radius: Px(2.2),
             seed: 0,
+            motion: PatternMotionProps::default(),
         }
     }
 }
@@ -94,6 +147,8 @@ where
         );
     };
 
+    let (t, (ox, oy)) = resolve_pattern_motion(cx, props.motion);
+
     let params = MaterialParams {
         vec4s: [
             rgba(props.base),
@@ -104,7 +159,7 @@ where
                 props.radius.0,
                 props.seed as f32,
             ],
-            [0.0, 0.0, 0.0, 0.0],
+            [t, 0.0, ox, oy],
         ],
     };
 
@@ -131,6 +186,7 @@ pub struct GridPatternProps {
     pub spacing: (Px, Px),
     pub line_width: Px,
     pub seed: u32,
+    pub motion: PatternMotionProps,
 }
 
 impl Default for GridPatternProps {
@@ -152,6 +208,7 @@ impl Default for GridPatternProps {
             spacing: (Px(22.0), Px(22.0)),
             line_width: Px(1.0),
             seed: 0,
+            motion: PatternMotionProps::default(),
         }
     }
 }
@@ -180,6 +237,8 @@ where
         );
     };
 
+    let (t, (ox, oy)) = resolve_pattern_motion(cx, props.motion);
+
     let params = MaterialParams {
         vec4s: [
             rgba(props.base),
@@ -190,7 +249,7 @@ where
                 props.line_width.0,
                 props.seed as f32,
             ],
-            [0.0, 0.0, 0.0, 0.0],
+            [t, 0.0, ox, oy],
         ],
     };
 
@@ -218,6 +277,7 @@ pub struct StripePatternProps {
     pub stripe_width: Px,
     pub angle_radians: f32,
     pub seed: u32,
+    pub motion: PatternMotionProps,
 }
 
 impl Default for StripePatternProps {
@@ -240,6 +300,7 @@ impl Default for StripePatternProps {
             stripe_width: Px(6.0),
             angle_radians: std::f32::consts::FRAC_PI_4,
             seed: 0,
+            motion: PatternMotionProps::default(),
         }
     }
 }
@@ -268,6 +329,8 @@ where
         );
     };
 
+    let (t, (ox, oy)) = resolve_pattern_motion(cx, props.motion);
+
     let params = MaterialParams {
         vec4s: [
             rgba(props.base),
@@ -278,7 +341,7 @@ where
                 props.stripe_width.0,
                 props.seed as f32,
             ],
-            [0.0, props.angle_radians, 0.0, 0.0],
+            [t, props.angle_radians, ox, oy],
         ],
     };
 

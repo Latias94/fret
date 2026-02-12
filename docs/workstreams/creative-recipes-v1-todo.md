@@ -60,7 +60,7 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
   - [x] `BorderBeam` (animated border highlight + glow; Phase 0 uses gradients + additive composite).
   - [ ] Patterns:
     - [x] Static dot/grid/stripe backgrounds (Tier B materials) + UI gallery + diag script.
-    - [ ] Animated variants (phase/offset-driven; reduced-motion fallback).
+    - [x] Animated variants (phase/offset-driven; reduced-motion fallback).
   - [ ] Sparkles text (seeded sparkle field; reduced-motion fallback).
 - [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines) for remaining
       creative parity targets.
