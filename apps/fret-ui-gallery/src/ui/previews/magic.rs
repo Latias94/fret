@@ -495,8 +495,10 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
             ..Default::default()
         },
         |cx| {
-            vec![shadcn::typography::p(cx, "Stripe (animated)")
-                .test_id("ui-gallery-magic-pattern-stripe")]
+            vec![
+                shadcn::typography::p(cx, "Stripe (animated)")
+                    .test_id("ui-gallery-magic-pattern-stripe"),
+            ]
         },
     );
 
