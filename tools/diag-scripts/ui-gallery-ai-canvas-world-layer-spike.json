@@ -44,6 +44,10 @@
     },
     {
       "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-mode-semantic-zoom" }
+    },
+    {
+      "type": "click",
       "target": { "kind": "test_id", "id": "ui-ai-cwl-overlay-click" }
     },
     {
@@ -59,8 +63,20 @@
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-ai-cwl-node-click" }
     },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-mode-scale-with-zoom" }
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-canvas-world-layer-spike-root" },
+      "delta_y": -240.0
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-node-click" }
+    },
 
     { "type": "capture_bundle", "label": "ui-gallery-ai-canvas-world-layer-spike" }
   ]
 }
-

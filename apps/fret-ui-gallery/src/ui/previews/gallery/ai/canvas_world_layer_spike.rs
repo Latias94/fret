@@ -7,8 +7,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use std::sync::Arc;
 
     use fret_canvas::ui::{
-        CanvasInputExemptRegionProps, CanvasWorldSurfacePanelProps, PanZoomInputPreset,
-        canvas_input_exempt_region, canvas_world_surface_panel, use_controllable_model,
+        CanvasInputExemptRegionProps, CanvasWorldScaleMode, CanvasWorldSurfacePanelProps,
+        PanZoomInputPreset, canvas_input_exempt_region, canvas_world_surface_panel,
+        use_controllable_model,
     };
     use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
     use fret_core::scene::Paint;
@@ -37,10 +38,15 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
 
     let view: fret_runtime::Model<PanZoom2D> =
         use_controllable_model(cx, None, PanZoom2D::default).model();
+    let scale_mode: fret_runtime::Model<CanvasWorldScaleMode> =
+        use_controllable_model(cx, None, CanvasWorldScaleMode::default).model();
     let overlay_clicks: fret_runtime::Model<u64> =
         use_controllable_model(cx, None, || 0u64).model();
     let node_clicks: fret_runtime::Model<u64> = use_controllable_model(cx, None, || 0u64).model();
 
+    let scale_mode_value = cx
+        .get_model_copied(&scale_mode, fret_ui::Invalidation::Layout)
+        .unwrap_or_default();
     let overlay_clicks_value = cx
         .get_model_copied(&overlay_clicks, fret_ui::Invalidation::Layout)
         .unwrap_or(0);
@@ -76,6 +82,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     world_props.pan_zoom.preset = PanZoomInputPreset::DesktopCanvasCad;
     world_props.pan_zoom.view = Some(view.clone());
     world_props.pan_zoom.default_view = PanZoom2D::default();
+    world_props.scale_mode = scale_mode_value;
     world_props.pan_zoom.pointer_region = {
         let mut p = PointerRegionProps::default();
         p.layout.size.width = Length::Fill;
@@ -158,7 +165,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         cx,
         world_props,
         paint,
-        move |cx, _world_cx| {
+        move |cx, world_cx| {
             let abs = LayoutRefinement::default().absolute();
 
             let on_node_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
@@ -167,6 +174,25 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     .update(&node_clicks_c, |v| *v = v.saturating_add(1));
                 host.request_redraw(action_cx.window);
             });
+
+            let a_canvas = Point::new(Px(80.0), Px(80.0));
+            let b_canvas = Point::new(Px(420.0), Px(260.0));
+
+            let (a_left, a_top, b_left, b_top) = match world_cx.scale_mode {
+                CanvasWorldScaleMode::ScaleWithZoom => {
+                    (a_canvas.x, a_canvas.y, b_canvas.x, b_canvas.y)
+                }
+                CanvasWorldScaleMode::SemanticZoom => {
+                    let a_screen = world_cx.canvas_to_screen(a_canvas);
+                    let b_screen = world_cx.canvas_to_screen(b_canvas);
+                    (
+                        Px(a_screen.x.0 - world_cx.bounds.origin.x.0),
+                        Px(a_screen.y.0 - world_cx.bounds.origin.y.0),
+                        Px(b_screen.x.0 - world_cx.bounds.origin.x.0),
+                        Px(b_screen.y.0 - world_cx.bounds.origin.y.0),
+                    )
+                }
+            };
 
             let node_a = ui_ai::WorkflowNode::new([
                 ui_ai::WorkflowNodeHeader::new([
@@ -183,12 +209,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .into_element(cx),
             ])
             .test_id("ui-ai-cwl-node-a")
-            .refine_layout(
-                abs.clone()
-                    .left_px(Px(80.0))
-                    .top_px(Px(80.0))
-                    .w_px(Px(260.0)),
-            )
+            .refine_layout(abs.clone().left_px(a_left).top_px(a_top).w_px(Px(260.0)))
             .into_element(cx);
 
             let node_b = ui_ai::WorkflowNode::new([
@@ -200,12 +221,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     .into_element(cx),
             ])
             .test_id("ui-ai-cwl-node-b")
-            .refine_layout(
-                abs.clone()
-                    .left_px(Px(420.0))
-                    .top_px(Px(260.0))
-                    .w_px(Px(260.0)),
-            )
+            .refine_layout(abs.clone().left_px(b_left).top_px(b_top).w_px(Px(260.0)))
             .into_element(cx);
 
             vec![node_a, node_b]
@@ -227,6 +243,34 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 host.request_redraw(action_cx.window);
             });
 
+            let scale_mode_scale = scale_mode.clone();
+            let on_mode_scale: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&scale_mode_scale, |m| {
+                    *m = CanvasWorldScaleMode::ScaleWithZoom
+                });
+                host.request_redraw(action_cx.window);
+            });
+
+            let scale_mode_semantic = scale_mode.clone();
+            let on_mode_semantic: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&scale_mode_semantic, |m| {
+                    *m = CanvasWorldScaleMode::SemanticZoom
+                });
+                host.request_redraw(action_cx.window);
+            });
+
+            let mode_scale = shadcn::Button::new("Mode: Scale-with-zoom")
+                .test_id("ui-ai-cwl-mode-scale-with-zoom")
+                .variant(ButtonVariant::Secondary)
+                .on_activate(on_mode_scale)
+                .into_element(cx);
+
+            let mode_semantic = shadcn::Button::new("Mode: Semantic zoom")
+                .test_id("ui-ai-cwl-mode-semantic-zoom")
+                .variant(ButtonVariant::Secondary)
+                .on_activate(on_mode_semantic)
+                .into_element(cx);
+
             let overlay = shadcn::Button::new(format!("Overlay clicks: {overlay_clicks_value}"))
                 .test_id("ui-ai-cwl-overlay-click")
                 .variant(ButtonVariant::Outline)
@@ -234,7 +278,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .into_element(cx);
 
             vec![canvas_input_exempt_region(cx, overlay_region, move |_cx| {
-                [overlay]
+                [mode_scale, mode_semantic, overlay]
             })]
         },
     )
