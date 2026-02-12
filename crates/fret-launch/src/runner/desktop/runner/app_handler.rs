@@ -1732,18 +1732,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
-        #[cfg(any(target_os = "android", target_os = "ios"))]
-        {
-            let needs_surfaces = self.context.is_none()
-                || self
-                    .windows
-                    .iter()
-                    .any(|(_app_window, state)| state.surface.is_none());
-            if needs_surfaces {
-                self.can_create_surfaces(event_loop);
-            }
-        }
-
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
@@ -2080,10 +2068,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     #[cfg(any(target_os = "android", target_os = "ios"))]
     fn resumed(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.is_suspended = false;
-
-        // Recreate surfaces eagerly when possible so the first post-resume frame presents without
-        // waiting for additional input events.
-        self.can_create_surfaces(event_loop);
 
         for (app_window, state) in self.windows.iter() {
             let _ = (app_window, state);
