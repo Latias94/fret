@@ -3,7 +3,7 @@ use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
-use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext, write_rgba8_texture_region};
+use fret_render::{write_rgba8_texture_region, RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
     ContainerProps, CrossAlign, Elements, FlexProps, LayoutStyle, Length, MainAlign,
@@ -476,10 +476,7 @@ fn record_engine_frame(
                 match DecodedPngSource::new() {
                     Ok(src) => st.decoded = Some(src),
                     Err(err) => {
-                        tracing::warn!(
-                            ?err,
-                            "failed to decode embedded png; falling back to checker"
-                        );
+                        tracing::warn!(?err, "failed to decode embedded png; falling back to checker");
                         st.mode = ExternalTextureImportsMode::CheckerGpu;
                     }
                 }
