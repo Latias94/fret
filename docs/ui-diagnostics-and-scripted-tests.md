@@ -406,6 +406,7 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_PATH=...`: script result JSON path (default `<dir>/script.result.json`).
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
+- `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=...`: cap snapshots included in script-driven bundle dumps (default 30).
 
 Screenshot capture:
 
