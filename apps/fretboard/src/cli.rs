@@ -114,6 +114,7 @@ Examples:
   fretboard diag suite ui-gallery          # runs `tools/diag-scripts/ui-gallery-*.json` sequentially (app must be running)
   fretboard diag suite ui-gallery-layout   # runs layout-focused UI gallery repro scripts (includes a small page sweep)
   fretboard diag suite ui-gallery-date-picker  # runs deterministic date picker regression scripts
+  fretboard diag suite ui-gallery-text-ime  # runs deterministic IME injection scripts (shortcut routing + composition)
   fretboard diag suite ui-gallery-combobox  # runs combobox conformance scripts (overlay + focus + keyboard + typeahead)
   fretboard diag suite ui-gallery-shadcn-conformance  # runs shadcn-focused conformance scripts (behavior + hit-testing + layout)
   fretboard diag suite --glob tools/diag-scripts/ui-gallery-select-*.json  # run a globbed suite (app must be running)

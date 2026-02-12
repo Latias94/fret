@@ -61,6 +61,12 @@ Start with “portable, low-flake” gates:
   - while composing, press keys that normally trigger global shortcuts,
   - assert the trace shows `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
 
+For deterministic scripts, prefer injecting IME events explicitly (instead of relying on a platform IME):
+
+- Use `UiActionStepV2::Ime` (script v2) to inject `preedit` / `commit` / `enabled` / `disabled` /
+  `delete_surrounding` events.
+- Declare `diag.inject_ime` in `meta.required_capabilities` for scripts that use IME injection.
+
 In-repo examples:
 
 - Word boundary (double click):
@@ -71,6 +77,7 @@ In-repo examples:
 Run the suite (native):
 
 - `cargo run -p fretboard -- diag suite ui-gallery-code-editor --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag suite ui-gallery-text-ime --launch -- cargo run -p fret-ui-gallery --release`
 
 IME-specific behavior may remain runner-dependent; treat missing IME evidence as capability-gated
 (`diag.text_ime_trace`) rather than as an implicit timeout.

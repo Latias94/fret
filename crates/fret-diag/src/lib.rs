@@ -4525,6 +4525,8 @@ See: `docs/tracy.md`.\n";
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-layout";
             let is_ui_gallery_date_picker_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
+            let is_ui_gallery_text_ime_suite =
+                suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-ime";
             let is_ui_gallery_combobox_suite =
                 suite_args.len() == 1 && suite_args[0] == "ui-gallery-combobox";
             let is_ui_gallery_select_suite =
@@ -4649,6 +4651,14 @@ See: `docs/tracy.md`.\n";
                     );
                     (
                         ui_gallery_date_picker_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_text_ime_suite {
+                    (
+                        ui_gallery_text_ime_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -10170,6 +10180,10 @@ fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
 
 fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
     ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
+}
+
+fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
+    ["tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json"]
 }
 
 fn ui_gallery_combobox_suite_scripts() -> [&'static str; 6] {

@@ -66,6 +66,32 @@ pub struct UiScriptMetaV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiImeEventV1 {
+    Enabled,
+    Disabled,
+    Commit {
+        text: String,
+    },
+    /// IME preedit update.
+    ///
+    /// `cursor_bytes` is a byte-indexed range in the preedit string (begin, end).
+    /// When `None`, the cursor should be hidden.
+    Preedit {
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cursor_bytes: Option<(u32, u32)>,
+    },
+    /// Delete text surrounding the cursor or selection.
+    ///
+    /// Offsets are expressed in UTF-8 bytes.
+    DeleteSurrounding {
+        before_bytes: u32,
+        after_bytes: u32,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -230,6 +256,13 @@ pub enum UiActionStepV2 {
     },
     TypeText {
         text: String,
+    },
+    /// Inject an IME event into the focused text surface.
+    ///
+    /// This is intended for deterministic regression scripts that need to exercise text/IME
+    /// composition without depending on platform IME integrations.
+    Ime {
+        event: UiImeEventV1,
     },
     WaitFrames {
         n: u32,
@@ -554,6 +587,17 @@ pub enum UiPredicateV1 {
     SelectedIs {
         target: UiSelectorV1,
         selected: bool,
+    },
+    /// True when the target exists and its semantics reports whether it currently has an IME
+    /// composition range.
+    ///
+    /// Notes:
+    /// - This checks whether `SemanticsNode.text_composition` is `Some(_)`.
+    /// - Some platforms/widgets may omit composition ranges even while composing; treat this
+    ///   predicate as best-effort and gate it behind appropriate suites.
+    TextCompositionIs {
+        target: UiSelectorV1,
+        composing: bool,
     },
     CheckedIsNone {
         target: UiSelectorV1,

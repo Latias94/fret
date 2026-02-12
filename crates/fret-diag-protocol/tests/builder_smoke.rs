@@ -1,11 +1,14 @@
 use fret_diag_protocol::UiActionScriptV2;
-use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
+use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 
 #[test]
 fn builder_v2_roundtrip_smoke() {
     let script = ScriptV2Builder::new()
         .click(test_id("todo-input"))
         .type_text("hello")
+        .ime_preedit("東", Some((0, 3)))
+        .assert(text_composition_is(test_id("todo-input"), true))
+        .ime_commit("東京")
         .press_key("enter")
         .wait_exists(test_id("todo-item-4-done"), 60)
         .assert_exists(test_id("todo-item-4-done"))

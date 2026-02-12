@@ -6,8 +6,8 @@
 //! - Prefer stable selectors (`test_id`, semantics role/name) over pixel coordinates.
 
 use crate::{
-    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiMouseButtonV1, UiPredicateV1,
-    UiSelectorV1,
+    UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiKeyModifiersV1, UiMouseButtonV1,
+    UiPredicateV1, UiSelectorV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -39,6 +39,10 @@ pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicat
 
 pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {
     UiPredicateV1::SelectedIs { target, selected }
+}
+
+pub fn text_composition_is(target: UiSelectorV1, composing: bool) -> UiPredicateV1 {
+    UiPredicateV1::TextCompositionIs { target, composing }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -137,6 +141,42 @@ impl ScriptV2Builder {
 
     pub fn type_text(self, text: impl Into<String>) -> Self {
         self.push(UiActionStepV2::TypeText { text: text.into() })
+    }
+
+    pub fn ime_enabled(self) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Enabled,
+        })
+    }
+
+    pub fn ime_disabled(self) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Disabled,
+        })
+    }
+
+    pub fn ime_preedit(self, text: impl Into<String>, cursor_bytes: Option<(u32, u32)>) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Preedit {
+                text: text.into(),
+                cursor_bytes,
+            },
+        })
+    }
+
+    pub fn ime_commit(self, text: impl Into<String>) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::Commit { text: text.into() },
+        })
+    }
+
+    pub fn ime_delete_surrounding(self, before_bytes: u32, after_bytes: u32) -> Self {
+        self.push(UiActionStepV2::Ime {
+            event: UiImeEventV1::DeleteSurrounding {
+                before_bytes,
+                after_bytes,
+            },
+        })
     }
 
     pub fn type_text_into(self, target: UiSelectorV1, text: impl Into<String>) -> Self {

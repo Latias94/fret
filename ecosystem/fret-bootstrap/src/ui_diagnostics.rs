@@ -1,21 +1,21 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
-    AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
+    AppWindowId, Event, ImeEvent, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point,
+    PointerEvent, PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_diag_protocol::{
     FilesystemCapabilitiesV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2,
     UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
-    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiInspectConfigV1,
-    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
-    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
-    UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1,
-    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1, UiScriptResultV1,
-    UiScriptStageV1, UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1,
-    UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1, UiTextInputSnapshotV1,
-    UiWebImeTraceEntryV1,
+    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1,
+    UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1,
+    UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1,
+    UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
+    UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -1164,6 +1164,46 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-type_text"));
+                }
+            }
+            UiActionStepV2::Ime { event } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let note = format!("ime_event kind={}", ime_event_kind_name(&event));
+                record_focus_trace(
+                    &mut active.focus_trace,
+                    app,
+                    window,
+                    element_runtime,
+                    semantics_snapshot,
+                    ui,
+                    step_index as u32,
+                    None,
+                    None,
+                    note.as_str(),
+                );
+                record_web_ime_trace(
+                    &mut active.web_ime_trace,
+                    app,
+                    step_index as u32,
+                    note.as_str(),
+                );
+                record_overlay_placement_trace(
+                    &mut active.overlay_placement_trace,
+                    element_runtime,
+                    semantics_snapshot,
+                    window,
+                    step_index as u32,
+                    note.as_str(),
+                );
+
+                active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                output.events.push(Event::Ime(ime_event_from_v1(&event)));
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-ime"));
                 }
             }
             UiActionStepV2::WaitUntil {
@@ -3754,6 +3794,7 @@ impl UiDiagnosticsService {
         if self.cfg.screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }
+        caps.push("diag.inject_ime".to_string());
         caps.push("diag.text_ime_trace".to_string());
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
@@ -4924,6 +4965,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::PressKey { .. }
         | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
+        | UiActionStepV2::Ime { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
@@ -5131,6 +5173,7 @@ impl UiDiagnosticsEnvFingerprintV1 {
         if svc.cfg.screenshots_enabled {
             capabilities.push("diag.screenshot_png".to_string());
         }
+        capabilities.push("diag.inject_ime".to_string());
         capabilities.push("diag.text_ime_trace".to_string());
         capabilities.push("diag.text_input_snapshot".to_string());
         capabilities.push("diag.shortcut_routing_trace".to_string());
@@ -12366,6 +12409,13 @@ fn eval_predicate(
             };
             node.flags.selected == *selected
         }
+        UiPredicateV1::TextCompositionIs { target, composing } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.text_composition.is_some() == *composing
+        }
         UiPredicateV1::CheckedIsNone { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -13122,6 +13172,35 @@ fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
         alt: modifiers.alt,
         meta: modifiers.meta,
         ..Modifiers::default()
+    }
+}
+
+fn ime_event_kind_name(event: &UiImeEventV1) -> &'static str {
+    match event {
+        UiImeEventV1::Enabled => "enabled",
+        UiImeEventV1::Disabled => "disabled",
+        UiImeEventV1::Commit { .. } => "commit",
+        UiImeEventV1::Preedit { .. } => "preedit",
+        UiImeEventV1::DeleteSurrounding { .. } => "delete_surrounding",
+    }
+}
+
+fn ime_event_from_v1(event: &UiImeEventV1) -> ImeEvent {
+    match event {
+        UiImeEventV1::Enabled => ImeEvent::Enabled,
+        UiImeEventV1::Disabled => ImeEvent::Disabled,
+        UiImeEventV1::Commit { text } => ImeEvent::Commit(text.clone()),
+        UiImeEventV1::Preedit { text, cursor_bytes } => ImeEvent::Preedit {
+            text: text.clone(),
+            cursor: cursor_bytes.map(|(a, b)| (a as usize, b as usize)),
+        },
+        UiImeEventV1::DeleteSurrounding {
+            before_bytes,
+            after_bytes,
+        } => ImeEvent::DeleteSurrounding {
+            before_bytes: (*before_bytes).min(usize::MAX as u32) as usize,
+            after_bytes: (*after_bytes).min(usize::MAX as u32) as usize,
+        },
     }
 }
 

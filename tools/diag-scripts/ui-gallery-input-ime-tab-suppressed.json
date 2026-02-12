@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.inject_ime"
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "text": "input",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-input",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-page-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-input-basic",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "event": {
+        "cursor_bytes": [
+          0,
+          6
+        ],
+        "kind": "preedit",
+        "text": "東京"
+      },
+      "type": "ime"
+    },
+    {
+      "predicate": {
+        "composing": true,
+        "kind": "text_composition_is",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "tab",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "composing": true,
+        "kind": "text_composition_is",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "event": {
+        "kind": "commit",
+        "text": "東京"
+      },
+      "type": "ime"
+    },
+    {
+      "predicate": {
+        "composing": false,
+        "kind": "text_composition_is",
+        "target": {
+          "id": "ui-gallery-input-basic",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-input-ime-tab-suppressed",
+      "type": "capture_bundle"
+    }
+  ]
+}

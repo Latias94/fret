@@ -116,6 +116,7 @@ Definition of done:
 ### M6: Text & IME gates (self-drawn UI pain point)
 
 - [ ] Define the minimum text/IME evidence surface (selection/caret/composition summary).
+- [x] Add a deterministic IME injection surface for scripted tests (`UiActionStepV2::Ime`, `diag.inject_ime`).
 - [ ] Add a small set of stable gates (word boundary, line boundary, composition not stolen by shortcuts).
 
 Definition of done:

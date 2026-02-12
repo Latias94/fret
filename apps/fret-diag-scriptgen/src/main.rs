@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id};
+use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 use fret_diag_protocol::{
     UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
 };
@@ -138,6 +138,7 @@ fn template_names() -> &'static [&'static str] {
     &[
         "todo-baseline-v2",
         "ui-gallery-command-palette-shortcut-primary-v2",
+        "ui-gallery-input-ime-tab-suppressed-v2",
         "ui-gallery-combobox-open-select-focus-restore-v2",
         "ui-gallery-combobox-keyboard-commit-apple-v2",
         "ui-gallery-combobox-typeahead-commit-banana-v2",
@@ -164,6 +165,7 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         "ui-gallery-command-palette-shortcut-primary-v2" => {
             Ok(ui_gallery_command_palette_shortcut_primary_v2())
         }
+        "ui-gallery-input-ime-tab-suppressed-v2" => Ok(ui_gallery_input_ime_tab_suppressed_v2()),
         "ui-gallery-combobox-open-select-focus-restore-v2" => {
             Ok(ui_gallery_combobox_open_select_focus_restore_v2())
         }
@@ -315,12 +317,62 @@ fn ui_gallery_nav_to_combobox_page() -> ScriptV2Builder {
         .wait_exists(test_id("ui-gallery-combobox-demo-trigger"), 600)
 }
 
+fn ui_gallery_nav_to_input_page() -> ScriptV2Builder {
+    ScriptV2Builder::new()
+        .wait_exists(test_id("ui-gallery-nav-search"), 600)
+        .press_key("escape")
+        .wait_frames(2)
+        .click(test_id("ui-gallery-nav-search"))
+        .push(ctrl_a_step())
+        .press_key("backspace")
+        .type_text("input")
+        .wait_frames(2)
+        .wait_exists(test_id("ui-gallery-nav-input"), 600)
+        .click(test_id("ui-gallery-nav-input"))
+        .wait_exists(test_id("ui-gallery-page-input"), 600)
+        .wait_exists(test_id("ui-gallery-input-basic"), 600)
+}
+
 fn with_required_caps(mut script: UiActionScriptV2, caps: &[&str]) -> UiActionScriptV2 {
     script.meta = Some(UiScriptMetaV1 {
         required_capabilities: caps.iter().map(|s| (*s).to_string()).collect(),
         ..Default::default()
     });
     script
+}
+
+fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
+    let input = test_id("ui-gallery-input-basic");
+    let script = ui_gallery_nav_to_input_page()
+        .click(input.clone())
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::FocusIs {
+                target: input.clone(),
+            },
+            timeout_frames: 240,
+        })
+        .ime_preedit("東京", Some((0, 6)))
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::TextCompositionIs {
+                target: input.clone(),
+                composing: true,
+            },
+            timeout_frames: 240,
+        })
+        .press_key("tab")
+        .assert_focus_is(input.clone())
+        .assert(text_composition_is(input.clone(), true))
+        .ime_commit("東京")
+        .push(UiActionStepV2::WaitUntil {
+            predicate: UiPredicateV1::TextCompositionIs {
+                target: input.clone(),
+                composing: false,
+            },
+            timeout_frames: 240,
+        })
+        .capture_bundle(Some("ui-gallery-input-ime-tab-suppressed".to_string()))
+        .build();
+    with_required_caps(script, &["diag.script_v2", "diag.inject_ime"])
 }
 
 fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
@@ -919,6 +971,10 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
     let mut checked: u64 = 0;
 
     let items: &[(&str, &str)] = match suite {
+        "ui-gallery-text-ime" => &[(
+            "ui-gallery-input-ime-tab-suppressed-v2",
+            "tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json",
+        )],
         "ui-gallery-combobox" => &[
             (
                 "ui-gallery-combobox-open-select-focus-restore-v2",

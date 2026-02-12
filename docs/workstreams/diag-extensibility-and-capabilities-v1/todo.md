@@ -97,10 +97,14 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
   - [x] selection range (UTF-16),
   - [x] caret/candidate rect (best-effort `ime_cursor_area`),
   - [x] IME composition state summary (`is_composing` + `marked_utf16`).
+- [x] Add a deterministic IME injection surface for scripted tests:
+  - [x] `UiActionStepV2::Ime` (preedit/commit/enable/disable/delete-surrounding),
+  - [x] `UiPredicateV1::TextCompositionIs` (best-effort composition range signal),
+  - [x] add `diag.inject_ime` capability.
 - [ ] Add at least one stable script gate for:
   - [x] word boundary (double click),
   - [x] line boundary (triple click),
-  - [ ] “composition not stolen by shortcuts” (requires trace + reason codes).
+  - [ ] “composition not stolen by shortcuts” (prefer: assert `shortcut_routing_trace` reserved-for-IME).
 
 ## Determinism (flake triage)
 
