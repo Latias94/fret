@@ -100,6 +100,7 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest target), Gate (red→green artifact), Evidence (anchors). See `fret-skills-playbook`.
 - The reusable invariant is stated clearly (“what must always be true”).
 - A regression artifact exists (test/script/parity case) that fails before and passes after.
 - The skill update points to 1–3 evidence anchors (paths/functions/tests) so future readers can trust it.

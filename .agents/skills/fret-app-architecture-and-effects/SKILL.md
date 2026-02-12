@@ -49,6 +49,7 @@ Follow the “Golden path (recommended defaults)” below, then protect the beha
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest app surface), Gate (test/script), Evidence (command + anchors). See `fret-skills-playbook`.
 - Entry point chosen and justified (`fret-kit` vs `fret-bootstrap` vs custom `fret-launch`).
 - Side effects are expressed via the canonical surfaces (Effects + Dispatcher/Inbox), without blocking the UI thread.
 - Any user-visible timing uses runner-owned scheduling (`Effect::SetTimer` / RAF) instead of ad-hoc timers.

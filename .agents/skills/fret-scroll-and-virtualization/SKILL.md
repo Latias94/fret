@@ -90,6 +90,7 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (list scenario), Gate (script/test), Evidence (bundle). See `fret-skills-playbook`.
 - Stable identity: `virtual_list_keyed` with a key derived from the model (never the row index).
 - Measurement mode chosen and justified (`Fixed` unless you truly need variable heights).
 - One regression artifact:

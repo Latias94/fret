@@ -71,6 +71,7 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (key sequence), Gate (script/test), Evidence (focus/routing traces). See `fret-skills-playbook`.
 - A minimal `tools/diag-scripts/*.json` that focuses the target, types text, and asserts a stable `test_id` outcome.
 - Bundle evidence that includes focus + routing traces for the failing key sequence (so future triage is self-diagnosing).
 - If you touched editing boundaries (word/line selection), add at least one unit test for the edge case.

@@ -93,6 +93,7 @@ pub fn toolbar<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest layout surface), Gate (test/script if regression), Evidence (anchors + before/after intent). See `fret-skills-playbook`.
 - Layout vs chrome responsibilities are explicit (no “mystery no-op” refinements).
 - Spacing/radius/colors use tokens (`Space`/`Radius`/`MetricRef`/`ColorRef`) unless there is a clear exception.
 - Overflow/clipping is correct (focus rings not accidentally clipped; hit-testing matches visuals).

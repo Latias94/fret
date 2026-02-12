@@ -124,6 +124,7 @@ Minimal pattern:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (fixture suite), Gate (nextest), Evidence (case-id failures). See `fret-skills-playbook`.
 - Fixture suite has `schema_version` and stable case `id` keys.
 - Harness is thin (parse → run_case → asserts) and does not depend on `cwd`.
 - Failing output is case-id-addressable (reviewers can locate the exact case quickly).

@@ -107,6 +107,7 @@ python3 tools/perf/perf_log.py append \
 
 When you finish perf work, leave:
 
+- Minimum deliverables (3-pack): Repro (probe/suite), Gate (baseline/threshold), Evidence (worst bundles + command). See `fret-skills-playbook`.
 - The exact command(s) used (copy/pasteable) + an output dir with artifacts.
 - A baseline or gate result that can be re-run at the same commit.
 - The worst bundle path(s) for the relevant scripts (so attribution is deterministic).

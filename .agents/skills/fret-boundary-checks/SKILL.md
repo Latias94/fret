@@ -62,6 +62,7 @@ Run the always-on guardrails:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (guardrail commands), Gate (layering), Evidence (anchors). See `fret-skills-playbook`.
 - `python3 tools/check_layering.py` is green (or any allowlist change is justified and minimal).
 - Module-size drift is understood and addressed (split responsibilities before “god files” grow).
 - If a violation was fixed, the fix is placed in the correct layer (prefer moving code over adding allowlists).

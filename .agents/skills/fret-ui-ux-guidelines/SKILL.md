@@ -70,6 +70,7 @@ python scripts/stylegen.py --style editor-compact > theme_overrides.json
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test), Evidence (token/recipe diff). See `fret-skills-playbook`.
 - The target surface has a clear hierarchy (3 surface layers) and consistent spacing rhythm (tokened, not magic numbers).
 - Density and focus visuals are coherent across the surface (control heights, ring width/offset).
 - Interactive affordances are keyboard-first (focus-visible everywhere; no hover-only essential actions).

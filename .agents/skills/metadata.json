@@ -5,7 +5,8 @@
   "last_updated": "2026-02-12",
   "skills": {
     "onboarding": [
-      "fret-repo-orientation"
+      "fret-repo-orientation",
+      "fret-skills-playbook"
     ],
     "foundation": [
       "fret-component-authoring",
@@ -310,6 +311,7 @@
   "profiles": {
     "app-dev": [
       "fret-repo-orientation",
+      "fret-skills-playbook",
       "fret-component-authoring",
       "fret-action-hooks",
       "fret-app-architecture-and-effects",
@@ -327,6 +329,7 @@
     ],
     "framework-dev": [
       "fret-repo-orientation",
+      "fret-skills-playbook",
       "fret-component-authoring",
       "fret-action-hooks",
       "fret-app-architecture-and-effects",

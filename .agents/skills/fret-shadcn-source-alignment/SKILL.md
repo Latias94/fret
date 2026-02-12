@@ -86,6 +86,7 @@ learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/parity), Evidence (upstream refs + anchors). See `fret-skills-playbook`.
 - A clear layer mapping in the change (no “policy knobs” added to `crates/fret-ui` unless it is truly a mechanism).
 - At least one regression artifact:
   - **state machine** mismatch ⇒ `tools/diag-scripts/*.json` repro with stable `test_id`,

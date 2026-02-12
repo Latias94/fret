@@ -59,6 +59,7 @@ Defaults if unclear:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest recipe surface), Gate (diag script/test), Evidence (anchors). See `fret-skills-playbook`.
 - The UI is built via an existing recipe/mind model (minimal divergence, no new one-off patterns).
 - Interactive affordances have stable `test_id` at the recipe/component layer.
 - One regression artifact exists for the behavior you touched:

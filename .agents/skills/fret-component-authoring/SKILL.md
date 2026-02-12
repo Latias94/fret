@@ -43,6 +43,7 @@ Defaults if unclear:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest component), Gate (test/script), Evidence (anchors). See `fret-skills-playbook`.
 - Stable identity is explicit (`keyed`/`scope`) and derived from the model (not incidental indices).
 - Cross-frame state lives in `with_state*` or `Model<T>` (no global statics).
 - All model reads register the correct invalidation (`Layout` vs `Paint`) and the UI updates deterministically.

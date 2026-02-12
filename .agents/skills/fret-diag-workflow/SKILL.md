@@ -95,6 +95,7 @@ Defaults if unclear:
 
 Ship a result that is reviewable and reusable:
 
+- Minimum deliverables (3-pack): Repro (script), Gate (script/test), Evidence (bundle + anchors). See `fret-skills-playbook`.
 - A minimal script under `tools/diag-scripts/` (schema v2 for new work) that reproduces the issue deterministically.
 - Stable selectors (`test_id`) added/updated so the script survives refactors.
 - One portable artifact path to share:

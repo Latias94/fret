@@ -67,6 +67,7 @@ See: `fret-diag-workflow`.
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (docking demo), Gate (diag script), Evidence (bundle). See `fret-skills-playbook`.
 - The issue reproduces in the smallest docking demo target and is captured by a stable `tools/diag-scripts/*.json`.
 - IDs are stable across reorder/tear-off (persistence and state do not “stick to positions”).
 - Multi-window behavior is correct (tear-off creates a new window; re-dock restores expected layout).

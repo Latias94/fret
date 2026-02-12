@@ -94,6 +94,7 @@ Defaults if unclear:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (closure/order), Gate (CI ready), Evidence (planning output). See `fret-skills-playbook`.
 - `release-plz.toml` scope is explicit (only intended crates enabled) and wave crates share a `version_group` as intended.
 - A closure/order artifact exists for the wave:
   - publish order file (e.g. `docs/release/v0.1.0-publish-order.txt`) and/or printed publish commands.

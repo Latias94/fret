@@ -101,6 +101,7 @@ pub fn menu_example<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (overlay scenario), Gate (script/test), Evidence (bundle). See `fret-skills-playbook`.
 - A `tools/diag-scripts/*.json` scenario covering open → interact → dismiss (Escape + outside press) with stable `test_id`.
 - Verified focus behavior (initial focus + restore) via bundle evidence and/or assertions.
 - If you changed placement: at least one deterministic invariant test (no pixel diffs unless necessary).

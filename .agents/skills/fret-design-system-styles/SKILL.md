@@ -54,6 +54,7 @@ Use the rest of this doc in order:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (target surface), Gate (at least one stable demo), Evidence (baseline preset + JSON patch). See `fret-skills-playbook`.
 - Baseline preset is explicit (`apply_shadcn_new_york_v4(...)`) and checked into the app setup.
 - A small, reviewable `ThemeConfig` override exists (JSON patch), scoped to 1–2 axes at a time.
 - The change is validated in the smallest target UI surface (UI gallery page/demo).

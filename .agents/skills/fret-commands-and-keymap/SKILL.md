@@ -83,6 +83,7 @@ Notes:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest command surface), Gate (resolution test/script), Evidence (anchors). See `fret-skills-playbook`.
 - `CommandId` + `CommandMeta` registered with correct scope and search keywords.
 - Default binding in `keymap.json` with explicit `when` gating (platform filters as needed).
 - At least one regression artifact:

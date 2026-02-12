@@ -91,6 +91,7 @@ pub fn spinner_like<H: UiHost>(cx: &mut ElementContext<'_, H>, spinning: bool) -
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest anim), Gate (test/script if timing-sensitive), Evidence (why chosen primitive). See `fret-skills-playbook`.
 - The chosen primitive matches the intent (redraw vs RAF vs continuous frames vs timer).
 - Any continuous frames lease is tied to element lifetime (no leaked scheduling after unmount).
 - Timed behavior uses runner-owned timers (no ad-hoc threads/timers for UI-visible time).

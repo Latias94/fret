@@ -236,6 +236,7 @@ When you finish attribution:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (worst bundle), Gate (threshold key), Evidence (frame/metric + next step). See `fret-skills-playbook`.
 - The failing threshold key is identified and mapped to a specific bundle metric.
 - The exact frame that maxes the failing metric is identified (not just “worst total time”).
 - A hitch class is named (layout vs paint vs renderer/cache vs allocator/GPU) with concrete evidence.

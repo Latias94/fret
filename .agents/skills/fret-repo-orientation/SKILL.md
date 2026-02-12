@@ -105,6 +105,7 @@ If you are changing layout/style parity:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest target), Gate (test/script), Evidence (anchors). See `fret-skills-playbook`.
 - The change is mapped to the correct layer/crate (mechanism vs policy vs recipe) with a short rationale.
 - A smallest runnable target is chosen (demo/gallery) when behavior is involved.
 - The key evidence anchors are identified (docs/ADRs + entry points) so reviewers can verify the rationale quickly.

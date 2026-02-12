@@ -64,6 +64,7 @@ Defaults if unclear:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (audit snapshot), Gate (crate tests + layering), Evidence (audit note). See `fret-skills-playbook`.
 - A short audit note exists (purpose/exports/deps/hazards) with 1–3 evidence anchors per major claim.
 - 3–8 landable refactor steps are listed with “done” criteria (not just narrative).
 - At least one regression artifact exists if behavior or contracts change (test and/or diag script).

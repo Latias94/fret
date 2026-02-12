@@ -116,6 +116,7 @@ Use the `ActionHooksExt` helpers:
 
 ## Definition of done (what to leave behind)
 
+- Minimum deliverables (3-pack): Repro (smallest interaction), Gate (test/script), Evidence (anchors). See `fret-skills-playbook`.
 - Policy is expressed as hooks (no runtime flags/props that encode policy).
 - Hooks are installed inside the correct element scope (they actually fire).
 - Long-lived callbacks use `WeakModel<T>` where appropriate (no accidental “keep alive”).
