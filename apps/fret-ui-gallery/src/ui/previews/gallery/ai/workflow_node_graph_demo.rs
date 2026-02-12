@@ -246,10 +246,18 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
             &mut self,
             cx: &mut fret_ui::retained_bridge::LayoutCx<'_, H>,
         ) -> fret_core::Size {
-            let _ = cx
+            let prev = cx
                 .app
                 .models_mut()
-                .update(&self.bounds, |b| *b = Some(cx.bounds));
+                .read(&self.bounds, |b| *b)
+                .ok()
+                .flatten();
+            if prev != Some(cx.bounds) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.bounds, |b| *b = Some(cx.bounds));
+            }
             cx.bounds.size
         }
 
