@@ -12,6 +12,20 @@ description: Scrolling and large lists in Fret (`ScrollHandle`, `VirtualList`, `
 - You see state bugs like “caret/hover sticks to the wrong row after reorder”.
 - You’re chasing regressions in scroll clamping, overscan, or item measurement.
 
+## Inputs to collect (ask the user)
+
+Ask these before choosing measurement modes or keys:
+
+- Data size and update pattern: static, append-only, reorder/filter frequently?
+- Row heights: fixed, variable, or known upfront?
+- Interaction invariants: selection/hover/caret must stick to the same item across reorder?
+- Programmatic scroll needs: scroll-to-item, keep-visible, scroll-to-bottom?
+- Performance target: which hot path is hurting (scroll, resize, pointer move)?
+
+Defaults if unclear:
+
+- Use `virtual_list_keyed` with stable keys and `Fixed` measurement mode if row height can be constant.
+
 ## Core concepts (what matters)
 
 - **`ScrollHandle` is state + revision**: viewport size, content size, offset. Mutations bump a revision so layout/paint can react.
@@ -69,6 +83,14 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 2. Pick the fastest valid measurement mode (`Fixed` if you can).
 3. Decide when to bump `items_revision` (reorder/key/height meaning changes).
 4. Add one regression gate (scripted repro for state bugs; invariant test for clamping/metrics).
+
+## Definition of done (what to leave behind)
+
+- Stable identity: `virtual_list_keyed` with a key derived from the model (never the row index).
+- Measurement mode chosen and justified (`Fixed` unless you truly need variable heights).
+- One regression artifact:
+  - a `tools/diag-scripts/*.json` repro for “reorder/filter + selection sticks”, and/or
+  - a deterministic invariant test for clamping/metrics.
 
 ## Common pitfalls
 

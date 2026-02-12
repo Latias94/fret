@@ -11,6 +11,20 @@ description: Text input, IME composition, and text-editing command routing in Fr
 - Debugging IME issues (composition breaks, Tab/Escape misbehaves, candidate window is misplaced).
 - Fixing “shortcut inserts characters” or “typing triggers global commands” regressions.
 
+## Inputs to collect (ask the user)
+
+Ask these so you can reproduce and pick the correct layer:
+
+- Widget type: simple input/textarea, combobox, command palette, code editor?
+- Platform(s): macOS/windows/linux/web; any IME-specific repro (JP/CN/KR)?
+- The failing invariant: wrong text, wrong selection, wrong focus, wrong key routing?
+- Key conflicts: which shortcuts/keys are involved (Tab/Escape/Enter/arrows/backspace)?
+- Evidence desired: do we need `text_input_snapshot` / focus traces and a script gate?
+
+Defaults if unclear:
+
+- Start by gating shortcuts with `when: "focus.is_text_input == false"` and add a scripted repro.
+
 ## Core rules (ADR 0012 is the contract)
 
 - **Shortcuts and text entry are separate channels**:
@@ -50,6 +64,12 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
 2. Ensure IME gets first refusal while composing (Tab/Enter/Escape/arrows must not be stolen).
 3. Provide caret rect feedback so candidate windows place correctly (`Effect::ImeSetCursorArea`).
 4. Gate global shortcuts on focus/composition state and add a regression artifact (script or unit test).
+
+## Definition of done (what to leave behind)
+
+- A minimal `tools/diag-scripts/*.json` that focuses the target, types text, and asserts a stable `test_id` outcome.
+- Bundle evidence that includes focus + routing traces for the failing key sequence (so future triage is self-diagnosing).
+- If you touched editing boundaries (word/line selection), add at least one unit test for the edge case.
 
 ## Common pitfalls
 

@@ -20,6 +20,20 @@ Fret splits overlays into:
 - **Policy (components):** dismissal rules, focus trap/restore, hover intent, presence/transition behavior
   (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`)
 
+## Inputs to collect (ask the user)
+
+Ask these up front to avoid “fixing the wrong overlay family”:
+
+- Overlay family: menu vs popover vs dialog/sheet (modal)?
+- Dismiss policy: Escape/outside press/trigger re-click; click-through allowed or blocked?
+- Focus policy: initial focus target and close focus restore target.
+- Keyboard nav: roving focus/typeahead/arrow key behavior required?
+- Placement constraints: should it clamp/flip/shift; any constrained viewport/scroll container?
+
+Defaults if unclear:
+
+- Menus are non-click-through outside press (`dismissible_menu`) and restore focus to the trigger on close.
+
 ## Quick start
 
 **Key building blocks:**
@@ -80,6 +94,12 @@ pub fn menu_example<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>
 4. Add a regression artifact:
    - Invariant test for placement/geometry/semantics, and/or
    - `tools/diag-scripts/*.json` scripted repro with stable `test_id` targets.
+
+## Definition of done (what to leave behind)
+
+- A `tools/diag-scripts/*.json` scenario covering open → interact → dismiss (Escape + outside press) with stable `test_id`.
+- Verified focus behavior (initial focus + restore) via bundle evidence and/or assertions.
+- If you changed placement: at least one deterministic invariant test (no pixel diffs unless necessary).
 
 ## Behavior checklist (Radix-correct outcomes)
 

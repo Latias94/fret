@@ -12,6 +12,20 @@ description: Commands, `keymap.json`, menus, and command palette contracts in Fr
 - A shortcut fires in the wrong place (e.g. triggers while typing in a text field).
 - You need platform-specific bindings (macOS `meta` vs Windows/Linux `ctrl`) or multi-stroke sequences.
 
+## Inputs to collect (ask the user)
+
+Ask these before writing code so IDs and gating don’t churn:
+
+- Command intent: what is the stable `CommandId` and which `CommandScope` (Window/App/Widget)?
+- Surfaces: should it appear in menus, command palette, both, or be hidden?
+- Default keys per platform: macOS vs windows/linux vs web expectations.
+- Safety gating: what must be true for it to fire (focus state, selection state, mode, etc)?
+- Interactions with text/IME: must be blocked while composing or when a text input is focused?
+
+Defaults if unclear:
+
+- Add a `when` gate that prevents firing inside text inputs (`focus.is_text_input == false`).
+
 ## Mental model (how Fret wants you to think)
 
 - **Commands are stable IDs + metadata** (`CommandId` + `CommandMeta`).
@@ -62,6 +76,14 @@ Notes:
 2. Add default bindings in `keymap.json` with explicit `when` gating.
 3. Verify focus-aware routing with a resolution/unit test (and a diag script for end-to-end behavior).
 4. Treat command IDs and `when` expressions as contracts (avoid breaking renames).
+
+## Definition of done (what to leave behind)
+
+- `CommandId` + `CommandMeta` registered with correct scope and search keywords.
+- Default binding in `keymap.json` with explicit `when` gating (platform filters as needed).
+- At least one regression artifact:
+  - unit test for parsing/resolution, and/or
+  - `tools/diag-scripts/*.json` pressing the shortcut and asserting a stable `test_id` outcome.
 
 ## Common pitfalls
 

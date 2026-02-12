@@ -16,6 +16,21 @@ Use this skill when:
 If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
 If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
 
+## Inputs to collect (ask the user)
+
+Ask 3–6 questions up front so you don’t “debug the wrong thing”:
+
+- Target: which app/demo/page reproduces it (smallest runnable target)?
+- Platform/transport: native launch (filesystem) or web (DevTools WS)?
+- Expected invariant: what should be true at the end (exists/focus/selection/command fired)?
+- Evidence needs: bundle only, or screenshots/pixel checks as well?
+- Flake shape: timing-sensitive, jittery targets, animation/virtualization involved?
+
+Defaults if unclear:
+
+- Use a UI gallery page + stable `test_id` selectors.
+- Capture at least one `capture_bundle` step (screenshots only if they add signal).
+
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
@@ -71,6 +86,17 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
+
+## Definition of done (what to leave behind)
+
+Ship a result that is reviewable and reusable:
+
+- A minimal script under `tools/diag-scripts/` (schema v2 for new work) that reproduces the issue deterministically.
+- Stable selectors (`test_id`) added/updated so the script survives refactors.
+- One portable artifact path to share:
+  - native: packed bundle dir (optional screenshots), or
+  - web: `.fret/diag/exports/<timestamp>/bundle.json` via `fret-diag-export`.
+- If you changed behavior: at least one regression gate (script and/or Rust test) linked from the PR/commit message.
 
 ## Perf triage handoff (when the “bug” is a hitch)
 

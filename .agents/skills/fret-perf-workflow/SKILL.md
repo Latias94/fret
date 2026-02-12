@@ -15,6 +15,19 @@ Use this skill when you need **numbers**, **baselines**, and **gates** (not just
 - You’re landing performance work and want to protect it with baselines/gates.
 - You need to separate “CPU time” vs “renderer/GPU-ish time” with evidence artifacts.
 
+## Inputs to collect (ask the user)
+
+Ask the minimum that makes results comparable:
+
+- Which probe/suite matches the hot path (resize/scroll/pointer-move)?
+- What machine tag + build mode are you measuring (and is it stable enough for gates)?
+- Are you comparing to an existing baseline (which file), or generating a new baseline?
+- What is the acceptance criterion: “must pass gate” vs “improve metric X by Y%”?
+
+Defaults if unclear:
+
+- Run `ui-gallery-steady` + the P0 resize probes with `--attempts 3` and record the worst bundles.
+
 ## Quick start
 
 ### Run the P0 resize gates (recommended “global sanity”)
@@ -85,6 +98,15 @@ python3 tools/perf/perf_log.py append \
 4. Record evidence for reversibility.
    - Add a perf log entry (commit hash + commands + deltas + worst bundles).
    - Update the TODO tracker checkbox if it is milestone work.
+
+## Definition of done (what to leave behind)
+
+When you finish perf work, leave:
+
+- The exact command(s) used (copy/pasteable) + an output dir with artifacts.
+- A baseline or gate result that can be re-run at the same commit.
+- The worst bundle path(s) for the relevant scripts (so attribution is deterministic).
+- One perf log entry (commit-addressable evidence) when the change is meant to land.
 
 ## Baselines
 
