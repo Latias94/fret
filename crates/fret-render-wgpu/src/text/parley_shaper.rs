@@ -25,6 +25,14 @@ fn env_disables_system_fonts() -> bool {
     matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
+fn env_disables_font_catalog_monospace_probe() -> bool {
+    let Ok(raw) = std::env::var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE") else {
+        return false;
+    };
+    let v = raw.trim().to_ascii_lowercase();
+    matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
+
 fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
     let ascent = ascent.max(0.0);
     let descent_mag = if descent.is_sign_negative() {
@@ -347,15 +355,18 @@ impl ParleyShaper {
                 })
                 .unwrap_or_default();
 
-            let is_monospace_candidate = info
-                .default_font()
-                .and_then(|font| {
-                    let blob = font.load(Some(&mut self.fcx.source_cache))?;
-                    let face = FontRef::from_index(blob.as_ref(), font.index()).ok()?;
-                    let post = face.post().ok()?;
-                    Some(post.is_fixed_pitch() != 0)
-                })
-                .unwrap_or(false);
+            let is_monospace_candidate = if env_disables_font_catalog_monospace_probe() {
+                false
+            } else {
+                info.default_font()
+                    .and_then(|font| {
+                        let blob = font.load(Some(&mut self.fcx.source_cache))?;
+                        let face = FontRef::from_index(blob.as_ref(), font.index()).ok()?;
+                        let post = face.post().ok()?;
+                        Some(post.is_fixed_pitch() != 0)
+                    })
+                    .unwrap_or(false)
+            };
 
             out.push(FontCatalogEntryMetadata {
                 family,
@@ -1096,5 +1107,25 @@ mod tests {
 
         let layout = shaper.shape_single_line(input, 1.0);
         assert!(layout.line_height + 0.001 >= 40.0);
+    }
+
+    #[test]
+    fn font_catalog_monospace_probe_can_be_disabled() {
+        let lock = env_lock().lock().unwrap();
+        unsafe {
+            std::env::set_var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE", "0");
+        }
+
+        let mut shaper = ParleyShaper::new();
+        let entries = shaper.all_font_catalog_entries();
+        assert!(
+            entries.iter().all(|e| !e.is_monospace_candidate),
+            "expected monospace candidates to be suppressed when probe is disabled"
+        );
+
+        unsafe {
+            std::env::remove_var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE");
+        }
+        drop(lock);
     }
 }
