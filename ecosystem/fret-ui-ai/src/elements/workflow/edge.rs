@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_canvas::wires::{cubic_bezier, cubic_bezier_polyline_points, dash_polyline_segments};
+use fret_canvas::wires::{
+    arrowhead_triangle, cubic_bezier, cubic_bezier_derivative, cubic_bezier_polyline_points,
+    dash_polyline_segments,
+};
 use fret_core::scene::{Color, DrawOrder, Paint, SceneOp};
 use fret_core::vector_path::{PathCommand, PathStyle, StrokeStyle};
 use fret_core::{Corners, Edges, Point, Px, Rect, Size};
@@ -174,11 +177,19 @@ impl WorkflowEdgeTemporary {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum WorkflowEdgeMarkerEnd {
+    #[default]
+    None,
+    Arrow,
+}
+
 #[derive(Clone)]
 pub struct WorkflowEdgeAnimated {
     from: Point,
     to: Point,
     stroke_width: Px,
+    marker_end: WorkflowEdgeMarkerEnd,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -189,6 +200,7 @@ impl std::fmt::Debug for WorkflowEdgeAnimated {
             .field("from", &self.from)
             .field("to", &self.to)
             .field("stroke_width", &self.stroke_width)
+            .field("marker_end", &self.marker_end)
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .finish()
@@ -201,6 +213,7 @@ impl WorkflowEdgeAnimated {
             from,
             to,
             stroke_width: Px(1.0),
+            marker_end: WorkflowEdgeMarkerEnd::None,
             test_id: None,
             layout: LayoutRefinement::default()
                 .w_full()
@@ -212,6 +225,11 @@ impl WorkflowEdgeAnimated {
 
     pub fn stroke_width(mut self, width: Px) -> Self {
         self.stroke_width = width;
+        self
+    }
+
+    pub fn marker_end(mut self, marker_end: WorkflowEdgeMarkerEnd) -> Self {
+        self.marker_end = marker_end;
         self
     }
 
@@ -237,6 +255,7 @@ impl WorkflowEdgeAnimated {
         let from = self.from;
         let to = self.to;
         let stroke_width = self.stroke_width;
+        let marker_end = self.marker_end;
 
         let el = cx.canvas(props, move |p| {
             p.request_animation_frame();
@@ -271,6 +290,32 @@ impl WorkflowEdgeAnimated {
                 p.scale_factor(),
             );
 
+            if marker_end == WorkflowEdgeMarkerEnd::Arrow {
+                let tangent = cubic_bezier_derivative(from, ctrl1, ctrl2, to, 1.0);
+                let arrow_len = (stroke_width.0 * 6.0).clamp(8.0, 14.0);
+                let arrow_w = arrow_len * 0.75;
+                let tri = arrowhead_triangle(to, tangent, arrow_len, arrow_w);
+
+                let scope = p.key_scope(&key);
+                let marker_key = u64::from(p.child_key(scope, &0u8));
+                let commands = [
+                    PathCommand::MoveTo(tri[0]),
+                    PathCommand::LineTo(tri[1]),
+                    PathCommand::LineTo(tri[2]),
+                    PathCommand::Close,
+                ];
+
+                p.path(
+                    marker_key,
+                    DrawOrder(1),
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Fill(Default::default()),
+                    ring,
+                    p.scale_factor(),
+                );
+            }
+
             let phase = (p.frame_id() % 120) as f32 / 120.0;
             let pos = cubic_bezier(from, ctrl1, ctrl2, to, phase);
             let radius = Px(4.0);
@@ -280,7 +325,7 @@ impl WorkflowEdgeAnimated {
             );
 
             p.scene().push(SceneOp::Quad {
-                order: DrawOrder(1),
+                order: DrawOrder(2),
                 rect,
                 background: Paint::Solid(primary),
                 border: Edges::all(Px(0.0)),
