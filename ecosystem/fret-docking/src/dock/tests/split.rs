@@ -405,3 +405,167 @@ fn dock_split_handle_drag_respects_panel_min_size_policy() {
         computed.sizes
     );
 }
+
+#[test]
+fn dock_nary_split_handle_drag_updates_only_adjacent_and_respects_min_size_policy() {
+    struct MinSizePolicy;
+
+    impl DockingPolicy for MinSizePolicy {
+        fn panel_min_content_size(
+            &self,
+            panel: &PanelKey,
+            _info: Option<&DockPanel>,
+        ) -> Option<Size> {
+            if panel.kind.0 == "core.middle" {
+                Some(Size::new(Px(300.0), Px(0.0)))
+            } else {
+                None
+            }
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
+        svc.set(Arc::new(MinSizePolicy));
+    });
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let left = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.left")],
+            active: 0,
+        });
+        let middle = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.middle")],
+            active: 0,
+        });
+        let right = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.right")],
+            active: 0,
+        });
+        let split = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, middle, right],
+            fractions: vec![0.33, 0.34, 0.33],
+        });
+        dock.graph.set_window_root(window, split);
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(900.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let settings = fret_runtime::DockingInteractionSettings::default();
+
+    let fractions0 = app
+        .global::<DockManager>()
+        .and_then(|dock| {
+            let root = dock.graph.window_root(window)?;
+            let DockNode::Split { fractions, .. } = dock.graph.node(root)? else {
+                return None;
+            };
+            Some(fractions.clone())
+        })
+        .expect("expected split root with fractions");
+
+    let layout0 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        dock_bounds,
+        3,
+        &fractions0,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+        &[],
+    );
+    assert_eq!(
+        layout0.sizes.len(),
+        3,
+        "expected three-panel split layout, got {:?}",
+        layout0.sizes
+    );
+    let handle0_x = *layout0
+        .handle_centers
+        .first()
+        .expect("expected handle 0 center");
+
+    let handle_pos = Point::new(Px(handle0_x), Px(dock_bounds.origin.y.0 + 10.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: handle_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.captured_for(fret_core::PointerId(0)),
+        Some(root),
+        "expected divider drag to request pointer capture"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(handle_pos.x.0 + 1200.0), handle_pos.y),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let fractions1 = app
+        .global::<DockManager>()
+        .and_then(|dock| {
+            let root = dock.graph.window_root(window)?;
+            let DockNode::Split { fractions, .. } = dock.graph.node(root)? else {
+                return None;
+            };
+            Some(fractions.clone())
+        })
+        .expect("expected split root with fractions");
+
+    let layout1 = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        dock_bounds,
+        3,
+        &fractions1,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+        &[],
+    );
+
+    assert!(
+        (layout1.sizes[2] - layout0.sizes[2]).abs() < 0.01,
+        "expected far-right panel unchanged, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+    assert!(
+        layout1.sizes[1] >= 300.0 - 0.01,
+        "expected middle panel clamped to min width, got sizes={:?}",
+        layout1.sizes
+    );
+    assert!(
+        layout1.sizes[0] > layout0.sizes[0] + 1.0,
+        "expected left panel to grow, before={:?}, after={:?}",
+        layout0.sizes,
+        layout1.sizes
+    );
+}
