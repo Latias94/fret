@@ -18,6 +18,7 @@ Active tracker highlights:
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity-todo.md`).
 - Fonts bootstrap + invalidation contract: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`.
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
+- Docking N-ary split graph (canonical form + ops semantics): `docs/workstreams/docking-nary-split-graph-v1.md` (TODOs: `docs/workstreams/docking-nary-split-graph-v1-todo.md`).
 - Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2-todo.md`).
 - Foundation closure tracker (P0 cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` (TODOs: `docs/workstreams/foundation-closure-p0-todo.md`).
 

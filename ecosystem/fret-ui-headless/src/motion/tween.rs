@@ -38,7 +38,7 @@ impl TweenTimeline {
         self.duration
     }
 
-    pub fn sample(&self, elapsed: Duration) -> MotionSample {
+    fn value_at(&self, elapsed: Duration) -> f64 {
         let linear = if elapsed >= self.duration {
             1.0
         } else if elapsed == Duration::ZERO {
@@ -48,18 +48,24 @@ impl TweenTimeline {
         };
 
         let eased = (self.ease)(linear as f32).clamp(0.0, 1.0) as f64;
-        let value = self.start + (self.end - self.start) * eased;
+        self.start + (self.end - self.start) * eased
+    }
+
+    pub fn sample(&self, elapsed: Duration) -> MotionSample {
+        let value = self.value_at(elapsed);
 
         // Best-effort velocity estimate. This is primarily used for retargeting continuity.
-        // Physics simulations provide analytic velocities; for tweens we approximate.
+        // Physics simulations provide analytic velocities; for tweens we approximate via finite
+        // differences using value sampling.
         let dt = Duration::from_millis(1);
-        let velocity = if elapsed == Duration::ZERO {
-            let next = self.sample(dt);
-            (next.value - value) / secs(dt)
+        let t0 = elapsed.saturating_sub(dt);
+        let t1 = (elapsed + dt).min(self.duration);
+        let velocity = if t1 > t0 {
+            let v0 = self.value_at(t0);
+            let v1 = self.value_at(t1);
+            (v1 - v0) / secs(t1 - t0)
         } else {
-            let prev = elapsed.saturating_sub(dt);
-            let prev_value = self.sample(prev).value;
-            (value - prev_value) / secs(dt)
+            0.0
         };
 
         MotionSample {

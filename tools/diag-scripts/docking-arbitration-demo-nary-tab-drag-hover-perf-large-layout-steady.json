@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: tab drag hover perf probe (n-ary, large layout, steady)",
+    "tags": ["docking", "nary", "perf", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with env: FRET_DOCK_ARB_PRESET=large",
+      "Recommended: FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1 (avoid layout mutation on drop)",
+      "Optional: FRET_DOCK_ARB_NO_PERSIST=1 to avoid writing .fret/layout.json"
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    { "type": "wait_frames", "n": 10 },
+    { "type": "reset_diagnostics" },
+
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" }, "delta_x": -620.0, "delta_y": 640.0, "steps": 140 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }, "delta_x": 620.0, "delta_y": 640.0, "steps": 140 },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady"
+    },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}
+

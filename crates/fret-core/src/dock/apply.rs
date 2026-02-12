@@ -112,6 +112,19 @@ impl DockGraph {
                 target_window,
                 target_tabs,
             } => {
+                if source_window == target_window {
+                    return false;
+                }
+                if !matches!(self.nodes.get(*target_tabs), Some(DockNode::Tabs { .. })) {
+                    return false;
+                }
+                if self
+                    .root_for_node_in_window_forest(*target_window, *target_tabs)
+                    .is_none()
+                {
+                    return false;
+                }
+
                 let panels = self.collect_panels_in_window(*source_window);
                 for panel in panels {
                     let _ = self.move_panel_between_windows(

@@ -126,8 +126,10 @@ pub(super) fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
     if zone == DropZone::Center {
         return rect;
     }
-    // Keep preview geometry aligned with the committed split behavior.
-    // `fret-core` currently splits 50/50 for edge drops.
+    // Legacy fallback preview geometry: split the rect 50/50.
+    //
+    // Note: core edge docking may instead insert into an existing same-axis split. The authoritative
+    // “insert vs wrap” decision should come from `DockGraph::edge_dock_decision` when available.
     let half_w = Px((rect.size.width.0 * 0.5).max(0.0));
     let half_h = Px((rect.size.height.0 * 0.5).max(0.0));
     match zone {

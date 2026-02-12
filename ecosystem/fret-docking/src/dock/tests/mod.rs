@@ -1,4 +1,4 @@
-use super::hit_test::hit_test_drop_target;
+use super::hit_test::{hit_test_drop_target, hit_test_split_handle};
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects_with_font, dock_space_regions,
     float_zone, split_tab_bar,
@@ -6,11 +6,10 @@ use super::layout::{
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
-use super::split_stabilize::{apply_same_axis_locks, compute_same_axis_locks_for_split_drag};
 use super::tab_bar_geometry::TabBarGeometry;
 use super::{
-    DockManager, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService, DockSpace,
-    render_and_bind_dock_panels,
+    DockManager, DockPanel, DockPanelContentService, DockPanelRegistry, DockPanelRegistryService,
+    DockSpace, DockingPolicy, DockingPolicyService, render_and_bind_dock_panels,
 };
 use super::{DockViewportLayout, ViewportPanel};
 use crate::test_host::TestHost;

@@ -449,9 +449,12 @@ Supported selectors (v1 MVP):
 
 ## Supported scripted steps (v1 MVP)
 
-- `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
 - `move_pointer`
-- `drag_pointer` (optional `button`, `steps`)
+- `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
+- `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
+- `pointer_up` (schema v2 only; optional `window` target; ends the `pointer_down` session)
+- `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
   `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
@@ -464,10 +467,16 @@ Supported selectors (v1 MVP):
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
-- `wait_until`
-- `assert`
+- `wait_until` (schema v2 only: optional `window` target)
+- `assert` (schema v2 only: optional `window` target)
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_outer_position` (schema v2 only; optional `window` target)
+- `raise_window` (schema v2 only; optional `window` target)
+- `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
+- `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -478,6 +487,12 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
+- `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
+- `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
+- `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
+- `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
 
 Notes:
 
@@ -514,10 +529,29 @@ Supported intent steps (v2):
 - `type_text_into` (wait + click + type)
 - `menu_select` (wait + open menu + click item)
 - `menu_select_path` (wait + open nested menus + click final item)
-- `drag_to` (drag between two semantics targets)
+- `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+- `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
+- `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
+- `raise_window` (emit `WindowRequest::Raise`)
+- `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags)
+- `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags)
+- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
+
+For window-targeted steps, the optional `window` field supports:
+
+- `{ "kind": "current" }` (default)
+- `{ "kind": "first_seen" }`
+- `{ "kind": "first_seen_other" }`
+- `{ "kind": "last_seen" }`
+- `{ "kind": "last_seen_other" }`
+- `{ "kind": "window_ffi", "window": 123 }`
 
 Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
+
+Note: window-targeted steps run against the target window's semantics snapshot. When a step targets
+a different window, the diagnostics runtime migrates the active script to that window; subsequent
+steps will execute there unless they specify another `window` target.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
@@ -578,8 +612,19 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
- - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+- `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+- `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
+
+Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typically `docking_arbitration_demo`):
+
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"wrap_binary"}`
+- `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
+- `{"kind":"dock_graph_canonical_is","canonical":true}`
+- `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
+- `{"kind":"known_window_count_ge","n":2}`
+- `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
+- `{"kind":"dock_graph_node_count_le","max":32}`
+- `{"kind":"dock_graph_max_split_depth_le","max":8}`
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

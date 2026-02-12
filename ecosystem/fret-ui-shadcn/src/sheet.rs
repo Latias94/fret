@@ -290,12 +290,12 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = radix_dialog::dialog_root_name(id);
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_easing_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_500,
-                overlay_motion::SHADCN_MOTION_TICKS_300,
-                overlay_motion::shadcn_ease,
+                overlay_motion::SHADCN_MOTION_DURATION_500,
+                overlay_motion::SHADCN_MOTION_DURATION_300,
+                overlay_motion::ease_in_out,
             );
             let (open_change, open_change_complete) = cx
                 .with_state(SheetOpenChangeCallbackState::default, |state| {
@@ -1495,6 +1495,29 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
         assert!(content_id.get().is_some());
 
+        // Let the enter transition settle so hit-testing lands inside the sheet content for
+        // deterministic pointer tests.
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        for _ in 0..settle_frames {
+            let _ = render_sheet_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                None,
+                true,
+                SheetSide::Right,
+                content_id.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
         // Click inside sheet should not close.
         ui.dispatch_event(
             &mut app,
@@ -1953,7 +1976,10 @@ mod tests {
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 1;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 1;
         for _ in 0..settle_frames {
             let _ = render_sheet_frame(
                 &mut ui,
@@ -2085,7 +2111,9 @@ mod tests {
 
         // After the exit transition settles, the barrier must drop and the underlay becomes
         // interactive again.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) + 2;
         for _ in 0..settle_frames {
             render_sheet_frame_with_underlay(
                 &mut ui,
@@ -2513,7 +2541,10 @@ mod tests {
 
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 2;
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_300,
+        ) as usize
+            + 2;
         for i in 0..settle_frames {
             app.set_frame_id(fret_runtime::FrameId(2 + i as u64));
             let _ = render_sheet_frame_with_auto_focus_hooks(

@@ -10,6 +10,7 @@
 //! - Support both "web-like" tweens (duration + easing) and "native-like" physics (spring/inertia).
 
 pub mod friction;
+pub mod inertia;
 pub mod simulation;
 pub mod spring;
 pub mod tolerance;
