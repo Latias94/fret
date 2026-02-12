@@ -1,0 +1,66 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "canvas world layer" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-ai-canvas-world-layer-spike"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-canvas-world-layer-spike" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-canvas-world-layer-spike-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-canvas-world-layer-spike-root" },
+      "delta_y": -240.0
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-overlay-click" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-node-click" }
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-canvas-world-layer-spike-root" },
+      "delta_y": -240.0
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-ai-cwl-node-click" }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-canvas-world-layer-spike" }
+  ]
+}
+
