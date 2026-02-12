@@ -150,7 +150,7 @@ When a gate fails, the goal is to go from “numbers” → “one concrete hitc
 If you have a gate out-dir (from `tools/perf/diag_resize_probes_gate.sh`), you can print a compact triage summary:
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag>
+python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py target/perf-gates/ui-resize-probes.<tag>
 ```
 
 This reports:
@@ -162,14 +162,18 @@ This reports:
 If you want to capture “best-effort internal attribution” from `app_snapshot` (when available), add:
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag> --app-snapshot
+python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py target/perf-gates/ui-resize-probes.<tag> --app-snapshot
 ```
 
 And if you want worst bundles even for passing attempts (useful for logs):
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag> --all --app-snapshot
+python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py target/perf-gates/ui-resize-probes.<tag> --all --app-snapshot
 ```
+
+If you prefer a bash + `jq` + `awk` version (macOS/Linux), see:
+
+- `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh`
 
 Note:
 - `diag perf --json` still prints the JSON payload even when perf thresholds fail (the process exits non-zero, but
@@ -180,11 +184,7 @@ Note:
    - For gate scripts: `<out-dir>/attempt-N/check.perf_thresholds.json`
 2. Find the worst bundle for that script.
    - Gate scripts write `attempt-N/stdout.json`, but it may include log lines before the JSON payload.
-   - Extract JSON (skip leading logs), then query with `jq`:
-     ```bash
-     awk 'BEGIN{f=0} {if(!f && $0 ~ /^\\{/){f=1} if(f){print}}' attempt-N/stdout.json > attempt-N/stdout.payload.json
-     jq -r '.rows[] | select(.script | endswith(\"<script-name>.json\")) | .worst_run.bundle' attempt-N/stdout.payload.json
-     ```
+   - Easiest (cross-platform): use the helper above to resolve the worst bundles per script.
 3. Attribute the worst frame in that bundle.
    - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
 4. Decide the lever (and keep it global-optimum safe).

@@ -34,7 +34,7 @@ Defaults if unclear:
 
 ## Smallest starting point (one command)
 
-- `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot`
+- `python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir> --all --app-snapshot`
 
 ---
 
@@ -43,7 +43,7 @@ Defaults if unclear:
 1) Summarize which attempt/script/metric failed and print worst bundles:
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot
+python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir> --all --app-snapshot
 ```
 
 2) Pick the worst bundle for the failing script, then inspect the top frames:

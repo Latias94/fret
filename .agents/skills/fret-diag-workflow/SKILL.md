@@ -111,7 +111,7 @@ If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a 
 2. When a `diag perf` run fails, start with the thresholds file:
    - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
    - Tip: `fret-perf-workflow` includes a compact gate triage helper:
-     `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir>`
+     `python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir>`
 3. Use the worst bundle for root cause:
    - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
 4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
@@ -129,7 +129,7 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --att
 If a gate fails (or you want the worst bundles even on PASS):
 
 ```bash
-.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot
+python3 .agents/skills/fret-perf-workflow/scripts/triage_gate.py <out-dir> --all --app-snapshot
 ```
 
 Then inspect the worst bundle:
