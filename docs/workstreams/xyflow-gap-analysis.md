@@ -147,11 +147,21 @@ In Fret today:
 
 - Declarative `CanvasPainter::path` renders a tessellated stroke but does not expose dash patterns.
 
-Recommendation:
+Status: Closed (2026-02-12)
 
-- Decide whether dash belongs in:
-  - the path service (tessellation) layer, or
-  - a higher-level polyline approximation helper.
+Implemented (polyline-level approximation, renderer unchanged):
+
+- Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`dash_polyline_segments`,
+  `cubic_bezier_polyline_points`)
+- Applied in AI Elements workflow chrome: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
+  (`WorkflowEdgeTemporary`)
+
+Notes:
+
+- This matches the upstream outcome for the temporary edge (`strokeDasharray: "5, 5"`) by emitting
+  a set of independent stroked line segments along a flattened Bezier polyline.
+- If/when the renderer grows native dash support, this should be migrated down to avoid per-segment
+  path overhead and to better match corner joins/caps.
 
 ### Gap D — Edge markers (arrowheads) and richer routing primitives (component layer)
 
