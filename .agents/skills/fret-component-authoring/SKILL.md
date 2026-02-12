@@ -15,6 +15,20 @@ Upper layers should stay in `fret-ui-kit` / `fret-ui-shadcn` and keep `crates/fr
 - Debugging invalidation bugs (“model updated but UI didn’t re-layout/repaint”).
 - Adopting the `UiBuilder` (`ui()`) patch surface for ecosystem components.
 
+## Inputs to collect (ask the user)
+
+Ask these before writing code (most bugs are “wrong identity” or “wrong invalidation”):
+
+- Component family: list row/virtualized item, overlay surface, text input, etc?
+- Identity: what should the stable key be (data id, not index), and where is it introduced?
+- State: what must persist across frames (element-local state vs `Model<T>` vs app-global)?
+- Invalidation: should updates trigger `Layout` or only `Paint`?
+- Layering: is this mechanism (`crates/fret-ui`) or policy/recipes (`ecosystem/`)?
+
+Defaults if unclear:
+
+- Add stable identity first (`keyed/scope`), then add state, then wire model reads with explicit invalidation.
+
 ## Workflow
 
 1. Ensure stable identity (`keyed` / `scope` / `named`) before adding state.
@@ -22,6 +36,16 @@ Upper layers should stay in `fret-ui-kit` / `fret-ui-shadcn` and keep `crates/fr
 3. Read models with explicit invalidation (`Layout` vs `Paint`) so updates are observed.
 4. Keep interaction policy in ecosystem layers (action hooks) rather than `crates/fret-ui`.
 5. Add at least one regression artifact (unit test or `fretboard diag` script) for tricky behavior.
+
+## Definition of done (what to leave behind)
+
+- Stable identity is explicit (`keyed`/`scope`) and derived from the model (not incidental indices).
+- Cross-frame state lives in `with_state*` or `Model<T>` (no global statics).
+- All model reads register the correct invalidation (`Layout` vs `Paint`) and the UI updates deterministically.
+- Any non-trivial interaction/state machine has a regression artifact:
+  - a focused unit/integration test, and/or
+  - a `tools/diag-scripts/*.json` scenario with stable `test_id` targets.
+- Layering is preserved: policy stays in `ecosystem/`, mechanisms in `crates/`.
 
 ## Overview
 

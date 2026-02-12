@@ -18,6 +18,20 @@ Use this skill when:
 - Translating shadcn/Tailwind mental models into Fret (`ui()` patches + tokens).
 - You want stable `test_id` + scripted repro gates as part of normal component work.
 
+## Inputs to collect (ask the user)
+
+Ask these so you pick the right recipe and leave gates behind:
+
+- What surface are you building (app screen vs one component family)?
+- Which shadcn/Radix component family is closest (select/menu/dialog/combobox/table/sidebar)?
+- Constraints: density/spacing, keyboard-first requirements, constrained viewports, virtualization?
+- What needs to be stable for automation (which controls need `test_id`)?
+- What regression gate do we want: diag script, invariant test, or parity harness case?
+
+Defaults if unclear:
+
+- Start from an existing recipe, add stable `test_id` to interactive affordances, and add one diag script for the state machine.
+
 ## Quick start (authoring)
 
 - Prefer `use fret_ui_shadcn::prelude::*;` in app code to stay on the shadcn-aligned golden path.
@@ -38,6 +52,15 @@ Use this skill when:
 3. Add stable `test_id` targets for anything interactive.
 4. Add a `tools/diag-scripts/*.json` repro for state machines (menus/select/dialogs/combobox).
 5. Add a small invariant test for the most fragile geometry/semantics.
+
+## Definition of done (what to leave behind)
+
+- The UI is built via an existing recipe/mind model (minimal divergence, no new one-off patterns).
+- Interactive affordances have stable `test_id` at the recipe/component layer.
+- One regression artifact exists for the behavior you touched:
+  - state machine ⇒ diag script + bundle evidence, and/or
+  - fragile geometry/semantics ⇒ a deterministic Rust invariant test.
+- If parity is the goal, the change is paired with `fret-shadcn-source-alignment` evidence (upstream refs + in-tree gates).
 
 ## Mind models
 

@@ -11,6 +11,20 @@ description: Align Fret’s shadcn/Radix-inspired components with upstream sourc
 - You need to decide whether a fix belongs in `crates/fret-ui` vs `ecosystem/fret-ui-kit` vs `ecosystem/fret-ui-shadcn`.
 - You fixed a mismatch once and want to lock it with tests and/or `fretboard diag` scripted repros.
 
+## Inputs to collect (ask the user)
+
+Ask these to keep the work scoped and landable:
+
+- Which component + mismatch class (dismiss/focus/keyboard nav/placement/style)?
+- What is the upstream source of truth (Radix docs vs shadcn composition/source)?
+- Which layer should own the change (mechanism vs policy vs recipe)?
+- What regression protection is required: unit test, parity harness case, and/or diag script?
+- Do we need a new stable `test_id` surface for automation?
+
+Defaults if unclear:
+
+- Treat interaction semantics as Radix truth; treat composition/sizing/tokens as shadcn truth; add at least one gate.
+
 ## Quick start
 
 1. Identify the layer (mechanism vs policy vs recipe) before touching code.
@@ -65,6 +79,14 @@ learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering
 
 - Overlay families: `dropdown-menu`, `select`, `context-menu`, `tooltip`/`hover-card`, `dialog`/`sheet`, `navigation-menu`.
 - Listbox-ish behavior: roving focus, typeahead, active-descendant semantics, scroll clamping in constrained viewports.
+
+## Definition of done (what to leave behind)
+
+- A clear layer mapping in the change (no “policy knobs” added to `crates/fret-ui` unless it is truly a mechanism).
+- At least one regression artifact:
+  - **state machine** mismatch ⇒ `tools/diag-scripts/*.json` repro with stable `test_id`,
+  - **layout/style** mismatch ⇒ parity harness case and/or deterministic invariant test.
+- Evidence anchors in the PR/commit message: upstream link(s) + in-tree file(s) + test/script path(s).
 
 ## Evidence anchors
 

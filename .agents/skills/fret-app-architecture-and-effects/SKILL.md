@@ -18,6 +18,20 @@ If you are looking for **GPU post-processing** (“blur/glass/backdrop”), that
 - You need time-based behavior (debounce, timeouts, animation ticks) without split-brain scheduling.
 - You are unsure whether something belongs in `Effect::SetTimer` vs `Dispatcher::dispatch_after`.
 
+## Inputs to collect (ask the user)
+
+Ask these so the architecture stays portable and deterministic:
+
+- Target platform(s): native only vs native + wasm (filesystem/network constraints)?
+- Side effects: persistence, network, filesystem, clipboard, timers, background compute?
+- Concurrency needs: what can be off-main-thread, what must stay on the UI thread?
+- State shape: window-local vs app-global; any derived/async state stack needs (`selector/query/router`)?
+- Regression protection: what behavior needs a unit test vs a `fretboard diag` script?
+
+Defaults if unclear:
+
+- Use `fret-kit` golden path, keep UI state main-thread-only, and put background results through an inbox + wake.
+
 ## Quick start
 
 - For a minimal app wiring example, start with `apps/fret-examples/src/todo_demo.rs`.
@@ -28,6 +42,16 @@ If you are looking for **GPU post-processing** (“blur/glass/backdrop”), that
 
 Follow the “Golden path (recommended defaults)” below, then protect the behavior with at least one regression artifact
 (unit/integration test, or a `fretboard diag` script if a state machine is involved).
+
+## Definition of done (what to leave behind)
+
+- Entry point chosen and justified (`fret-kit` vs `fret-bootstrap` vs custom `fret-launch`).
+- Side effects are expressed via the canonical surfaces (Effects + Dispatcher/Inbox), without blocking the UI thread.
+- Any user-visible timing uses runner-owned scheduling (`Effect::SetTimer` / RAF) instead of ad-hoc timers.
+- At least one regression artifact exists for the changed behavior:
+  - unit/integration test for deterministic logic, and/or
+  - `tools/diag-scripts/*.json` for interaction/state-machine behavior.
+- Commands/ID surfaces are stable (no churn without migration plan).
 
 ## Golden path (recommended defaults)
 
