@@ -1321,7 +1321,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    validate_scene_if_enabled(&state.scene);
+                    super::render::validate_scene_if_enabled(&state.scene);
 
                     if let Some(a11y) = state.accessibility.as_mut()
                         && a11y.is_active()
