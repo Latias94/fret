@@ -84,7 +84,9 @@ impl TextFallbackPolicyV1 {
             fret_core::TextCommonFallbackInjection::PlatformDefault => {
                 Self::platform_default_common_fallback_mode(shaper)
             }
-            fret_core::TextCommonFallbackInjection::None => CommonFallbackMode::PreferSystemFallback,
+            fret_core::TextCommonFallbackInjection::None => {
+                CommonFallbackMode::PreferSystemFallback
+            }
             fret_core::TextCommonFallbackInjection::CommonFallback => {
                 CommonFallbackMode::PreferCommonFallback
             }
@@ -2232,6 +2234,9 @@ impl TextSystem {
 
         let added = self.parley_shaper.add_fonts(fonts);
         if added > 0 {
+            let _ =
+                self.apply_font_families_inner(&self.fallback_policy.font_family_config.clone());
+            self.fallback_policy.recompute_key(&self.parley_shaper);
             self.font_db_revision = self.font_db_revision.saturating_add(1);
             self.recompute_font_stack_key();
             self.reset_caches_for_font_change();
