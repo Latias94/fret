@@ -44,9 +44,11 @@ See also:
   - selection-in-rect queries.
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (union display)
-- [ ] CWL-M2-002 Decide where selection-on-drag lives:
-  - reuse `fret-canvas/ui` marquee recipe,
-  - or provide a world-layer aware wrapper.
+- [x] CWL-M2-002 Decide where selection-on-drag lives:
+  - Decision: provide a world-layer-aware wrapper (marquee chrome must render above node subtrees).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (simulated commit + wiring)
+  - Note: `fretboard diag` currently cannot drag; the spike page includes a simulate button for gating.
 - [x] CWL-M2-003 Add a small helper to compute `fit_view_to_canvas_rect(...)` from a set of bound keys.
   - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
   - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (Fit view button)

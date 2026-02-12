@@ -18,8 +18,10 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, ItemKey, UiHost};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::ui::use_controllable_model;
+use crate::ui::{CanvasMarqueeCommitCx, CanvasMarqueeSelectionProps};
 use crate::ui::{
     PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_panel,
 };
@@ -126,6 +128,29 @@ pub fn canvas_world_fit_view_to_keys(
 ) -> Option<PanZoom2D> {
     let target = bounds_store.union_canvas_bounds_for_key_values(keys)?;
     Some(fit_view_to_canvas_rect(surface_bounds, target, options))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct MarqueeDragState {
+    button: fret_core::MouseButton,
+    start: fret_core::Point,
+    current: fret_core::Point,
+    modifiers: fret_core::Modifiers,
+    active: bool,
+}
+
+fn rect_from_points(a: fret_core::Point, b: fret_core::Point) -> Rect {
+    let x0 = a.x.0.min(b.x.0);
+    let y0 = a.y.0.min(b.y.0);
+    let x1 = a.x.0.max(b.x.0);
+    let y1 = a.y.0.max(b.y.0);
+    Rect::new(
+        fret_core::Point::new(fret_core::Px(x0), fret_core::Px(y0)),
+        fret_core::Size::new(
+            fret_core::Px((x1 - x0).max(0.0)),
+            fret_core::Px((y1 - y0).max(0.0)),
+        ),
+    )
 }
 
 fn rect_union(a: Rect, b: Rect) -> Rect {
@@ -313,5 +338,202 @@ where
         [cx.container(container, move |_cx| {
             [canvas, world].into_iter().chain(overlay)
         })]
+    })
+}
+
+/// Like [`canvas_world_surface_panel`], but adds marquee selection chrome above the world layer.
+///
+/// This matches the XYFlow mental model (`selectionOnDrag`): a drag-to-select rectangle is drawn
+/// above nodes, and the committed rect is emitted (screen + canvas space).
+///
+/// Note: `editor_pan_zoom_canvas_surface_panel_with_marquee_selection` draws the marquee in the
+/// canvas paint pass (good for canvas-only editors), but that would appear **behind** world-layer
+/// element subtrees. This helper draws marquee chrome as a declarative `Container` so it stays on
+/// top of nodes.
+#[track_caller]
+pub fn canvas_world_surface_panel_with_marquee_selection<H: UiHost, W, O>(
+    cx: &mut ElementContext<'_, H>,
+    mut props: CanvasWorldSurfacePanelProps,
+    marquee: CanvasMarqueeSelectionProps,
+    paint: impl for<'p> Fn(&mut CanvasPainter<'p>, PanZoomCanvasPaintCx) + 'static,
+    world: impl FnOnce(&mut ElementContext<'_, H>, CanvasWorldPaintCx) -> W,
+    overlay: impl FnOnce(&mut ElementContext<'_, H>, CanvasWorldPaintCx) -> O,
+) -> AnyElement
+where
+    W: IntoIterator<Item = AnyElement>,
+    O: IntoIterator<Item = AnyElement>,
+{
+    let marquee_enabled = marquee.enabled && marquee.selection_on_drag;
+    let marquee_button = marquee.button;
+    let min_drag = marquee.min_drag_distance_px.max(0.0);
+    let marquee_style = marquee.style;
+    let on_commit = marquee.on_commit.clone();
+
+    let drag_state: fret_runtime::Model<Option<MarqueeDragState>> =
+        use_controllable_model(cx, None, || None).model();
+
+    if marquee_enabled {
+        let drag_c = drag_state.clone();
+        let on_down: fret_ui::action::OnPointerDown = Arc::new(
+            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  down: fret_ui::action::PointerDownCx| {
+                if down.button != marquee_button {
+                    return false;
+                }
+
+                host.capture_pointer();
+                let _ = host.models_mut().update(&drag_c, |st| {
+                    *st = Some(MarqueeDragState {
+                        button: down.button,
+                        start: down.position,
+                        current: down.position,
+                        modifiers: down.modifiers,
+                        active: false,
+                    });
+                });
+                host.request_redraw(action_cx.window);
+                true
+            },
+        );
+        props.pan_zoom.on_pointer_down = Some(match props.pan_zoom.on_pointer_down.take() {
+            None => on_down,
+            Some(prev) => {
+                Arc::new(move |host, cx, down| prev(host, cx, down) || on_down(host, cx, down))
+            }
+        });
+
+        let drag_c = drag_state.clone();
+        let on_move: fret_ui::action::OnPointerMove = Arc::new(
+            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  mv: fret_ui::action::PointerMoveCx| {
+                let mut drag = host.models_mut().read(&drag_c, |st| *st).ok().flatten();
+                let Some(mut drag_state) = drag.take() else {
+                    return false;
+                };
+
+                drag_state.current = mv.position;
+                if !drag_state.active {
+                    let dx = drag_state.current.x.0 - drag_state.start.x.0;
+                    let dy = drag_state.current.y.0 - drag_state.start.y.0;
+                    let dist = (dx * dx + dy * dy).sqrt();
+                    if dist >= min_drag {
+                        drag_state.active = true;
+                    }
+                }
+
+                let _ = host
+                    .models_mut()
+                    .update(&drag_c, |st| *st = Some(drag_state));
+                host.request_redraw(action_cx.window);
+                true
+            },
+        );
+        props.pan_zoom.on_pointer_move = Some(match props.pan_zoom.on_pointer_move.take() {
+            None => on_move,
+            Some(prev) => Arc::new(move |host, cx, mv| prev(host, cx, mv) || on_move(host, cx, mv)),
+        });
+
+        let drag_c = drag_state.clone();
+        let view_model = use_controllable_model(cx, props.pan_zoom.view.take(), || {
+            props.pan_zoom.default_view
+        })
+        .model();
+        props.pan_zoom.view = Some(view_model.clone());
+
+        let default_view = props.pan_zoom.default_view;
+        let on_commit = on_commit.clone();
+        let on_up: fret_ui::action::OnPointerUp = Arc::new(
+            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  up: fret_ui::action::PointerUpCx| {
+                let drag = host.models_mut().read(&drag_c, |st| *st).ok().flatten();
+                let Some(drag) = drag else {
+                    return false;
+                };
+                if up.button != drag.button {
+                    return false;
+                }
+
+                host.release_pointer_capture();
+                let _ = host.models_mut().update(&drag_c, |st| *st = None);
+
+                if drag.active {
+                    if let Some(on_commit) = on_commit.as_ref() {
+                        let bounds = host.bounds();
+                        let view = host
+                            .models_mut()
+                            .read(&view_model, |v| *v)
+                            .ok()
+                            .unwrap_or(default_view);
+
+                        let rect_screen = rect_from_points(drag.start, drag.current);
+                        let c0 = view.screen_to_canvas(bounds, rect_screen.origin);
+                        let c1 = view.screen_to_canvas(
+                            bounds,
+                            fret_core::Point::new(
+                                fret_core::Px(rect_screen.origin.x.0 + rect_screen.size.width.0),
+                                fret_core::Px(rect_screen.origin.y.0 + rect_screen.size.height.0),
+                            ),
+                        );
+                        let rect_canvas = rect_from_points(c0, c1);
+                        on_commit(
+                            host,
+                            action_cx,
+                            CanvasMarqueeCommitCx {
+                                rect_screen,
+                                rect_canvas,
+                                modifiers: drag.modifiers,
+                            },
+                        );
+                    }
+                }
+
+                host.request_redraw(action_cx.window);
+                true
+            },
+        );
+        props.pan_zoom.on_pointer_up = Some(match props.pan_zoom.on_pointer_up.take() {
+            None => on_up,
+            Some(prev) => Arc::new(move |host, cx, up| prev(host, cx, up) || on_up(host, cx, up)),
+        });
+    }
+
+    canvas_world_surface_panel(cx, props, paint, world, move |cx, paint_cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+
+        if marquee_enabled {
+            let drag = cx
+                .get_model_copied(&drag_state, Invalidation::Paint)
+                .unwrap_or(None);
+            if let Some(drag) = drag {
+                if drag.active {
+                    let rect_screen = rect_from_points(drag.start, drag.current);
+                    if rect_screen.size.width.0 > 0.0 && rect_screen.size.height.0 > 0.0 {
+                        let left =
+                            fret_core::Px(rect_screen.origin.x.0 - paint_cx.bounds.origin.x.0);
+                        let top =
+                            fret_core::Px(rect_screen.origin.y.0 - paint_cx.bounds.origin.y.0);
+
+                        let mut p = ContainerProps::default();
+                        p.layout.position = fret_ui::element::PositionStyle::Absolute;
+                        p.layout.inset.left = Some(left);
+                        p.layout.inset.top = Some(top);
+                        p.layout.size.width = Length::Px(rect_screen.size.width);
+                        p.layout.size.height = Length::Px(rect_screen.size.height);
+                        p.background = Some(marquee_style.fill);
+                        p.border =
+                            fret_core::Edges::all(fret_core::Px(marquee_style.border_width_px));
+                        p.border_color = Some(marquee_style.border);
+                        p.snap_to_device_pixels = true;
+                        out.push(cx.container(p, |_cx| std::iter::empty()));
+                    }
+                }
+            }
+        }
+
+        out.extend(overlay(cx, paint_cx));
+        out
     })
 }

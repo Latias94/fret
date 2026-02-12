@@ -109,9 +109,11 @@ To make this substrate usable for real apps (AI Elements “workflow” experien
      - minimap extents.
 
 2. **Selection-on-drag integration**
-   - decide whether we:
-     - reuse the existing marquee recipe (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`), or
-     - provide a world-layer-aware wrapper that emits canonical canvas-space selection rects and events.
+   - Status: Implemented (M2-002) via a world-layer-aware wrapper:
+     - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+   - Rationale: canvas-paint marquee chrome would render behind node element subtrees.
+   - Diagnostics note: `fretboard diag` currently does not support pointer drag steps, so the UI Gallery
+     spike includes a "Simulate marquee commit" button as a gate.
 
 3. **Input arbitration recipes**
    - document (and ideally provide helpers for) common patterns:

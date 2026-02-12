@@ -42,7 +42,12 @@ Status: Done
 
 ### M2 — App ergonomics (bounds + selection seams)
 
-Status: In progress
+Status: Done (with known gaps)
 
 - Apps can query/report node bounds for fit-view.
-- Marquee selection integrates cleanly (recipe reuse or world-layer wrapper).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
+- Fit-view glue exists for a set of active keys.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_fit_view_to_keys`)
+- Marquee selection integrates cleanly for world-layer nodes (chrome above nodes).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
+  - Known gap: `fretboard diag` does not yet support pointer drag steps; the spike uses a simulate button gate.

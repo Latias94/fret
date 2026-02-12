@@ -7,9 +7,10 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use std::sync::Arc;
 
     use fret_canvas::ui::{
-        CanvasInputExemptRegionProps, CanvasWorldBoundsStore, CanvasWorldScaleMode,
-        CanvasWorldSurfacePanelProps, PanZoomInputPreset, canvas_input_exempt_region,
-        canvas_world_bounds_item, canvas_world_fit_view_to_keys, canvas_world_surface_panel,
+        CanvasInputExemptRegionProps, CanvasMarqueeSelectionProps, CanvasWorldBoundsStore,
+        CanvasWorldScaleMode, CanvasWorldSurfacePanelProps, OnCanvasMarqueeCommit,
+        PanZoomInputPreset, canvas_input_exempt_region, canvas_world_bounds_item,
+        canvas_world_fit_view_to_keys, canvas_world_surface_panel_with_marquee_selection,
         use_controllable_model,
     };
     use fret_canvas::view::{FitViewOptions2D, PanZoom2D, visible_canvas_rect};
@@ -46,6 +47,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     let node_clicks: fret_runtime::Model<u64> = use_controllable_model(cx, None, || 0u64).model();
     let bounds_store: fret_runtime::Model<CanvasWorldBoundsStore> =
         use_controllable_model(cx, None, CanvasWorldBoundsStore::default).model();
+    let selected_count: fret_runtime::Model<u64> =
+        use_controllable_model(cx, None, || 0u64).model();
 
     let scale_mode_value = cx
         .get_model_copied(&scale_mode, fret_ui::Invalidation::Layout)
@@ -55,6 +58,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         .unwrap_or(0);
     let node_clicks_value = cx
         .get_model_copied(&node_clicks, fret_ui::Invalidation::Layout)
+        .unwrap_or(0);
+    let selected_count_value = cx
+        .get_model_copied(&selected_count, fret_ui::Invalidation::Layout)
         .unwrap_or(0);
 
     let (bounds_count, bounds_union_canvas) = cx
@@ -172,9 +178,50 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     let overlay_clicks_c = overlay_clicks.clone();
     let node_clicks_c = node_clicks.clone();
     let bounds_store_c = bounds_store.clone();
-    let world = canvas_world_surface_panel(
+
+    let bounds_store_for_marquee = bounds_store.clone();
+    let selected_count_for_marquee = selected_count.clone();
+    let on_marquee_commit: OnCanvasMarqueeCommit = Arc::new(move |host, action_cx, commit| {
+        let count = host
+            .models_mut()
+            .read(&bounds_store_for_marquee, |st| {
+                let mut count = 0u64;
+                for item in st.items.values() {
+                    let (ax0, ay0, ax1, ay1) = (
+                        item.canvas_bounds.origin.x.0,
+                        item.canvas_bounds.origin.y.0,
+                        item.canvas_bounds.origin.x.0 + item.canvas_bounds.size.width.0,
+                        item.canvas_bounds.origin.y.0 + item.canvas_bounds.size.height.0,
+                    );
+                    let (bx0, by0, bx1, by1) = (
+                        commit.rect_canvas.origin.x.0,
+                        commit.rect_canvas.origin.y.0,
+                        commit.rect_canvas.origin.x.0 + commit.rect_canvas.size.width.0,
+                        commit.rect_canvas.origin.y.0 + commit.rect_canvas.size.height.0,
+                    );
+                    let intersects = ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0;
+                    if intersects {
+                        count = count.saturating_add(1);
+                    }
+                }
+                count
+            })
+            .ok()
+            .unwrap_or(0);
+
+        let _ = host
+            .models_mut()
+            .update(&selected_count_for_marquee, |v| *v = count);
+        host.request_redraw(action_cx.window);
+    });
+
+    let mut marquee = CanvasMarqueeSelectionProps::default();
+    marquee.on_commit = Some(on_marquee_commit);
+
+    let world = canvas_world_surface_panel_with_marquee_selection(
         cx,
         world_props,
+        marquee,
         paint,
         move |cx, world_cx| {
             let abs = LayoutRefinement::default().absolute();
@@ -325,6 +372,53 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .on_activate(on_fit_view)
                 .into_element(cx);
 
+            let simulate_selected_store = bounds_store.clone();
+            let simulate_selected_out = selected_count.clone();
+            let on_simulate_selected: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let count = host
+                    .models_mut()
+                    .read(&simulate_selected_store, |st| {
+                        let rect = st.union_canvas_bounds_for_key_values([1u64, 2u64]);
+                        let Some(rect) = rect else {
+                            return 0u64;
+                        };
+
+                        let mut count = 0u64;
+                        for item in st.items.values() {
+                            let (ax0, ay0, ax1, ay1) = (
+                                item.canvas_bounds.origin.x.0,
+                                item.canvas_bounds.origin.y.0,
+                                item.canvas_bounds.origin.x.0 + item.canvas_bounds.size.width.0,
+                                item.canvas_bounds.origin.y.0 + item.canvas_bounds.size.height.0,
+                            );
+                            let (bx0, by0, bx1, by1) = (
+                                rect.origin.x.0,
+                                rect.origin.y.0,
+                                rect.origin.x.0 + rect.size.width.0,
+                                rect.origin.y.0 + rect.size.height.0,
+                            );
+                            let intersects = ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0;
+                            if intersects {
+                                count = count.saturating_add(1);
+                            }
+                        }
+                        count
+                    })
+                    .ok()
+                    .unwrap_or(0);
+
+                let _ = host
+                    .models_mut()
+                    .update(&simulate_selected_out, |v| *v = count);
+                host.request_redraw(action_cx.window);
+            });
+
+            let simulate = shadcn::Button::new("Simulate marquee commit")
+                .test_id("ui-ai-cwl-marquee-simulate")
+                .variant(ButtonVariant::Secondary)
+                .on_activate(on_simulate_selected)
+                .into_element(cx);
+
             let bounds_text = match bounds_union_canvas {
                 None => "Bounds: (unknown)".to_string(),
                 Some(r) => format!(
@@ -338,7 +432,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     mode_scale,
                     mode_semantic,
                     fit_view,
+                    simulate,
                     overlay,
+                    cx.text(format!("Selected: {selected_count_value}")),
                     cx.text(bounds_text),
                 ]
             })]
