@@ -194,3 +194,21 @@ Suggested steps:
 - Motion tokens can be sourced from theme config (M3 keys and/or shadcn aliases).
 - At least 2 diag scripts gate motion behavior under fixed `delta` (native runner).
 
+## Implementation status (as of 2026-02-12)
+
+Already landed (evidence anchors):
+
+- Refresh-rate stable overlay transitions: `ecosystem/fret-ui-kit/src/declarative/transition.rs`
+- Headless motion primitives: `ecosystem/fret-ui-headless/src/motion/`
+  - `spring.rs`, `friction.rs`, `tween.rs`, `inertia.rs`
+- UI-kit drivers: `ecosystem/fret-ui-kit/src/declarative/motion.rs`
+  - `drive_tween_f32`, `drive_spring_f32`, `drive_inertia_f32`
+- Pointer velocity snapshots exposed to component hooks (ADR 0243 alignment):
+  - `crates/fret-ui/src/action.rs` (`PointerMoveCx.velocity_window`, `PointerUpCx.velocity_window`)
+- Drawer release uses velocity projection to decide close/snap (starting point for Vaul-like feel):
+  - `ecosystem/fret-ui-shadcn/src/drawer.rs`
+
+Diag gates:
+
+- Sidebar toggle under fixed frame delta: `tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json`
+- Drawer snap points drag + settle: `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json`
