@@ -127,6 +127,48 @@ pub fn normal_from_tangent(tangent: Point) -> Point {
     Point::new(Px(nx), Px(ny))
 }
 
+/// Compute a simple arrowhead triangle at `end`, oriented by `tangent`.
+///
+/// Returns points in winding order `[tip, left, right]` so callers can fill a closed path:
+/// `MoveTo(tip) -> LineTo(left) -> LineTo(right) -> Close`.
+///
+/// Inputs:
+/// - `tangent`: direction at the end of the curve (does not need to be normalized)
+/// - `length`: tip-to-base distance in the same units as `Point` (typically logical px)
+/// - `width`: base width (left-to-right) in the same units as `Point`
+pub fn arrowhead_triangle(end: Point, tangent: Point, length: f32, width: f32) -> [Point; 3] {
+    let length = if length.is_finite() {
+        length.max(0.0)
+    } else {
+        0.0
+    };
+    let width = if width.is_finite() {
+        width.max(0.0)
+    } else {
+        0.0
+    };
+
+    let dx = tangent.x.0;
+    let dy = tangent.y.0;
+    let dlen = (dx * dx + dy * dy).sqrt();
+    let (ux, uy) = if dlen.is_finite() && dlen > 1.0e-6 {
+        (dx / dlen, dy / dlen)
+    } else {
+        (1.0, 0.0)
+    };
+
+    // Unit normal (perp to direction).
+    let nx = -uy;
+    let ny = ux;
+    let half_w = width * 0.5;
+
+    let base = Point::new(Px(end.x.0 - ux * length), Px(end.y.0 - uy * length));
+    let left = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
+    let right = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
+
+    [end, left, right]
+}
+
 /// Sample a cubic Bezier curve into a polyline point list.
 ///
 /// The output always includes `p0` and `p3` and is cleared before writing.
@@ -649,6 +691,25 @@ mod tests {
         assert!(!out.is_empty());
         assert!((out[0].0.x.0 - 0.0).abs() <= 1.0e-6);
         assert!((out[0].1.x.0 - 3.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn arrowhead_triangle_is_finite() {
+        let end = Point::new(Px(10.0), Px(5.0));
+        let tangent = Point::new(Px(2.0), Px(0.0));
+        let tri = arrowhead_triangle(end, tangent, 10.0, 6.0);
+
+        for p in tri {
+            assert!(p.x.0.is_finite() && p.y.0.is_finite());
+        }
+
+        // Base center should be behind the tip along the tangent direction.
+        let base = Point::new(
+            Px((tri[1].x.0 + tri[2].x.0) * 0.5),
+            Px((tri[1].y.0 + tri[2].y.0) * 0.5),
+        );
+        assert!(base.x.0 < end.x.0);
+        assert!((base.y.0 - end.y.0).abs() <= 1.0e-4);
     }
 
     #[test]
