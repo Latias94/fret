@@ -4845,12 +4845,38 @@ struct WindowRing {
 impl WindowRing {
     fn update_pointer_position(&mut self, event: &Event) {
         match event {
-            Event::Pointer(e) => {
-                self.last_pointer_position = Some(e.position());
-                self.last_pointer_type = Some(e.pointer_type());
-            }
+            Event::Pointer(e) => match e {
+                fret_core::PointerEvent::Move {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Down {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Up {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::Wheel {
+                    position,
+                    pointer_type,
+                    ..
+                }
+                | fret_core::PointerEvent::PinchGesture {
+                    position,
+                    pointer_type,
+                    ..
+                } => {
+                    self.last_pointer_position = Some(*position);
+                    self.last_pointer_type = Some(*pointer_type);
+                }
+            },
             Event::PointerCancel(e) => {
-                self.last_pointer_position = Some(e.position);
+                self.last_pointer_position = e.position;
                 self.last_pointer_type = Some(e.pointer_type);
             }
             _ => {}
