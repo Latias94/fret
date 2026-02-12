@@ -7,9 +7,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use std::sync::Arc;
 
     use fret_canvas::ui::{
-        CanvasInputExemptRegionProps, CanvasWorldScaleMode, CanvasWorldSurfacePanelProps,
-        PanZoomInputPreset, canvas_input_exempt_region, canvas_world_surface_panel,
-        use_controllable_model,
+        CanvasInputExemptRegionProps, CanvasWorldBoundsStore, CanvasWorldScaleMode,
+        CanvasWorldSurfacePanelProps, PanZoomInputPreset, canvas_input_exempt_region,
+        canvas_world_bounds_item, canvas_world_surface_panel, use_controllable_model,
     };
     use fret_canvas::view::{PanZoom2D, visible_canvas_rect};
     use fret_core::scene::Paint;
@@ -43,6 +43,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     let overlay_clicks: fret_runtime::Model<u64> =
         use_controllable_model(cx, None, || 0u64).model();
     let node_clicks: fret_runtime::Model<u64> = use_controllable_model(cx, None, || 0u64).model();
+    let bounds_store: fret_runtime::Model<CanvasWorldBoundsStore> =
+        use_controllable_model(cx, None, CanvasWorldBoundsStore::default).model();
 
     let scale_mode_value = cx
         .get_model_copied(&scale_mode, fret_ui::Invalidation::Layout)
@@ -53,6 +55,13 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     let node_clicks_value = cx
         .get_model_copied(&node_clicks, fret_ui::Invalidation::Layout)
         .unwrap_or(0);
+
+    let (bounds_count, bounds_union_canvas) = cx
+        .read_model_ref(&bounds_store, fret_ui::Invalidation::Layout, |st| {
+            let keys = [1u64, 2u64];
+            (st.items.len(), st.union_canvas_bounds_for_keys(keys.iter()))
+        })
+        .unwrap_or((0, None));
 
     let stage_layout = LayoutRefinement::default()
         .w_full()
@@ -161,6 +170,7 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
 
     let overlay_clicks_c = overlay_clicks.clone();
     let node_clicks_c = node_clicks.clone();
+    let bounds_store_c = bounds_store.clone();
     let world = canvas_world_surface_panel(
         cx,
         world_props,
@@ -224,7 +234,14 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             .refine_layout(abs.clone().left_px(b_left).top_px(b_top).w_px(Px(260.0)))
             .into_element(cx);
 
-            vec![node_a, node_b]
+            vec![
+                canvas_world_bounds_item(cx, bounds_store_c.clone(), 1, world_cx, move |_cx| {
+                    vec![node_a]
+                }),
+                canvas_world_bounds_item(cx, bounds_store_c.clone(), 2, world_cx, move |_cx| {
+                    vec![node_b]
+                }),
+            ]
         },
         move |cx, _world_cx| {
             let mut overlay_region = CanvasInputExemptRegionProps::default();
@@ -277,8 +294,16 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .on_activate(on_overlay_activate)
                 .into_element(cx);
 
-            vec![canvas_input_exempt_region(cx, overlay_region, move |_cx| {
-                [mode_scale, mode_semantic, overlay]
+            let bounds_text = match bounds_union_canvas {
+                None => "Bounds: (unknown)".to_string(),
+                Some(r) => format!(
+                    "Bounds: {bounds_count} items; union canvas rect = ({:.1}, {:.1}) {:.1}×{:.1}",
+                    r.origin.x.0, r.origin.y.0, r.size.width.0, r.size.height.0
+                ),
+            };
+
+            vec![canvas_input_exempt_region(cx, overlay_region, move |cx| {
+                vec![mode_scale, mode_semantic, overlay, cx.text(bounds_text)]
             })]
         },
     )

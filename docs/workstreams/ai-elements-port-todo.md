@@ -44,7 +44,9 @@ Each TODO is labeled:
 AI Elements is now fully accounted for. If we want an XYFlow/ReactFlow-like workflow editor
 experience (nodes as element subtrees, marquee selection, input filtering), track it separately:
 
-- [ ] AIEL-FLOW-001 Define a declarative “world layer” contract for canvas-space element subtrees.
+- [~] AIEL-FLOW-001 Land a declarative “world layer” substrate for canvas-space element subtrees.
+  - Done (M0/M1): `ecosystem/fret-canvas/src/ui/world_layer.rs` + UI Gallery spike + diag gate.
+  - Remaining (M2): bounds reporting + selection seams.
   - Workstream: `docs/workstreams/canvas-world-layer-v1.md`
   - TODO tracker: `docs/workstreams/canvas-world-layer-v1-todo.md`
 - [x] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
@@ -56,6 +58,14 @@ experience (nodes as element subtrees, marquee selection, input filtering), trac
 - [x] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
   - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`arrowhead_triangle`)
   - Applied to `WorkflowEdgeAnimated`: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
+- [x] AIEL-FLOW-005 Add a bounds reporting seam for world-layer nodes (fit view + selection queries).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
+  - Anchor: `docs/workstreams/xyflow-gap-analysis.md` (Gap F)
+  - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
+- [ ] AIEL-FLOW-006 Decide/implement selection-on-drag integration for world-layer nodes.
+  - Option A: reuse existing marquee recipe (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`).
+  - Option B: world-layer wrapper that emits canonical canvas-space selection rects + events.
+  - Workstream: `docs/workstreams/canvas-world-layer-v1.md` (M2)
 
 ### M0 — Foundations (composition + gates)
 

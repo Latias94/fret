@@ -1,6 +1,6 @@
 ---
 title: Declarative Canvas World Layer v1 (XYFlow-style nodes as element subtrees)
-status: draft
+status: active
 date: 2026-02-12
 scope: ecosystem/fret-canvas/ui, ecosystem/fret-ui-kit, apps (UI Gallery demos + diag gates)
 ---
@@ -90,6 +90,31 @@ Known limitations (v0):
 - Bounds for the world transform are derived from `layout_query_bounds(...)` (last-frame), so
   sudden resizes can have one-frame transform mismatch. v1 should remove this by computing the
   transform from current-frame bounds (requires a deeper runtime seam).
+
+## Next (M2) — Ergonomics (bounds + selection seams)
+
+To make this substrate usable for real apps (AI Elements “workflow” experiences), we still need:
+
+1. **Bounds reporting seam**
+   - Status: Implemented (M2-001)
+     - `ecosystem/fret-canvas/src/ui/world_layer.rs`:
+       - `CanvasWorldBoundsStore`
+       - `canvas_world_bounds_item(...)`
+   - Remaining: provide a small helper/controller for `fit_view_to_canvas_rect(...)` from active keys,
+   - helpers exist to map bounds between screen space and canvas space for:
+     - `fitView` math (`fit_view_to_canvas_rect`),
+     - selection-in-rect queries,
+     - minimap extents.
+
+2. **Selection-on-drag integration**
+   - decide whether we:
+     - reuse the existing marquee recipe (`editor_pan_zoom_canvas_surface_panel_with_marquee_selection`), or
+     - provide a world-layer-aware wrapper that emits canonical canvas-space selection rects and events.
+
+3. **Input arbitration recipes**
+   - document (and ideally provide helpers for) common patterns:
+     - “node subtree has an inner scroll area: wheel scroll should not pan the canvas”,
+     - “text input inside a node: drag/select gestures should not start a canvas pan”.
 
 ## Quality gates
 

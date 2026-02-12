@@ -16,13 +16,15 @@ use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutQueryRegionProps, LayoutStyle, Length, RenderTransformProps,
 };
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, ItemKey, UiHost};
+use std::collections::BTreeMap;
 
 use crate::ui::use_controllable_model;
 use crate::ui::{
     PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_panel,
 };
 use crate::view::PanZoom2D;
+use crate::view::screen_rect_to_canvas_rect;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CanvasWorldScaleMode {
@@ -53,6 +55,129 @@ impl CanvasWorldPaintCx {
     pub fn screen_to_canvas(&self, screen: fret_core::Point) -> fret_core::Point {
         self.view.screen_to_canvas(self.bounds, screen)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CanvasWorldItemBounds {
+    /// Root element ID for the wrapped subtree (useful for overlay anchoring queries).
+    pub element: GlobalElementId,
+    /// The subtree's last known bounds mapped into canvas space under the current surface view.
+    pub canvas_bounds: Rect,
+}
+
+/// A lightweight, app-owned registry for node subtree bounds in a canvas world layer.
+///
+/// This is intentionally "outcomes-first" and frame-lagged:
+///
+/// - The world layer can only read last-frame bounds (`LayoutQueryRegion` / element bounds caches),
+///   so updates arrive with one-frame latency.
+/// - The common use case (fit-view / selection queries) is tolerant of that latency.
+///
+/// Apps decide which keys are "active" (stale entries are allowed).
+#[derive(Debug, Default, Clone)]
+pub struct CanvasWorldBoundsStore {
+    pub items: BTreeMap<ItemKey, CanvasWorldItemBounds>,
+}
+
+impl CanvasWorldBoundsStore {
+    pub fn union_canvas_bounds_for_keys<'a>(
+        &self,
+        keys: impl IntoIterator<Item = &'a ItemKey>,
+    ) -> Option<Rect> {
+        let mut out: Option<Rect> = None;
+        for key in keys {
+            let Some(item) = self.items.get(key) else {
+                continue;
+            };
+            out = Some(match out {
+                None => item.canvas_bounds,
+                Some(prev) => rect_union(prev, item.canvas_bounds),
+            });
+        }
+        out
+    }
+}
+
+fn rect_union(a: Rect, b: Rect) -> Rect {
+    let x0 = a.origin.x.0.min(b.origin.x.0);
+    let y0 = a.origin.y.0.min(b.origin.y.0);
+    let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
+    let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
+    Rect::new(
+        fret_core::Point::new(fret_core::Px(x0), fret_core::Px(y0)),
+        fret_core::Size::new(
+            fret_core::Px((x1 - x0).max(0.0)),
+            fret_core::Px((y1 - y0).max(0.0)),
+        ),
+    )
+}
+
+fn rect_approx_eq(a: Rect, b: Rect, eps: f32) -> bool {
+    (a.origin.x.0 - b.origin.x.0).abs() <= eps
+        && (a.origin.y.0 - b.origin.y.0).abs() <= eps
+        && (a.size.width.0 - b.size.width.0).abs() <= eps
+        && (a.size.height.0 - b.size.height.0).abs() <= eps
+}
+
+/// Wraps a subtree as a "world item" and reports its last-known bounds into an app-owned store.
+///
+/// Notes:
+///
+/// - `key` should be stable for the item within this world surface.
+/// - Bounds are frame-lagged by design (see `LayoutQueryRegion` contract).
+#[track_caller]
+pub fn canvas_world_bounds_item<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    bounds_store: fret_runtime::Model<CanvasWorldBoundsStore>,
+    key: ItemKey,
+    paint_cx: CanvasWorldPaintCx,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    cx.keyed(key, |cx| {
+        let mut props = LayoutQueryRegionProps::default();
+        props.name = Some("fret-canvas.ui.canvas_world_bounds_item".into());
+
+        cx.layout_query_region_with_id(props, move |cx, element| {
+            let visual_bounds = cx
+                .last_visual_bounds_for_element(element)
+                .or_else(|| cx.last_bounds_for_element(element));
+
+            if let Some(visual_bounds) = visual_bounds {
+                let canvas_bounds =
+                    screen_rect_to_canvas_rect(paint_cx.bounds, paint_cx.view, visual_bounds);
+
+                let should_update = cx
+                    .app
+                    .models()
+                    .read(&bounds_store, |st| {
+                        let Some(prev) = st.items.get(&key) else {
+                            return true;
+                        };
+                        prev.element != element
+                            || !rect_approx_eq(prev.canvas_bounds, canvas_bounds, 0.25)
+                    })
+                    .unwrap_or(true);
+
+                if should_update {
+                    let _ = cx.app.update_model(&bounds_store, |st, _| {
+                        st.items.insert(
+                            key,
+                            CanvasWorldItemBounds {
+                                element,
+                                canvas_bounds,
+                            },
+                        );
+                    });
+                    cx.request_frame();
+                }
+            }
+
+            f(cx)
+        })
+    })
 }
 
 #[derive(Clone)]

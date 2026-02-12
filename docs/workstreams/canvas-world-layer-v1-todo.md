@@ -1,6 +1,6 @@
 # Declarative Canvas World Layer v1 — TODO
 
-Status: Draft (workstream tracker)
+Status: Active (workstream tracker)
 
 This TODO list is scoped to the “nodes as element subtrees in a pan/zoom world” substrate.
 
@@ -39,9 +39,12 @@ See also:
 
 ## M2 — Ergonomics (apps can build on it)
 
-- [ ] CWL-M2-001 Define a minimal “bounds reporting” seam so apps can implement:
+- [x] CWL-M2-001 Define a minimal “bounds reporting” seam so apps can implement:
   - fit-view to nodes,
   - selection-in-rect queries.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`CanvasWorldBoundsStore`, `canvas_world_bounds_item`)
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` (union display)
 - [ ] CWL-M2-002 Decide where selection-on-drag lives:
   - reuse `fret-canvas/ui` marquee recipe,
   - or provide a world-layer aware wrapper.
+- [ ] CWL-M2-003 Add a small helper to compute `fit_view_to_canvas_rect(...)` from a set of bound keys.

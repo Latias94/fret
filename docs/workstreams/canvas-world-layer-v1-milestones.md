@@ -1,6 +1,6 @@
 ---
 title: Declarative Canvas World Layer v1 — Milestones
-status: draft
+status: active
 date: 2026-02-12
 scope: ecosystem/fret-canvas/ui, ecosystem/fret-ui-kit, UI Gallery + diag gates
 ---
@@ -23,11 +23,18 @@ We consider v1 usable when:
 
 ### M0 — Spike demo (composition proof)
 
-- A minimal host surface exists (API shape TBD).
+Status: Done
+
+- A minimal host surface exists.
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel`)
 - A UI Gallery page demonstrates nodes-as-elements under pan/zoom.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
 - One diag script captures the bundle for drift review.
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
 
 ### M1 — Correctness closure (hit-testing + scaling modes)
+
+Status: Done
 
 - Scale-with-zoom mode works (XYFlow-like).
 - Semantic zoom mode works (editor-like).
@@ -35,6 +42,7 @@ We consider v1 usable when:
 
 ### M2 — App ergonomics (bounds + selection seams)
 
+Status: Open
+
 - Apps can query/report node bounds for fit-view.
 - Marquee selection integrates cleanly (recipe reuse or world-layer wrapper).
-

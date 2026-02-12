@@ -96,28 +96,41 @@ Fret already has a much richer surface than XYFlow:
 This list is ordered by “what we would need to build an XYFlow-like *component* experience” (not
 by what the retained `fret-node` widget already has).
 
-### Gap A — Declarative "world layer" for nodes/edges as element subtrees
+### Gap A — Declarative "world layer" for nodes as element subtrees (partially closed)
 
 XYFlow’s core affordance is: nodes are DOM elements, edges are SVG, both live in a transformed
 world that pans/zooms together.
 
-In Fret today:
+In Fret today (2026-02-12):
 
-- `WorkflowCanvas` (`ecosystem/fret-ui-ai/src/elements/workflow/canvas.rs`) is a **host** surface
-  built on `fret-canvas/ui` pan/zoom + an overlay slot.
-- `WorkflowNode` (`ecosystem/fret-ui-ai/src/elements/workflow/node.rs`) is a shadcn-aligned chrome
-  component, but it is not wired into a world-space layout/measure system.
+- A minimal reusable world-layer composition helper exists:
+  - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel`)
+  - Supports both:
+    - `CanvasWorldScaleMode::ScaleWithZoom` (XYFlow-like)
+    - `CanvasWorldScaleMode::SemanticZoom` (editor-like)
+- A UI Gallery spike exists with a diag gate:
+  - Page: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+  - Gate: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
 
-Missing substrate:
+What is still missing (v1 ergonomics gaps):
 
-- A reusable way to lay out *element tree children* at canvas-space positions under a `PanZoom2D`
-  view (including hit-testing and invalidation under pan/zoom).
+- **Bounds reporting seam**: apps need node bounds (canvas-space and/or screen-space) to implement:
+  - fit-view to nodes,
+  - selection-in-rect queries,
+  - minimap extents.
+- **Interaction glue**: a world-layer-only solution still needs app-level policies for:
+  - node dragging (including snaplines / snap-to-grid),
+  - connection-drag (handles, loose/strict targeting),
+  - selection model updates (click vs marquee).
+- **Current bounds latency caveat**: the v0 world layer derives the transform from a
+  `LayoutQueryRegion` using `layout_query_bounds(...)` (last-frame bounds). This can produce a
+  one-frame mismatch on resize/layout changes. See `docs/workstreams/canvas-world-layer-v1.md`.
 
 Recommendation:
 
-- Treat this as a separate “declarative canvas world layer” workstream (likely `fret-ui-kit` or a
-  dedicated ecosystem crate), because it is renderer + layout + hit-test sensitive.
-- In the meantime, for interactive editors, prefer `fret-node`’s retained `NodeGraphCanvas`.
+- Track remaining work as `docs/workstreams/canvas-world-layer-v1.md` M2 (bounds + selection seams).
+- For editor-grade workflows **today**, prefer `fret-node::NodeGraphCanvas` as the interaction engine
+  and use `fret-ui-ai` workflow wrappers as chrome.
 
 ### Gap B — ReactFlow-like input filter knobs (`noWheel` / `noPan` / `.nokey`)
 
@@ -138,6 +151,43 @@ Recommendation:
   - `ecosystem/fret-canvas/src/ui/input_exempt.rs`: `canvas_input_exempt_region` (`.nowheel` / `.nopan` equivalents).
   - `ecosystem/fret-canvas/src/ui/pan_zoom.rs`: `editor_pan_zoom_canvas_surface_panel_with_marquee_selection`
     (selection-on-drag / marquee overlay).
+
+### Gap F — World-layer node bounds → viewport helpers (fit view) (partially closed)
+
+XYFlow’s `fitView` works because the system has access to measured DOM bounds for nodes.
+
+In Fret’s declarative world layer today, we want a first-class seam to collect per-node bounds
+without forcing apps to invent ad-hoc measurement registries.
+
+Current state (2026-02-12):
+
+- A minimal bounds store + item wrapper exists:
+  - `ecosystem/fret-canvas/src/ui/world_layer.rs`:
+    - `CanvasWorldBoundsStore`
+    - `canvas_world_bounds_item(...)`
+- The UI Gallery spike uses this to show a live union rect (proof of wiring):
+  - `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+
+Target outcome:
+
+- Keep the seam small and robust:
+  - node subtrees can publish stable canvas-space bounds (fit-view and selection queries),
+  - element IDs are preserved for screen-space queries (overlay anchoring via `visual_bounds_for_element`),
+  - avoid per-pan/zoom thrash by keeping the stored values zoom-invariant in `ScaleWithZoom` mode.
+
+Still missing:
+
+- A small helper/controller that turns a set of active keys into a `fit_view_to_canvas_rect(...)`
+  request (see `docs/workstreams/canvas-world-layer-v1-todo.md` CWL-M2-003).
+- A clear selection-on-drag integration story for world-layer nodes (CWL-M2-002).
+
+Notes:
+
+- Bounds remain frame-lagged due to `LayoutQueryRegion` / element bounds cache semantics.
+
+Workstream anchor:
+
+- `docs/workstreams/canvas-world-layer-v1.md` (M2)
 
 ### Gap C — Dashed strokes for paths (edge temporary)
 
