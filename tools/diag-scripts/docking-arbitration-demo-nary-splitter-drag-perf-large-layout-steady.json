@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: splitter drag perf probe (n-ary, large layout, steady)",
+    "tags": ["docking", "nary", "perf", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with env: FRET_DOCK_ARB_PRESET=large",
+      "Optional: FRET_DOCK_ARB_NO_PERSIST=1 to avoid writing .fret/layout.json"
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-extra-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    { "type": "wait_frames", "n": 20 },
+    { "type": "reset_diagnostics" },
+
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": 220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": -220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": 220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": -220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": 220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": -220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": 220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": -220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": 220.0, "delta_y": 0.0, "steps": 24 },
+    { "type": "drag_pointer", "target": { "kind": "test_id", "id": "dock-arb-split-handle-viewport" }, "delta_x": -220.0, "delta_y": 0.0, "steps": 24 },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady"
+    },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}
+

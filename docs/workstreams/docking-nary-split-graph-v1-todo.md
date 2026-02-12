@@ -159,16 +159,28 @@ Each TODO is labeled:
     - `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-split-handle-viewport` semantics anchor)
     - `tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json`
 
-- [ ] DN-P1-diag-004 Add `meta.required_capabilities` to docking scripts and fail fast on missing support.
+- [x] DN-P1-diag-004 Add `meta.required_capabilities` to docking scripts and fail fast on missing support.
   - Goal: prevent “timeouts as failures” in CI; prefer structured capability errors.
+  - Evidence:
+    - `tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json` (`meta.required_capabilities`)
+    - `tools/diag-scripts/docking-arbitration-demo-nary-preview-insert-into-existing-split.json` (`meta.required_capabilities`)
+    - `tools/diag-scripts/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json` (`meta.required_capabilities`)
+    - `tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json` (`meta.required_capabilities`)
 
 ## P1 — Performance gates
 
-- [ ] DN-P1-perf-001 Add a perf probe for repeated splitter drags in a large layout.
+- [x] DN-P1-perf-001 Add a perf probe for repeated splitter drags in a large layout.
   - Compare before/after CPU time, allocations, and layout node visits (where available).
+  - Evidence:
+    - `tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json`
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (`FRET_DOCK_ARB_PRESET=large`)
+    - `crates/fret-diag/src/perf_seed_policy.rs` (`docking-arbitration-steady`)
 
-- [ ] DN-P1-perf-002 Add a perf probe for tab drag hover (drop hint recomputation).
+- [x] DN-P1-perf-002 Add a perf probe for tab drag hover (drop hint recomputation).
   - Goal: keep pointer-move steady-state under a chosen threshold.
+  - Evidence:
+    - `tools/diag-scripts/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json`
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (`FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1`)
 
 ## P2 — Persistence and migration (optional in v1)
 

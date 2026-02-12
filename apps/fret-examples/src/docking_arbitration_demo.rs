@@ -59,12 +59,17 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationDragAnchor {
 #[derive(Clone)]
 struct DockingArbitrationPolicyFlags {
     disallow_left_edge: Arc<AtomicBool>,
+    disallow_drop_targets: Arc<AtomicBool>,
 }
 
 impl DockingArbitrationPolicyFlags {
     fn new() -> Self {
+        let disallow_drop_targets = std::env::var("FRET_DOCK_ARB_DISALLOW_DROP_TARGETS")
+            .ok()
+            .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
         Self {
             disallow_left_edge: Arc::new(AtomicBool::new(false)),
+            disallow_drop_targets: Arc::new(AtomicBool::new(disallow_drop_targets)),
         }
     }
 }
@@ -82,6 +87,9 @@ impl DockingPolicy for DockingArbitrationDockingPolicy {
         zone: DropZone,
         _outer: bool,
     ) -> bool {
+        if self.flags.disallow_drop_targets.load(Ordering::Relaxed) {
+            return false;
+        }
         if zone == DropZone::Left && self.flags.disallow_left_edge.load(Ordering::Relaxed) {
             return false;
         }
@@ -276,7 +284,8 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
         bounds: Rect,
         panel: &fret_core::PanelKey,
     ) -> Option<fret_core::NodeId> {
-        match panel.kind.0.as_str() {
+        let kind = panel.kind.0.as_str();
+        match kind {
             "demo.viewport.left" => {
                 let root_name = "dock.panel.viewport_left";
                 return Some(render_cached_panel_root(
@@ -328,7 +337,36 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                 ));
             }
             "demo.controls" => {}
-            _ => return None,
+            _ => {
+                let Some(suffix) = kind.strip_prefix("demo.viewport.extra.") else {
+                    return None;
+                };
+
+                let root_name = format!("dock.panel.viewport_extra_{suffix}");
+                let test_id = Arc::<str>::from(format!("dock-arb-viewport-extra-{suffix}"));
+                return Some(render_cached_panel_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    &root_name,
+                    |cx| {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        vec![cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                layout,
+                                role: fret_core::SemanticsRole::Viewport,
+                                test_id: Some(test_id.clone()),
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        )]
+                    },
+                ));
+            }
         }
 
         let models = app
@@ -678,6 +716,8 @@ struct DockingArbitrationDriver {
     viewport_tools: Arc<Mutex<DemoViewportToolState>>,
     synth_pointers: HashMap<AppWindowId, SynthPointerState>,
     next_synth_touch_id: u64,
+    layout_preset: DockingArbitrationLayoutPreset,
+    persist_layout_on_exit: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -708,6 +748,26 @@ struct DockLayoutRestoreState {
     pending_logical_window_ids: HashSet<String>,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+enum DockingArbitrationLayoutPreset {
+    #[default]
+    Default,
+    Large,
+}
+
+impl DockingArbitrationLayoutPreset {
+    fn from_env() -> Self {
+        let Some(raw) = std::env::var("FRET_DOCK_ARB_PRESET").ok() else {
+            return Self::Default;
+        };
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "" | "default" => Self::Default,
+            "large" | "perf_large" | "perf-large" => Self::Large,
+            _ => Self::Default,
+        }
+    }
+}
+
 impl DockingArbitrationDriver {
     const DOCK_LAYOUT_PATH: &'static str = ".fret/layout.json";
     const MAIN_LOGICAL_WINDOW_ID: &'static str = "main";
@@ -715,6 +775,8 @@ impl DockingArbitrationDriver {
     fn new(
         pending_layout: Option<fret_core::DockLayout>,
         viewport_tools: Arc<Mutex<DemoViewportToolState>>,
+        layout_preset: DockingArbitrationLayoutPreset,
+        persist_layout_on_exit: bool,
     ) -> Self {
         let mut next_logical_window_ix = 1;
         if let Some(layout) = &pending_layout {
@@ -738,6 +800,8 @@ impl DockingArbitrationDriver {
             viewport_tools,
             synth_pointers: HashMap::new(),
             next_synth_touch_id: 42,
+            layout_preset,
+            persist_layout_on_exit,
         }
     }
 
@@ -979,7 +1043,7 @@ impl DockingArbitrationDriver {
         }
     }
 
-    fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
+    fn ensure_dock_graph(&self, app: &mut App, window: AppWindowId) {
         use fret_core::{DockNode, PanelKey};
 
         app.with_global_mut(DockManager::default, |dock, _app| {
@@ -1017,29 +1081,91 @@ impl DockingArbitrationDriver {
                 return;
             }
 
-            let tabs_left = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![viewport_left],
-                active: 0,
-            });
-            let tabs_right = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![viewport_right],
-                active: 0,
-            });
-            let viewport_split = dock.graph.insert_node(DockNode::Split {
-                axis: fret_core::Axis::Horizontal,
-                children: vec![tabs_left, tabs_right],
-                fractions: vec![0.5, 0.5],
-            });
-            let tabs_controls = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![controls_panel],
-                active: 0,
-            });
-            let root = dock.graph.insert_node(DockNode::Split {
-                axis: fret_core::Axis::Vertical,
-                children: vec![viewport_split, tabs_controls],
-                fractions: vec![0.7, 0.3],
-            });
-            dock.graph.set_window_root(window, root);
+            fn tabs_for_panel(
+                graph: &mut fret_core::DockGraph,
+                panel: PanelKey,
+            ) -> fret_core::DockNodeId {
+                graph.insert_node(DockNode::Tabs {
+                    tabs: vec![panel],
+                    active: 0,
+                })
+            }
+
+            fn row_split(
+                graph: &mut fret_core::DockGraph,
+                children: Vec<fret_core::DockNodeId>,
+            ) -> fret_core::DockNodeId {
+                let fractions = vec![1.0; children.len()];
+                graph.insert_node(DockNode::Split {
+                    axis: fret_core::Axis::Horizontal,
+                    children,
+                    fractions,
+                })
+            }
+
+            match self.layout_preset {
+                DockingArbitrationLayoutPreset::Default => {
+                    let tabs_left = tabs_for_panel(&mut dock.graph, viewport_left);
+                    let tabs_right = tabs_for_panel(&mut dock.graph, viewport_right);
+                    let viewport_split = dock.graph.insert_node(DockNode::Split {
+                        axis: fret_core::Axis::Horizontal,
+                        children: vec![tabs_left, tabs_right],
+                        fractions: vec![0.5, 0.5],
+                    });
+                    let tabs_controls = tabs_for_panel(&mut dock.graph, controls_panel);
+                    let root = dock.graph.insert_node(DockNode::Split {
+                        axis: fret_core::Axis::Vertical,
+                        children: vec![viewport_split, tabs_controls],
+                        fractions: vec![0.7, 0.3],
+                    });
+                    dock.graph.set_window_root(window, root);
+                }
+                DockingArbitrationLayoutPreset::Large => {
+                    let extra_viewports: Vec<PanelKey> = (0..10)
+                        .map(|ix| PanelKey::new(format!("demo.viewport.extra.{ix}")))
+                        .collect();
+
+                    for (ix, key) in extra_viewports.iter().enumerate() {
+                        let title = format!("Viewport Extra {ix}");
+                        let target = RenderTargetId::from(KeyData::from_ffi(10 + ix as u64));
+                        dock.ensure_panel(key, || DockPanel {
+                            title,
+                            color: Color::TRANSPARENT,
+                            viewport: Some(fret_docking::ViewportPanel {
+                                target,
+                                target_px_size: (960, 540),
+                                fit: fret_core::ViewportFit::Stretch,
+                                context_menu_enabled: true,
+                            }),
+                        });
+                    }
+
+                    let row1 = vec![
+                        tabs_for_panel(&mut dock.graph, viewport_left),
+                        tabs_for_panel(&mut dock.graph, viewport_right),
+                        tabs_for_panel(&mut dock.graph, extra_viewports[0].clone()),
+                        tabs_for_panel(&mut dock.graph, extra_viewports[1].clone()),
+                    ];
+                    let row2: Vec<fret_core::DockNodeId> = (2..6)
+                        .map(|ix| tabs_for_panel(&mut dock.graph, extra_viewports[ix].clone()))
+                        .collect();
+                    let row3: Vec<fret_core::DockNodeId> = (6..10)
+                        .map(|ix| tabs_for_panel(&mut dock.graph, extra_viewports[ix].clone()))
+                        .collect();
+
+                    let row1 = row_split(&mut dock.graph, row1);
+                    let row2 = row_split(&mut dock.graph, row2);
+                    let row3 = row_split(&mut dock.graph, row3);
+                    let controls = tabs_for_panel(&mut dock.graph, controls_panel);
+
+                    let root = dock.graph.insert_node(DockNode::Split {
+                        axis: fret_core::Axis::Vertical,
+                        children: vec![row1, row2, row3, controls],
+                        fractions: vec![1.0, 1.0, 1.0, 0.8],
+                    });
+                    dock.graph.set_window_root(window, root);
+                }
+            }
         });
     }
 
@@ -1180,13 +1306,14 @@ impl DockingArbitrationDriver {
     }
 
     fn render_dock(
+        &self,
         app: &mut App,
         services: &mut dyn UiServices,
         window: AppWindowId,
         state: &mut DockingArbitrationWindowState,
         bounds: Rect,
     ) {
-        Self::ensure_dock_graph(app, window);
+        self.ensure_dock_graph(app, window);
 
         OverlayController::begin_frame(app, window);
 
@@ -1661,7 +1788,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
             scale_factor,
             scene,
         } = context;
-        DockingArbitrationDriver::render_dock(app, services, window, state, bounds);
+        self.render_dock(app, services, window, state, bounds);
 
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
@@ -1862,7 +1989,9 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
     fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
         if Some(window) == self.main_window {
-            self.save_layout_on_exit(app);
+            if self.persist_layout_on_exit {
+                self.save_layout_on_exit(app);
+            }
         } else {
             self.logical_windows.remove(&window);
         }
@@ -2025,14 +2154,29 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let pending_layout =
+    let layout_preset = DockingArbitrationLayoutPreset::from_env();
+    let no_persist = std::env::var("FRET_DOCK_ARB_NO_PERSIST")
+        .ok()
+        .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let persist_layout_on_exit =
+        layout_preset == DockingArbitrationLayoutPreset::Default && !no_persist;
+
+    let pending_layout = if layout_preset == DockingArbitrationLayoutPreset::Default {
         fret_app::DockLayoutFileV1::load_json_if_exists(DockingArbitrationDriver::DOCK_LAYOUT_PATH)
             .map(|v| v.map(|f| f.layout))
             .unwrap_or_else(|err| {
                 tracing::warn!("failed to load dock layout: {err}");
                 None
-            });
+            })
+    } else {
+        None
+    };
 
-    let driver = DockingArbitrationDriver::new(pending_layout, viewport_tools);
+    let driver = DockingArbitrationDriver::new(
+        pending_layout,
+        viewport_tools,
+        layout_preset,
+        persist_layout_on_exit,
+    );
     fret_kit::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
 }

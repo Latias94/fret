@@ -137,6 +137,10 @@ struct SeedPresetFile {
 
 pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'static str]> {
     match name {
+        "docking-arbitration-steady" => Some(&[
+            "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
+            "tools/diag-scripts/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
+        ]),
         "ui-gallery" => Some(&[
             "tools/diag-scripts/ui-gallery-overlay-torture.json",
             "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
