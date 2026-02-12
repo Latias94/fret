@@ -102,8 +102,10 @@ Docking runtime integration (ops → window requests, close/merge policies):
 Runner integration (multi-window routing, internal drags, window positioning/follow):
 
 - Desktop runner (winit):
-  - `crates/fret-launch/src/runner/desktop/mod.rs` (cross-window internal drag hover/drop routing; tear-off follow; window ordering)
-  - `crates/fret-launch/src/runner/desktop/app_handler.rs` (cursor + event mapping; screen cursor tracking)
+  - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (cross-window internal drag hover/drop routing; window-under-cursor selection)
+  - `crates/fret-launch/src/runner/desktop/runner/docking.rs` (tear-off follow; released-outside drop completion)
+  - `crates/fret-launch/src/runner/desktop/runner/window.rs` (cursor mapping helpers; window positioning; unit tests)
+  - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (cursor + event mapping; cursor bootstrap during drag)
 - UI runtime internal drag routing:
   - `crates/fret-ui/src/drag_route.rs`
   - `crates/fret-ui/src/tree/dispatch.rs` (internal drag anchor routing)
@@ -117,7 +119,7 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 | Concept | ImGui docking branch | Fret |
 |---|---|---|
 | “Dock host” surface | DockSpace / DockNode host window | `DockSpace` widget (`ecosystem/fret-docking/src/dock/space.rs`) |
-| Dock node tree | `ImGuiDockNode` | `DockNode` + `DockGraph` (`crates/fret-core/src/dock.rs`) |
+| Dock node tree | `ImGuiDockNode` | `DockNode` + `DockGraph` (`crates/fret-core/src/dock/mod.rs`) |
 | Dock ops / transactions | `ImGuiDockRequest` queue + node mutations | `DockOp` emitted via `Effect::Dock(...)` (ADR 0013) |
 | Dock preview targeting | `DockNodePreviewDockSetup` + `DockNodeCalcDropRectsAndTestMousePos` | `dock_drop_target_via_dnd` + `dock_hint_rects`/`drop_zone_rect` |
 | “Shift to dock” policy | `ImGuiIO::ConfigDockingWithShift` | `DockDragInversionSettings` (`crates/fret-runtime/src/docking_settings.rs`) |
@@ -173,7 +175,7 @@ This section exists to keep reviews grounded: “which file owns which part of t
     - `DockContextQueueDock` + `DockContextProcessDock`
     - dock settings + node lifecycle in ImGui.
 
-- `crates/fret-launch/src/runner/desktop/mod.rs` — **platform window semantics**
+- `crates/fret-launch/src/runner/desktop/runner/*` — **platform window semantics**
   - Hovered-window selection, drop delivery on mouse-up outside windows, z-order/focus/follow.
   - Upstream analog:
     - multi-viewport platform backend responsibilities in `imgui_impl_*`.
@@ -223,7 +225,8 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
   - ImGui: best case is a backend providing `io.AddMouseViewportEvent()` and ignoring `ImGuiViewportFlags_NoInputs`
     (`ImGuiBackendFlags_HasMouseHoveredViewport` guidance in `repo-ref/imgui/docs/BACKENDS.md`).
   - Fret: when a dock tear-off window follows the cursor, prefer the window behind it (`prefer_not`) so re-docking remains possible
-    without flicker. See `crates/fret-launch/src/runner/desktop/mod.rs` (`route_internal_drag_hover_from_cursor`, `window_under_cursor`).
+    without flicker. See `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
+    and `crates/fret-launch/src/runner/desktop/runner/window.rs` (`window_under_cursor`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
@@ -253,9 +256,9 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Dock UI runs in **window-local logical px** (`Point<Px>`).
     - Runner must convert **screen-space** cursor to **window-local logical** for `Event::InternalDrag` routing.
   - Evidence anchors:
-    - Fret conversion helpers: `crates/fret-launch/src/runner/desktop/mod.rs` (`local_pos_for_window`, `screen_pos_in_window`).
+    - Fret conversion helpers: `crates/fret-launch/src/runner/desktop/runner/window.rs` (`local_pos_for_window`, `screen_pos_in_window`).
     - Dock UI assumes window-local input: `ecosystem/fret-docking/src/dock/space.rs` (uses `WindowMetricsService::inner_bounds` + event positions).
-    - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/mod.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
+    - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/runner/window.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
 
@@ -266,7 +269,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Treat `Window::surface_position()` as **decoration offset**, not a screen-space origin.
     - Compute client origin as `outer_position + surface_position`.
   - Evidence anchors:
-    - `crates/fret-launch/src/runner/desktop/mod.rs` (`cursor_screen_pos_fallback_for_window`, `screen_pos_in_window`, `local_pos_for_window`)
+    - `crates/fret-launch/src/runner/desktop/runner/window.rs` (`cursor_screen_pos_fallback_for_window`, `screen_pos_in_window`, `local_pos_for_window`)
   - Diagnostics:
     - `FRET_DOCK_TEAROFF_LOG=1` emits `[cursor-oob]` when local coords drift outside the target window.
 
@@ -476,7 +479,7 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
 
 # 6) Tear-off and floating behavior (same window vs new OS window)
 
-## 5.1 “Float in window” vs “float to new OS window”
+## 6.1 “Float in window” vs “float to new OS window”
 
 - [~] **Equivalent user story mapping**
   - ImGui:
@@ -488,13 +491,27 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
   - Evidence anchors:
     - Dock UI emits request: `ecosystem/fret-docking/src/dock/space.rs`
     - Runtime translates to window create: `ecosystem/fret-docking/src/runtime.rs`
+    - Core model (in-window float container + metadata):
+      - `crates/fret-core/src/dock/mod.rs` (`DockNode::Floating`, `DockGraph::floating_windows`)
+      - `crates/fret-core/src/dock/layout.rs` (`DockLayoutWindow.floatings`, `DockLayoutFloatingWindow.rect`)
+
+### Dockview mapping (reference; non-normative)
+
+Dockview models “floating” in two buckets in its serialized state:
+
+- `floatingGroups`: in-window floating groups with an anchored box position (`SerializedFloatingGroup.position`).
+- `popoutGroups`: out-of-window “popout” groups with their own window + URL (`SerializedPopoutGroup`, `popoutUrl`).
+
+Evidence anchor:
+
+- `repo-ref/dockview/packages/dockview-core/src/dockview/dockviewComponent.ts` (`SerializedDockview`, `SerializedFloatingGroup`, `SerializedPopoutGroup`)
 
 Open parity question:
 
 - Should “drag far enough” always start as “in-window floating” and only become “new OS window” once the cursor exits?
   (This is closer to ImGui multi-viewport mental model, where the payload becomes its own platform window when appropriate.)
 
-## 5.2 Tear-off trigger conditions (when we request a new OS window)
+## 6.2 Tear-off trigger conditions (when we request a new OS window)
 
 - [~] **Trigger condition matches ImGui’s intent (not overly eager)**
   - ImGui:
@@ -512,7 +529,7 @@ Open parity question:
     - `ecosystem/fret-docking/src/runtime.rs` (`DockTearOffMachine` idempotency)
     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_only_requests_tear_off_after_stable_oob_frame`)
 
-## 5.3 Cross-window hover and drop routing
+## 6.3 Cross-window hover and drop routing
 
 - [~] **Hovered-window selection is stable when windows overlap**
   - ImGui:
@@ -520,7 +537,7 @@ Open parity question:
   - Fret:
     - runner uses `cursor_screen_pos` + `window_under_cursor(...)` and a “prefer_not” moving window rule.
   - Evidence anchors:
-    - `crates/fret-launch/src/runner/desktop/mod.rs`:
+    - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`:
       - `route_internal_drag_hover_from_cursor`
       - `route_internal_drag_drop_from_cursor`
       - Window-under-cursor selection:
@@ -539,7 +556,7 @@ Open parity question:
     - `bring_window_to_front(...)` attempts to activate and order the NSWindow/Win32 window.
     - Uses capability gating for z-level changes.
   - Evidence anchors:
-    - `crates/fret-launch/src/runner/desktop/mod.rs` (platform-specific raise; pending-front retries)
+    - `crates/fret-launch/src/runner/desktop/runner/window.rs` (platform-specific raise; pending-front retries)
     - `docs/workstreams/macos-docking-multiwindow-imgui-parity.md` (macOS plan)
 
 ---

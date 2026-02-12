@@ -534,9 +534,23 @@ Supported intent steps (v2):
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
-- `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags)
-- `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags)
+- `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
+- `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags; window-client physical pixels)
 - `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
+
+Desktop runner note (cursor override wire format):
+
+- The diagnostics runtime writes `${FRET_DIAG_DIR}/cursor_screen_pos.override.txt` and touches
+  `${FRET_DIAG_DIR}/cursor_screen_pos.touch` to notify the desktop runner.
+- Format is a small key/value text payload (not JSON). Example:
+
+```text
+schema_version=1
+kind=window_client_physical
+window=123
+x_px=220.0
+y_px=220.0
+```
 
 For window-targeted steps, the optional `window` field supports:
 
@@ -734,6 +748,16 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 You can run them as a built-in suite:
 
 - `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+
+There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
+
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- `tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json`
+
+Example (run one script against the demo, launching a fresh process):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
 
 ### View-cache regression gating
 
