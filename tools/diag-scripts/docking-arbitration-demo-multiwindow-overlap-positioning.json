@@ -3,7 +3,7 @@
   "meta": {
     "name": "Docking arbitration demo: tear-off then overlap windows (manual repro helper)",
     "tags": ["docking", "multiwindow", "overlap"],
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "target_hints": [
       "Intended for desktop runners with multi-window tear-off enabled.",
       "This script is a setup helper (not a strict parity gate yet): it creates a DockFloating window via tear-off, then moves it to overlap the source window."
@@ -44,4 +44,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

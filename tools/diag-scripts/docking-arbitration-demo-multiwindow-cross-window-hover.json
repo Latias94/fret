@@ -3,7 +3,7 @@
   "meta": {
     "name": "Docking arbitration demo: cross-window hover (scripted helper)",
     "tags": ["docking", "multiwindow", "hover"],
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "target_hints": [
       "This script is a multi-window routing helper (not a strict CI gate yet).",
       "It tears off a tab to create a DockFloating OS window, overlaps the windows, then uses a cursor screen-position override to assert that the dock drag current window can switch to the other OS window.",

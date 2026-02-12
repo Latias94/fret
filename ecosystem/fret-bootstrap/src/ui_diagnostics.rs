@@ -4420,6 +4420,9 @@ impl UiDiagnosticsService {
         if self.cfg.screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }
+        if !cfg!(target_arch = "wasm32") {
+            caps.push("diag.multi_window".to_string());
+        }
         caps.push("diag.text_ime_trace".to_string());
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
