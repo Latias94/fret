@@ -19,7 +19,8 @@ guideline-based skills (e.g. Vercel’s web interface checks), but tailored to F
 - Use this skill when the task is **review/audit** (produce findings + recommended fixes/gates).
 - Use `fret-app-ui-builder` when you want to build/refactor a UI via a golden-path workflow.
 - Use `fret-diag-workflow` when the primary deliverable is a deterministic repro + gate + bundle.
-- Use `fret-shadcn-source-alignment` when the issue is “not matching upstream shadcn/Radix semantics”.
+- If a component behavior seems wrong, treat it as a framework/eco responsibility:
+  - leave a minimal `fret-diag-workflow` repro (script + bundle) and file it for the component owners.
 
 ## Inputs to collect (ask the user)
 
@@ -46,6 +47,8 @@ Audit in this priority order:
 4. **Commands/keymaps**: stable `CommandId` + explicit `when` gating (avoid firing in text inputs/IME).
 5. **Automation stability**: stable `test_id` targets for interactive affordances.
 6. **Regression gates**: at least one script/test for the most fragile interaction.
+7. **Polish pass** (style-agnostic): apply `rule_id` checklist from:
+   - `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 
 ## Output format (recommended)
 
@@ -99,6 +102,7 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 
 - Shared conventions: `.agents/skills/fret-skills-playbook/SKILL.md`
 - Build playbook (tokens + recipes): `.agents/skills/fret-app-ui-builder/SKILL.md`, `.agents/skills/fret-app-ui-builder/references/`
+- Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Contracts/ADRs: `docs/architecture.md`, `docs/runtime-contract-matrix.md`, `docs/adr/`
 - Diag gates: `.agents/skills/fret-diag-workflow/SKILL.md`
 
@@ -114,4 +118,4 @@ Minimum deliverables (3-pack): Repro (smallest surface), Gate (script/test/perf)
 - `fret-app-ui-builder`
 - `fret-external-app-mode`
 - `fret-diag-workflow`
-- `fret-shadcn-source-alignment`
+  - Framework/eco authors only: `fret-shadcn-source-alignment`

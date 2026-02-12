@@ -22,6 +22,8 @@ It is intentionally **self-contained**: it includes theming, recipes, and the mo
 - Use this skill for an end-to-end **product workflow** (style → recipes → UX polish → gates).
 - Use `fret-ui-review` when the task is “review/audit this UI” rather than building/refactoring it.
 - Use `fret-diag-workflow` when the primary goal is a deterministic repro + gate (not “make it look good”).
+  - If you believe a framework/eco component is wrong, use `fret-diag-workflow` to produce a minimal repro bundle + script.
+    Parity/alignment work is typically owned by framework/eco authors (see `fret-framework-maintainer-guide`).
 
 ## Inputs to collect (ask the user)
 
@@ -61,6 +63,10 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
 - settings: `references/recipes/apps/app-settings-form.md`
 - workspace shell/docking: `references/recipes/apps/app-docking-workspace.md`
 
+3.5) Run a style-agnostic polish pass on that surface (one screen at a time):
+
+- `references/polish/polish-pass.md`
+
 4) Add stable `test_id` to interactive affordances and leave a diag script gate:
 
 - `tools/diag-scripts/<scenario>.json` (schema v2 preferred) + `capture_bundle`.
@@ -84,6 +90,9 @@ If you are in an external app repo, start with `fret-external-app-mode` first.
    - Add `test_id` targets.
    - Add one diag script per interaction state machine (open → interact → dismiss).
    - If perf is a concern, run a small perf probe before landing.
+6) **Polish pass (style-agnostic).**
+   - Apply the checklist to one surface at a time:
+     - `references/polish/polish-pass.md`
 
 ## Engineering notes (the “deep dives” you will hit)
 
@@ -157,6 +166,7 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - Style generation: `.agents/skills/fret-app-ui-builder/scripts/stylegen.py`
 - Style catalog (used by `stylegen.py`): `.agents/skills/fret-app-ui-builder/references/style_catalog.json`
 - Recipes + mind models: `.agents/skills/fret-app-ui-builder/references/`
+- Polish pass rules: `.agents/skills/fret-app-ui-builder/references/polish/polish-pass.md`
 - Diag + perf gates: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 
 ## Common pitfalls
@@ -172,4 +182,4 @@ Minimum deliverables (3-pack): Repro (smallest app surface), Gate (script/test),
 - `fret-skills-playbook`
 - `fret-diag-workflow`
 - `fret-ui-review`
-- `fret-shadcn-source-alignment`
+  - Framework/eco authors only: `fret-shadcn-source-alignment`

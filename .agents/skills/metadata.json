@@ -16,13 +16,12 @@
       "primary": "fret-app-ui-builder",
       "also_consider": [
         "fret-ui-review",
-        "fret-diag-workflow",
-        "fret-shadcn-source-alignment"
+        "fret-diag-workflow"
       ]
     },
     "review_or_audit_ui": {
       "primary": "fret-ui-review",
-      "also_consider": ["fret-app-ui-builder", "fret-diag-workflow", "fret-shadcn-source-alignment"]
+      "also_consider": ["fret-app-ui-builder", "fret-diag-workflow"]
     },
     "debug_correctness_regression": {
       "primary": "fret-diag-workflow",
@@ -313,15 +312,7 @@
     "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
   },
   "profiles": {
-    "consumer-app-dev": [
-      "fret-repo-orientation",
-      "fret-skills-playbook",
-      "fret-external-app-mode",
-      "fret-app-ui-builder",
-      "fret-ui-review",
-      "fret-diag-workflow",
-      "fret-shadcn-source-alignment"
-    ],
+    "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow"],
     "framework-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",

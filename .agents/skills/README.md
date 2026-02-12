@@ -103,7 +103,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 - Review/audit a Fret UI: `fret-ui-review`
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
 - Measure or gate performance (numbers/baselines) + attribute worst-frame hitches: `fret-diag-workflow`
-- Align with shadcn/Radix upstream (then lock with gates): `fret-shadcn-source-alignment`
+- Maintain/author framework components (parity work + gates): `fret-shadcn-source-alignment` (framework/eco authors)
 - Maintain the framework safely (contracts + gates): `fret-framework-maintainer-guide`
 - Refactor safely across crates/layers: `fret-boundary-checks`
 - Ship releases: `fret-release-check-and-publish`
