@@ -58,7 +58,7 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "VisualViewport", "Window", "console"] }
+web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "VisualViewport", "Window", "console"] }
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
 cocoa.workspace = true

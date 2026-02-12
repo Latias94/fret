@@ -1,9 +1,10 @@
 use fret_app::Effect;
 use fret_core::Event;
 use fret_runtime::{PlatformCapabilities, WindowRequest};
-use js_sys::{Function, Object, Promise, Reflect};
+use js_sys::{Array, Function, Object, Promise, Reflect, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
+use web_sys::{File, FilePropertyBag};
 use winit::cursor::Cursor;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
@@ -13,9 +14,12 @@ use super::super::{WinitCommandContext, WinitGlobalContext};
 use super::streaming_images;
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
-fn share_items_to_web_share_data(items: &[fret_core::ShareItem]) -> Option<Object> {
+fn share_items_to_web_share_data(
+    items: &[fret_core::ShareItem],
+) -> Result<Option<Object>, JsValue> {
     let mut text_parts: Vec<String> = Vec::new();
     let mut url: Option<String> = None;
+    let files = Array::new();
 
     for item in items {
         match item {
@@ -31,14 +35,26 @@ fn share_items_to_web_share_data(items: &[fret_core::ShareItem]) -> Option<Objec
                     text_parts.push(u.clone());
                 }
             }
-            fret_core::ShareItem::Bytes { .. } => {
-                // Web Share API Level 2 (files) is not wired up yet.
+            fret_core::ShareItem::Bytes { name, mime, bytes } => {
+                let parts = Array::new();
+                parts.push(&Uint8Array::from(bytes.as_slice()));
+                let parts: JsValue = parts.into();
+                let file = if let Some(mime) = mime.as_deref()
+                    && !mime.is_empty()
+                {
+                    let opts = FilePropertyBag::new();
+                    opts.set_type(mime);
+                    File::new_with_u8_array_sequence_and_options(&parts, name, &opts)?
+                } else {
+                    File::new_with_u8_array_sequence(&parts, name)?
+                };
+                files.push(&file);
             }
         }
     }
 
-    if text_parts.is_empty() && url.is_none() {
-        return None;
+    if text_parts.is_empty() && url.is_none() && files.length() == 0 {
+        return Ok(None);
     }
 
     let data = Object::new();
@@ -58,7 +74,11 @@ fn share_items_to_web_share_data(items: &[fret_core::ShareItem]) -> Option<Objec
         );
     }
 
-    Some(data)
+    if files.length() != 0 {
+        let _ = Reflect::set(data.as_ref(), &JsValue::from_str("files"), files.as_ref());
+    }
+
+    Ok(Some(data))
 }
 
 fn js_error_string(err: &JsValue) -> String {
@@ -82,6 +102,12 @@ fn share_outcome_from_error(err: JsValue) -> fret_core::ShareSheetOutcome {
         .and_then(|v| v.as_string());
     if name.as_deref() == Some("AbortError") {
         return fret_core::ShareSheetOutcome::Canceled;
+    }
+    if matches!(
+        name.as_deref(),
+        Some("TypeError") | Some("NotSupportedError")
+    ) {
+        return fret_core::ShareSheetOutcome::Unavailable;
     }
     fret_core::ShareSheetOutcome::Failed {
         message: js_error_string(&err),
@@ -691,13 +717,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let Some(data) = share_items_to_web_share_data(&items) else {
-                        self.pending_events.push(Event::ShareSheetCompleted {
-                            token,
-                            outcome: fret_core::ShareSheetOutcome::Unavailable,
-                        });
-                        window.request_redraw();
-                        continue;
+                    let data = match share_items_to_web_share_data(&items) {
+                        Ok(Some(v)) => v,
+                        Ok(None) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: fret_core::ShareSheetOutcome::Unavailable,
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
+                        Err(err) => {
+                            self.pending_events.push(Event::ShareSheetCompleted {
+                                token,
+                                outcome: share_outcome_from_error(err),
+                            });
+                            window.request_redraw();
+                            continue;
+                        }
                     };
 
                     let Some(web_window) = web_sys::window() else {
@@ -775,9 +812,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         Err(err) => {
                             self.pending_events.push(Event::ShareSheetCompleted {
                                 token,
-                                outcome: fret_core::ShareSheetOutcome::Failed {
-                                    message: js_error_string(&err),
-                                },
+                                outcome: share_outcome_from_error(err),
                             });
                             window.request_redraw();
                             continue;
