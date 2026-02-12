@@ -58,9 +58,12 @@ from ecosystem recipes without falling back to ad-hoc canvas-only hacks.
   - [x] `MagicCard` (pointer-follow radial gradient fill/border).
   - [x] `Lens` (radial mask + content scale + reduced-motion behavior).
   - [x] `BorderBeam` (animated border highlight + glow; Phase 0 uses gradients + additive composite).
-  - [ ] Patterns: dot/grid/stripe + animated variants.
+  - [ ] Patterns:
+    - [x] Static dot/grid/stripe backgrounds (Tier B materials) + UI gallery + diag script.
+    - [ ] Animated variants (phase/offset-driven; reduced-motion fallback).
   - [ ] Sparkles text (seeded sparkle field; reduced-motion fallback).
-- [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines).
+- [ ] Add UI gallery entries and `fretboard diag` scripts (screenshots + perf baselines) for remaining
+      creative parity targets.
 
 ## P1 — Effect steps extension
 
@@ -86,13 +89,13 @@ Land a MagicUI-aligned ecosystem crate that composes the existing kernel primiti
 diagnostics, not perfect CSS parity.
 
 - [x] Create `ecosystem/fret-ui-magic` (crate + minimal public surface).
-- [ ] Implement 3–5 seed components (Phase 0):
+- [x] Implement 3–5 seed components (Phase 0):
   - [x] `Lens`
   - [x] `MagicCard`
   - [x] `BorderBeam`
   - [x] `Marquee`
   - [x] `Dock`
-- [ ] Add UI gallery entries + `fretboard diag` scripts for each seed component:
+- [x] Add UI gallery entries + `fretboard diag` scripts for each seed component:
   - [x] `Marquee`
   - [x] `Lens`
   - [x] `MagicCard`

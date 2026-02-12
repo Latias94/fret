@@ -167,6 +167,7 @@ Done (so far):
 
 - Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
 - UI gallery pages + diag scripts exist for the above (see Evidence below)
+- Tier B patterns: static dot/grid/stripe backgrounds (UI gallery page + steady script)
 
 Evidence (planned):
 
@@ -196,11 +197,15 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_DOCK`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_dock`)
 - `tools/diag-scripts/ui-gallery-magic-dock-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/patterns.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_PATTERNS`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_patterns`)
+- `tools/diag-scripts/ui-gallery-magic-patterns-steady.json`
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
 - Next creative parity targets:
-  - Patterns (dot/grid/stripe + animated variants)
+  - Patterns (animated variants; phase/offset-driven)
   - `SparklesText`
 - Verification:
   - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
