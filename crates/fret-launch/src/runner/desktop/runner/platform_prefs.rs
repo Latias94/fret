@@ -1,3 +1,4 @@
+use super::*;
 use fret_core::{ColorScheme, ContrastPreference, ForcedColorsMode};
 use winit::window::Window;
 
@@ -157,6 +158,101 @@ fn read_desktop_color_scheme(window: &dyn Window) -> Option<ColorScheme> {
     #[cfg(not(target_os = "linux"))]
     {
         from_window
+    }
+}
+
+impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn update_window_environment_for_window_ref(
+        &mut self,
+        window: fret_core::AppWindowId,
+        winit_window: &dyn Window,
+    ) -> bool {
+        let snapshot = read_desktop_environment_snapshot(winit_window);
+        let metrics = self.app.global::<WindowMetricsService>();
+
+        let needs_scheme = !metrics.is_some_and(|svc| svc.color_scheme_is_known(window))
+            || metrics.and_then(|svc| svc.color_scheme(window)) != snapshot.color_scheme;
+        let needs_motion = !metrics.is_some_and(|svc| svc.prefers_reduced_motion_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_motion(window))
+                != snapshot.prefers_reduced_motion;
+        let needs_text_scale = !metrics.is_some_and(|svc| svc.text_scale_factor_is_known(window))
+            || metrics.and_then(|svc| svc.text_scale_factor(window)) != snapshot.text_scale_factor;
+        let needs_transparency = !metrics
+            .is_some_and(|svc| svc.prefers_reduced_transparency_is_known(window))
+            || metrics.and_then(|svc| svc.prefers_reduced_transparency(window))
+                != snapshot.prefers_reduced_transparency;
+        let needs_accent = !metrics.is_some_and(|svc| svc.accent_color_is_known(window))
+            || metrics.and_then(|svc| svc.accent_color(window)) != snapshot.accent_color;
+        let needs_contrast = !metrics.is_some_and(|svc| svc.contrast_preference_is_known(window))
+            || metrics.and_then(|svc| svc.contrast_preference(window))
+                != snapshot.contrast_preference;
+        let needs_forced = !metrics.is_some_and(|svc| svc.forced_colors_mode_is_known(window))
+            || metrics.and_then(|svc| svc.forced_colors_mode(window))
+                != snapshot.forced_colors_mode;
+
+        if !(needs_scheme
+            || needs_motion
+            || needs_text_scale
+            || needs_transparency
+            || needs_accent
+            || needs_contrast
+            || needs_forced)
+        {
+            return false;
+        }
+
+        self.app
+            .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                if needs_scheme {
+                    svc.set_color_scheme(window, snapshot.color_scheme);
+                }
+                if needs_motion {
+                    svc.set_prefers_reduced_motion(window, snapshot.prefers_reduced_motion);
+                }
+                if needs_text_scale {
+                    svc.set_text_scale_factor(window, snapshot.text_scale_factor);
+                }
+                if needs_transparency {
+                    svc.set_prefers_reduced_transparency(
+                        window,
+                        snapshot.prefers_reduced_transparency,
+                    );
+                }
+                if needs_accent {
+                    svc.set_accent_color(window, snapshot.accent_color);
+                }
+                if needs_contrast {
+                    svc.set_contrast_preference(window, snapshot.contrast_preference);
+                }
+                if needs_forced {
+                    svc.set_forced_colors_mode(window, snapshot.forced_colors_mode);
+                }
+            });
+
+        true
+    }
+
+    pub(super) fn poll_window_environment_if_due(&mut self, now: Instant) {
+        #[cfg(target_os = "linux")]
+        let linux_dirty = LINUX_PORTAL_ENV_DIRTY.swap(false, std::sync::atomic::Ordering::SeqCst);
+        #[cfg(not(target_os = "linux"))]
+        let linux_dirty = false;
+
+        if now < self.next_environment_poll_at && !linux_dirty {
+            return;
+        }
+        self.next_environment_poll_at = now + Duration::from_millis(500);
+
+        let windows: Vec<(fret_core::AppWindowId, Arc<dyn Window>)> = self
+            .windows
+            .iter()
+            .map(|(id, state)| (id, state.window.clone()))
+            .collect();
+        for (id, window_ref) in windows {
+            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
+                self.app.request_redraw(id);
+            }
+        }
     }
 }
 
