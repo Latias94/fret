@@ -15,6 +15,12 @@ Use this skill when you need **numbers**, **baselines**, and **gates** (not just
 - You’re landing performance work and want to protect it with baselines/gates.
 - You need to separate “CPU time” vs “renderer/GPU-ish time” with evidence artifacts.
 
+## Choose this vs adjacent skills
+
+- Use this skill when you need **performance numbers** (baselines, thresholds, gate pass/fail).
+- Use `fret-perf-attribution` when you already have worst bundles and need to explain the hitch/root cause.
+- Use `fret-diag-workflow` when you need a correctness repro script/bundle (not a perf measurement protocol).
+
 ## Inputs to collect (ask the user)
 
 Ask the minimum that makes results comparable:

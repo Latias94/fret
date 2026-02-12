@@ -22,6 +22,14 @@ It composes the existing skills into one product-oriented workflow:
 - Refactoring an existing app UI that “works” but is visually inconsistent or hard to use.
 - You want a repeatable way to produce a good UI (style + layout + behavior + gates).
 
+## Choose this vs adjacent skills
+
+- Use this skill for an end-to-end **product workflow** (style → recipes → UX polish → gates).
+- Use `fret-design-system-styles` when you only need theme/token decisions (`ThemeConfig`), not screen composition.
+- Use `fret-shadcn-app-recipes` when you only need a recipe for one component family / surface.
+- Use `fret-ui-review` when the task is “review/audit this UI” rather than building/refactoring it.
+- Use `fret-diag-workflow` when the primary goal is a deterministic repro + gate (not “make it look good”).
+
 ## Inputs to collect (ask the user)
 
 - Surface type: editor workspace / settings forms / dashboard / content viewer.

@@ -20,6 +20,7 @@ Install script (recommended for consistency, cross-platform via Python):
   - Codex CLI: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --force`
   - Gemini CLI: `python3 .agents/skills/fret_skills.py install --agent gemini --target <project> --force`
 - Install a profile (recommended for most users):
+  - Framework users (external app repos): `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --profile consumer-app-dev --force`
   - App developers: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --profile app-dev --force`
   - Framework developers: `python3 .agents/skills/fret_skills.py install --agent codex --target <project> --profile framework-dev --force`
 - Install a subset:
@@ -78,10 +79,11 @@ python3 .agents/skills/fret_skills.py validate --strict --check-anchors --check-
 If you want a lightweight “skills-only” artifact (for framework users who do not want to clone the full repo),
 export a bundle zip and attach it to a GitHub Release:
 
-CI helper (recommended): `.github/workflows/skills-bundles.yml` builds and uploads `app-dev` + `framework-dev`
+CI helper (recommended): `.github/workflows/skills-bundles.yml` builds and uploads `consumer-app-dev` + `app-dev` + `framework-dev`
 bundles on every published GitHub Release (and supports manual runs via `workflow_dispatch`).
 
 ```bash
+python3 .agents/skills/fret_skills.py package --profile consumer-app-dev --out dist/fret-skills-consumer-app-dev
 python3 .agents/skills/fret_skills.py package --profile app-dev --out dist/fret-skills-app-dev
 python3 .agents/skills/fret_skills.py package --profile framework-dev --out dist/fret-skills-framework-dev
 ```
@@ -93,22 +95,26 @@ Each bundle contains only skill folders and can be installed by unzipping and co
 
 ## Skill map (what to use when)
 
-- Get oriented / find the right layer: `fret-repo-orientation`
-- Shared conventions (layering, gates, evidence): `fret-skills-playbook`
-- Using skills from an external app repo (framework users): `fret-external-app-mode`
-- Build a cohesive app UI fast (product-oriented): `fret-app-ui-builder`
-- Review/audit Fret UI code (best practices): `fret-ui-review`
-- Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`
-- App architecture + side effects (persistence, background work): `fret-app-architecture-and-effects`
-- State stack defaults (typed routing + selector + query): `fret-app-architecture-and-effects` + `fret-component-authoring`
-- Align behavior with shadcn/Radix: `fret-shadcn-source-alignment` (then add invariant tests + `fretboard diag` repros)
-- Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
-- Refactor audits + guardrails: `fret-crate-audits` + `fret-boundary-checks` + `fret-fixture-driven-harnesses`
-- Profile + gate performance (numbers/baselines): `fret-perf-workflow` (resize/scroll/pointer-move probes, baseline selection, perf log evidence)
-- Attribute perf hitches (root cause playbook): `fret-perf-attribution` (read bundles, decide CPU vs GPU, pick the next profiler, record evidence)
-- Turn one-off fixes into reusable workflows: `fret-skill-evolution` (update skills + add tests/scripts/gates)
-- Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
-- Prepare and run releases: `fret-release-check-and-publish` (`release-plz` scope, preflight checks, release-pr/release troubleshooting)
+Pick **one primary skill** based on intent, then pull in the adjacent ones only if needed:
+
+- Get oriented / pick the right layer: `fret-repo-orientation` (then `fret-skills-playbook`)
+- Build a good-looking app UI (golden path): `fret-app-ui-builder`
+- Review/audit a Fret UI: `fret-ui-review`
+- Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
+- Measure or gate performance (numbers/baselines): `fret-perf-workflow`
+- Attribute perf hitches (worst-frame root cause): `fret-perf-attribution`
+- Align with shadcn/Radix upstream (then lock with gates): `fret-shadcn-source-alignment`
+- Refactor safely across crates/layers: `fret-boundary-checks`
+- Ship releases: `fret-release-check-and-publish`
+
+Common adjacent pulls:
+
+- Theme/tokens: `fret-design-system-styles`
+- App UX composition: `fret-ui-ux-guidelines`
+- Recipes: `fret-shadcn-app-recipes`
+- Commands/keymaps: `fret-commands-and-keymap`
+- Overlays/focus: `fret-overlays-and-focus`
+- Text input/IME: `fret-text-input-and-ime`
 
 ## Skills
 

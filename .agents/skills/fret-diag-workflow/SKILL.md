@@ -16,6 +16,13 @@ Use this skill when:
 If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
 If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
 
+## Choose this vs adjacent skills
+
+- Use this skill for **correctness repro + regression gating** (scripts, bundles, post-run checks).
+- Use `fret-perf-workflow` when you need numbers/baselines/thresholds (perf gates), not just a repro bundle.
+- Use `fret-perf-attribution` when you already have worst bundles and need to explain the hitch class/root cause.
+- Use `fret-ui-review` when the task is “audit this UI implementation” (not “turn this bug into a script”).
+
 ## Inputs to collect (ask the user)
 
 Ask 3–6 questions up front so you don’t “debug the wrong thing”:

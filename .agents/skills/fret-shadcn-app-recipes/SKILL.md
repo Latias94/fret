@@ -18,6 +18,14 @@ Use this skill when:
 - Translating shadcn/Tailwind mental models into Fret (`ui()` patches + tokens).
 - You want stable `test_id` + scripted repro gates as part of normal component work.
 
+## Choose this vs adjacent skills
+
+- Use this skill when you want **recipes** (how to build a surface/component family in Fret).
+- Use `fret-design-system-styles` when you need global token/theming decisions first.
+- Use `fret-app-ui-builder` when you want an end-to-end product workflow (tokens + recipes + gates).
+- Use `fret-shadcn-source-alignment` when the goal is upstream parity (Radix semantics / shadcn composition) and you need to lock it with gates.
+- Use `fret-ui-review` when you want an audit of an existing UI implementation.
+
 ## Inputs to collect (ask the user)
 
 Ask these so you pick the right recipe and leave gates behind:

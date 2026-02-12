@@ -21,6 +21,14 @@ For concrete component/app recipes, use:
 
 - `fret-shadcn-app-recipes`
 
+## Choose this vs adjacent skills
+
+- Use this skill for **screen composition** and “what good looks like” (hierarchy, spacing rhythm, affordances).
+- Use `fret-design-system-styles` for theme/token work (density/radius/ring/shadows), not layout decisions.
+- Use `fret-shadcn-app-recipes` for concrete recipes and code structure for specific surfaces/components.
+- Use `fret-ui-review` when the goal is a structured audit of existing code (findings list).
+- Use `fret-app-ui-builder` when you want the end-to-end workflow (composition + tokens + recipes + gates).
+
 ## Inputs to collect (ask the user)
 
 1. **Surface type**: editor workspace / settings / data-heavy / content viewer

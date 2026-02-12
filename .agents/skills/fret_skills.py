@@ -405,8 +405,38 @@ def _validate_symbols(skills: list[Path], repo_root: Path) -> list[ValidationPro
 def cmd_list(args: argparse.Namespace) -> int:
     root = _skills_root(Path(args.root) if args.root else None)
     skills = _iter_skill_dirs(root)
+    fmt = getattr(args, "format", "text")
+    with_desc = bool(getattr(args, "with_descriptions", False))
+
+    items: list[dict[str, str | None]] = []
     for s in skills:
-        print(s.name)
+        if with_desc or fmt == "json":
+            skill_file = s / SKILL_FILE_NAME
+            text = _read_text(skill_file)
+            lines = text.splitlines()
+            end_index = None
+            for idx in range(1, len(lines)):
+                if lines[idx].strip() == "---":
+                    end_index = idx
+                    break
+            fm = _parse_frontmatter(lines[1:end_index] if end_index is not None else [])
+            items.append({"name": s.name, "description": fm.description})
+        else:
+            items.append({"name": s.name, "description": None})
+
+    if fmt == "json":
+        print(json.dumps(items, indent=2, ensure_ascii=False))
+        return 0
+
+    for it in items:
+        if with_desc:
+            desc = (it.get("description") or "").strip()
+            if desc:
+                print(f"{it['name']} - {desc}")
+            else:
+                print(it["name"])
+        else:
+            print(it["name"])
     return 0
 
 
@@ -611,6 +641,16 @@ def cmd_package(args: argparse.Namespace) -> int:
     bundle_zip = out_dir / f"{bundle_name}.zip"
     _zip_dir(stage, bundle_zip)
 
+    profile_install_block = ""
+    if args.profile:
+        profile_install_block = f"""
+If this bundle was built from a profile, install that profile explicitly:
+
+```bash
+python3 fret_skills.py install --agent codex --target <project> --profile {args.profile} --force
+```
+"""
+
     manifest = {
         "bundle": bundle_name,
         "profile": args.profile,
@@ -631,6 +671,8 @@ Recommended (cross-platform, preserves updates cleanly):
 # From the extracted bundle directory:
 python3 fret_skills.py install --agent codex --target <project> --force
 ```
+
+{profile_install_block}
 
 Notes:
 - `validate --check-anchors/--check-symbols` requires a full Fret source checkout (mono-repo). Bundles are skills-only.
@@ -706,6 +748,12 @@ def main(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_list = sub.add_parser("list", help="List available skills")
+    p_list.add_argument(
+        "--with-descriptions",
+        action="store_true",
+        help="Include each skill's frontmatter description (more helpful for humans; names-only is the default)",
+    )
+    p_list.add_argument("--format", choices=["text", "json"], default="text")
     p_list.set_defaults(fn=cmd_list)
 
     p_validate = sub.add_parser("validate", help="Validate skills (frontmatter + recommended headings)")

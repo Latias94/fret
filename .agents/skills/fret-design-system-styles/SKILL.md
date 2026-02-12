@@ -21,6 +21,14 @@ Use this skill when:
 - Re-skinning an app (density/radius/shadows/rings) without touching every component.
 - Translating “style keywords” into concrete token changes.
 
+## Choose this vs adjacent skills
+
+- Use this skill when the change is primarily **theme/tokens** (density/radius/shadow/ring/colors).
+- Use `fret-ui-ux-guidelines` when you need composition and hierarchy guidance (screen structure, spacing rhythm).
+- Use `fret-shadcn-app-recipes` when you need concrete UI building blocks (recipes), not global token work.
+- Use `fret-app-ui-builder` when you want an end-to-end workflow (tokens + recipes + gates).
+- Use `fret-ui-review` when you want an audit/checklist rather than making style changes.
+
 ## Inputs to collect (ask the user)
 
 - **Scheme**: `light` / `dark`

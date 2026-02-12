@@ -18,6 +18,12 @@ Companion skills:
 - If you need **numbers/baselines/gates**, start with `fret-perf-workflow`.
 - If you need a **minimal repro script / bundle packaging**, use `fret-diag-workflow`.
 
+## Choose this vs adjacent skills
+
+- Use this skill when the question is “**why** did the worst frame hitch?” (classification + next profiler).
+- Use `fret-perf-workflow` when you need to produce numbers/baselines/thresholds (gate protocol).
+- Use `fret-diag-workflow` when you need a deterministic correctness repro + gate (not necessarily perf).
+
 ## Inputs to collect (ask the user)
 
 Ask these before digging into bundles (so you don’t attribute the wrong metric):

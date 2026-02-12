@@ -14,6 +14,14 @@ guideline-based skills (e.g. Vercel’s web interface checks), but tailored to F
 - You suspect a regression caused by layering, focus, overlay policy, or token drift.
 - You want to ensure an app repo uses Fret in a way that stays stable across refactors.
 
+## Choose this vs adjacent skills
+
+- Use this skill when the task is **review/audit** (produce findings + recommended fixes/gates).
+- Use `fret-app-ui-builder` when you want to build/refactor a UI via a golden-path workflow.
+- Use `fret-diag-workflow` when the primary deliverable is a deterministic repro + gate + bundle.
+- Use `fret-design-system-styles` when you already know the issue is tokens/theme and you want to implement it.
+- Use `fret-shadcn-source-alignment` when the issue is “not matching upstream shadcn/Radix semantics”.
+
 ## Inputs to collect (ask the user)
 
 - What files or directories should be reviewed (`src/`, a specific module, or one component)?

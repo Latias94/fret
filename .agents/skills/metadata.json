@@ -1,73 +1,86 @@
 {
   "name": "fret-skills",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
   "last_updated": "2026-02-12",
+  "intents": {
+    "get_oriented": {
+      "primary": "fret-repo-orientation",
+      "also_consider": ["fret-skills-playbook", "fret-external-app-mode"]
+    },
+    "build_a_good_app_ui": {
+      "primary": "fret-app-ui-builder",
+      "also_consider": [
+        "fret-design-system-styles",
+        "fret-ui-ux-guidelines",
+        "fret-shadcn-app-recipes",
+        "fret-commands-and-keymap",
+        "fret-diag-workflow"
+      ]
+    },
+    "review_or_audit_ui": {
+      "primary": "fret-ui-review",
+      "also_consider": ["fret-ui-ux-guidelines", "fret-design-system-styles", "fret-diag-workflow"]
+    },
+    "debug_correctness_regression": {
+      "primary": "fret-diag-workflow",
+      "also_consider": ["fret-overlays-and-focus", "fret-text-input-and-ime", "fret-commands-and-keymap"]
+    },
+    "measure_or_gate_performance": {
+      "primary": "fret-perf-workflow",
+      "also_consider": ["fret-perf-attribution", "fret-diag-workflow"]
+    },
+    "attribute_perf_hitches": {
+      "primary": "fret-perf-attribution",
+      "also_consider": ["fret-perf-workflow", "fret-diag-workflow"]
+    },
+    "align_with_upstream_shadcn_radix": {
+      "primary": "fret-shadcn-source-alignment",
+      "also_consider": ["fret-diag-workflow", "fret-ui-review"]
+    },
+    "refactor_safely": {
+      "primary": "fret-boundary-checks",
+      "also_consider": ["fret-crate-audits", "fret-fixture-driven-harnesses"]
+    },
+    "ship_release": {
+      "primary": "fret-release-check-and-publish",
+      "also_consider": ["fret-boundary-checks"]
+    }
+  },
   "skills": {
-    "onboarding": [
+    "start_here": [
       "fret-repo-orientation",
       "fret-skills-playbook",
-      "fret-external-app-mode",
-      "fret-app-ui-builder"
+      "fret-external-app-mode"
     ],
-    "foundation": [
+    "golden_path": ["fret-app-ui-builder"],
+    "build": [
       "fret-component-authoring",
-      "fret-action-hooks"
-    ],
-    "app_architecture": [
-      "fret-app-architecture-and-effects"
-    ],
-    "design_system": [
-      "fret-design-system-styles"
-    ],
-    "ux": [
+      "fret-action-hooks",
+      "fret-app-architecture-and-effects",
+      "fret-design-system-styles",
       "fret-ui-ux-guidelines",
-      "fret-ui-review"
-    ],
-    "commands_keymap": [
-      "fret-commands-and-keymap"
-    ],
-    "text_input": [
-      "fret-text-input-and-ime"
-    ],
-    "virtualization": [
-      "fret-scroll-and-virtualization"
-    ],
-    "layout_style": [
-      "fret-layout-and-style"
-    ],
-    "overlays_focus": [
-      "fret-overlays-and-focus"
-    ],
-    "animation": [
-      "fret-animation-and-scheduling"
-    ],
-    "docking": [
+      "fret-shadcn-app-recipes",
+      "fret-commands-and-keymap",
+      "fret-layout-and-style",
+      "fret-overlays-and-focus",
+      "fret-animation-and-scheduling",
+      "fret-scroll-and-virtualization",
+      "fret-text-input-and-ime",
       "fret-docking-and-viewports"
     ],
-    "debugging": [
-      "fret-diag-workflow"
-    ],
-    "release": [
-      "fret-release-check-and-publish"
-    ],
-    "performance": [
-      "fret-perf-workflow",
-      "fret-perf-attribution"
-    ],
-    "parity": [
-      "fret-shadcn-source-alignment"
-    ],
-    "recipes": [
-      "fret-shadcn-app-recipes",
-      "fret-app-ui-builder"
-    ],
+    "review_audit": ["fret-ui-review"],
+    "debug": ["fret-diag-workflow"],
+    "perf": ["fret-perf-workflow", "fret-perf-attribution"],
+    "parity": ["fret-shadcn-source-alignment"],
     "quality": [
       "fret-crate-audits",
       "fret-boundary-checks",
       "fret-fixture-driven-harnesses",
       "fret-ui-review"
-    ]
+    ],
+    "release": ["fret-release-check-and-publish"],
+    "meta": ["fret-skill-evolution"]
   },
   "triggers": {
     "fret": [
@@ -314,6 +327,27 @@
     "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
   },
   "profiles": {
+    "consumer-app-dev": [
+      "fret-repo-orientation",
+      "fret-skills-playbook",
+      "fret-external-app-mode",
+      "fret-app-ui-builder",
+      "fret-component-authoring",
+      "fret-action-hooks",
+      "fret-app-architecture-and-effects",
+      "fret-design-system-styles",
+      "fret-ui-ux-guidelines",
+      "fret-ui-review",
+      "fret-commands-and-keymap",
+      "fret-text-input-and-ime",
+      "fret-scroll-and-virtualization",
+      "fret-layout-and-style",
+      "fret-overlays-and-focus",
+      "fret-animation-and-scheduling",
+      "fret-diag-workflow",
+      "fret-shadcn-source-alignment",
+      "fret-shadcn-app-recipes"
+    ],
     "app-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",

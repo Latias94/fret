@@ -11,6 +11,13 @@ description: Align Fret’s shadcn/Radix-inspired components with upstream sourc
 - You need to decide whether a fix belongs in `crates/fret-ui` vs `ecosystem/fret-ui-kit` vs `ecosystem/fret-ui-shadcn`.
 - You fixed a mismatch once and want to lock it with tests and/or `fretboard diag` scripted repros.
 
+## Choose this vs adjacent skills
+
+- Use this skill when the goal is **upstream parity** (Radix semantics / shadcn composition) plus a regression gate.
+- Use `fret-shadcn-app-recipes` when you just need a good recipe for building UI (not necessarily parity work).
+- Use `fret-diag-workflow` when the main deliverable is a repro/gate for a bug (and parity is secondary).
+- Use `fret-ui-review` when the request is an audit of app UI code quality and layering (not a specific parity mismatch).
+
 ## Inputs to collect (ask the user)
 
 Ask these to keep the work scoped and landable:
