@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, FontId, FontWeight, ImageId, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    TextWrap, ViewportFit,
 };
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -675,6 +675,7 @@ impl AttachmentPreview {
                 vec![cx.image_props(ImageProps {
                     layout,
                     image,
+                    fit: ViewportFit::Cover,
                     opacity: 1.0,
                     uv: None,
                 })]

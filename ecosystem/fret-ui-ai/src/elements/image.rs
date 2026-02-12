@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{ImageId, SemanticsRole};
+use fret_core::{ImageId, SemanticsRole, ViewportFit};
 use fret_ui::element::{AnyElement, ImageProps, LayoutStyle, Length, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -78,6 +78,7 @@ impl Image {
         let img = cx.image_props(ImageProps {
             layout,
             image: self.image,
+            fit: ViewportFit::Contain,
             opacity: 1.0,
             uv: None,
         });

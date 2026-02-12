@@ -25,8 +25,9 @@ pub(in crate::ui) fn preview_ai_transcription_demo(
         });
     }
 
-    let current_time =
-        cx.with_state(DemoModels::default, |st| st.current_time.clone().expect("current_time"));
+    let current_time = cx.with_state(DemoModels::default, |st| {
+        st.current_time.clone().expect("current_time")
+    });
 
     let segments: Arc<[ui_ai::TranscriptionSegmentData]> = Arc::from(vec![
         ui_ai::TranscriptionSegmentData::new(0.0, 4.0, "Hello,"),
@@ -42,15 +43,17 @@ pub(in crate::ui) fn preview_ai_transcription_demo(
         .get_model_copied(&current_time, Invalidation::Paint)
         .unwrap_or(0.0);
 
-    let time_marker = cx.text(format!("current_time={time_now:.0}")).attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Generic)
-            .test_id(if time_now < 0.5 {
-                "ui-ai-transcription-demo-time-zero"
-            } else {
-                "ui-ai-transcription-demo-time-nonzero"
-            }),
-    );
+    let time_marker = cx
+        .text(format!("current_time={time_now:.0}"))
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id(if time_now < 0.5 {
+                    "ui-ai-transcription-demo-time-zero"
+                } else {
+                    "ui-ai-transcription-demo-time-nonzero"
+                }),
+        );
 
     let active_index = segments
         .iter()
@@ -90,7 +93,9 @@ pub(in crate::ui) fn preview_ai_transcription_demo(
         move |cx| {
             vec![
                 cx.text("Transcription (AI Elements)"),
-                cx.text("Segment click triggers `on_seek`; this demo mirrors it into `current_time`."),
+                cx.text(
+                    "Segment click triggers `on_seek`; this demo mirrors it into `current_time`.",
+                ),
                 time_marker,
                 active_marker,
                 transcript,
@@ -98,4 +103,3 @@ pub(in crate::ui) fn preview_ai_transcription_demo(
         },
     )]
 }
-

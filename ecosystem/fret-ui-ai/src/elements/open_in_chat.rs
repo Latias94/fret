@@ -345,7 +345,11 @@ fn open_in_item_entry<H: UiHost + 'static>(
     );
 
     let on_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
-        host.push_effect(Effect::OpenUrl { url: url.clone() });
+        host.push_effect(Effect::OpenUrl {
+            url: url.clone(),
+            target: None,
+            rel: None,
+        });
         host.notify(action_cx);
     });
 

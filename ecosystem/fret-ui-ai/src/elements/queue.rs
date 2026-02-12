@@ -7,7 +7,7 @@ use std::sync::Arc;
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Edges, FontId, FontWeight, ImageId, Px,
     SemanticsRole, StrikethroughStyle, TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap,
-    Transform2D,
+    Transform2D, ViewportFit,
 };
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -1287,6 +1287,7 @@ impl QueueItemImage {
         let img = cx.image_props(ImageProps {
             layout: image_layout,
             image: self.image,
+            fit: ViewportFit::Cover,
             opacity: 1.0,
             uv: None,
         });
