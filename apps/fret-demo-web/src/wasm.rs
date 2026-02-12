@@ -11,6 +11,7 @@ thread_local! {
 enum Demo {
     UiGallery,
     ComponentsGallery,
+    ExternalTextureImportsWebDemo,
     EmojiConformanceDemo,
     CjkConformanceDemo,
     ChartDemo,
@@ -40,6 +41,7 @@ fn demo_from_id(id: &str) -> Option<Demo> {
     match id {
         "ui_gallery" => Some(Demo::UiGallery),
         "components_gallery" => Some(Demo::ComponentsGallery),
+        "external_texture_imports_web_demo" => Some(Demo::ExternalTextureImportsWebDemo),
         "emoji_conformance_demo" => Some(Demo::EmojiConformanceDemo),
         "cjk_conformance_demo" => Some(Demo::CjkConformanceDemo),
         "chart_demo" => Some(Demo::ChartDemo),
@@ -112,6 +114,7 @@ fn select_demo() -> Demo {
         "emoji_conformance_demo",
         "cjk_conformance_demo",
         "components_gallery",
+        "external_texture_imports_web_demo",
     ] {
         if fret_router::hash_contains_token(&hash, id) {
             if let Some(demo) = demo_from_id(id) {
@@ -142,6 +145,15 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::components_gallery::build_runner_config();
             config.main_window_title = "fret-demo components_gallery (web)".to_string();
             let driver = fret_examples::components_gallery::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::ExternalTextureImportsWebDemo => {
+            let app = fret_examples::external_texture_imports_web_demo::build_app();
+            let mut config =
+                fret_examples::external_texture_imports_web_demo::build_runner_config();
+            config.main_window_title =
+                "fret-demo external_texture_imports_web_demo (web)".to_string();
+            let driver = fret_examples::external_texture_imports_web_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::EmojiConformanceDemo => {

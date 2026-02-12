@@ -210,7 +210,7 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 - Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
 - Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
 
-Status: In progress (contract-path demo + diagnostics/perf evidence landed; first real backend path pending)
+Status: In progress (contract-path demo + diagnostics/perf evidence landed; web copy backend landed; native/zero-copy pending)
 
 Acceptance criteria (v1):
 
@@ -240,3 +240,6 @@ Evidence:
 - `docs/workstreams/perf-baselines/policies/external-texture-imports-contract-path.v1.json`
 - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)
+- Web backend (v0 copy path):
+  - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
+  - `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)

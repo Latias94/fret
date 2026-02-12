@@ -127,5 +127,10 @@ to `fret-ui` (ADR 0234).
     - [x] A windows-local baseline JSON is committed:
       - `docs/workstreams/perf-baselines/external-texture-imports-contract-path.windows-local.v1.json`
 - [ ] Add capability gating for a first “true external import” backend path (optional v1 follow-up):
-  - [ ] web: WebCodecs `VideoFrame` → WebGPU external texture (capability-gated) with deterministic fallback
+  - [x] web (v0 copy path): `ExternalImageSource` → `Queue::copy_external_image_to_texture` →
+        `RenderTargetUpdate::Update` (GPU copy, no CPU readback).
+    - Evidence: `apps/fret-examples/src/external_texture_imports_web_demo.rs`,
+      `apps/fret-demo-web/src/wasm.rs` (`demo=external_texture_imports_web_demo`)
+  - [ ] web (v1 zero-copy): WebCodecs `VideoFrame` → WebGPU external texture / `ExternalTexture`
+        (capability-gated) with deterministic fallback
   - [ ] native: a decode path (software or hardware) with an explicit copy/zero-copy policy
