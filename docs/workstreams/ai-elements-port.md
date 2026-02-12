@@ -467,6 +467,11 @@ Recommended derivation strategy:
   **detect duplicates** during message list construction (fail fast in debug builds).
   - `fret-ui-ai` provides helpers: `message_id_from_external_id(external_id: &str)` and
     `message_id_from_salted_external_id(salt: u64, external_id: &str)`.
+  - Convenience constructors also exist:
+    - `AiMessage::from_external_id(external_id, role, parts)`
+    - `AiMessage::from_salted_external_id(salt, external_id, role, parts)`
+  - `AiConversationTranscript` performs a debug-only uniqueness check when `content_revision` (or
+    message list length) changes and will panic on duplicates to surface keying bugs early.
   - Reminder: hash collisions are possible; if you cannot tolerate collisions, keep a per-transcript
     mapping table and assign monotonic `MessageId`s.
 - Avoid using `Vec` indices as IDs if you ever insert/remove in the middle of the transcript (it

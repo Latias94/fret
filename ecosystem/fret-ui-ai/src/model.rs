@@ -257,6 +257,40 @@ impl AiMessage {
         }
     }
 
+    /// Constructs a message keyed from a stable external string identifier.
+    ///
+    /// This is a convenience wrapper around:
+    /// - `message_id_from_external_id(external_id)`
+    /// - `AiMessage::external_id(...)`
+    ///
+    /// Notes:
+    /// - Hash collisions are possible; if you cannot tolerate collisions, keep a per-transcript
+    ///   mapping table and assign monotonic `MessageId`s instead.
+    pub fn from_external_id(
+        external_id: impl Into<ExternalId>,
+        role: MessageRole,
+        parts: impl IntoIterator<Item = MessagePart>,
+    ) -> Self {
+        let external_id: ExternalId = external_id.into();
+        let id = message_id_from_external_id(external_id.as_ref());
+        Self::new(id, role, parts).external_id(external_id)
+    }
+
+    /// Constructs a message keyed from a stable external string identifier plus an extra salt.
+    ///
+    /// This is useful when you want a deterministic mapping, but also want to reduce collision risk
+    /// across merged transcripts by salting with a conversation/session identifier.
+    pub fn from_salted_external_id(
+        salt: u64,
+        external_id: impl Into<ExternalId>,
+        role: MessageRole,
+        parts: impl IntoIterator<Item = MessagePart>,
+    ) -> Self {
+        let external_id: ExternalId = external_id.into();
+        let id = message_id_from_salted_external_id(salt, external_id.as_ref());
+        Self::new(id, role, parts).external_id(external_id)
+    }
+
     pub fn external_id(mut self, external_id: ExternalId) -> Self {
         self.external_id = Some(external_id);
         self
