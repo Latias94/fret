@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_canvas::wires::{cubic_bezier, cubic_bezier_polyline_points, dash_polyline_segments};
 use fret_core::scene::{Color, DrawOrder, Paint, SceneOp};
 use fret_core::vector_path::{PathCommand, PathStyle, StrokeStyle};
 use fret_core::{Corners, Edges, Point, Px, Rect, Size};
@@ -19,21 +20,6 @@ struct WorkflowEdgeKey {
 
 fn px_bits(px: Px) -> u32 {
     px.0.to_bits()
-}
-
-fn cubic_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
-    let t = t.clamp(0.0, 1.0);
-    let u = 1.0 - t;
-
-    let uu = u * u;
-    let uuu = uu * u;
-    let tt = t * t;
-    let ttt = tt * t;
-
-    let x = uuu * p0.x.0 + 3.0 * uu * t * p1.x.0 + 3.0 * u * tt * p2.x.0 + ttt * p3.x.0;
-    let y = uuu * p0.y.0 + 3.0 * uu * t * p1.y.0 + 3.0 * u * tt * p2.y.0 + ttt * p3.y.0;
-
-    Point::new(Px(x), Px(y))
 }
 
 /// AI Elements-aligned workflow edge renderer (UI-only).
@@ -121,24 +107,57 @@ impl WorkflowEdgeTemporary {
             let ctrl1 = Point::new(mid_x, from.y);
             let ctrl2 = Point::new(mid_x, to.y);
 
-            let commands = [
-                PathCommand::MoveTo(from),
-                PathCommand::CubicTo { ctrl1, ctrl2, to },
-            ];
+            // Upstream uses `strokeDasharray: "5, 5"`. Fret's path primitive does not currently
+            // expose dash patterns, so we approximate dashes by emitting a set of independent
+            // stroked line segments along a flattened Bezier polyline.
+            let chord = {
+                let dx = to.x.0 - from.x.0;
+                let dy = to.y.0 - from.y.0;
+                (dx * dx + dy * dy).sqrt().max(1.0)
+            };
+            let steps = ((chord / 12.0).ceil() as usize).clamp(16, 64);
 
-            // Note: upstream uses `strokeDasharray: "5, 5"`. Fret's current path primitive does
-            // not support dash patterns, so this renders as a solid stroke for now.
-            p.path(
-                key,
-                DrawOrder(0),
-                Point::new(Px(0.0), Px(0.0)),
-                &commands,
-                PathStyle::Stroke(StrokeStyle {
-                    width: stroke_width,
-                }),
-                ring,
-                p.scale_factor(),
-            );
+            let mut points = Vec::new();
+            cubic_bezier_polyline_points(from, ctrl1, ctrl2, to, steps, &mut points);
+
+            let mut segments = Vec::new();
+            dash_polyline_segments(&points, &[5.0, 5.0], 0.0, &mut segments);
+
+            if segments.is_empty() {
+                let commands = [
+                    PathCommand::MoveTo(from),
+                    PathCommand::CubicTo { ctrl1, ctrl2, to },
+                ];
+                p.path(
+                    key,
+                    DrawOrder(0),
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Stroke(StrokeStyle {
+                        width: stroke_width,
+                    }),
+                    ring,
+                    p.scale_factor(),
+                );
+                return;
+            }
+
+            let scope = p.key_scope(&key);
+            for (ix, (a, b)) in segments.iter().enumerate() {
+                let seg_key = u64::from(p.child_key(scope, &ix));
+                let commands = [PathCommand::MoveTo(*a), PathCommand::LineTo(*b)];
+                p.path(
+                    seg_key,
+                    DrawOrder(0),
+                    Point::new(Px(0.0), Px(0.0)),
+                    &commands,
+                    PathStyle::Stroke(StrokeStyle {
+                        width: stroke_width,
+                    }),
+                    ring,
+                    p.scale_factor(),
+                );
+            }
         });
 
         let Some(test_id) = self.test_id else {
