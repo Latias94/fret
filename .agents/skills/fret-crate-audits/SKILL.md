@@ -14,7 +14,7 @@ reviewing them for Rust best practices, boundary hygiene, and refactor hazards.
 - You need to check public API surface hygiene (exports/re-exports) and dependency posture.
 - You are about to touch hot paths (dispatch/layout/paint) and want a minimal gate set.
 
-## Inputs
+## Inputs to collect (ask the user)
 
 - Target crate name (package name), e.g. `fret-runtime`
 - Optional focus (pick 1–2):
@@ -23,6 +23,14 @@ reviewing them for Rust best practices, boundary hygiene, and refactor hazards.
   - hot paths (dispatch/layout/paint)
   - serialization formats / stability
   - error handling and diagnostics
+- Risk posture:
+  - is this a “touch contracts” change (needs ADR alignment + extra gates) or an internal refactor?
+- Expected deliverable:
+  - audit note only, or audit note + landable refactor steps + gates?
+
+Defaults if unclear:
+
+- Do an L0 snapshot with `tools/audit_crate.py`, list hazards, and propose 3–8 landable steps with one gate.
 
 ## Quick start (L0 audit)
 
@@ -49,6 +57,16 @@ reviewing them for Rust best practices, boundary hygiene, and refactor hazards.
    - `cargo fmt`
    - `cargo nextest run -p <crate>`
    - `python3 tools/check_layering.py`
+
+## Definition of done (what to leave behind)
+
+- A short audit note exists (purpose/exports/deps/hazards) with 1–3 evidence anchors per major claim.
+- 3–8 landable refactor steps are listed with “done” criteria (not just narrative).
+- At least one regression artifact exists if behavior or contracts change (test and/or diag script).
+- Minimum gates are green for the touched crate and layering stays green:
+  - `cargo fmt`
+  - `cargo nextest run -p <crate>`
+  - `python3 tools/check_layering.py`
 
 ## Minimum gates (recommended)
 
