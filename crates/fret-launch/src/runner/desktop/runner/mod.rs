@@ -158,6 +158,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
     is_suspended: bool,
+    driver_initialized: bool,
+    wgpu_init_blocked: bool,
     #[cfg(target_os = "android")]
     android_app: Option<winit::platform::android::activity::AndroidApp>,
 
@@ -1231,6 +1233,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
             is_suspended: false,
+            driver_initialized: false,
+            wgpu_init_blocked: false,
             #[cfg(target_os = "android")]
             android_app: None,
             renderdoc: None,
@@ -2277,7 +2281,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
             context.create_surface(window.clone())?
         };
-        self.insert_window(window, accessibility, surface)
+        self.insert_window(window, accessibility, Some(surface))
     }
 
     fn enqueue_window_front(

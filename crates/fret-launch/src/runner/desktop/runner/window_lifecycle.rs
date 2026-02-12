@@ -5,36 +5,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         &mut self,
         window: Arc<dyn Window>,
         accessibility: Option<accessibility::WinitAccessibility>,
-        surface: wgpu::Surface<'static>,
+        surface: Option<wgpu::Surface<'static>>,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
-        let Some(context) = self.context.as_ref() else {
-            return Err(RunnerError::WgpuNotInitialized);
-        };
+        let surface = if let Some(surface) = surface {
+            let Some(context) = self.context.as_ref() else {
+                return Err(RunnerError::WgpuNotInitialized);
+            };
 
-        let size = window.surface_size();
-        let surface_usage = {
-            let base = self.diag_bundle_screenshots.surface_usage();
-            #[cfg(feature = "diag-screenshots")]
-            {
-                if self.diag_screenshots.is_some() {
-                    base | wgpu::TextureUsages::COPY_SRC
-                } else {
+            let size = window.surface_size();
+            let surface_usage = {
+                let base = self.diag_bundle_screenshots.surface_usage();
+                #[cfg(feature = "diag-screenshots")]
+                {
+                    if self.diag_screenshots.is_some() {
+                        base | wgpu::TextureUsages::COPY_SRC
+                    } else {
+                        base
+                    }
+                }
+                #[cfg(not(feature = "diag-screenshots"))]
+                {
                     base
                 }
-            }
-            #[cfg(not(feature = "diag-screenshots"))]
-            {
-                base
-            }
+            };
+            Some(SurfaceState::new_with_usage(
+                &context.adapter,
+                &context.device,
+                surface,
+                size.width,
+                size.height,
+                surface_usage,
+            )?)
+        } else {
+            None
         };
-        let surface = SurfaceState::new_with_usage(
-            &context.adapter,
-            &context.device,
-            surface,
-            size.width,
-            size.height,
-            surface_usage,
-        )?;
 
         let id = self.windows.insert_with_key(|id| {
             let user = self.driver.create_window_state(&mut self.app, id);
@@ -42,7 +46,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window,
                 accessibility,
                 last_accessibility_snapshot: None,
-                surface: Some(surface),
+                surface,
                 scene: Scene::default(),
                 platform: fret_runner_winit::WinitPlatform {
                     wheel: fret_runner_winit::WheelConfig {
