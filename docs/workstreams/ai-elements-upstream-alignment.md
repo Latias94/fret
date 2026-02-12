@@ -1,7 +1,7 @@
 ---
 title: AI Elements upstream alignment (inventory + mapping)
 status: active
-date: 2026-02-11
+date: 2026-02-12
 scope: ecosystem/fret-ui-ai, repo-ref/ai-elements
 ---
 
@@ -83,6 +83,13 @@ Legend:
 | `task.tsx` | `fret-ui-ai` | `task.rs` | Ported (prototype) | Collapsible task surface (trigger + indented content) for “search/plan step” UI. |
 | `audio-player.tsx` | `fret-ui-ai` | `audio_player.rs` | Ported (prototype) | UI-only chrome port (controls + time/volume sliders). Playback remains app-owned. |
 | `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
+| `agent.tsx` | `fret-ui-ai` | `agent.rs` | Not started | UI-only shell; keep dependencies feature-gated; effects remain app-owned. |
+| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Not started | UI-only shell; primarily composition. |
+| `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Not started | UI-only shell; sandbox runtime is out-of-scope for v1 (feature-gate). |
+| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
+| `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
+| `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
+| Workflow wrappers (`canvas/node/edge/panel/toolbar/controls/connection`) | `fret-ui-ai` (chrome) | `workflow/*.rs` | Not started | Chrome-only wrappers over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports). |
 
 ## Known upstream files not yet ported
 

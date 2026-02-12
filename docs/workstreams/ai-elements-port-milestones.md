@@ -1,7 +1,7 @@
 ---
 title: AI Elements Port (`fret-ui-ai`) — Milestones
 status: active
-date: 2026-02-06
+date: 2026-02-12
 scope: ecosystem/fret-ui-ai, diag gates, upstream parity tracking
 ---
 
@@ -171,7 +171,7 @@ Acceptance criteria:
 
 - No “new engines” in `fret-ui-ai`; only composition/policy wrappers.
 
-Status: Defer until a concrete consumer exists.
+Status: Planned (chrome-only; feature-gate heavy integrations).
 
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
@@ -185,7 +185,24 @@ Acceptance criteria:
 
 - Backends/policies are explicit; UI remains intent-driven (apps own side effects).
 
-Status: Partial (UI-only `audio-player` + `transcription` surfaces; UI Gallery demos + diag gates exist; backends + remaining voice surfaces deferred).
+Status: Partial (UI-only `audio-player` + `transcription` surfaces; UI Gallery demos + diag gates exist; remaining voice chrome planned; backends are app-owned).
+
+### M6 — Upstream coverage closure (all files accounted for)
+
+Scope:
+
+- Port the remaining upstream “shell” components: `agent.tsx`, `persona.tsx`, `sandbox.tsx`.
+- Port remaining voice surfaces: `mic-selector.tsx`, `speech-input.tsx`, `voice-selector.tsx`.
+- Port workflow wrapper surfaces as chrome-only wrappers (no new engines inside `fret-ui-ai`).
+
+Acceptance criteria:
+
+- Every upstream `.tsx` has a corresponding Rust module (or is explicitly marked `N/A` with rationale).
+- Each newly ported surface has stable selectors (`test_id`) and at least one regression gate
+  (diag script preferred for interactive surfaces).
+- Heavy dependencies and backends are feature-gated; UI surfaces remain intent-driven.
+
+Status: Planned.
 
 ## Next-step checklist (recommended weekly cadence)
 

@@ -22,6 +22,13 @@ Each TODO is labeled:
 
 ## Milestones (make progress measurable)
 
+## Next up (recommended priority)
+
+- [ ] AIEL-MVP6-closure-001 Port `agent` / `persona` / `sandbox` as UI-first shells (seams only; effects app-owned).
+- [ ] AIEL-MVP6-closure-002 Port `mic-selector` / `speech-input` / `voice-selector` as UI-only chrome + explicit seams.
+- [ ] AIEL-MVP6-closure-003 Port workflow wrappers as chrome-only wrappers over existing crates (no new engines).
+- [ ] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
+
 ### M0 — Foundations (composition + gates)
 
 - [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
@@ -54,7 +61,7 @@ Status legend:
 | `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
 | `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
 | `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
-| `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `persona` | Not started | `fret-ui-ai` | Port as a small UI shell (composition-first). |
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
@@ -79,8 +86,8 @@ Status legend:
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
 | `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
-| `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
-| `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `agent` | Not started | `fret-ui-ai` | Port as a UI-only shell; keep dependencies feature-gated; effects remain app-owned. |
+| `sandbox` | Not started | `fret-ui-ai` | Port as a UI-only shell; sandbox runtime is out-of-scope for v1 (feature-gate). |
 | `package-info` | Prototype | `fret-ui-ai` | `PackageInfo*` surfaces + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`. |
 | `environment-variables` | Prototype | `fret-ui-ai` | Ported as `EnvironmentVariables*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`). |
 
@@ -103,7 +110,9 @@ Status legend:
 | --- | --- | --- | --- |
 | `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
 | `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
-| `mic-selector` / `speech-input` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+| `mic-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`MicSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-mic-selector-demo-select.json`. Device enumeration remains app-owned. |
+| `speech-input` | Prototype | `fret-ui-ai` | UI-only chrome port (`SpeechInput`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-speech-input-demo-toggle.json`. Capture + ASR backends remain app-owned. |
+| `voice-selector` | Prototype | `fret-ui-ai` | UI-only chrome port (`VoiceSelector*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-voice-selector-demo-select.json`. Voice inventory + preview playback remain app-owned. |
 
 ### M1 — Chat surfaces (usable app kit)
 

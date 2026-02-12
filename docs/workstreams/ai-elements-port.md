@@ -1,7 +1,7 @@
 ---
 title: AI Elements Port (`fret-ui-ai`)
-status: draft
-date: 2026-02-05
+status: active
+date: 2026-02-12
 scope: ecosystem/fret-ui-ai, shadcn recipes reuse, diag gates
 ---
 
@@ -21,6 +21,21 @@ Related workstreams:
 
 - WebView backend plan (native, `wry`): `docs/workstreams/webview-wry-v1.md` and
   `docs/workstreams/webview-wry-v1-todo.md`.
+
+## Next up (priority order)
+
+The port goal is **full upstream coverage** (every upstream `.tsx` has a corresponding Rust surface),
+while keeping Fret’s layering boundaries intact:
+
+1. Port the remaining upstream “shell” components (`agent`, `persona`, `sandbox`) as **UI-first,
+   intent-driven** surfaces (effects remain app-owned; heavy dependencies are feature-gated).
+2. Port remaining voice surfaces (`mic-selector`, `speech-input`, `voice-selector`) as **UI-only**
+   chrome with explicit seams (capture/ASR backends are app-owned).
+3. Port workflow wrappers (`canvas/node/edge/panel/toolbar/controls/connection`) as **chrome-only**
+   wrappers over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports), not as
+   new engines inside `fret-ui-ai`.
+4. Tighten contract docs for **keyed identity** and selectors (see “MessageId contract” below), so
+   long transcripts + virtualization remain reliable under inserts/streaming.
 
 ## Version stamp (upstream reference)
 
@@ -166,6 +181,21 @@ this section as part of the “Version stamp” bump.
 - `CommitFilePath` / `StackTrace` file-paths: upstream is presentation-only; Fret exposes explicit click seams (`OnCommitFilePathClick`, `OnStackTraceFilePathClick`) because “open file” is an app effect.
 - `Test` rows (`test-results.tsx`): upstream renders tests as a non-interactive row by default; Fret keeps the default non-interactive but adds an optional activation seam (`Test::on_activate(OnTestActivate)`) for editor-style “open test output” flows.
 
+## MessageId contract (do not hand-wave)
+
+Transcripts depend on stable keyed identity to prevent “state jumping” under virtualization,
+inserts/removals, and streaming growth.
+
+Rules:
+
+- `AiMessage.id: MessageId` must be **stable** and **unique within a transcript**.
+- If your source-of-truth IDs are strings (UUID/nanoid/etc), prefer deterministic bridging via:
+  - `message_id_from_external_id(external_id)`, or
+  - `message_id_from_salted_external_id(conversation_salt, external_id)` when transcripts may be
+    merged or cross-fed.
+- Hash collisions are possible (as with any hash). If collisions are unacceptable, apps should keep
+  a per-conversation mapping table (`HashMap<ExternalId, MessageId>`) and assign monotonic IDs.
+
 ## Workstream goals
 
 P0 (MVP usability):
@@ -178,10 +208,11 @@ P1 (tooling UIs):
 
 - Provide reusable building blocks for “assistant/tooling” apps: sources, citations, file trees, code artifacts.
 
-P2 (workflow + voice):
+P2 (workflow + voice parity closure):
 
 - Map workflow surfaces onto existing ecosystem crates (`fret-canvas`, `fret-node`, viewports).
-- Voice surfaces only if/when there is a concrete app consumer.
+- Port voice surfaces as UI-only chrome + explicit seams; keep backends (capture/ASR/playback)
+  app-owned and dependency-heavy integrations feature-gated.
 
 ## Non-goals (explicit)
 
