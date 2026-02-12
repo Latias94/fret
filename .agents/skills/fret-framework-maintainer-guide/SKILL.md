@@ -111,7 +111,7 @@ If the change affects publishable crates or release automation:
 - ADRs + alignment: `docs/adr/`, `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - Diagnostics/perf runbook: `.agents/skills/fret-diag-workflow/SKILL.md`, `tools/diag-scripts/`, `tools/perf/`
 - Upstream parity: `.agents/skills/fret-shadcn-source-alignment/SKILL.md`
-- Base UI snapshot (optional): `repo-ref/base-ui/packages/react/src/`, `repo-ref/base-ui/docs/`
+- Base UI (upstream source + docs): https://github.com/mui/base-ui (see `packages/react/src/` and `docs/`)
 
 ## Common pitfalls
 

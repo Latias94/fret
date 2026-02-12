@@ -344,16 +344,8 @@ def _validate_anchors(skill_dir: Path, repo_root: Path, strict: bool) -> list[Va
         if not _looks_like_repo_path(span):
             continue
 
-        # repo-ref is explicitly optional for GitHub checkouts.
         if span.startswith("repo-ref/"):
-            if not (repo_root / span).exists():
-                problems.append(
-                    ValidationProblem(
-                        "warning",
-                        skill_name,
-                        f"Optional anchor missing (repo-ref not present): `{span}`",
-                    )
-                )
+            problems.append(ValidationProblem("error", skill_name, f"Disallowed anchor path (repo-ref): `{span}`"))
             continue
 
         p = repo_root / span

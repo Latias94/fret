@@ -53,10 +53,10 @@ Primary (fast, cross-platform, no dependencies):
 python3 .agents/skills/fret_skills.py validate --strict
 ```
 
-Optional (upstream Agent Skills reference validator):
+Optional (upstream schema validation):
 
-If you want the upstream reference validator, install and run `skills-ref` from the Agent Skills project
-and validate a single skill directory.
+If you want to validate against the upstream Agent Skills reference schema as well, search GitHub for
+`agentskills/agentskills` and run their validator against a single skill folder.
 
 Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
 

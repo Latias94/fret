@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: Align Fret’s shadcn/Radix-inspired components with upstream sources (public docs + GitHub source; optional local pinned snapshots under `repo-ref/`). Also consider Base UI (unstyled, accessibility-first primitives) as a reference for part composition and headless state machines. Map changes to the correct Fret layer and lock outcomes with tests + `fretboard diag` scripts.
+description: Align Fret’s shadcn/Radix-inspired components with upstream sources (public docs + GitHub source). Also consider Base UI (unstyled, accessibility-first primitives) as a reference for part composition and headless state machines. Map changes to the correct Fret layer and lock outcomes with tests + `fretboard diag` scripts.
 ---
 
 # Shadcn / Radix source alignment
@@ -64,10 +64,9 @@ it almost never belongs in `crates/fret-ui`.
    - shadcn/ui v4 source (New York v4 registry): https://github.com/shadcn-ui/ui/tree/main/apps/v4/registry/new-york-v4/ui
    - Radix Primitives source: https://github.com/radix-ui/primitives/tree/main/packages/react
    - Base UI source: https://github.com/mui/base-ui/tree/main/packages/react/src
-   - Optional local pinned snapshots (if your checkout includes `repo-ref/`; not necessarily present on GitHub):
-     - shadcn recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/<component>.tsx`
-     - Radix primitive: `repo-ref/primitives/packages/react/<primitive>/src/*`
-     - Base UI: `repo-ref/base-ui/packages/react/src/`
+
+If you maintain local upstream checkouts (or snapshots) for faster navigation, treat them as optional
+convenience only. The skills bundle must remain usable from a clean checkout or a consumer app repo.
 
 Use shadcn to learn the *composition + Tailwind contracts* (sizes, spacing, tokens), and Radix to
 learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering).
@@ -94,7 +93,7 @@ Use Base UI as an additional reference for:
 
 1. Add a targeted invariant test first (so you stop bleeding regressions immediately).
 2. If needed, generate the missing golden later:
-   - Follow `docs/shadcn-web-goldens.md` (extraction from the upstream shadcn v4 app; local `repo-ref/ui` is optional).
+   - Follow `docs/shadcn-web-goldens.md` (extraction from the upstream shadcn v4 app; a local upstream checkout is optional).
 
 ### 5) High-value regression targets (start here)
 
@@ -118,9 +117,6 @@ Use Base UI as an additional reference for:
 - Web-vs-fret harness + goldens:
   - `ecosystem/fret-ui-shadcn/tests/`
   - `goldens/shadcn-web/v4/new-york-v4/*.json`
-- Optional pinned snapshots (if present):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/`
-  - `repo-ref/primitives/packages/react/`
 
 ## Common pitfalls
 

@@ -4,6 +4,7 @@ Cross-platform perf gate triage helper.
 
 Companion to:
   - tools/perf/diag_resize_probes_gate.sh
+  - tools/perf/diag_resize_probes_gate.py
 
 This is a Python equivalent of `triage_gate.sh`, intended to work on Windows/macOS/Linux
 without requiring bash/awk/jq.
@@ -325,4 +326,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

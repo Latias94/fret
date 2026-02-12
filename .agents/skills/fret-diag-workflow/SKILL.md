@@ -119,9 +119,14 @@ and **worst-bundle evidence** (not only a correctness repro).
 Run the P0 resize probes (numbers + thresholds):
 
 ```bash
-tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
-tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
+python3 tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3
+python3 tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3
 ```
+
+Notes:
+
+- For non-default machines/OS, pass `--baseline <baseline.json>` explicitly (defaults may be tuned for a specific host).
+- The bash gate (`tools/perf/diag_resize_probes_gate.sh`) is still available, but the Python gate is cross-platform.
 
 If a gate fails (or you want the worst bundles even on PASS), triage the out-dir:
 
@@ -134,6 +139,19 @@ Then inspect the worst bundle:
 ```bash
 cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 ```
+
+### VirtualList boundary gate (window shift invariants)
+
+Run the VirtualList window-boundary crossing gate repeatedly (checks + bundles per run):
+
+```bash
+python3 tools/perf/diag_vlist_boundary_gate.py --runs 3
+```
+
+Notes:
+
+- Default profile is retained (`--retained 1`). For non-retained stress runs: `--retained 0`.
+- Each run writes `summary.json` under the out-dir; failures also keep per-run `stdout.log`/`stderr.log`.
 
 ### Steady baseline run (when you want a stable “global sanity”)
 
@@ -152,7 +170,8 @@ cargo run -p fretboard -- diag perf ui-gallery-steady \
 
 If you need to generate a new baseline, prefer the baseline-select helper:
 
-- `tools/perf/diag_perf_baseline_select.sh`
+- `tools/perf/diag_perf_baseline_select.py` (cross-platform)
+  - Bash wrapper: `tools/perf/diag_perf_baseline_select.sh`
 
 ## Perf attribution (answer “why did the worst frame hitch?”)
 
@@ -183,6 +202,9 @@ jq -c '
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
+- Use suites/repros when you want standardized runs:
+  - `cargo run -p fretboard -- diag suite <suite-name>`
+  - `cargo run -p fretboard -- diag repro <script.json> ...` (convenience wrapper around `diag run` + checks)
 - When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
   rather than retrying `click` with arbitrary sleeps.
 - If `click_stable` flakes, set `FRET_DIAG_DEBUG_CLICK_STABLE=1` to capture additional debug context in traces/bundles.
