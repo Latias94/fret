@@ -80,6 +80,31 @@ let marquee = magic::marquee(cx, props, |cx| vec![/* repeated content */]);
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_LENS: &str = r#"
+## Lens (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Uses `MaskLayer` (ADR 0239) to alpha-mask a zoomed copy of the subtree.
+- Uses `VisualTransform` to scale about the current pointer position.
+- Phase 0 keeps the implementation simple by **duplicating the subtree** (base + zoomed copy).
+
+Non-goals (v1):
+
+- Perfect React/Motion animation parity.
+- Supporting interactive children without duplicated state.
+"#;
+
+pub(crate) const USAGE_MAGIC_LENS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let lens = magic::lens(cx, magic::LensProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_CARD: &str = r#"
 ## MagicCard (fret-ui-magic)
 

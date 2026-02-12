@@ -166,6 +166,10 @@ Evidence (planned):
 
 Evidence (partial):
 
+- `ecosystem/fret-ui-magic/src/lens.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_LENS`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_lens`)
+- `tools/diag-scripts/ui-gallery-magic-lens-pointer-follow.json`
 - `ecosystem/fret-ui-magic/src/marquee.rs`
 - `ecosystem/fret-ui-magic/src/magic_card.rs`
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
