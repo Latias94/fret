@@ -66,6 +66,10 @@ SYMBOL_CHECKS: dict[str, list[tuple[str, str]]] = {
         ("crates/fret-diag/src/lib.rs", r"\bFRET_DIAG_FIXED_FRAME_DELTA_MS\b"),
         (".agents/skills/fret-diag-workflow/scripts/triage_perf_gate.py", r""),
     ],
+    "fret-framework-maintainer-guide": [
+        ("docs/adr/IMPLEMENTATION_ALIGNMENT.md", r""),
+        ("docs/dependency-policy.md", r""),
+    ],
     "fret-repo-orientation": [
         ("docs/architecture.md", r""),
         ("docs/runtime-contract-matrix.md", r""),

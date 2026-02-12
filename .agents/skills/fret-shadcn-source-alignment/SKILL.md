@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: Align Fret’s shadcn/Radix-inspired components with upstream sources (public docs + GitHub source; optional local pinned snapshots under `repo-ref/`), map changes to the correct Fret layer (`crates/fret-ui`, `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`), and add targeted tests + `fretboard diag` scripts to prevent regressions even when web goldens are incomplete.
+description: Align Fret’s shadcn/Radix-inspired components with upstream sources (public docs + GitHub source; optional local pinned snapshots under `repo-ref/`). Also consider Base UI (unstyled, accessibility-first primitives) as a reference for part composition and headless state machines. Map changes to the correct Fret layer and lock outcomes with tests + `fretboard diag` scripts.
 ---
 
 # Shadcn / Radix source alignment
@@ -31,6 +31,7 @@ Ask these to keep the work scoped and landable:
 Defaults if unclear:
 
 - Treat interaction semantics as Radix truth; treat composition/sizing/tokens as shadcn truth; add at least one gate.
+- When DOM-focused assumptions are involved, consult Base UI as an additional headless reference for part composition and accessibility patterns.
 
 ## Smallest starting point (one command)
 
@@ -58,15 +59,24 @@ it almost never belongs in `crates/fret-ui`.
 1. Start with public docs (good enough for most alignment work):
    - shadcn components: https://ui.shadcn.com/docs/components
    - Radix primitives: https://www.radix-ui.com/primitives/docs/components
+   - Base UI (headless primitives): https://base-ui.com/react/overview/quick-start
 2. If you need exact implementation details, use source code:
    - shadcn/ui v4 source (New York v4 registry): https://github.com/shadcn-ui/ui/tree/main/apps/v4/registry/new-york-v4/ui
    - Radix Primitives source: https://github.com/radix-ui/primitives/tree/main/packages/react
+   - Base UI source: https://github.com/mui/base-ui/tree/main/packages/react/src
    - Optional local pinned snapshots (if your checkout includes `repo-ref/`; not necessarily present on GitHub):
      - shadcn recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/<component>.tsx`
      - Radix primitive: `repo-ref/primitives/packages/react/<primitive>/src/*`
+     - Base UI: `repo-ref/base-ui/packages/react/src/`
 
 Use shadcn to learn the *composition + Tailwind contracts* (sizes, spacing, tokens), and Radix to
 learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering).
+
+Use Base UI as an additional reference for:
+
+- part-based component composition (Root/Trigger/Content patterns),
+- accessibility-first defaults (labels/fields/form patterns), and
+- headless state machines that must be translated to Fret’s custom renderer (semantics/hit-testing/focus routing).
 
 ### 3) Align + protect with tests (goldens are not enough)
 
@@ -118,6 +128,7 @@ learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering
 - Relying on goldens alone for state-machine behavior (add a scripted repro).
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.
+- Treating Base UI as a 1:1 “implementation port”: use it as a headless reference, then translate to Fret’s GPU-first renderer (semantics/hit-testing/focus routing).
 
 ## Related skills
 

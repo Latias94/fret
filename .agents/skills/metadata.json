@@ -1,9 +1,13 @@
 {
   "name": "fret-skills",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
   "last_updated": "2026-02-12",
   "intents": {
+    "maintain_framework": {
+      "primary": "fret-framework-maintainer-guide",
+      "also_consider": ["fret-diag-workflow", "fret-boundary-checks", "fret-shadcn-source-alignment"]
+    },
     "get_oriented": {
       "primary": "fret-repo-orientation",
       "also_consider": ["fret-skills-playbook", "fret-external-app-mode"]
@@ -51,6 +55,7 @@
       "fret-skills-playbook",
       "fret-external-app-mode"
     ],
+    "framework": ["fret-framework-maintainer-guide"],
     "ui": ["fret-app-ui-builder", "fret-ui-review"],
     "diagnostics": ["fret-diag-workflow"],
     "parity": ["fret-shadcn-source-alignment"],
@@ -315,12 +320,12 @@
       "fret-app-ui-builder",
       "fret-ui-review",
       "fret-diag-workflow",
-      "fret-shadcn-source-alignment",
       "fret-shadcn-source-alignment"
     ],
     "framework-dev": [
       "fret-repo-orientation",
       "fret-skills-playbook",
+      "fret-framework-maintainer-guide",
       "fret-external-app-mode",
       "fret-app-ui-builder",
       "fret-ui-review",

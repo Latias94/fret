@@ -101,6 +101,7 @@ Pick **one primary skill** based on intent, then pull in the adjacent ones only 
 - Debug a correctness regression (repro + gate + bundle): `fret-diag-workflow`
 - Measure or gate performance (numbers/baselines) + attribute worst-frame hitches: `fret-diag-workflow`
 - Align with shadcn/Radix upstream (then lock with gates): `fret-shadcn-source-alignment`
+- Maintain the framework safely (contracts + gates): `fret-framework-maintainer-guide`
 - Refactor safely across crates/layers: `fret-boundary-checks`
 - Ship releases: `fret-release-check-and-publish`
 
@@ -116,6 +117,7 @@ Common adjacent pulls:
 - `fret-external-app-mode`: Use the skills from an external app repo (outside the mono-repo): what works without `tools/` and `fretboard`, and how to keep anchors and tooling usable via a Fret checkout.
 - `fret-app-ui-builder`: Product-oriented golden path: pick a baseline style, apply token overrides, compose shadcn recipes, and leave diag/perf gates early.
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
+- `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source (optional local pinned snapshots under `repo-ref/`) and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
