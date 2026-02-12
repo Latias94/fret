@@ -254,6 +254,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
     }
+
+    #[cfg(target_os = "linux")]
+    pub(super) fn maybe_start_linux_portal_settings_listener(&mut self, waker: EventLoopProxy) {
+        if self.linux_portal_settings_listener_started {
+            return;
+        }
+        self.linux_portal_settings_listener_started = true;
+
+        std::thread::spawn(move || {
+            use zbus::blocking::{Connection, Proxy};
+
+            const SETTINGS_SERVICE: &str = "org.freedesktop.portal.Desktop";
+            const SETTINGS_PATH: &str = "/org/freedesktop/portal/desktop";
+            const SETTINGS_INTERFACE: &str = "org.freedesktop.portal.Settings";
+
+            let Ok(connection) = Connection::session() else {
+                return;
+            };
+            let Ok(proxy) = Proxy::new(
+                &connection,
+                SETTINGS_SERVICE,
+                SETTINGS_PATH,
+                SETTINGS_INTERFACE,
+            ) else {
+                return;
+            };
+            let Ok(signals) = proxy.receive_signal("SettingChanged") else {
+                return;
+            };
+
+            for msg in signals {
+                let Ok((namespace, key, _value)) =
+                    msg.body()
+                        .deserialize::<(String, String, zbus::zvariant::OwnedValue)>()
+                else {
+                    continue;
+                };
+                if namespace != linux_portal_settings::APPEARANCE_NAMESPACE {
+                    continue;
+                }
+                if !matches!(
+                    key.as_str(),
+                    "color-scheme" | "contrast" | "reduce-motion" | "reduced-motion"
+                ) {
+                    continue;
+                }
+                if LINUX_PORTAL_ENV_DIRTY.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                    continue;
+                }
+                waker.wake_up();
+            }
+        });
+    }
 }
 
 #[cfg(target_os = "linux")]
