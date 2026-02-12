@@ -65,13 +65,13 @@ Legend:
 
 | Component | UI Gallery Page | Diag Scripts | Rust Tests | Coverage (Fonts/Hit/Layout) | Status | Notes |
 |---|---|---|---|---|---|---|
-| Accordion | `accordion` | TODO | TODO | TODO | TODO | |
+| Accordion | `accordion` | `tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json`, `tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json` | TODO | Layout (collapsible height; first-open vs reopen) | In progress | Add keyboard navigation + multi-open invariants. |
 | Alert | `alert` | TODO | TODO | TODO | TODO | |
 | Alert Dialog | `alert_dialog` | `tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json` | TODO | Focus + least-destructive default | In progress | Add dismiss + click-through gates. |
 | Aspect Ratio | `aspect_ratio` | TODO | TODO | TODO | TODO | |
 | Avatar | `avatar` | TODO | TODO | TODO | TODO | |
 | Badge | `badge` | TODO | TODO | TODO | TODO | |
-| Breadcrumb | `breadcrumb` | TODO | TODO | TODO | TODO | |
+| Breadcrumb | `breadcrumb` | `tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json` | TODO | Layout (custom separator stays single-line) | In progress | Add RTL dropdown gate + ellipsis-dropdown parity. |
 | Button | `button` | `tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json` | TODO | Fonts/layout (icon vs label non-overlap) | In progress | Extend: min hit-size + disabled/pressed routing. |
 | Button Group | `button_group` | TODO | TODO | TODO | TODO | |
 | Calendar | `calendar` | TODO | TODO | TODO | TODO | |
@@ -79,7 +79,7 @@ Legend:
 | Carousel | `carousel` | TODO | TODO | TODO | TODO | |
 | Chart | `chart` | TODO | TODO | TODO | TODO | |
 | Checkbox | `checkbox` | TODO | TODO | TODO | TODO | |
-| Collapsible | `collapsible` | TODO | TODO | TODO | TODO | |
+| Collapsible | `collapsible` | `tools/diag-scripts/ui-gallery-collapsible-demo-open-non-overlap.json`, `tools/diag-scripts/ui-gallery-collapsible-basic-double-click-close.json`, `tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json` | TODO | Hit-testing + layout (open non-overlap; first-open height) | In progress | Expand coverage: nested tree nodes + animated height clamp. |
 | Combobox | `combobox` | `tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json`, `tools/diag-scripts/ui-gallery-combobox-commit-pixels-changed.json` | TODO | Focus restore + selection commit | In progress | Add disabled item + outside press policy. |
 | Command Palette | `command` | TODO | TODO | TODO | TODO | |
 | Context Menu | `context_menu` | `tools/diag-scripts/ui-gallery-context-menu-right-click.json` | TODO | Right-click routing + overlay | In progress | Add click-through + submenu bounds gates. |

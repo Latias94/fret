@@ -44,18 +44,24 @@ pub(in crate::ui) fn preview_accordion(
             .items([
                 shadcn::AccordionItem::new(
                     "shipping",
-                    shadcn::AccordionTrigger::new(vec![cx.text("What are your shipping options?")]),
+                    shadcn::AccordionTrigger::new(vec![cx.text("What are your shipping options?")])
+                        .test_id("ui-gallery-accordion-demo-shipping-trigger"),
                     shadcn::AccordionContent::new(vec![cx.text(
                         "We offer standard (5-7 days), express (2-3 days), and overnight shipping. Free shipping on international orders.",
-                    )]),
-                ),
+                    )])
+                    .test_id("ui-gallery-accordion-demo-shipping-content"),
+                )
+                .test_id("ui-gallery-accordion-demo-shipping-item"),
                 shadcn::AccordionItem::new(
                     "returns",
-                    shadcn::AccordionTrigger::new(vec![cx.text("What is your return policy?")]),
+                    shadcn::AccordionTrigger::new(vec![cx.text("What is your return policy?")])
+                        .test_id("ui-gallery-accordion-demo-returns-trigger"),
                     shadcn::AccordionContent::new(vec![cx.text(
                         "Returns accepted within 30 days. Items must be unused and in original packaging. Refunds processed within 5-7 business days.",
-                    )]),
-                ),
+                    )])
+                    .test_id("ui-gallery-accordion-demo-returns-content"),
+                )
+                .test_id("ui-gallery-accordion-demo-returns-item"),
                 shadcn::AccordionItem::new(
                     "support",
                     shadcn::AccordionTrigger::new(vec![cx.text("How can I contact customer support?")]),
