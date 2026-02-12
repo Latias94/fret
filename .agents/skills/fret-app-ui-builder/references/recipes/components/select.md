@@ -8,9 +8,6 @@ Goal: a shadcn/Radix-like Select (listbox in an overlay) that is keyboard-friend
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/select.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/select
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/select/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx`
-  - `repo-ref/primitives/packages/react/select/src/*`
 
 ## Fret building blocks
 

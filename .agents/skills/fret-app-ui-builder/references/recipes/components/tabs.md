@@ -8,9 +8,6 @@ Goal: Radix-like tabs with predictable keyboard navigation, stable selection sta
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/tabs.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/tabs
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/tabs/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx`
-  - `repo-ref/primitives/packages/react/tabs/src/*`
 
 ## Fret building blocks
 

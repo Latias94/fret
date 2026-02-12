@@ -6,8 +6,6 @@ Goal: shadcn-style table primitives (header/body/rows/cells) with consistent den
 
 - shadcn docs: https://ui.shadcn.com/docs/components/table
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/table.tsx
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx`
 
 ## Fret building blocks
 

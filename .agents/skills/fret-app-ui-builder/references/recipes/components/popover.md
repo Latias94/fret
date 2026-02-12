@@ -8,9 +8,6 @@ Goal: a Radix-like popover (non-modal overlay) with predictable dismiss/focus an
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/popover.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/popover
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/popover/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx`
-  - `repo-ref/primitives/packages/react/popover/src/*`
 
 ## Fret building blocks
 

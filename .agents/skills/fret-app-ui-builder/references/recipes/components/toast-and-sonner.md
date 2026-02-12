@@ -7,8 +7,6 @@ Goal: transient notifications that don’t break focus/keyboard flows and remain
 - shadcn docs (Sonner): https://ui.shadcn.com/docs/components/sonner
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/sonner.tsx
 - Sonner project docs (non-Radix): https://sonner.emilkowal.ski/
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sonner.tsx`
 
 ## Fret building blocks
 

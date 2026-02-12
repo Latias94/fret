@@ -7,8 +7,6 @@ Goal: a shadcn-style resizable split layout that feels editor-grade (drag captur
 - shadcn docs: https://ui.shadcn.com/docs/components/resizable
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/resizable.tsx
 - `react-resizable-panels` (upstream library used by shadcn): https://github.com/bvaughn/react-resizable-panels
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/resizable.tsx`
 
 ## Fret building blocks
 

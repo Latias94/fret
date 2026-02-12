@@ -8,9 +8,6 @@ Goal: an editor-grade menubar with predictable keyboard navigation, submenu beha
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/menubar.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/menubar
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/menubar/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/menubar.tsx`
-  - `repo-ref/primitives/packages/react/menubar/src/*`
 
 ## Fret building blocks
 

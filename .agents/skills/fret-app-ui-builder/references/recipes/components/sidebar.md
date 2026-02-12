@@ -6,8 +6,6 @@ Goal: a shadcn-style sidebar layout suitable for editor apps (navigation + panel
 
 - shadcn docs: https://ui.shadcn.com/docs/components/sidebar
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/sidebar.tsx
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx`
 
 ## Fret building blocks
 

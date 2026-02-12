@@ -24,7 +24,7 @@ When behavior is unclear:
 - For exact implementation details, inspect source code:
   - shadcn/ui v4 source (New York v4 registry): https://github.com/shadcn-ui/ui/tree/main/apps/v4/registry/new-york-v4/ui
   - Radix Primitives source: https://github.com/radix-ui/primitives/tree/main/packages/react
-  - Optional local pinned snapshots (if your checkout includes `repo-ref/`; not necessarily present on GitHub): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/<component>.tsx`, `repo-ref/primitives/packages/react/<primitive>/src/*`
+  - If you need an exact file quickly, search within those repos for the component name (e.g. `dropdown-menu.tsx`).
 
 ## See also
 

@@ -309,7 +309,7 @@
     ]
   },
   "notes": {
-    "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
+    "local_snapshots": "Local upstream snapshots are optional and are not part of the published skills bundle."
   },
   "profiles": {
     "consumer-app-dev": ["fret-repo-orientation", "fret-skills-playbook", "fret-external-app-mode", "fret-app-ui-builder", "fret-ui-review", "fret-diag-workflow"],

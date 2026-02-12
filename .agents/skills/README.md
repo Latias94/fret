@@ -41,7 +41,6 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 ## Notes on upstream references
 
 - Skills point to **public upstream docs and source URLs** by default.
-- Some developer checkouts may include optional pinned snapshots under `repo-ref/` for quick local diffs; this folder is not necessarily present on GitHub checkouts of this repo.
 - If you are using these skills in an external app repo (not inside the Fret mono-repo), consider keeping a lightweight Fret source checkout available so “evidence anchors” (paths) remain clickable.
   - Option A (recommended): add the Fret repo as a git submodule or keep a sibling checkout for browsing.
   - Option B (fallback): browse dependency sources in the Cargo registry (`~/.cargo/registry/src/...`) for published crates.
@@ -56,16 +55,8 @@ python3 .agents/skills/fret_skills.py validate --strict
 
 Optional (upstream Agent Skills reference validator):
 
-This repo vendors the Agent Skills reference implementation under `repo-ref/agentskills/skills-ref`.
-
-Example (macOS/Linux, using `uv`):
-
-```bash
-cd repo-ref/agentskills/skills-ref
-uv sync
-source .venv/bin/activate
-skills-ref validate ../../../.agents/skills/fret-diag-workflow
-```
+If you want the upstream reference validator, install and run `skills-ref` from the Agent Skills project
+and validate a single skill directory.
 
 Maintainer mode (recommended in the mono-repo; validates anchor paths and a small set of high-signal symbols):
 
@@ -122,7 +113,7 @@ Common adjacent pulls:
 - `fret-ui-review`: Review/audit Fret UI code for framework-aligned UX correctness (tokens, focus-visible, overlays, commands gating, `test_id`, and regression gates).
 - `fret-framework-maintainer-guide`: Maintainer playbook for contracts/ADRs, boundaries, diagnostics/perf gates, upstream alignment (shadcn/Radix/Base UI), and evidence discipline.
 - `fret-diag-workflow`: Diagnostics for correctness + perf: scripted repros, bundles/screenshots, triage/compare, perf gates (`diag perf`), and worst-frame attribution.
-- `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source (optional local pinned snapshots under `repo-ref/`) and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
+- `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-crate-audits`: Crate-by-crate code-quality audits for fearless refactors (purpose/exports/deps/hazards) and a small gate set.
 - `fret-boundary-checks`: Guardrails for crate boundary/portability refactors (layering, module-size drift, crate audit snapshot).
 - `fret-fixture-driven-harnesses`: Convert large test matrices into JSON fixtures + thin harnesses for reviewability and lower merge-conflict risk.

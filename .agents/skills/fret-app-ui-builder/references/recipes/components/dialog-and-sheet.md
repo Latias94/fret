@@ -10,10 +10,6 @@ Goal: modal/overlay surfaces with correct focus trapping/restoration, dismiss ru
   - Sheet: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/sheet.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/dialog
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/dialog/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sheet.tsx`
-  - `repo-ref/primitives/packages/react/dialog/src/*`
 
 ## Fret building blocks
 

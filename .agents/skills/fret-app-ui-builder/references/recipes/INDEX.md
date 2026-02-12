@@ -4,7 +4,7 @@ This is a living inventory for `fret-ui-shadcn` app/component recipes.
 
 Each recipe should include:
 
-- Upstream references (URLs first; `repo-ref/` is optional)
+- Upstream references (URLs first; do not depend on local snapshots)
 - Fret building blocks (crate/module anchors + model shapes)
 - Checklist (dismiss/focus/placement/semantics)
 - `test_id` suggestions

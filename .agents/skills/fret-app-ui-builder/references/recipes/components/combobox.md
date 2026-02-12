@@ -10,10 +10,6 @@ Goal: a shadcn-style combobox (searchable select) with correct a11y semantics an
 - shadcn “Command” source: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/command.tsx
 - Radix docs (overlay primitive used by shadcn): https://www.radix-ui.com/primitives/docs/components/popover
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/popover/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/combobox.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
-  - `repo-ref/primitives/packages/react/popover/src/*`
 
 ## Fret building blocks
 

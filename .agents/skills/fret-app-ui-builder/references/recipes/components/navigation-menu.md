@@ -8,9 +8,6 @@ Goal: a Radix-like navigation menu with stable viewport/indicator behavior and r
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/navigation-menu
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/navigation-menu/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/navigation-menu.tsx`
-  - `repo-ref/primitives/packages/react/navigation-menu/src/*`
 
 ## Fret building blocks
 

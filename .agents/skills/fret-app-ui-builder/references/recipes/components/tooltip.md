@@ -8,9 +8,6 @@ Goal: a Radix-like tooltip that behaves correctly for hover and keyboard focus w
 - shadcn source (v4 New York registry): https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/tooltip.tsx
 - Radix docs: https://www.radix-ui.com/primitives/docs/components/tooltip
 - Radix source: https://github.com/radix-ui/primitives/tree/main/packages/react/tooltip/src
-- Local pinned snapshot (optional; not necessarily present on GitHub checkouts):
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx`
-  - `repo-ref/primitives/packages/react/tooltip/src/*`
 
 ## Fret building blocks
 
