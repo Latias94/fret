@@ -18,15 +18,19 @@ This workstream is intentionally **Android-first**:
 - Android is the fastest path to a real device smoke test for `winit + wgpu`.
 - iOS has the same contract needs, but requires separate platform glue for insets and lifecycle.
 
-## Android device/emulator run (APK via cargo-apk)
+## Android device/emulator run (APK via GameActivity wrapper)
 
-For bring-up we use `cargo-apk` to package a `cdylib` + `NativeActivity` APK.
-This is a dev-only loop and may change later (the upstream tool is deprecated in favour of
-`xbuild`, but it is still a fast path to get a real device smoke test).
+For bring-up we use a minimal Gradle wrapper that hosts our Rust `cdylib` in a
+`GameActivity`-based APK.
+
+Why GameActivity:
+
+- `NativeActivity` is a fast smoke-test path but is not sufficient for reliable IME / text input.
+- `GameActivity` is the intended baseline for `GameTextInput` (soft keyboard + composing text).
 
 Run:
 
-- `tools/mobile/android_apk_run.sh --release`
+- `tools/mobile/run.sh android --app ui-gallery --release`
 
 ## iOS simulator run (no Xcode project)
 
@@ -41,7 +45,7 @@ Prereqs:
 
 Run:
 
-- `tools/mobile/ios_sim_run.sh --release`
+- `tools/mobile/run.sh ios --app ui-gallery --sim --release`
 
 Notes:
 

@@ -1055,7 +1055,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .and_then(|svc| svc.snapshot(app_window))
                     {
                         let mut dirty = false;
-                        dirty |= state.platform.set_ime_allowed(snapshot.focus_is_text_input);
+                        let ime_changed =
+                            state.platform.set_ime_allowed(snapshot.focus_is_text_input);
+                        dirty |= ime_changed;
+                        #[cfg(target_os = "android")]
+                        if ime_changed {
+                            self.android_force_soft_input(snapshot.focus_is_text_input);
+                        }
                         if snapshot.focus_is_text_input
                             && let Some(rect) = snapshot.ime_cursor_area
                         {
@@ -1093,6 +1099,80 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         state.last_accessibility_snapshot = Some(snapshot);
                     } else {
                         state.last_accessibility_snapshot = None;
+                    }
+
+                    #[cfg(feature = "webview-wry")]
+                    {
+                        // v1 integration seam: drive a native child WebView using `test_id` bounds
+                        // from the semantics snapshot.
+                        //
+                        // We only compute a snapshot when a surface is registered for this window.
+                        let _stale = fret_webview::webview_gc_stale_surfaces(
+                            &mut self.app,
+                            app_window,
+                            self.frame_id.0,
+                            2,
+                        );
+                        let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
+                            if fret_webview::webview_has_surfaces_for_window(&self.app, app_window)
+                            {
+                                self.driver.accessibility_snapshot(
+                                    &mut self.app,
+                                    app_window,
+                                    &mut state.user,
+                                )
+                            } else {
+                                None
+                            }
+                        });
+
+                        if let Some(snapshot) = snapshot.as_ref() {
+                            let surfaces =
+                                fret_webview::webview_surfaces_for_window(&self.app, app_window);
+                            if !surfaces.is_empty() {
+                                let placements = surfaces
+                                    .into_iter()
+                                    .map(|s| {
+                                        let placement = fret_webview::placement_for_test_id(
+                                            snapshot,
+                                            s.surface_test_id.as_ref(),
+                                            s.visible,
+                                        )
+                                        .unwrap_or_else(|| fret_webview::WebViewPlacement {
+                                            window: app_window,
+                                            bounds: fret_core::Rect::default(),
+                                            visible: false,
+                                        });
+                                        fret_webview::WebViewRequest::SetPlacement {
+                                            id: s.id,
+                                            placement,
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+                                fret_webview::webview_push_requests(&mut self.app, placements);
+                            }
+                        }
+
+                        let requests = fret_webview::webview_drain_requests(&mut self.app);
+                        if !requests.is_empty() {
+                            let unhandled = self.webviews_wry.handle_requests_for_window(
+                                app_window,
+                                state.window.as_ref(),
+                                requests,
+                            );
+                            if !unhandled.is_empty() {
+                                fret_webview::webview_requeue_requests_front(
+                                    &mut self.app,
+                                    unhandled,
+                                );
+                            }
+                        }
+
+                        let events = self.webviews_wry.drain_events_for_window(app_window);
+                        if !events.is_empty() {
+                            fret_webview::webview_push_events(&mut self.app, events);
+                            self.app.request_redraw(app_window);
+                        }
                     }
 
                     let record_started = hitch_config.map(|_| Instant::now());
@@ -1165,6 +1245,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
                             self.app
                                 .set_global(renderer.text_font_trace_snapshot(self.frame_id));
+                            self.app
+                                .set_global(renderer.text_fallback_policy_snapshot(self.frame_id));
                         }
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")

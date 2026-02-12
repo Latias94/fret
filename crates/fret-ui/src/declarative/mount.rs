@@ -1319,6 +1319,8 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::FocusTraversalGate(p) => ElementInstance::FocusTraversalGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
+        ElementKind::MaskLayer(p) => ElementInstance::MaskLayer(p),
+        ElementKind::CompositeGroup(p) => ElementInstance::CompositeGroup(p),
         ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
@@ -1328,6 +1330,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
         ElementKind::TextInputRegion(p) => ElementInstance::TextInputRegion(p),
         ElementKind::InternalDragRegion(p) => ElementInstance::InternalDragRegion(p),
+        ElementKind::ExternalDragRegion(p) => ElementInstance::ExternalDragRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
         ElementKind::Column(p) => ElementInstance::Flex(FlexProps {
@@ -1978,8 +1981,10 @@ fn declarative_instance_change_mask(
             }
 
             if a.background != b.background
+                || a.background_paint != b.background_paint
                 || a.shadow != b.shadow
                 || a.border_color != b.border_color
+                || a.border_paint != b.border_paint
                 || a.focus_ring != b.focus_ring
                 || a.focus_border_color != b.focus_border_color
                 || a.focus_within != b.focus_within
@@ -2011,6 +2016,16 @@ fn declarative_instance_change_mask(
         }
         (ElementInstance::Opacity(a), ElementInstance::Opacity(b)) => {
             if a.opacity != b.opacity {
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::MaskLayer(a), ElementInstance::MaskLayer(b)) => {
+            if a.mask != b.mask {
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::CompositeGroup(a), ElementInstance::CompositeGroup(b)) => {
+            if a.mode != b.mode || a.quality != b.quality {
                 paint_changed = true;
             }
         }

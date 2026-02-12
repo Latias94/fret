@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::headless::table::{
     ColumnPinningState, GroupedColumnMode, RowKey, TableState, create_column_helper,

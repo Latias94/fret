@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::Color;
-use fret_core::{SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
 
-use crate::elements::MessageResponse;
+use crate::elements::CodeBlock;
 use crate::model::{ToolCallPayload, ToolCallState};
 
 /// Tool disclosure building blocks aligned with AI Elements `tool.tsx`.
@@ -57,13 +57,13 @@ impl ToolStatus {
 
     pub fn icon_id(self) -> IconId {
         match self {
-            Self::ApprovalRequested => ids::ui::STATUS_PENDING,
-            Self::ApprovalResponded => ids::ui::STATUS_PENDING,
-            Self::InputAvailable => ids::ui::STATUS_RUNNING,
-            Self::InputStreaming => ids::ui::STATUS_PENDING,
-            Self::OutputAvailable => ids::ui::STATUS_SUCCEEDED,
-            Self::OutputDenied => ids::ui::STATUS_FAILED,
-            Self::OutputError => ids::ui::STATUS_FAILED,
+            Self::ApprovalRequested => IconId::new_static("lucide.clock"),
+            Self::ApprovalResponded => IconId::new_static("lucide.check-circle"),
+            Self::InputAvailable => IconId::new_static("lucide.clock"),
+            Self::InputStreaming => IconId::new_static("lucide.circle"),
+            Self::OutputAvailable => IconId::new_static("lucide.check-circle"),
+            Self::OutputDenied => IconId::new_static("lucide.x-circle"),
+            Self::OutputError => IconId::new_static("lucide.x-circle"),
         }
     }
 
@@ -81,12 +81,42 @@ impl ToolStatus {
 
     pub fn icon_color(self, theme: &Theme) -> Option<Color> {
         match self {
-            Self::ApprovalResponded | Self::OutputAvailable => theme
-                .color_by_key("primary")
-                .or_else(|| theme.color_by_key("foreground")),
-            Self::OutputError => theme
-                .color_by_key("destructive")
-                .or_else(|| theme.color_by_key("foreground")),
+            // Align with AI Elements' Tailwind palette (600 shades).
+            Self::ApprovalRequested => Some(Color {
+                // yellow-600 (#ca8a04)
+                r: 0.792,
+                g: 0.541,
+                b: 0.016,
+                a: 1.0,
+            }),
+            Self::ApprovalResponded => Some(Color {
+                // blue-600 (#2563eb)
+                r: 0.145,
+                g: 0.388,
+                b: 0.922,
+                a: 1.0,
+            }),
+            Self::OutputAvailable => Some(Color {
+                // green-600 (#16a34a)
+                r: 0.086,
+                g: 0.639,
+                b: 0.290,
+                a: 1.0,
+            }),
+            Self::OutputDenied => Some(Color {
+                // orange-600 (#ea580c)
+                r: 0.918,
+                g: 0.345,
+                b: 0.047,
+                a: 1.0,
+            }),
+            Self::OutputError => Some(theme.color_by_key("destructive").unwrap_or(Color {
+                // red-600 (#dc2626)
+                r: 0.863,
+                g: 0.149,
+                b: 0.149,
+                a: 1.0,
+            })),
             _ => None,
         }
     }
@@ -162,14 +192,40 @@ impl ToolHeader {
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let label = self.title.unwrap_or_else(|| self.name.clone());
+        let label = self.title.unwrap_or_else(|| derive_tool_label(&self.name));
         let status = self.status;
+        let muted_foreground = theme.color_required("muted-foreground");
+
+        let text_sm_px = theme
+            .metric_by_key("component.text.sm_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let text_sm_line_height = theme
+            .metric_by_key("component.text.sm_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        let label_text = cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: label.clone(),
+            style: Some(TextStyle {
+                font: Default::default(),
+                size: text_sm_px,
+                weight: FontWeight::MEDIUM,
+                slant: Default::default(),
+                line_height: Some(text_sm_line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(theme.color_required("foreground")),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        });
+
         let badge = Badge::new(self.status.label())
             .variant(self.status.badge_variant())
             .children([decl_icon::icon_with(
                 cx,
                 status.icon_id(),
-                None,
+                Some(Px(16.0)),
                 status.icon_color(&theme).map(ColorRef::Color),
             )])
             .into_element(cx);
@@ -179,20 +235,27 @@ impl ToolHeader {
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
                 vec![
-                    decl_icon::icon(cx, ids::ui::TOOL),
-                    cx.text(label.clone()),
+                    decl_icon::icon_with(
+                        cx,
+                        IconId::new_static("lucide.wrench"),
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(muted_foreground)),
+                    ),
+                    label_text,
                     badge,
                 ]
             },
         );
 
-        let chevron = decl_icon::icon(
+        let chevron = decl_icon::icon_with(
             cx,
             if is_open {
                 ids::ui::CHEVRON_UP
             } else {
                 ids::ui::CHEVRON_DOWN
             },
+            Some(Px(16.0)),
+            Some(ColorRef::Color(muted_foreground)),
         );
 
         let row = stack::hstack(
@@ -273,19 +336,28 @@ impl ToolContent {
     }
 
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        CollapsibleContent::new(self.children)
+        let children = self.children;
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N4),
+            move |_cx| children,
+        );
+
+        CollapsibleContent::new([body])
             .refine_layout(self.layout)
             .refine_style(ChromeRefinement::default().p(Space::N4).merge(self.chrome))
             .into_element(cx)
     }
 }
 
-fn payload_to_code_fence(payload: &ToolCallPayload) -> Arc<str> {
+fn payload_to_jsonish_code(payload: &ToolCallPayload) -> Arc<str> {
     match payload {
-        ToolCallPayload::Text(text) => Arc::from(format!("```json\n{text}\n```")),
+        ToolCallPayload::Text(text) => text.clone(),
         ToolCallPayload::Json(value) => {
             let pretty = serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string());
-            Arc::from(format!("```json\n{pretty}\n```"))
+            Arc::from(pretty)
         }
     }
 }
@@ -321,7 +393,11 @@ impl ToolInput {
         let theme = Theme::global(&*cx.app).clone();
         let title = ToolSectionTitle::new("Parameters").into_element(cx);
 
-        let code = MessageResponse::new(payload_to_code_fence(&self.input)).into_element(cx);
+        let code = CodeBlock::new(payload_to_jsonish_code(&self.input))
+            .language("json")
+            .show_header(false)
+            .show_language(false)
+            .into_element(cx);
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let code = cx.container(
             decl_style::container_props(
@@ -383,6 +459,15 @@ impl ToolOutput {
         }
 
         let theme = Theme::global(&*cx.app).clone();
+
+        let text_xs_px = theme
+            .metric_by_key("component.text.xs_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let text_xs_line_height = theme
+            .metric_by_key("component.text.xs_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
         let title = ToolSectionTitle::new(if self.error_text.is_some() {
             "Error"
         } else {
@@ -396,7 +481,14 @@ impl ToolOutput {
                 cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text: error,
-                    style: None,
+                    style: Some(TextStyle {
+                        font: Default::default(),
+                        size: text_xs_px,
+                        weight: FontWeight::NORMAL,
+                        slant: Default::default(),
+                        line_height: Some(text_xs_line_height),
+                        letter_spacing_em: None,
+                    }),
                     color: theme
                         .color_by_key("destructive")
                         .or_else(|| theme.color_by_key("foreground")),
@@ -406,7 +498,13 @@ impl ToolOutput {
             );
         }
         if let Some(output) = self.output.as_ref() {
-            body.push(MessageResponse::new(payload_to_code_fence(output)).into_element(cx));
+            body.push(
+                CodeBlock::new(payload_to_jsonish_code(output))
+                    .language("json")
+                    .show_header(false)
+                    .show_language(false)
+                    .into_element(cx),
+            );
         }
 
         let bg = if self.error_text.is_some() {
@@ -452,7 +550,7 @@ impl Tool {
             default_open: false,
             header,
             content,
-            layout: LayoutRefinement::default().w_full(),
+            layout: LayoutRefinement::default().w_full().mb(Space::N4),
             chrome: ChromeRefinement::default(),
         }
     }
@@ -508,20 +606,38 @@ impl ToolSectionTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+
+        let text = Arc::<str>::from(self.text.to_ascii_uppercase());
+        let text_xs_px = theme
+            .metric_by_key("component.text.xs_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let text_xs_line_height = theme
+            .metric_by_key("component.text.xs_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
-            text: self.text,
+            text,
             style: Some(fret_core::TextStyle {
                 font: Default::default(),
-                size: theme.metric_required("font.size"),
+                size: text_xs_px,
                 weight: fret_core::FontWeight::MEDIUM,
                 slant: Default::default(),
-                line_height: Some(theme.metric_required("font.line_height")),
-                letter_spacing_em: None,
+                line_height: Some(text_xs_line_height),
+                // Tailwind `tracking-wide` is 0.025em.
+                letter_spacing_em: Some(0.025),
             }),
             color: theme.color_by_key("muted-foreground"),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         })
     }
+}
+
+fn derive_tool_label(name: &Arc<str>) -> Arc<str> {
+    let raw = name.as_ref();
+    raw.strip_prefix("tool-")
+        .map(Arc::<str>::from)
+        .unwrap_or_else(|| name.clone())
 }

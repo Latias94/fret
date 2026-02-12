@@ -1,0 +1,67 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'dev.fret.ui_gallery'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "dev.fret.ui_gallery"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // WindowInsetsControllerCompat in some GameActivity templates.
+    implementation "androidx.core:core:1.12.0"
+
+    // GameActivity wrapper (required for GameTextInput / IME on Android).
+    implementation "androidx.games:games-activity:4.0.0"
+}
+
+def fretRoot = rootProject.file("../../..").canonicalFile
+def jniLibsOutDir = file("$projectDir/src/main/jniLibs")
+
+tasks.register("cargoBuildDebug", Exec) {
+    workingDir fretRoot
+    commandLine "cargo", "ndk",
+            "-t", "arm64-v8a",
+            "-o", jniLibsOutDir.absolutePath,
+            "build",
+            "-p", "fret-ui-gallery-mobile"
+}
+
+tasks.register("cargoBuildRelease", Exec) {
+    workingDir fretRoot
+    commandLine "cargo", "ndk",
+            "-t", "arm64-v8a",
+            "-o", jniLibsOutDir.absolutePath,
+            "build",
+            "--release",
+            "-p", "fret-ui-gallery-mobile"
+}
+
+afterEvaluate {
+    tasks.named("preDebugBuild").configure { dependsOn("cargoBuildDebug") }
+    tasks.named("preReleaseBuild").configure { dependsOn("cargoBuildRelease") }
+}
+

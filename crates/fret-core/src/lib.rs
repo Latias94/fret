@@ -68,11 +68,15 @@ pub use input::{
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
-pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
+pub use materials::{
+    MaterialBindingShape, MaterialCatalogTextureKind, MaterialDescriptor, MaterialKind,
+    MaterialRegistrationError, MaterialService,
+};
 pub use panels::{PanelKey, PanelKind};
 pub use render_text::{
-    RendererGlyphAtlasPerfSnapshot, RendererTextFontTraceEntry, RendererTextFontTraceFamilyClass,
-    RendererTextFontTraceFamilyUsage, RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
+    RendererGlyphAtlasPerfSnapshot, RendererTextFallbackPolicySnapshot, RendererTextFontTraceEntry,
+    RendererTextFontTraceFamilyClass, RendererTextFontTraceFamilyUsage,
+    RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
 };
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
@@ -89,9 +93,9 @@ pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
-    StrikethroughStyle, TextCommonFallbackInjection, TextConstraints, TextFontFamilyConfig,
-    TextInput, TextInputRef, TextMetrics, TextOverflow, TextPaintStyle, TextService,
-    TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    StrikethroughStyle, TextCommonFallbackInjection, TextConstraints, TextFontAxisSetting,
+    TextFontFamilyConfig, TextInput, TextInputRef, TextMetrics, TextOverflow, TextPaintStyle,
+    TextService, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,
@@ -99,6 +103,6 @@ pub use vector_path::{
 };
 pub use viewport::{ViewportFit, ViewportMapped, ViewportMapping};
 pub use window::{
-    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowLogicalPosition,
-    WindowMetricsService,
+    ColorScheme, ContrastPreference, ForcedColorsMode, WindowAnchor, WindowFrameClockService,
+    WindowFrameClockSnapshot, WindowLogicalPosition, WindowMetricsService,
 };

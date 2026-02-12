@@ -102,6 +102,7 @@ pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
 pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
 pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
+pub(crate) const PAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = "text_mixed_script_fallback";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
@@ -116,7 +117,41 @@ pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
+pub(crate) const PAGE_AI_CONTEXT_DEMO: &str = "ai_context_demo";
+pub(crate) const PAGE_AI_TERMINAL_DEMO: &str = "ai_terminal_demo";
+pub(crate) const PAGE_AI_PACKAGE_INFO_DEMO: &str = "ai_package_info_demo";
+pub(crate) const PAGE_AI_OPEN_IN_CHAT_DEMO: &str = "ai_open_in_chat_demo";
+pub(crate) const PAGE_AI_TASK_DEMO: &str = "ai_task_demo";
+pub(crate) const PAGE_AI_AUDIO_PLAYER_DEMO: &str = "ai_audio_player_demo";
+pub(crate) const PAGE_AI_TRANSCRIPTION_DEMO: &str = "ai_transcription_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+    "ai_prompt_input_referenced_sources_demo";
+pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
+pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
+pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
+pub(crate) const PAGE_AI_QUEUE_DEMO: &str = "ai_queue_demo";
+pub(crate) const PAGE_AI_ATTACHMENTS_DEMO: &str = "ai_attachments_demo";
+pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
+pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
+pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
+pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
+pub(crate) const PAGE_AI_COMMIT_LARGE_DEMO: &str = "ai_commit_large_demo";
+pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
+pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_demo";
+pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
+pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
+pub(crate) const PAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = "ai_test_results_large_demo";
+pub(crate) const PAGE_AI_CHECKPOINT_DEMO: &str = "ai_checkpoint_demo";
+pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
+pub(crate) const PAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = "ai_environment_variables_demo";
+pub(crate) const PAGE_AI_PLAN_DEMO: &str = "ai_plan_demo";
+pub(crate) const PAGE_AI_TOOL_DEMO: &str = "ai_tool_demo";
+pub(crate) const PAGE_AI_WEB_PREVIEW_DEMO: &str = "ai_web_preview_demo";
+pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
+pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -124,6 +159,11 @@ pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
 pub(crate) const PAGE_AVATAR: &str = "avatar";
 pub(crate) const PAGE_IMAGE_OBJECT_FIT: &str = "image_object_fit";
+pub(crate) const PAGE_MAGIC_LENS: &str = "magic_lens";
+pub(crate) const PAGE_MAGIC_MARQUEE: &str = "magic_marquee";
+pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
+pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
+pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
 pub(crate) const PAGE_SCROLL_AREA: &str = "scroll_area";
 pub(crate) const PAGE_TOOLTIP: &str = "tooltip";
@@ -229,6 +269,8 @@ pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
 pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
     "ui_gallery.nav.select.text_bidi_rtl_conformance";
+pub(crate) const CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK: &str =
+    "ui_gallery.nav.select.text_mixed_script_fallback";
 pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.text_measure_overlay";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
@@ -247,7 +289,51 @@ pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
+pub(crate) const CMD_NAV_AI_CONTEXT_DEMO: &str = "ui_gallery.nav.select.ai_context_demo";
+pub(crate) const CMD_NAV_AI_TERMINAL_DEMO: &str = "ui_gallery.nav.select.ai_terminal_demo";
+pub(crate) const CMD_NAV_AI_PACKAGE_INFO_DEMO: &str = "ui_gallery.nav.select.ai_package_info_demo";
+pub(crate) const CMD_NAV_AI_OPEN_IN_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_open_in_chat_demo";
+pub(crate) const CMD_NAV_AI_TASK_DEMO: &str = "ui_gallery.nav.select.ai_task_demo";
+pub(crate) const CMD_NAV_AI_AUDIO_PLAYER_DEMO: &str = "ui_gallery.nav.select.ai_audio_player_demo";
+pub(crate) const CMD_NAV_AI_TRANSCRIPTION_DEMO: &str =
+    "ui_gallery.nav.select.ai_transcription_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_provider_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_referenced_sources_demo";
+pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
+pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
+pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
+pub(crate) const CMD_NAV_AI_QUEUE_DEMO: &str = "ui_gallery.nav.select.ai_queue_demo";
+pub(crate) const CMD_NAV_AI_ATTACHMENTS_DEMO: &str = "ui_gallery.nav.select.ai_attachments_demo";
+pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str = "ui_gallery.nav.select.ai_suggestions_demo";
+pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
+    "ui_gallery.nav.select.ai_message_branch_demo";
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
+pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
+pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
+pub(crate) const CMD_NAV_AI_COMMIT_LARGE_DEMO: &str = "ui_gallery.nav.select.ai_commit_large_demo";
+pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
+pub(crate) const CMD_NAV_AI_STACK_TRACE_LARGE_DEMO: &str =
+    "ui_gallery.nav.select.ai_stack_trace_large_demo";
+pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
+    "ui_gallery.nav.select.ai_schema_display_demo";
+pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str = "ui_gallery.nav.select.ai_test_results_demo";
+pub(crate) const CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO: &str =
+    "ui_gallery.nav.select.ai_test_results_large_demo";
+pub(crate) const CMD_NAV_AI_CHECKPOINT_DEMO: &str = "ui_gallery.nav.select.ai_checkpoint_demo";
+pub(crate) const CMD_NAV_AI_CONFIRMATION_DEMO: &str = "ui_gallery.nav.select.ai_confirmation_demo";
+pub(crate) const CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO: &str =
+    "ui_gallery.nav.select.ai_environment_variables_demo";
+pub(crate) const CMD_NAV_AI_PLAN_DEMO: &str = "ui_gallery.nav.select.ai_plan_demo";
+pub(crate) const CMD_NAV_AI_TOOL_DEMO: &str = "ui_gallery.nav.select.ai_tool_demo";
+pub(crate) const CMD_NAV_AI_WEB_PREVIEW_DEMO: &str = "ui_gallery.nav.select.ai_web_preview_demo";
+pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
+    "ui_gallery.nav.select.ai_model_selector_demo";
+pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
+    "ui_gallery.nav.select.ai_chain_of_thought_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -255,6 +341,11 @@ pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
 pub(crate) const CMD_NAV_AVATAR: &str = "ui_gallery.nav.select.avatar";
 pub(crate) const CMD_NAV_IMAGE_OBJECT_FIT: &str = "ui_gallery.nav.select.image_object_fit";
+pub(crate) const CMD_NAV_MAGIC_MARQUEE: &str = "ui_gallery.nav.select.magic_marquee";
+pub(crate) const CMD_NAV_MAGIC_CARD: &str = "ui_gallery.nav.select.magic_card";
+pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
+pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
+pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
 pub(crate) const CMD_NAV_SCROLL_AREA: &str = "ui_gallery.nav.select.scroll_area";
 pub(crate) const CMD_NAV_TOOLTIP: &str = "ui_gallery.nav.select.tooltip";
@@ -616,6 +707,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_TEXT_BIDI_RTL_CONFORMANCE,
             ),
             PageSpec::new(
+                PAGE_TEXT_MIXED_SCRIPT_FALLBACK,
+                "Text Mixed Script (Fallback)",
+                "Text / Mixed-Script Fallback (Bundled Fonts)",
+                "Font system workstream",
+                CMD_NAV_TEXT_MIXED_SCRIPT_FALLBACK,
+                &[
+                    "text",
+                    "fonts",
+                    "fallback",
+                    "cjk",
+                    "emoji",
+                    "diagnostics",
+                    "no-tofu",
+                ],
+                docs::DOC_TEXT_MIXED_SCRIPT_FALLBACK,
+                docs::USAGE_TEXT_MIXED_SCRIPT_FALLBACK,
+            ),
+            PageSpec::new(
                 PAGE_TEXT_MEASURE_OVERLAY,
                 "Text Measure (Overlay)",
                 "Text / Measured Bounds Overlay",
@@ -820,6 +929,203 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_AI_CHAT_DEMO,
             ),
             PageSpec::new(
+                PAGE_AI_CONTEXT_DEMO,
+                "AI Context (Demo)",
+                "AI Elements Context / Context Usage HoverCard Demo",
+                "fret-ui-ai (context hovercard)",
+                CMD_NAV_AI_CONTEXT_DEMO,
+                &["ai", "context", "tokens", "progress", "hovercard", "demo"],
+                docs::DOC_AI_CONTEXT_DEMO,
+                docs::USAGE_AI_CONTEXT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TERMINAL_DEMO,
+                "AI Terminal (Demo)",
+                "AI Elements Terminal / Output Viewer Demo",
+                "fret-ui-ai (terminal viewer)",
+                CMD_NAV_AI_TERMINAL_DEMO,
+                &[
+                    "ai", "terminal", "output", "copy", "clear", "scroll", "demo",
+                ],
+                docs::DOC_AI_TERMINAL_DEMO,
+                docs::USAGE_AI_TERMINAL_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PACKAGE_INFO_DEMO,
+                "AI PackageInfo (Demo)",
+                "AI Elements PackageInfo / Package Versions Demo",
+                "fret-ui-ai (package info)",
+                CMD_NAV_AI_PACKAGE_INFO_DEMO,
+                &["ai", "package", "versions", "dependencies", "badge", "demo"],
+                docs::DOC_AI_PACKAGE_INFO_DEMO,
+                docs::USAGE_AI_PACKAGE_INFO_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_OPEN_IN_CHAT_DEMO,
+                "AI OpenIn (Demo)",
+                "AI Elements OpenIn / Open in Chat Providers Demo",
+                "fret-ui-ai (open in chat menu)",
+                CMD_NAV_AI_OPEN_IN_CHAT_DEMO,
+                &["ai", "open", "chat", "menu", "providers", "url", "demo"],
+                docs::DOC_AI_OPEN_IN_CHAT_DEMO,
+                docs::USAGE_AI_OPEN_IN_CHAT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TASK_DEMO,
+                "AI Task (Demo)",
+                "AI Elements Task / Collapsible Task Demo",
+                "fret-ui-ai (task collapsible)",
+                CMD_NAV_AI_TASK_DEMO,
+                &["ai", "task", "collapsible", "search", "demo"],
+                docs::DOC_AI_TASK_DEMO,
+                docs::USAGE_AI_TASK_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_AUDIO_PLAYER_DEMO,
+                "AI Audio Player (Demo)",
+                "AI Elements AudioPlayer / Media Controls Chrome Demo",
+                "fret-ui-ai (audio player chrome)",
+                CMD_NAV_AI_AUDIO_PLAYER_DEMO,
+                &["ai", "audio", "player", "seek", "mute", "volume", "demo"],
+                docs::DOC_AI_AUDIO_PLAYER_DEMO,
+                docs::USAGE_AI_AUDIO_PLAYER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TRANSCRIPTION_DEMO,
+                "AI Transcription (Demo)",
+                "AI Elements Transcription / Segment Seek Demo",
+                "fret-ui-ai (transcription)",
+                CMD_NAV_AI_TRANSCRIPTION_DEMO,
+                &["ai", "transcription", "segments", "seek", "voice", "demo"],
+                docs::DOC_AI_TRANSCRIPTION_DEMO,
+                docs::USAGE_AI_TRANSCRIPTION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                "AI PromptInput Provider (Demo)",
+                "PromptInputProvider + PromptInputRoot (parts) Demo",
+                "fret-ui-ai (prompt input parts)",
+                CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                &["ai", "prompt", "input", "provider", "parts", "demo"],
+                docs::DOC_AI_PROMPT_INPUT_PROVIDER_DEMO,
+                docs::USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
+                "AI PromptInput Action Menu (Demo)",
+                "PromptInputActionMenu (DropdownMenu) Demo",
+                "fret-ui-ai (prompt input action menu)",
+                CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
+                &[
+                    "ai", "prompt", "input", "menu", "dropdown", "actions", "demo",
+                ],
+                docs::DOC_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
+                docs::USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                "AI PromptInput Referenced Sources (Demo)",
+                "PromptInput referenced sources (chips) Demo",
+                "fret-ui-ai (prompt input referenced sources)",
+                CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                &[
+                    "ai",
+                    "prompt",
+                    "input",
+                    "referenced",
+                    "sources",
+                    "chips",
+                    "demo",
+                ],
+                docs::DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+                docs::USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_ARTIFACT_DEMO,
+                "AI Artifact (Demo)",
+                "AI Elements Artifact / Header + Content + Actions Demo",
+                "fret-ui-ai (artifact container)",
+                CMD_NAV_AI_ARTIFACT_DEMO,
+                &["ai", "artifact", "header", "actions", "tooltip", "demo"],
+                docs::DOC_AI_ARTIFACT_DEMO,
+                docs::USAGE_AI_ARTIFACT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SHIMMER_DEMO,
+                "AI Shimmer (Demo)",
+                "AI Elements Shimmer / Animated Text Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_SHIMMER_DEMO,
+                &["ai", "shimmer", "loading", "text", "animation", "demo"],
+                docs::DOC_AI_SHIMMER_DEMO,
+                docs::USAGE_AI_SHIMMER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_REASONING_DEMO,
+                "AI Reasoning (Demo)",
+                "AI Elements Reasoning / Auto-open + Auto-close Disclosure Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_REASONING_DEMO,
+                &[
+                    "ai",
+                    "reasoning",
+                    "collapsible",
+                    "markdown",
+                    "timer",
+                    "demo",
+                ],
+                docs::DOC_AI_REASONING_DEMO,
+                docs::USAGE_AI_REASONING_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_QUEUE_DEMO,
+                "AI Queue (Demo)",
+                "AI Elements Queue / Sections + Item Actions Demo",
+                "fret-ui-ai (queue surface)",
+                CMD_NAV_AI_QUEUE_DEMO,
+                &[
+                    "ai",
+                    "queue",
+                    "collapsible",
+                    "scroll",
+                    "actions",
+                    "attachments",
+                    "demo",
+                ],
+                docs::DOC_AI_QUEUE_DEMO,
+                docs::USAGE_AI_QUEUE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_ATTACHMENTS_DEMO,
+                "AI Attachments (Demo)",
+                "AI Elements Attachments / Grid + Inline + List Demo",
+                "fret-ui-ai (attachments surface)",
+                CMD_NAV_AI_ATTACHMENTS_DEMO,
+                &["ai", "attachments", "remove", "hover", "demo"],
+                docs::DOC_AI_ATTACHMENTS_DEMO,
+                docs::USAGE_AI_ATTACHMENTS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SUGGESTIONS_DEMO,
+                "AI Suggestions (Demo)",
+                "AI Elements Suggestions / Horizontal Pills Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_SUGGESTIONS_DEMO,
+                &["ai", "suggestion", "suggestions", "scroll", "chips", "demo"],
+                docs::DOC_AI_SUGGESTIONS_DEMO,
+                docs::USAGE_AI_SUGGESTIONS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MESSAGE_BRANCH_DEMO,
+                "AI Message Branch (Demo)",
+                "AI Elements MessageBranch / Alternate Assistant Outputs Demo",
+                "fret-ui-ai (message surface)",
+                CMD_NAV_AI_MESSAGE_BRANCH_DEMO,
+                &["ai", "message", "branch", "selector", "demo"],
+                docs::DOC_AI_MESSAGE_BRANCH_DEMO,
+                docs::USAGE_AI_MESSAGE_BRANCH_DEMO,
+            ),
+            PageSpec::new(
                 PAGE_AI_FILE_TREE_DEMO,
                 "AI File Tree (Demo)",
                 "AI Elements FileTree / Nested Collapsible Demo",
@@ -828,6 +1134,181 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "file", "tree", "outline", "demo"],
                 docs::DOC_AI_FILE_TREE_DEMO,
                 docs::USAGE_AI_FILE_TREE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CODE_BLOCK_DEMO,
+                "AI Code Block (Demo)",
+                "AI Elements CodeBlock + Snippet Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_CODE_BLOCK_DEMO,
+                &["ai", "code", "block", "snippet", "copy", "demo"],
+                docs::DOC_AI_CODE_BLOCK_DEMO,
+                docs::USAGE_AI_CODE_BLOCK_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_COMMIT_DEMO,
+                "AI Commit (Demo)",
+                "AI Elements Commit Disclosure Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_COMMIT_DEMO,
+                &["ai", "commit", "git", "copy", "diff", "demo"],
+                docs::DOC_AI_COMMIT_DEMO,
+                docs::USAGE_AI_COMMIT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_COMMIT_LARGE_DEMO,
+                "AI Commit Large (Demo)",
+                "Commit Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_COMMIT_LARGE_DEMO,
+                &["ai", "commit", "large", "scroll", "files", "demo"],
+                docs::DOC_AI_COMMIT_LARGE_DEMO,
+                docs::USAGE_AI_COMMIT_LARGE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_STACK_TRACE_DEMO,
+                "AI Stack Trace (Demo)",
+                "AI Elements StackTrace / Parsed Frames Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_STACK_TRACE_DEMO,
+                &["ai", "stack", "trace", "error", "copy", "demo"],
+                docs::DOC_AI_STACK_TRACE_DEMO,
+                docs::USAGE_AI_STACK_TRACE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_STACK_TRACE_LARGE_DEMO,
+                "AI Stack Trace Large (Demo)",
+                "StackTrace Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_STACK_TRACE_LARGE_DEMO,
+                &["ai", "stack", "trace", "large", "scroll", "demo"],
+                docs::DOC_AI_STACK_TRACE_LARGE_DEMO,
+                docs::USAGE_AI_STACK_TRACE_LARGE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TEST_RESULTS_DEMO,
+                "AI Test Results (Demo)",
+                "AI Elements TestResults / Suite & Test Rows Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_TEST_RESULTS_DEMO,
+                &["ai", "test", "results", "suite", "demo"],
+                docs::DOC_AI_TEST_RESULTS_DEMO,
+                docs::USAGE_AI_TEST_RESULTS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TEST_RESULTS_LARGE_DEMO,
+                "AI Test Results Large (Demo)",
+                "TestResults Large List (scroll + click seams)",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO,
+                &["ai", "test", "results", "large", "scroll", "demo"],
+                docs::DOC_AI_TEST_RESULTS_LARGE_DEMO,
+                docs::USAGE_AI_TEST_RESULTS_LARGE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CHECKPOINT_DEMO,
+                "AI Checkpoint (Demo)",
+                "AI Elements Checkpoint / Tooltip Trigger Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_CHECKPOINT_DEMO,
+                &["ai", "checkpoint", "tooltip", "demo"],
+                docs::DOC_AI_CHECKPOINT_DEMO,
+                docs::USAGE_AI_CHECKPOINT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CONFIRMATION_DEMO,
+                "AI Confirmation (Demo)",
+                "AI Elements Confirmation / Approval Request Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_CONFIRMATION_DEMO,
+                &["ai", "confirmation", "approval", "demo"],
+                docs::DOC_AI_CONFIRMATION_DEMO,
+                docs::USAGE_AI_CONFIRMATION_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_ENVIRONMENT_VARIABLES_DEMO,
+                "AI Environment Variables (Demo)",
+                "AI Elements EnvironmentVariables / Show-Hide + Copy Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO,
+                &[
+                    "ai",
+                    "environment",
+                    "variables",
+                    "env",
+                    "toggle",
+                    "copy",
+                    "demo",
+                ],
+                docs::DOC_AI_ENVIRONMENT_VARIABLES_DEMO,
+                docs::USAGE_AI_ENVIRONMENT_VARIABLES_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_PLAN_DEMO,
+                "AI Plan (Demo)",
+                "AI Elements Plan / Collapsible Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_PLAN_DEMO,
+                &["ai", "plan", "collapsible", "streaming", "shimmer", "demo"],
+                docs::DOC_AI_PLAN_DEMO,
+                docs::USAGE_AI_PLAN_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TOOL_DEMO,
+                "AI Tool (Demo)",
+                "AI Elements Tool / Collapsible Tool Call Demo",
+                "fret-ui-ai (tool call chrome)",
+                CMD_NAV_AI_TOOL_DEMO,
+                &[
+                    "ai",
+                    "tool",
+                    "tool-call",
+                    "collapsible",
+                    "code-block",
+                    "demo",
+                ],
+                docs::DOC_AI_TOOL_DEMO,
+                docs::USAGE_AI_TOOL_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_WEB_PREVIEW_DEMO,
+                "AI Web Preview (Demo)",
+                "AI Elements WebPreview / URL + Console Chrome Demo",
+                "fret-ui-ai (web preview chrome)",
+                CMD_NAV_AI_WEB_PREVIEW_DEMO,
+                &["ai", "web", "preview", "url", "console", "demo"],
+                docs::DOC_AI_WEB_PREVIEW_DEMO,
+                docs::USAGE_AI_WEB_PREVIEW_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MODEL_SELECTOR_DEMO,
+                "AI Model Selector (Demo)",
+                "AI Elements ModelSelector / Command Palette-in-Dialog Demo",
+                "fret-ui-ai (chatbot)",
+                CMD_NAV_AI_MODEL_SELECTOR_DEMO,
+                &["ai", "model", "selector", "command", "dialog", "demo"],
+                docs::DOC_AI_MODEL_SELECTOR_DEMO,
+                docs::USAGE_AI_MODEL_SELECTOR_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CHAIN_OF_THOUGHT_DEMO,
+                "AI Chain of Thought (Demo)",
+                "AI Elements ChainOfThought / Collapsible Steps Demo",
+                "fret-ui-ai (chatbot)",
+                CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO,
+                &["ai", "chain", "thought", "steps", "collapsible", "demo"],
+                docs::DOC_AI_CHAIN_OF_THOUGHT_DEMO,
+                docs::USAGE_AI_CHAIN_OF_THOUGHT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SCHEMA_DISPLAY_DEMO,
+                "AI Schema Display (Demo)",
+                "AI Elements SchemaDisplay / OpenAPI-ish Viewer Demo",
+                "fret-ui-ai (schema display)",
+                CMD_NAV_AI_SCHEMA_DISPLAY_DEMO,
+                &["ai", "schema", "openapi", "json", "demo"],
+                docs::DOC_AI_SCHEMA_DISPLAY_DEMO,
+                docs::USAGE_AI_SCHEMA_DISPLAY_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,
@@ -1542,6 +2023,61 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["dialog", "popover"],
                 docs::DOC_OVERLAY,
                 docs::USAGE_OVERLAY,
+            ),
+        ],
+    },
+    PageGroupSpec {
+        title: "Magic",
+        items: &[
+            PageSpec::new(
+                PAGE_MAGIC_LENS,
+                "Lens",
+                "Lens (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_LENS,
+                &["magic", "lens", "mask", "transform"],
+                docs::DOC_MAGIC_LENS,
+                docs::USAGE_MAGIC_LENS,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_MARQUEE,
+                "Marquee",
+                "Marquee (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_MARQUEE,
+                &["magic", "marquee", "animation", "reduced-motion"],
+                docs::DOC_MAGIC_MARQUEE,
+                docs::USAGE_MAGIC_MARQUEE,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_CARD,
+                "MagicCard",
+                "MagicCard (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_CARD,
+                &["magic", "card", "pointer-follow", "gradient"],
+                docs::DOC_MAGIC_CARD,
+                docs::USAGE_MAGIC_CARD,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_BORDER_BEAM,
+                "BorderBeam",
+                "BorderBeam (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_BORDER_BEAM,
+                &["magic", "border", "beam", "glow", "blend"],
+                docs::DOC_MAGIC_BORDER_BEAM,
+                docs::USAGE_MAGIC_BORDER_BEAM,
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_DOCK,
+                "Dock",
+                "Dock (Phase 0)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_DOCK,
+                &["magic", "dock", "pointer", "magnify"],
+                docs::DOC_MAGIC_DOCK,
+                docs::USAGE_MAGIC_DOCK,
             ),
         ],
     },

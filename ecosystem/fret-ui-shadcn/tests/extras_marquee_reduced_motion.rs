@@ -1,5 +1,4 @@
 use fret_app::App;
-use fret_core::window::WindowMetricsService;
 use fret_core::{
     AppWindowId, FrameId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
     PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
@@ -112,8 +111,8 @@ fn marquee_respects_reduced_motion_and_does_not_request_frames() {
     let bounds = window_bounds();
 
     let mut app = App::new();
-    app.with_global_mut(WindowMetricsService::default, |svc, _app| {
-        svc.set_prefers_reduced_motion(window, Some(true));
+    app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
+        rt.set_window_prefers_reduced_motion(window, Some(true));
     });
     app.with_global_mut(fret_ui::ElementRuntime::default, |rt, _app| {
         rt.set_window_prefers_reduced_motion(window, Some(true));

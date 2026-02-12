@@ -468,6 +468,14 @@ pub(crate) struct InternalDragActionHooks {
     pub on_internal_drag: Option<OnInternalDrag>,
 }
 
+pub type OnExternalDrag =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &fret_core::ExternalDragEvent) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct ExternalDragActionHooks {
+    pub on_external_drag: Option<OnExternalDrag>,
+}
+
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
 pub type OnPressablePointerDown = Arc<
     dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerDownCx) -> PressablePointerDownResult
@@ -572,6 +580,7 @@ pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx)
 
 #[derive(Default)]
 pub(crate) struct KeyActionHooks {
+    pub on_key_down_capture: Option<OnKeyDown>,
     pub on_key_down: Option<OnKeyDown>,
 }
 

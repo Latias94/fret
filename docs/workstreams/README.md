@@ -55,6 +55,8 @@ Active workstreams:
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ai-elements-port-milestones.md`
+- `docs/workstreams/webview-wry-v1.md`
+- `docs/workstreams/webview-wry-v1-todo.md`
 - `docs/workstreams/shadcn-extras.md`
 - `docs/workstreams/shadcn-extras-todo.md`
 - `docs/workstreams/shadcn-extras-milestones.md`

@@ -39,9 +39,10 @@ Workstream entry:
 - [x] Handle winit lifecycle events:
   - on `Suspended`: drop surfaces / pause rendering,
   - on `Resumed`: rebuild surfaces and request redraw.
-- [ ] Android packaging loop (dev):
+- [x] Android packaging loop (dev):
   - `apps/fret-ui-gallery-mobile` provides `android_main()` entrypoint.
-  - `tools/mobile/android_apk_run.sh` can build + install + launch on a device/emulator.
+  - `apps/fret-ui-gallery-mobile/android` provides a `GameActivity` wrapper.
+  - `tools/mobile/android_game_activity_run.sh` can build + install + launch on a device/emulator.
 
 Notes:
 

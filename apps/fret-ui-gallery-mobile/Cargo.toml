@@ -17,10 +17,16 @@ crate-type = ["cdylib", "staticlib"]
 fret-ui-gallery = { path = "../fret-ui-gallery" }
 winit.workspace = true
 
+[target.'cfg(target_os = "android")'.dependencies]
+tracing.workspace = true
+tracing-android = "0.2"
+tracing-subscriber.workspace = true
+
 [package.metadata.android]
 package = "dev.fret.ui_gallery"
 apk_name = "fret-ui-gallery"
 build_targets = ["aarch64-linux-android"]
+strip = "strip"
 
 [package.metadata.android.sdk]
 min_sdk_version = 26

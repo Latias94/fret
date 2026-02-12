@@ -20,6 +20,7 @@ hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
 diag-screenshots = ["dep:serde_json", "dep:image"]
 wasm-emoji-fonts = ["fret-fonts/emoji"]
 wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
+webview-wry = ["dep:fret-webview", "dep:fret-webview-wry", "fret-webview-wry/wry"]
 
 [dependencies]
 fret-app = { version = "0.1.0", path = "../fret-app" }
@@ -36,14 +37,18 @@ winit.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-platform = { version = "0.1.0", path = "../fret-platform" }
 fret-platform-native = { version = "0.1.0", path = "../fret-platform-native" }
+fret-webview = { version = "0.1.0", path = "../fret-webview", optional = true }
+fret-webview-wry = { version = "0.1.0", path = "../fret-webview-wry", optional = true }
 pollster.workspace = true
 slotmap.workspace = true
-renderdog.workspace = true
 stacksafe.workspace = true
 serde_json = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
 subsecond = { version = "0.7.2", optional = true }
 tungstenite = { version = "0.27.0", optional = true }
+
+[target.'cfg(all(not(target_arch = "wasm32"), any(target_os = "windows", target_os = "macos", target_os = "linux")))'.dependencies]
+renderdog.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-fonts = { version = "0.1.0", path = "../fret-fonts" }

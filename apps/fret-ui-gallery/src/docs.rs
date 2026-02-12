@@ -53,6 +53,137 @@ let root = stack::hstack(
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_MARQUEE: &str = r#"
+## Marquee (fret-ui-magic)
+
+This page is an early **creative authoring** demo:
+
+- Drives time via the runner-owned frame clock (ADR 0240).
+- Requests continuous frames while animating (no hidden timers).
+- Respects reduced-motion preferences (deterministic fallback).
+
+Phase 0 intentionally keeps the API small and explicit: `wrap_width` is provided by the author
+instead of relying on dynamic measurement.
+"#;
+
+pub(crate) const USAGE_MAGIC_MARQUEE: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let props = magic::MarqueeProps {
+    wrap_width: Px(1200.0),
+    speed_px_per_s: 80.0,
+    ..Default::default()
+};
+
+let marquee = magic::marquee(cx, props, |cx| vec![/* repeated content */]);
+```
+"#;
+
+pub(crate) const DOC_MAGIC_LENS: &str = r#"
+## Lens (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Uses `MaskLayer` (ADR 0239) to alpha-mask a zoomed copy of the subtree.
+- Uses `VisualTransform` to scale about the current pointer position.
+- Phase 0 keeps the implementation simple by **duplicating the subtree** (base + zoomed copy).
+
+Non-goals (v1):
+
+- Perfect React/Motion animation parity.
+- Supporting interactive children without duplicated state.
+"#;
+
+pub(crate) const USAGE_MAGIC_LENS: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let lens = magic::lens(cx, magic::LensProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_BORDER_BEAM: &str = r#"
+## BorderBeam (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Animates a moving highlight around the border using a runner-owned frame clock (ADR 0240).
+- Renders glow via `GaussianBlur` + additive compositing groups (ADR 0247).
+- Uses `Paint::RadialGradient` for Phase 0; a future revision may switch to a Tier B material kind.
+
+Non-goals (v1):
+
+- Pixel-perfect CSS conic-gradient parity.
+- Exposing custom shader code at the component layer.
+"#;
+
+pub(crate) const USAGE_MAGIC_BORDER_BEAM: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let card = magic::border_beam(cx, magic::BorderBeamProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_DOCK: &str = r#"
+## Dock (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI / macOS dock-style affordances:
+
+- Items are magnified based on pointer proximity.
+- The implementation uses a pointer region + a small model to store the last pointer position.
+- Hover is used to gate magnification without needing pointer-leave callbacks.
+
+Non-goals (v1):
+
+- Pixel-perfect spring smoothing and bounce physics (can be layered on later).
+- A full “roving focus + typeahead” dock interaction policy.
+"#;
+
+pub(crate) const USAGE_MAGIC_DOCK: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let dock = magic::dock(cx, magic::DockProps::default(), |cx| {
+    vec![
+        cx.text(\"A\"),
+        cx.text(\"B\"),
+        cx.text(\"C\"),
+    ]
+});
+```
+"#;
+
+pub(crate) const DOC_MAGIC_CARD: &str = r#"
+## MagicCard (fret-ui-magic)
+
+This is a Phase 0 “creative parity” demo inspired by MagicUI:
+
+- Pointer-follow radial gradient chrome (background + border).
+- Built on the declarative `ContainerProps` paint surface (ADR 0233) using `Paint::RadialGradient`.
+- Uses `PointerRegion` move hooks for pointer tracking (ADR 0238).
+
+Non-goals (v1):
+
+- Perfect visual parity with CSS/WebKit gradients.
+- Complex blending/mask semantics beyond the current kernel contracts.
+"#;
+
+pub(crate) const USAGE_MAGIC_CARD: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let card = magic::magic_card(cx, magic::MagicCardProps::default(), |cx| {
+    vec![cx.text(\"...\")]
+});
+```
+"#;
+
 pub(crate) const DOC_VIEW_CACHE: &str = r#"
 ## View Cache (experimental)
 
@@ -300,6 +431,27 @@ pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
 // - shift-click / drag: extend selection from the current anchor
 //
 // Try the selectable samples above to validate editor-like text selection on BiDi strings.
+```
+"#;
+
+pub(crate) const DOC_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+## Text mixed-script fallback (bundled fonts)
+
+This page is a small correctness harness for **mixed-script fallback**:
+
+- Latin (UI font)
+- CJK (common fallback)
+- Emoji (color font)
+
+It is designed to remain meaningful even when system fonts are disabled (see `FRET_TEXT_SYSTEM_FONTS=0`),
+by explicitly injecting the bundled font set on first render.
+"#;
+
+pub(crate) const USAGE_TEXT_MIXED_SCRIPT_FALLBACK: &str = r#"
+```rust
+// Expectation:
+// - missing/tofu glyphs should remain 0 for the provided sample strings
+// - a font trace should exist if missing glyphs ever regress
 ```
 "#;
 
@@ -608,6 +760,375 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_CONTEXT_DEMO: &str = r#"
+## AI context (demo)
+
+This page demonstrates the AI Elements-aligned `Context` hovercard surface:
+
+- percent trigger,
+- progress + compact token counts in the content.
+
+The data model is app-owned; this surface is presentation-only.
+"#;
+
+pub(crate) const USAGE_AI_CONTEXT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Context;
+```
+"#;
+
+pub(crate) const DOC_AI_TERMINAL_DEMO: &str = r#"
+## AI terminal (demo)
+
+This page demonstrates the AI Elements-aligned `Terminal` viewer surface:
+
+- output text content (monospace),
+- copy/clear actions,
+- auto-scroll to bottom on output changes (when enabled).
+
+Note: v1 is **viewer-only** and does not embed a PTY/TTY terminal.
+"#;
+
+pub(crate) const USAGE_AI_TERMINAL_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Terminal;
+```
+"#;
+
+pub(crate) const DOC_AI_PACKAGE_INFO_DEMO: &str = r#"
+## AI package info (demo)
+
+This page demonstrates the AI Elements-aligned `PackageInfo` surface:
+
+- name + change type badge,
+- current/new version display,
+- dependency list building blocks (`PackageInfoDependencies` / `PackageInfoDependency`).
+
+The data model is app-owned; this surface is presentation-only.
+"#;
+
+pub(crate) const USAGE_AI_PACKAGE_INFO_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{PackageInfo, PackageInfoChangeKind};
+```
+"#;
+
+pub(crate) const DOC_AI_OPEN_IN_CHAT_DEMO: &str = r#"
+## AI open in chat (demo)
+
+This page demonstrates the AI Elements-aligned `OpenIn` menu surface:
+
+- trigger button,
+- provider entries that emit `Effect::OpenUrl` when selected.
+
+Note: the demo gate opens the menu but does not click a provider entry (to avoid launching a browser).
+"#;
+
+pub(crate) const USAGE_AI_OPEN_IN_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::OpenIn;
+```
+"#;
+
+pub(crate) const DOC_AI_TASK_DEMO: &str = r#"
+## AI task (demo)
+
+This page demonstrates the AI Elements-aligned `Task` collapsible surface:
+
+- a trigger row with title + chevron,
+- an indented content region with a muted left border,
+- lightweight `TaskItem` / `TaskItemFile` building blocks.
+"#;
+
+pub(crate) const USAGE_AI_TASK_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Task, TaskContent, TaskItem, TaskItemFile, TaskTrigger};
+```
+"#;
+
+pub(crate) const DOC_AI_AUDIO_PLAYER_DEMO: &str = r#"
+## AI audio player (demo)
+
+This page demonstrates an AI Elements-aligned `AudioPlayer` chrome surface:
+
+- outline icon controls (play/pause, seek, mute),
+- time + duration labels,
+- time and volume sliders.
+
+Note: this is a UI-only port. Apps are expected to own actual audio playback and drive the exposed
+models (or attach callbacks to mirror changes into a backend).
+"#;
+
+pub(crate) const USAGE_AI_AUDIO_PLAYER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    AudioPlayer, AudioPlayerControlBar, AudioPlayerDurationDisplay, AudioPlayerMuteButton,
+    AudioPlayerPlayButton, AudioPlayerSeekBackwardButton, AudioPlayerSeekForwardButton,
+    AudioPlayerTimeDisplay, AudioPlayerTimeRange, AudioPlayerVolumeRange,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_TRANSCRIPTION_DEMO: &str = r#"
+## AI transcription (demo)
+
+This page demonstrates an AI Elements-aligned `Transcription` surface:
+
+- a flex-wrapping segment row,
+- segment styling for past/active/future regions,
+- an optional seek interaction seam (`on_seek`) for app-owned playback backends.
+"#;
+
+pub(crate) const USAGE_AI_TRANSCRIPTION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Transcription, TranscriptionSegment, TranscriptionSegmentData};
+```
+"#;
+
+pub(crate) const DOC_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
+## AI prompt input provider (demo)
+
+This page demonstrates `PromptInputProvider` + a parts-first `PromptInputRoot` composition:
+
+- provider mode lifts `text` + `attachments` models outside the prompt input surface,
+- an external button mutates the attachments model (simulating an app-owned file picker effect),
+- `PromptInputRoot::into_element_with_slots` composes block-start and block-end content using parts:
+  - `PromptInputHeader` + `PromptInputAttachmentsRow`
+  - `PromptInputFooter` + `PromptInputTools` + `PromptInputActionAddAttachmentsButton` + `PromptInputSubmit`
+
+It exists to validate:
+
+- provider-mode integration for apps (models are app-owned),
+- parts-first composition seams for prompt chrome,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    PromptInputProvider, PromptInputRoot, PromptInputSlots, PromptInputHeader, PromptInputFooter,
+    PromptInputTools, PromptInputSubmit, PromptInputActionAddAttachmentsButton,
+    PromptInputAttachmentsRow,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = r#"
+## AI prompt input action menu (demo)
+
+This page demonstrates `PromptInputActionMenu` (shadcn `DropdownMenu`) composed into a
+parts-first `PromptInputRoot`.
+
+It exists to validate:
+
+- action menu trigger + content wiring in the prompt footer,
+- intent-driven menu items (via `OnActivate`, not direct side effects),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    PromptInputActionAddAttachments, PromptInputActionMenu, PromptInputActionMenuContent,
+    PromptInputActionMenuTrigger,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str = r#"
+## AI prompt input referenced sources (demo)
+
+This page demonstrates a local “referenced sources” model for `PromptInputRoot` (aligned with
+AI Elements `ReferencedSourcesContext` in `prompt-input.tsx`):
+
+- referenced sources are **local to the prompt input** (even when attachments are provider-owned),
+- the surface is intent-driven (apps decide how sources are discovered/added),
+- chips are rendered via `PromptInputReferencedSourcesRow`.
+
+It exists to validate:
+
+- local model ownership and stable keyed identity for chips,
+- remove affordances (chip hover + remove button),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{PromptInputReferencedSourcesRow, use_prompt_input_referenced_sources};
+```
+"#;
+
+pub(crate) const DOC_AI_ARTIFACT_DEMO: &str = r#"
+## AI artifact (demo)
+
+This page is a small demo for the AI Elements-aligned `Artifact` container surfaces in `fret-ui-ai`:
+
+- `Artifact` root (rounded border + shadow + overflow hidden)
+- `ArtifactHeader` + `ArtifactTitle` + `ArtifactDescription`
+- `ArtifactActions` + `ArtifactAction` + `ArtifactClose` (icon buttons + optional tooltips)
+- `ArtifactContent` (scrollable content region)
+
+It exists to validate:
+
+- header/content composition outcomes,
+- action button + tooltip wrapping,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ARTIFACT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Artifact, ArtifactHeader, ArtifactContent, ArtifactAction, ArtifactClose};
+```
+"#;
+
+pub(crate) const DOC_AI_SHIMMER_DEMO: &str = r#"
+## AI shimmer (demo)
+
+This page demonstrates the AI Elements-aligned `Shimmer` surface in `fret-ui-ai`.
+
+Upstream uses a CSS background-clip + gradient animation. In Fret, we approximate the same outcome
+by painting a base text run and an overlaid clipped `Canvas` “erase band”:
+
+- the base text is `muted-foreground`,
+- a moving “erase” band is colored with `background`.
+
+It exists to validate:
+
+- `duration` / `spread` knobs,
+- continuous frame scheduling while the shimmer is visible,
+- inline-sizing expectations (upstream renders as `inline-block`; avoid cross-axis stretch when demoing),
+- stable `test_id` anchors for screenshot-backed automation checks.
+"#;
+
+pub(crate) const USAGE_AI_SHIMMER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Shimmer;
+```
+"#;
+
+pub(crate) const DOC_AI_REASONING_DEMO: &str = r#"
+## AI reasoning (demo)
+
+This page demonstrates the AI Elements-aligned `Reasoning` surfaces in `fret-ui-ai`:
+
+- `Reasoning` (collapsible root with streaming-driven open/close policy),
+- `ReasoningTrigger` (brain icon + thinking message + chevron),
+- `ReasoningContent` (markdown block mounted inside the collapsible).
+
+Upstream behavior to match:
+
+- `defaultOpen ?? isStreaming`
+- auto-open when streaming starts (unless `defaultOpen === false`)
+- auto-close once, 1000ms after streaming ends
+- compute duration (seconds, ceil) between streaming start/end and expose it via the trigger message
+
+It exists to validate:
+
+- timer scheduling (`Effect::SetTimer`) + cancellation correctness,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_REASONING_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Reasoning, ReasoningContent, ReasoningTrigger};
+```
+"#;
+
+pub(crate) const DOC_AI_QUEUE_DEMO: &str = r#"
+## AI queue (demo)
+
+This page demonstrates the AI Elements-aligned `Queue` surfaces in `fret-ui-ai`:
+
+- `Queue` root container,
+- `QueueSection` + `QueueSectionTrigger` + `QueueSectionLabel` + `QueueSectionContent`,
+- `QueueList` (ScrollArea-based constrained list),
+- `QueueItem` + `QueueItemIndicator` + `QueueItemContent` + `QueueItemDescription`,
+- `QueueItemActions` + `QueueItemAction`,
+- `QueueItemAttachment` + `QueueItemFile`.
+
+It exists to validate:
+
+- section open/close behavior (Collapsible),
+- hover-driven item chrome + action reveal,
+- scroll constraints for long lists (`max-h-40` parity),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_QUEUE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Queue, QueueItem, QueueItemAction, QueueItemActions, QueueItemContent, QueueItemIndicator,
+    QueueList, QueueSection, QueueSectionLabel, QueueSectionTrigger,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_ATTACHMENTS_DEMO: &str = r#"
+## AI attachments (demo)
+
+This page demonstrates the AI Elements-aligned attachments surfaces in `fret-ui-ai`:
+
+- `Attachments` container with three variants (`Grid`, `Inline`, `List`),
+- `Attachment` + `AttachmentPreview` + `AttachmentInfo` + `AttachmentRemove`,
+- `AttachmentEmpty` empty state surface.
+
+It exists to validate:
+
+- hover-driven remove affordance visibility (best-effort `group-hover` outcome),
+- remove intent wiring and keyed identity stability,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ATTACHMENTS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Attachment, AttachmentData, AttachmentFileData, AttachmentVariant, Attachments,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_SUGGESTIONS_DEMO: &str = r#"
+## AI suggestions (demo)
+
+This page demonstrates the AI Elements-aligned suggestions surfaces in `fret-ui-ai`:
+
+- `Suggestions` (horizontally scrollable row),
+- `Suggestion` (pill button that emits a suggestion string intent).
+
+It exists to validate:
+
+- horizontal scroll sizing behavior (no wrapping),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_SUGGESTIONS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Suggestion, Suggestions};
+```
+"#;
+
+pub(crate) const DOC_AI_MESSAGE_BRANCH_DEMO: &str = r#"
+## AI message branch (demo)
+
+This page demonstrates AI Elements-aligned message branching surfaces in `fret-ui-ai`:
+
+- `MessageBranchContent` (swap between alternate branches),
+- `MessageBranchSelector` (previous/next + page label),
+- `MessageBranch` (convenience wrapper that composes content + selector).
+
+It exists to validate:
+
+- stable branch identity (hidden branches stay mounted),
+- wrap-around navigation (prev from 1 → last, next from last → 1),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_MESSAGE_BRANCH_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{MessageBranch, MessageBranchContent, MessageBranchSelector};
+```
+"#;
+
 pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
 ## AI file tree (demo)
 
@@ -617,12 +1138,330 @@ It exists to validate:
 
 - nested expand/collapse behavior (folder nodes),
 - selection intent emission (`on_select`),
+- nested row actions do not trigger folder toggle/selection,
 - stable `test_id` anchors for `fretboard diag` gates.
 "#;
 
 pub(crate) const USAGE_AI_FILE_TREE_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{FileTree, FileTreeFile, FileTreeFolder};
+```
+"#;
+
+pub(crate) const DOC_AI_CODE_BLOCK_DEMO: &str = r#"
+## AI code block (demo)
+
+This page is a small demo for AI Elements-aligned code artifact surfaces in `fret-ui-ai`:
+
+- `CodeBlock` for fenced-code rendering backed by `ecosystem/fret-code-view`,
+- `Snippet` for inline copyable commands/values.
+
+It exists to validate:
+
+- stable copy feedback state (`Copied` timeout),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CODE_BLOCK_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{CodeBlock, CodeBlockCopyButton, Snippet, SnippetCopyButton, SnippetInput, SnippetText};
+```
+"#;
+
+pub(crate) const DOC_AI_COMMIT_DEMO: &str = r#"
+## AI commit (demo)
+
+This page is a small demo for the AI Elements-aligned `Commit` disclosure surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- Collapsible header/content composition (commit header toggles open/closed),
+- nested action buttons do not toggle the disclosure (stop-propagation outcome),
+- stable copy feedback state (`Copied` timeout),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_COMMIT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Commit, CommitHeader, CommitContent, CommitCopyButton};
+```
+"#;
+
+pub(crate) const DOC_AI_COMMIT_LARGE_DEMO: &str = r#"
+## AI commit large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `Commit` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- long file lists remain scrollable and stable under view-cache reuse,
+- per-row `test_id` selectors are stable for automation,
+- file path click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_COMMIT_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Commit, CommitFiles, CommitFile, CommitFilePath, OnCommitFilePathClick};
+```
+"#;
+
+pub(crate) const DOC_AI_STACK_TRACE_DEMO: &str = r#"
+## AI stack trace (demo)
+
+This page is a small demo for the AI Elements-aligned `StackTrace` disclosure surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- stack trace parsing (error type/message + frames),
+- Collapsible header/content composition,
+- stable copy feedback state (`Copied` timeout),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_STACK_TRACE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{StackTrace, StackTraceFrames, StackTraceCopyButton, parse_stack_trace};
+```
+"#;
+
+pub(crate) const DOC_AI_STACK_TRACE_LARGE_DEMO: &str = r#"
+## AI stack trace large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `StackTrace` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- long frame lists remain scrollable and stable,
+- per-frame `test_id` selectors are stable for automation,
+- file-path click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_STACK_TRACE_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{StackTrace, OnStackTraceFilePathClick};
+```
+"#;
+
+pub(crate) const DOC_AI_TEST_RESULTS_DEMO: &str = r#"
+## AI test results (demo)
+
+This page is a small demo for the AI Elements-aligned `TestResults` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- summary (passed/failed/skipped + duration),
+- progress bar outcomes,
+- suite Collapsible composition (`TestSuite`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_TEST_RESULTS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{TestResults, TestSuite, Test, TestError, TestStatusKind, TestResultsSummaryData};
+```
+"#;
+
+pub(crate) const DOC_AI_TEST_RESULTS_LARGE_DEMO: &str = r#"
+## AI test results large (demo)
+
+This page is a stress-oriented demo for the AI Elements-aligned `TestResults` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- long test lists remain scrollable and stable,
+- per-row `test_id` selectors are stable for automation,
+- row activate/click seams are app-owned (effects are outside `fret-ui-ai`).
+"#;
+
+pub(crate) const USAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{OnTestActivate, Test, TestResults, TestSuite, TestStatusKind};
+```
+"#;
+
+pub(crate) const DOC_AI_CHECKPOINT_DEMO: &str = r#"
+## AI checkpoint (demo)
+
+This page is a small demo for the AI Elements-aligned `Checkpoint` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- `CheckpointTrigger` button behavior (app-owned activate seam),
+- Tooltip hover outcomes with stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CHECKPOINT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Checkpoint, CheckpointIcon, CheckpointTrigger};
+```
+"#;
+
+pub(crate) const DOC_AI_CONFIRMATION_DEMO: &str = r#"
+## AI confirmation (demo)
+
+This page is a small demo for the AI Elements-aligned `Confirmation` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- conditional rendering based on `ToolUiPartState`,
+- approval request actions are app-owned (effects are outside `fret-ui-ai`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CONFIRMATION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Confirmation, ConfirmationAccepted, ConfirmationAction, ConfirmationActions, ConfirmationRejected,
+    ConfirmationRequest, ConfirmationTitle, ToolUiPartApproval, ToolUiPartState,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_ENVIRONMENT_VARIABLES_DEMO: &str = r#"
+## AI environment variables (demo)
+
+This page is a small demo for the AI Elements-aligned `EnvironmentVariables` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- controlled/uncontrolled `showValues` behavior (toggle),
+- masked value rendering (bullet replacement),
+- copy button timing feedback with stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    EnvironmentVariable, EnvironmentVariableCopyButton, EnvironmentVariableCopyFormat,
+    EnvironmentVariableGroup, EnvironmentVariableName, EnvironmentVariableRequired,
+    EnvironmentVariableValue, EnvironmentVariables, EnvironmentVariablesContent,
+    EnvironmentVariablesHeader, EnvironmentVariablesTitle, EnvironmentVariablesToggle,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_PLAN_DEMO: &str = r#"
+## AI plan (demo)
+
+This page is a small demo for the AI Elements-aligned `Plan` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- collapsible open/close behavior (header trigger),
+- streaming shimmer states for title/description,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_PLAN_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Plan, PlanAction, PlanContent, PlanDescription, PlanFooter, PlanHeader, PlanTitle, PlanTrigger,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_TOOL_DEMO: &str = r#"
+## AI tool (demo)
+
+This page is a small demo for the AI Elements-aligned `Tool` / `ToolCallBlock` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- status badge mapping for `ToolCallState` (Awaiting Approval / Responded / Running / Pending / Completed / Denied / Error),
+- parameter + result rendering via `ToolInput` / `ToolOutput` (JSON pretty-print via `ToolCallPayload`),
+- stable `test_id` anchors for `fretboard diag` gates (trigger + content marker).
+"#;
+
+pub(crate) const USAGE_AI_TOOL_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Tool, ToolCall, ToolCallBlock, ToolCallPayload, ToolCallState, ToolContent, ToolHeader, ToolInput,
+    ToolOutput, ToolStatus,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_WEB_PREVIEW_DEMO: &str = r#"
+## AI web preview (demo)
+
+This page is a small demo for the AI Elements-aligned `WebPreview` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- URL draft input + Enter-to-commit behavior (`Input::on_submit`),
+- basic navigation chrome composition (icon buttons + separators),
+- console disclosure surface + stable `test_id` anchors for `fretboard diag` gates.
+
+Note: this demo renders **chrome only** (no embedded webview yet). The actual webview backend is
+expected to be host/platform-owned and gated behind optional features.
+"#;
+
+pub(crate) const USAGE_AI_WEB_PREVIEW_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    WebPreview, WebPreviewBody, WebPreviewConsole, WebPreviewConsoleLog, WebPreviewConsoleLogLevel,
+    WebPreviewController, WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewUrl,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_MODEL_SELECTOR_DEMO: &str = r#"
+## AI model selector (demo)
+
+This page is a small demo for the AI Elements-aligned `ModelSelector` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- dialog open/close behavior driven by an app-owned model,
+- cmdk-style filtering and keyboard navigation via `CommandPalette`,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_MODEL_SELECTOR_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    ModelSelector, ModelSelectorContent, ModelSelectorLogo, ModelSelectorLogoGroup, ModelSelectorName,
+};
+use fret_ui_shadcn::{CommandPalette, CommandItem};
+```
+"#;
+
+pub(crate) const DOC_AI_CHAIN_OF_THOUGHT_DEMO: &str = r#"
+## AI chain of thought (demo)
+
+This page is a small demo for the AI Elements-aligned `ChainOfThought` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- controlled/uncontrolled open behavior (`defaultOpen` and `open`),
+- collapsible content motion for step lists,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    ChainOfThought, ChainOfThoughtContent, ChainOfThoughtHeader, ChainOfThoughtSearchResult,
+    ChainOfThoughtSearchResults, ChainOfThoughtStep, ChainOfThoughtStepStatus,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
+## AI schema display (demo)
+
+This page is a small demo for the AI Elements-aligned `SchemaDisplay` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- section collapsibles (Parameters / Request Body / Response),
+- recursive property disclosure defaults (`depth < 2` opens by default),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{HttpMethod, SchemaDisplay, SchemaParameter, SchemaProperty};
 ```
 "#;
 

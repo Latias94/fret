@@ -5,7 +5,8 @@ use parley::Layout;
 use parley::LayoutContext;
 use parley::fontique::{FamilyId, GenericFamily};
 use parley::style::{
-    FontStyle, FontWeight as ParleyFontWeight, StyleProperty, TextStyle as ParleyTextStyle,
+    FontSettings, FontStyle, FontVariation, FontWeight as ParleyFontWeight, StyleProperty,
+    TextStyle as ParleyTextStyle,
 };
 use read_fonts::{FontRef, TableProvider as _};
 use std::borrow::Cow;
@@ -14,6 +15,23 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use super::FontCatalogEntryMetadata;
+use super::FontVariableAxisMetadata;
+
+fn env_disables_system_fonts() -> bool {
+    let Ok(raw) = std::env::var("FRET_TEXT_SYSTEM_FONTS") else {
+        return false;
+    };
+    let v = raw.trim().to_ascii_lowercase();
+    matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
+
+fn env_disables_font_catalog_monospace_probe() -> bool {
+    let Ok(raw) = std::env::var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE") else {
+        return false;
+    };
+    let v = raw.trim().to_ascii_lowercase();
+    matches!(v.as_str(), "0" | "false" | "no" | "off")
+}
 
 fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
     let ascent = ascent.max(0.0);
@@ -126,7 +144,11 @@ impl Default for ParleyShaper {
 
 impl ParleyShaper {
     pub fn new() -> Self {
-        Self::default()
+        let mut out = Self::default();
+        if env_disables_system_fonts() {
+            out.disable_system_fonts();
+        }
+        out
     }
 
     #[cfg(test)]
@@ -208,17 +230,26 @@ impl ParleyShaper {
         true
     }
 
-    #[cfg(test)]
-    #[allow(dead_code)]
-    pub fn new_without_system_fonts() -> Self {
-        let mut out = Self::default();
-        out.fcx.collection =
+    pub fn common_fallback_stack_suffix(&self) -> &str {
+        &self.common_fallback_stack_suffix
+    }
+
+    fn disable_system_fonts(&mut self) {
+        self.fcx.collection =
             parley::fontique::Collection::new(parley::fontique::CollectionOptions {
                 shared: false,
                 system_fonts: false,
             });
-        out.fcx.source_cache = parley::fontique::SourceCache::default();
-        out.system_fonts_enabled = false;
+        self.fcx.source_cache = parley::fontique::SourceCache::default();
+        self.system_fonts_enabled = false;
+        self.invalidate_catalog_caches();
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub fn new_without_system_fonts() -> Self {
+        let mut out = Self::default();
+        out.disable_system_fonts();
         out
     }
 
@@ -247,6 +278,10 @@ impl ParleyShaper {
     pub fn all_font_catalog_entries(&mut self) -> Vec<FontCatalogEntryMetadata> {
         if let Some(cache) = self.all_font_catalog_entries_cache.as_ref() {
             return cache.clone();
+        }
+
+        fn axis_tag_string(tag_be_bytes: [u8; 4]) -> String {
+            String::from_utf8_lossy(&tag_be_bytes).to_string()
         }
 
         let mut by_lower: HashMap<String, String> = HashMap::new();
@@ -304,20 +339,40 @@ impl ParleyShaper {
                 known_variable_axes.push("opsz".to_string());
             }
 
-            let is_monospace_candidate = info
+            let variable_axes = info
                 .default_font()
-                .and_then(|font| {
-                    let blob = font.load(Some(&mut self.fcx.source_cache))?;
-                    let face = FontRef::from_index(blob.as_ref(), font.index()).ok()?;
-                    let post = face.post().ok()?;
-                    Some(post.is_fixed_pitch() != 0)
+                .map(|font| {
+                    font.axes()
+                        .iter()
+                        .take(64)
+                        .map(|axis| FontVariableAxisMetadata {
+                            tag: axis_tag_string(axis.tag.to_be_bytes()),
+                            min_bits: axis.min.to_bits(),
+                            max_bits: axis.max.to_bits(),
+                            default_bits: axis.default.to_bits(),
+                        })
+                        .collect::<Vec<_>>()
                 })
-                .unwrap_or(false);
+                .unwrap_or_default();
+
+            let is_monospace_candidate = if env_disables_font_catalog_monospace_probe() {
+                false
+            } else {
+                info.default_font()
+                    .and_then(|font| {
+                        let blob = font.load(Some(&mut self.fcx.source_cache))?;
+                        let face = FontRef::from_index(blob.as_ref(), font.index()).ok()?;
+                        let post = face.post().ok()?;
+                        Some(post.is_fixed_pitch() != 0)
+                    })
+                    .unwrap_or(false)
+            };
 
             out.push(FontCatalogEntryMetadata {
                 family,
                 has_variable_axes,
                 known_variable_axes,
+                variable_axes,
                 is_monospace_candidate,
             });
         }
@@ -731,6 +786,7 @@ fn shaping_properties_for_span(
         weight,
         slant,
         letter_spacing_em,
+        axes,
     } = &span.shaping;
 
     let mut out: Vec<StyleProperty<'static, [u8; 4]>> = Vec::new();
@@ -741,7 +797,38 @@ fn shaping_properties_for_span(
             Cow::Owned(stack),
         )));
     }
-    if let Some(weight) = weight {
+
+    let mut effective_weight = *weight;
+    let mut axes_for_variations: Vec<fret_core::TextFontAxisSetting> = Vec::new();
+    if !axes.is_empty() {
+        // `wght` overlaps with the `FontWeight` attribute path. Prefer expressing it as
+        // `FontWeight` so fontique synthesis participates consistently (and avoid duplicate
+        // tag resolution ambiguity in the underlying shaping stack).
+        let mut wght_axis_override: Option<f32> = None;
+        for axis in axes {
+            if axis.tag.trim().eq_ignore_ascii_case("wght") && axis.value.is_finite() {
+                wght_axis_override = Some(axis.value);
+                continue;
+            }
+            axes_for_variations.push(axis.clone());
+        }
+        if effective_weight.is_none()
+            && let Some(wght) = wght_axis_override
+        {
+            let wght = wght.clamp(1.0, 1000.0).round() as u16;
+            effective_weight = Some(fret_core::FontWeight(wght));
+        }
+    }
+
+    if !axes_for_variations.is_empty() {
+        let variations = font_variations_for_axes(&axes_for_variations);
+        if !variations.is_empty() {
+            out.push(StyleProperty::FontVariations(FontSettings::List(
+                Cow::Owned(variations.into()),
+            )));
+        }
+    }
+    if let Some(weight) = effective_weight {
         out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
             weight.0 as f32,
         )));
@@ -756,6 +843,33 @@ fn shaping_properties_for_span(
     }
 
     (!out.is_empty()).then_some(out)
+}
+
+fn font_variations_for_axes(axes: &[fret_core::TextFontAxisSetting]) -> Vec<FontVariation> {
+    use std::collections::BTreeMap;
+
+    let mut by_tag: BTreeMap<u32, FontVariation> = BTreeMap::new();
+    for axis in axes {
+        let tag = axis.tag.trim();
+        if tag.is_empty() {
+            continue;
+        }
+        let bytes = tag.as_bytes();
+        if bytes.len() != 4 {
+            continue;
+        }
+        if !axis.value.is_finite() {
+            continue;
+        }
+
+        let mut tag_bytes = [0u8; 4];
+        tag_bytes.copy_from_slice(bytes);
+        let tuple = (tag_bytes, axis.value);
+        let setting = FontVariation::from(&tuple);
+        by_tag.insert(setting.tag, setting);
+    }
+
+    by_tag.into_values().collect::<Vec<_>>()
 }
 
 pub(super) fn run_system_font_rescan(
@@ -785,12 +899,44 @@ pub(super) fn run_system_font_rescan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::Px;
+    use fret_core::{FontId, FontWeight, Px, TextSpan, TextStyle};
     use std::sync::{Mutex, OnceLock};
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
         LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    #[test]
+    fn shaping_properties_map_wght_axis_to_font_weight() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            ..Default::default()
+        };
+
+        let span = TextSpan {
+            len: 1,
+            shaping: TextShapingStyle::default().with_axis("wght", 900.0),
+            paint: Default::default(),
+        };
+
+        let props =
+            shaping_properties_for_span(&base, &span, "").expect("expected shaping properties");
+
+        assert!(
+            props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontWeight(_))),
+            "expected `wght` axis to map to FontWeight"
+        );
+        assert!(
+            !props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontVariations(_))),
+            "expected `wght` axis to be removed from FontVariations"
+        );
     }
 
     #[test]
@@ -961,5 +1107,25 @@ mod tests {
 
         let layout = shaper.shape_single_line(input, 1.0);
         assert!(layout.line_height + 0.001 >= 40.0);
+    }
+
+    #[test]
+    fn font_catalog_monospace_probe_can_be_disabled() {
+        let lock = env_lock().lock().unwrap();
+        unsafe {
+            std::env::set_var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE", "0");
+        }
+
+        let mut shaper = ParleyShaper::new();
+        let entries = shaper.all_font_catalog_entries();
+        assert!(
+            entries.iter().all(|e| !e.is_monospace_candidate),
+            "expected monospace candidates to be suppressed when probe is disabled"
+        );
+
+        unsafe {
+            std::env::remove_var("FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE");
+        }
+        drop(lock);
     }
 }

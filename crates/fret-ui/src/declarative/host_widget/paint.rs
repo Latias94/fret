@@ -56,7 +56,9 @@ impl ElementHostWidget {
 
                 let should_draw = props.shadow.is_some()
                     || props.background.is_some()
+                    || props.background_paint.is_some()
                     || props.border_color.is_some()
+                    || props.border_paint.is_some()
                     || props.border != Edges::all(Px(0.0));
 
                 if should_draw {
@@ -66,11 +68,13 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: bounds,
-                        background: Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT)),
+                        background: props.background_paint.unwrap_or_else(|| {
+                            Paint::Solid(props.background.unwrap_or(Color::TRANSPARENT))
+                        }),
                         border: props.border,
-                        border_paint: Paint::Solid(
-                            props.border_color.unwrap_or(Color::TRANSPARENT),
-                        ),
+                        border_paint: props.border_paint.unwrap_or_else(|| {
+                            Paint::Solid(props.border_color.unwrap_or(Color::TRANSPARENT))
+                        }),
                         corner_radii: props.corner_radii,
                     });
                 }
@@ -193,6 +197,46 @@ impl ElementHostWidget {
                 if opacity < 1.0 {
                     cx.scene.push(SceneOp::PopOpacity);
                 }
+            }
+            ElementInstance::MaskLayer(props) => {
+                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let mask = props.mask.sanitize();
+                if let Some(mask) = mask {
+                    cx.scene.push(SceneOp::PushMask {
+                        bounds: cx.bounds,
+                        mask,
+                    });
+                }
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                if mask.is_some() {
+                    cx.scene.push(SceneOp::PopMask);
+                }
+            }
+            ElementInstance::CompositeGroup(props) => {
+                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let desc =
+                    fret_core::scene::CompositeGroupDesc::new(cx.bounds, props.mode, props.quality);
+                cx.scene.push(SceneOp::PushCompositeGroup { desc });
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                cx.scene.push(SceneOp::PopCompositeGroup);
             }
             ElementInstance::EffectLayer(props) => {
                 if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
@@ -1489,6 +1533,21 @@ impl ElementHostWidget {
                 }
             }
             ElementInstance::InternalDragRegion(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
+            ElementInstance::ExternalDragRegion(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {
                     cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });

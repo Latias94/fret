@@ -14,6 +14,13 @@ impl Renderer {
         self.text_system.font_trace_snapshot(frame_id)
     }
 
+    pub fn text_fallback_policy_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextFallbackPolicySnapshot {
+        self.text_system.fallback_policy_snapshot(frame_id)
+    }
+
     pub fn text_diagnostics_snapshot(
         &self,
         frame_id: fret_core::FrameId,
@@ -100,6 +107,7 @@ impl Renderer {
             scene_encoding_cache_hits: self.perf.scene_encoding_cache_hits,
             scene_encoding_cache_misses: self.perf.scene_encoding_cache_misses,
             material_quad_ops: self.perf.material_quad_ops,
+            material_sampled_quad_ops: self.perf.material_sampled_quad_ops,
             material_distinct: self.perf.material_distinct,
             material_unknown_ids: self.perf.material_unknown_ids,
             material_degraded_due_to_budget: self.perf.material_degraded_due_to_budget,

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, FontId, NodeId, Px, SemanticsRole, TextStyle};
+use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -75,6 +76,7 @@ pub struct Input {
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
+    on_submit: Option<OnInputSubmit>,
     size: Size,
     style: InputStyle,
     chrome: ChromeRefinement,
@@ -96,6 +98,7 @@ impl Input {
             expanded: None,
             submit_command: None,
             cancel_command: None,
+            on_submit: None,
             size: Size::default(),
             style: InputStyle::default(),
             chrome: ChromeRefinement::default(),
@@ -149,6 +152,15 @@ impl Input {
 
     pub fn cancel_command(mut self, command: CommandId) -> Self {
         self.cancel_command = Some(command);
+        self
+    }
+
+    /// Registers a component-owned submit handler for Enter key presses.
+    ///
+    /// This is useful when the consumer wants to keep the effect localized (e.g. committing a
+    /// derived draft model) without relying on an app-level `on_command` handler.
+    pub fn on_submit(mut self, on_submit: OnInputSubmit) -> Self {
+        self.on_submit = Some(on_submit);
         self
     }
 
@@ -206,7 +218,7 @@ impl Input {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        input_with_style(
+        input_with_style_and_submit(
             cx,
             self.model,
             self.a11y_label,
@@ -218,6 +230,7 @@ impl Input {
             self.expanded,
             self.submit_command,
             self.cancel_command,
+            self.on_submit,
             self.size,
             self.style,
             self.chrome,
@@ -239,7 +252,7 @@ pub fn input<H: UiHost>(
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
 ) -> AnyElement {
-    input_with_style(
+    input_with_style_and_submit(
         cx,
         model,
         a11y_label,
@@ -251,6 +264,7 @@ pub fn input<H: UiHost>(
         expanded,
         submit_command,
         cancel_command,
+        None,
         Size::default(),
         InputStyle::default(),
         ChromeRefinement::default(),
@@ -260,7 +274,9 @@ pub fn input<H: UiHost>(
     )
 }
 
-fn input_with_style<H: UiHost>(
+pub type OnInputSubmit = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx) + 'static>;
+
+fn input_with_style_and_submit<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
@@ -272,6 +288,7 @@ fn input_with_style<H: UiHost>(
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
+    on_submit: Option<OnInputSubmit>,
     size: Size,
     style_override: InputStyle,
     chrome_override: ChromeRefinement,
@@ -380,7 +397,7 @@ fn input_with_style<H: UiHost>(
     props.placeholder = placeholder;
     props.active_descendant = active_descendant;
     props.expanded = expanded;
-    props.submit_command = submit_command;
+    props.submit_command = submit_command.clone();
     props.cancel_command = cancel_command;
     props.chrome = chrome;
     props.text_style = text_style;
@@ -393,9 +410,39 @@ fn input_with_style<H: UiHost>(
     props.layout.overflow = Overflow::Clip;
     decl_style::apply_layout_refinement(theme, layout_override, &mut props.layout);
 
+    let model_for_hook = props.model.clone();
+    let on_submit_hook = on_submit.clone();
+    let submit_command_for_hook = submit_command.clone();
+    let input = cx.text_input_with_id_props(|cx, id| {
+        if let Some(on_submit_hook) = on_submit_hook.clone() {
+            cx.key_add_on_key_down_for(
+                id,
+                Arc::new(
+                    move |host: &mut dyn UiFocusActionHost,
+                          action_cx: ActionCx,
+                          down: KeyDownCx| {
+                        if down.key != KeyCode::Enter {
+                            return false;
+                        }
+                        on_submit_hook(host, action_cx);
+                        if let Some(command) = submit_command_for_hook.clone() {
+                            host.dispatch_command(Some(action_cx.window), command);
+                        }
+                        host.request_redraw(action_cx.window);
+                        true
+                    },
+                ),
+            );
+        }
+        let mut props = props.clone();
+        // Ensure the key hook reads the latest text from the model on the dispatch cycle.
+        props.model = model_for_hook.clone();
+        props
+    });
+
     if disabled {
-        cx.opacity(0.5, move |cx| vec![cx.text_input(props)])
+        cx.opacity(0.5, move |_cx| vec![input])
     } else {
-        cx.text_input(props)
+        input
     }
 }

@@ -11,6 +11,7 @@ Upstream reference:
 
 Workstream narrative: `docs/workstreams/ai-elements-port.md`
 Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`
+Upstream inventory + mapping: `docs/workstreams/ai-elements-upstream-alignment.md`
 
 ## Tracking format
 
@@ -46,44 +47,49 @@ Status legend:
 | `conversation` | Prototype | `fret-ui-ai` | Parts-based transcript exists (`AiConversationTranscript`) + empty state + download button + scroll affordance; `AiChat` provides a default composition shell. |
 | `message` | Prototype | `fret-ui-ai` | `MessageParts` + `MessageResponse` exist (markdown + tool calls + sources/citations); richer action slots pending. |
 | `prompt-input` | Prototype | `fret-ui-ai` | MVP exists (send/stop/disabled/loading + `test_id`). |
-| `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); keep iterating on payload views and styling parity. |
+| `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); UI Gallery demo + diag gate: `ai_tool_demo`, `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`. |
 | `sources` | Prototype | `fret-ui-ai` | Collapsible parity (`Used N sources`) is implemented; keep iterating on styling and payload richness (excerpt/link affordances). |
 | `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
-| `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
-| `suggestion` | Not started | `fret-ui-ai` | Optional. |
-| `queue` | Not started | `fret-ui-ai` | Optional. |
-| `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `reasoning` | Prototype | `fret-ui-ai` | `Reasoning` + `ReasoningTrigger` + `ReasoningContent` exist with streaming-driven auto-open + timed auto-close; UI Gallery demo + diag gate added. |
+| `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
+| `queue` | Prototype | `fret-ui-ai` | Queue surfaces + UI Gallery demo + diag gate exist; keep iterating on styling parity. |
+| `model-selector` | Prototype | `fret-ui-ai` | Thin wrappers + demo exist (`apps/fret-ui-gallery` `ai_model_selector_demo`) and gated via `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`. Provider logos are placeholders (no remote fetch). |
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
-| `attachments` | Not started | `fret-ui-ai` | Requires host effects (file pick); keep policy-only in components. |
-| `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
-| `checkpoint` | Not started | `fret-ui-ai` | Likely a styling recipe. |
-| `confirmation` | Not started | `fret-ui-ai` | Likely maps to shadcn alert/dialog. |
-| `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
-| `plan` | Not started | `fret-ui-ai` | Optional; depends on product needs. |
-| `shimmer` | Not started | `fret-ui-ai` | Can likely reuse `fret-ui-shadcn::Skeleton`. |
-| `task` | Not started | `fret-ui-ai` | Optional; depends on “agent/task” UIs. |
+| `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
+| `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
+| `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
+| `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
+| `context` | Prototype | `fret-ui-ai` | Ported as a hovercard disclosure (`Context`) with a percent trigger and a progress+usage breakdown content; app owns the data model. |
+| `plan` | Prototype | `fret-ui-ai` | Ported as `Plan*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`). |
+| `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
+| `task` | Prototype | `fret-ui-ai` | Collapsible task surface (`Task*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-task-demo-toggle.json`. |
 
 ### Code
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `code-block` | Not started | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`. |
-| `snippet` | Not started | `fret-ui-ai` | Likely a thin wrapper over `code-block`. |
-| `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) + future path to UI Kit virtualization for large outlines. |
-| `commit` | Not started | `fret-ui-ai` | Add only after code-block is stable. |
-| `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
-| `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
-| `test-results` | Not started | `fret-ui-ai` | Optional; can be app-level initially. |
+| `code-block` | Prototype | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`; demo + diag gate exist. |
+| `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
+| `artifact` | Prototype | `fret-ui-ai` | Artifact container surfaces (`Artifact*`) + UI Gallery demo + diag gate exist. |
+| `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
+| `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
+| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
+| `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
+| `terminal` | Prototype | `fret-ui-ai` | Viewer-only v1 (`Terminal`): output text + copy/clear + auto-scroll; UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`. ANSI formatting is a future enhancement (keep deps feature-gated). |
+| `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
-| `web-preview` | Not started | n/a | Needs embedded webview; out of scope unless there is a host. |
-| `artifact` / `agent` / `sandbox` / `package-info` / `environment-variables` / `stack-trace` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `web-preview` | Prototype | `fret-ui-ai` | Chrome port exists (`WebPreview*`) with UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`. Embedded native webview backend is host-owned and available behind `fret-launch/webview-wry` + `fret-ui-gallery/webview-wry` (see `docs/workstreams/webview-wry-v1.md`), with additional gates: `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-nav.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console.json`, `tools/diag-scripts/ui-gallery-ai-web-preview-demo-webview-wry-console-clear.json`. |
+| `agent` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `sandbox` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `package-info` | Prototype | `fret-ui-ai` | `PackageInfo*` surfaces + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json`. |
+| `environment-variables` | Prototype | `fret-ui-ai` | Ported as `EnvironmentVariables*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`). |
 
 ### Utilities
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `image` | Not started | `fret-ui-ai` or `fret-ui-shadcn` | Decide whether it is generic enough to live in shadcn. |
-| `open-in-chat` | Not started | `fret-ui-ai` | Likely app-level wiring; component is just chrome. |
+| `image` | Prototype | `fret-ui-ai` or `fret-ui-shadcn` | `Image` surface exists (renders `ImageId`; decoding/upload is app-owned). Decide later if it belongs in shadcn. |
+| `open-in-chat` | Prototype | `fret-ui-ai` | Provider dropdown menu (`OpenIn*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-open-in-chat-demo-open-menu.json`. |
 
 ### Workflow
 
@@ -95,13 +101,18 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `audio-player` / `mic-selector` / `speech-input` / `transcription` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+| `audio-player` | Prototype | `fret-ui-ai` | UI-only chrome port (`AudioPlayer*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-audio-player-demo-play-mute-seek.json`. Playback remains app-owned. |
+| `transcription` | Prototype | `fret-ui-ai` | Segment surface (`Transcription*`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
+| `mic-selector` / `speech-input` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
 
 ### M1 — Chat surfaces (usable app kit)
 
 - [x] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
 - [x] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
-- [ ] AIEL-MVP1-chat-007 Port `MessageBranch` surfaces (branch content + selector controls).
+- [x] AIEL-MVP1-chat-007 Port `MessageBranch` surfaces (branch content + selector controls).
+  - Implemented: `ecosystem/fret-ui-ai/src/elements/message_branch.rs`
+  - Demo: `apps/fret-ui-gallery` page `ai_message_branch_demo`
+  - Gate: `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
 - [x] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + initial code actions).
 - [x] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
 - [x] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
@@ -111,7 +122,7 @@ Status legend:
 
 - [~] AIEL-MVP2-tools-001 Port `Tool` (input/output blocks, running/success/error states, collapse).
 - [~] AIEL-MVP2-tools-002 Port `Sources` and `InlineCitation` (stable linking and display).
-- [ ] AIEL-MVP2-tools-003 Port `Suggestion` and `Queue` (optional; only if apps need them).
+- [ ] AIEL-MVP2-tools-003 Port `Suggestion` (optional; only if apps need it).
 
 ## Regression gates (scripts)
 
@@ -120,24 +131,145 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-copy.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json` (`[!]` if click targeting is occluded by prompt chrome)
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json` (`[!]` if hover/click targeting is occluded by prompt chrome)
 
-Planned next gate:
+Existing gates (UI Gallery `ai_artifact_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
+
+Existing gates (UI Gallery `ai_shimmer_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
+
+Existing gates (UI Gallery `ai_attachments_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`
+
+Existing gates (UI Gallery `ai_suggestions_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`
+
+Existing gates (UI Gallery `ai_code_block_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
+
+Existing gates (UI Gallery `ai_commit_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
+
+Existing gates (UI Gallery `ai_commit_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`
+
+Existing gates (UI Gallery `ai_stack_trace_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+
+Existing gates (UI Gallery `ai_stack_trace_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+
+Existing gates (UI Gallery `ai_test_results_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
+
+Existing gates (UI Gallery `ai_test_results_large_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`
+
+Existing gates (UI Gallery `ai_checkpoint_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`
+
+Existing gates (UI Gallery `ai_confirmation_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+
+Existing gates (UI Gallery `ai_environment_variables_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`
+
+Existing gates (UI Gallery `ai_plan_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`
+
+Existing gates (UI Gallery `ai_tool_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
+
+Existing gates (UI Gallery `ai_model_selector_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-model-selector-demo-open-filter-select.json`
+
+Existing gates (UI Gallery `ai_context_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-context-demo-hover.json`
+
+Existing gates (UI Gallery `ai_terminal_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-terminal-demo-copy-clear.json`
+
+Existing gates (UI Gallery `ai_web_preview_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-web-preview-demo-commit-console.json`
+
+Existing gates (UI Gallery `ai_chain_of_thought_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`
+
+Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
 - `tools/diag-scripts/ui-gallery-ai-transcript-scroll-button.json`
+
+Existing gates (UI Gallery `ai_file_tree_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
+- `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
+- `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json`
+
+Existing gates (UI Gallery `ai_schema_display_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 
 Prioritize thin adapters over new engines:
 
-- [ ] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
-- [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
-- [ ] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
-- [ ] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
+- [x] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json` (CodeBlock copy + Snippet copy).
+- [x] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
+  - Notes: `fret-ui-ai::FileTree` now flattens items via UI Kit `TreeItem` + `flatten_tree`, and renders via `VirtualList` when the host provides a height constraint.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json` (expand → scroll to row → click select).
+- [x] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
+  - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
+  - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
+  - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
+  - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
+  - Parity polish checklist (make it measurable):
+    - [~] Match upstream copy semantics per-surface (some buttons suppress re-copy while `copied` is active, others do not); add `on_copy` hooks where missing.
+      - Done: `CommitCopyButton` suppresses re-copy while `copied` is active + `on_copy` hook exists.
+      - Done: `StackTraceCopyButton` `on_copy` hook exists (repeat-copy semantics remain allowed).
+    - [~] Add/confirm stable `test_id` selectors for per-row actions (commit files, stack frames, test suites/tests).
+      - Done: commit file rows + file paths have `test_id` and a large-list demo uses them.
+      - Done: per-frame `test_id` for stack trace rows + file path buttons (used by the large-list gate).
+      - Done: test rows can be tagged with `test_id` and a large-list demo uses them.
+    - [~] Confirm long-list behavior stays stable (scroll + selection) and add one gate if needed:
+      - commit: many files; stack trace: many frames; test results: many suites.
+      - Done: commit many-files scroll gate (`tools/diag-scripts/ui-gallery-ai-commit-large-scroll.json`).
+      - Done: stack trace many-frames scroll gate (`tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`).
+      - Done: test results many-tests scroll/activate gate (`tools/diag-scripts/ui-gallery-ai-test-results-large-scroll.json`).
+    - [~] Confirm extension hooks exist for app-owned effects:
+      - commit: file row click / open file
+      - stack trace: file path click / open file
+      - test results: test click / open test output
+      - Done: `Test::on_activate(OnTestActivate)` exists and is used by the large demo gate.
+    - [x] Re-audit upstream TS (`commit.tsx`, `stack-trace.tsx`, `test-results.tsx`) and document known deltas in `docs/workstreams/ai-elements-port.md`.
+- [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)
 
@@ -149,7 +281,9 @@ Only implement if it is mostly “styling recipes over existing crates”:
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
 - [ ] AIEL-MVP5-voice-001 Decide whether voice UI belongs in `fret-ui-ai` or a sibling crate (`fret-ui-voice`).
-- [ ] AIEL-MVP5-voice-002 If in scope: `AudioPlayer`, `MicSelector`, `Transcription`, `VoiceSelector`.
+- [~] AIEL-MVP5-voice-002 Port `AudioPlayer` chrome (UI-only) + UI Gallery demo + diag gate.
+- [~] AIEL-MVP5-voice-003 Port `Transcription` (segments + seek seam) + UI Gallery demo + diag gate.
+- [ ] AIEL-MVP5-voice-004 If in scope: `MicSelector`, `VoiceSelector` (backend policy app-owned).
 
 ## Upstream inventory (keep honest)
 
@@ -204,7 +338,6 @@ Keep this list in sync with the pinned upstream commit recorded in
 - `test-results.tsx`
 - `tool.tsx`
 - `toolbar.tsx`
-- `transcription.tsx`
 - `voice-selector.tsx`
 - `web-preview.tsx`
 
@@ -219,6 +352,15 @@ Keep this list in sync with the pinned upstream commit recorded in
   - Target: `docs/workstreams/ai-elements-port.md` (parts, controlled/uncontrolled, intents not effects, stable selectors).
 - [x] AIEL-MVP0-foundation-014 Add “Version stamp” update rules (pinned upstream commit must be updated first).
   - Target: `docs/workstreams/ai-elements-port.md`
+
+### WebPreview backend (optional, feature-gated)
+
+- [x] AIEL-MVP0-webpreview-001 Port `WebPreview` chrome-only surfaces + UI Gallery demo + diag gate.
+- [~] AIEL-MVP0-webpreview-002 Close the v1 backend loop (navigation state + URL reflection) and document limitations.
+  - Source of truth: `docs/workstreams/webview-wry-v1.md` + TODO tracker.
+- [x] AIEL-MVP0-webpreview-002 Define WebView integration plan and crate boundaries (contract + wry backend).
+  - Workstream: `docs/workstreams/webview-wry-v1.md`
+  - TODOs: `docs/workstreams/webview-wry-v1-todo.md`
 
 ### Data model (v0)
 
@@ -266,7 +408,56 @@ Keep this list in sync with the pinned upstream commit recorded in
 ### PromptInput
 
 - [x] AIEL-MVP1-chat-080 Prompt input MVP: text input + send + stop + loading spinner.
-- [ ] AIEL-MVP1-chat-081 Optional attachments chips: add/remove/clear (app performs file picker effects).
+- [x] AIEL-MVP1-chat-081 Optional attachments chips: add/remove/clear (app performs file picker effects).
+  - Outcomes: render chips row, allow remove per item, expose `clear` intent at the app boundary.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json` (add → remove via Backspace → send).
+- [x] AIEL-MVP1-chat-084 Textarea keyboard parity: `Enter` submits, `Shift+Enter` inserts newline (IME-safe).
+- [x] AIEL-MVP1-chat-085 Backspace parity: when textarea is empty, `Backspace` removes the last attachment.
+- [!] AIEL-MVP1-chat-086 Clipboard file paste parity: `paste` adds file/image attachments.
+  - Blocker: Fret runtime currently supports clipboard *text* effects only; file/image clipboard needs a new platform capability.
+- [x] AIEL-MVP1-chat-087 PromptInput add-attachments action parity: plus-button action emits an app-owned “open file dialog” intent.
+  - Surface: `PromptInput::on_add_attachments` + `PromptInput::test_id_add_attachments` (also exposed via `AiChat::on_add_attachments`).
+  - Gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json` (click plus → chips → Backspace pop → send).
+- [x] AIEL-MVP1-chat-088 PromptInput drag-and-drop fallback: accept external file drops as attachments (primary path while clipboard files are unsupported).
+  - Surface: `PromptInput` wraps its root with `ExternalDragRegion` and handles `ExternalDragKind::DropFiles` by appending file-name-based attachment chips.
+  - Notes: this is metadata-only (no bytes); the component releases the `ExternalDropToken` via `Effect::ExternalDropRelease` after it has updated the attachments model.
+  - Gate: unit test `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_external_drag_region_can_handle_external_drag_events`).
+- [x] AIEL-MVP1-chat-089 PromptInput provider mode parity: allow lifting text + attachments models outside the PromptInput surface.
+  - Surface: `PromptInputProvider` + `use_prompt_input_controller` + `PromptInput::new_uncontrolled` (provider/local/uncontrolled resolution).
+  - Gate: unit test `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_provider_text_model_receives_text_input`).
+- [x] AIEL-MVP1-chat-090 PromptInput parts decomposition parity (align upstream composition surface).
+  - Goal: mirror the upstream “parts-first” API so apps can rearrange prompt chrome without forking.
+  - Target parts (initial set):
+    - `PromptInputBody`, `PromptInputTextarea`, `PromptInputHeader`, `PromptInputFooter`
+    - `PromptInputTools`, `PromptInputButton`, `PromptInputSubmit`
+    - `PromptInputActionMenu*` and an intent-driven `PromptInputActionAddAttachments`
+  - Keep `PromptInput` as a default recipe wrapper for backward compatibility.
+  - Surface (Fret): `PromptInputRoot` + `PromptInputSlots` + `PromptInputHeader`/`Footer`/`Tools`/`Button`/`Submit`/`ActionAddAttachments` (+ `PromptInputProvider`, `use_prompt_input_controller`, `use_prompt_input_config`).
+- [x] AIEL-MVP1-chat-092 PromptInput action menu parity: `PromptInputActionMenu*` surfaces (dropdown menu trigger + items).
+  - Surface: `PromptInputActionMenu` / `PromptInputActionMenuTrigger` / `PromptInputActionMenuContent` / `PromptInputActionMenuItem` + `PromptInputActionAddAttachments`.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`.
+- [x] AIEL-MVP1-chat-093 PromptInput attachments constraints parity: accept/multiple/maxFiles/maxFileSize/onError.
+  - Upstream reference: `prompt-input.tsx` (`accept`, `multiple`, `maxFiles`, `maxFileSize`, `onError`).
+  - Surface (Fret): `PromptInputConfig::{accept,multiple,max_files,max_file_size_bytes,on_error}` (also on `PromptInputRoot` + `PromptInput`).
+  - Behavior: validates external file drops against `accept` + `max_files` + `max_file_size_bytes`, filters rejected items, and emits `on_error` with a typed `PromptInputErrorCode`.
+  - Notes:
+    - Constraints are enforced on `ExternalDragKind::DropFiles` (metadata-only attachments). App-owned file dialogs can reuse the same config, but programmatic attachment insertion is app-owned by design.
+    - `max_file_size_bytes` is enforced only when `size_bytes` is known.
+    - On native, `media_type` may be unavailable; `accept` matching falls back to file extensions for common `image/*` formats.
+  - Gate: unit tests in `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_drop_respects_max_files_and_emits_error`, `prompt_input_drop_accept_and_size_errors_do_not_add_attachments`).
+- [x] AIEL-MVP1-chat-094 PromptInput referenced sources parity: local referenced sources model + chips row.
+  - Upstream reference: `prompt-input.tsx` (`ReferencedSourcesContext` local to PromptInput).
+  - Note: keep this local even in provider mode (matches upstream: attachments can be provider-owned, referenced sources remain local).
+  - Gate: `tools/diag-scripts/ui-gallery-ai-prompt-input-referenced-sources-demo.json`.
+- [ ] AIEL-MVP1-chat-095 PromptInput hidden input sync parity (`syncHiddenInput`).
+  - Upstream reference: `prompt-input.tsx` (`syncHiddenInput`).
+  - Note: implement only if we have a concrete app need; otherwise defer (native form posts are not a primary Fret flow).
+- [x] AIEL-MVP1-chat-091 Provider-mode composition demo + gate.
+  - Add a UI Gallery page that composes `PromptInputProvider` + parts and demonstrates “external actions”
+    (e.g. a toolbar button/menu item that triggers `on_add_attachments`).
+  - Add a diag script gate:
+    - `tools/diag-scripts/ui-gallery-ai-prompt-input-provider-demo.json`
+  - UI Gallery page: `ai_prompt_input_provider_demo`.
 - [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
 - [x] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
 
@@ -284,7 +475,9 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### Tool calls / Sources / Citations
 
-- [ ] AIEL-MVP2-tools-100 Tool call block: request/response sections, collapse, error state.
+- [x] AIEL-MVP2-tools-100 Tool call block: request/response sections, collapse, error state.
+  - UI Gallery page: `ai_tool_demo`
+  - Diag gate: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 - [ ] AIEL-MVP2-tools-101 Sources list: title/url, open-url intent hook, truncation rules.
 - [ ] AIEL-MVP2-tools-102 Inline citation: stable anchor behavior (jump/highlight) within a transcript.
 
@@ -313,5 +506,18 @@ Keep this list in sync with the pinned upstream commit recorded in
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
+- [x] AIEL-MVP1-gates-011 Gate reasoning auto-open/auto-close via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-reasoning-demo-auto-open-close.json`
+- [x] AIEL-MVP1-gates-012 Gate queue sections + scroll + hover actions via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-queue-demo-section-scroll-action.json`
+  - Note: exercises scrolling via `wheel`; does not assert post-scroll item hit-testing (scroll offset is HitTest-only).
+- [x] AIEL-MVP1-gates-013 Gate attachments hover-remove via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-attachments-demo-remove.json`
+  - Verified PASS: 2026-02-09 (local).
+- [x] AIEL-MVP1-gates-014 Gate message branch wrap-around via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-message-branch-demo-wrap.json`
+  - Verified PASS: 2026-02-09 (local).
+- [x] AIEL-MVP2-gates-030 Gate tool disclosure demo via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-tool-demo-toggle.json`
 - [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
   (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).

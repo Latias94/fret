@@ -136,6 +136,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             family: e.family,
                             has_variable_axes: e.has_variable_axes,
                             known_variable_axes: e.known_variable_axes,
+                            variable_axes: e
+                                .variable_axes
+                                .into_iter()
+                                .map(|a| fret_runtime::FontVariableAxisInfo {
+                                    tag: a.tag,
+                                    min_bits: a.min_bits,
+                                    max_bits: a.max_bits,
+                                    default_bits: a.default_bits,
+                                })
+                                .collect(),
                             is_monospace_candidate: e.is_monospace_candidate,
                         })
                         .collect::<Vec<_>>();

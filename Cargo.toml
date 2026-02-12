@@ -4,6 +4,8 @@ default-members = ["crates/*", "ecosystem/*"]
 exclude = [
     # Not part of the default workspace yet (maybe promoted or moved to `apps/` later).
     # Incomplete / incubating.
+    "ecosystem/fret-webview",
+    "ecosystem/fret-webview-wry",
 ]
 resolver = "2"
 
@@ -55,7 +57,7 @@ arboard = "3.4.1"
 rfd = "0.17"
 webbrowser = "1.0.4"
 wgpu = "28.0.0"
-winit = { version = "0.31.0-beta.2", features = ["android-native-activity"] }
+winit = { version = "0.31.0-beta.2", features = ["android-game-activity"] }
 naga = "28.0.0"
 renderdog = "0.2.0"
 renderdog-automation = "0.2.0"
@@ -74,7 +76,7 @@ kurbo = "0.11"
 pulldown-cmark = "0.13"
 mdstream = "0.2.0"
 mathjax_svg = "3.2.0"
-merman = { path = "../merman/crates/merman", default-features = false }
+merman = { git = "https://github.com/Latias94/merman", rev = "9ad057021f002e9251b32c2a819cc74b7b65cc30", default-features = false }
 getrandom = "0.3"
 tree-sitter = "0.26.3"
 tree-sitter-highlight = "0.26.3"

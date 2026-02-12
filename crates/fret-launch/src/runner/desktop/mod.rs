@@ -43,6 +43,9 @@ use winit::{
     window::{Window, WindowId, WindowLevel},
 };
 
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopExtAndroid as _;
+
 use crate::RunnerError;
 use fret_platform::clipboard::Clipboard as _;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -61,6 +64,7 @@ mod ios_keyboard;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod renderdoc_capture;
 #[cfg(windows)]
 mod windows_menu;
@@ -69,7 +73,26 @@ use super::streaming_upload::StreamingUploadQueue;
 use diag_bundle_screenshots::DiagBundleScreenshotCapture;
 use dispatcher::DesktopDispatcher;
 use no_services::NoUiServices;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use renderdoc_capture::RenderDocCapture;
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+struct RenderDocCapture;
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+impl RenderDocCapture {
+    fn try_init() -> Option<Self> {
+        None
+    }
+
+    fn request_capture(&mut self) {}
+
+    fn begin_capture_if_requested(&mut self) -> bool {
+        false
+    }
+
+    fn end_capture(&mut self) {}
+}
 
 #[cfg(windows)]
 static WINDOWS_IME_MSG_HOOK_ENABLED: AtomicBool = AtomicBool::new(true);
@@ -121,6 +144,8 @@ pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
 ) -> Result<(), RunnerError> {
     crate::configure_stacksafe_from_env();
     let mut runner = WinitRunner::new_app(config, app, driver);
+    #[cfg(target_os = "android")]
+    runner.set_android_app(event_loop.android_app().clone());
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(runner)?;
     Ok(())
@@ -1162,6 +1187,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
     is_suspended: bool,
+    #[cfg(target_os = "android")]
+    android_app: Option<winit::platform::android::activity::AndroidApp>,
 
     renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
@@ -1172,12 +1199,19 @@ pub struct WinitRunner<D: WinitAppDriver> {
     system_font_rescan_pending: bool,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
+    #[cfg(feature = "webview-wry")]
+    webviews_wry: fret_webview_wry::wry_host::WryWebViewHost,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
     main_window: Option<fret_core::AppWindowId>,
     menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
+    /// Best-effort z-order for windows (most recently focused last).
+    ///
+    /// This is used as a tie-breaker when multiple windows overlap the cursor and the platform
+    /// cannot provide reliable z-order/hover routing.
+    windows_z_order: Vec<fret_core::AppWindowId>,
 
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
     /// On macOS we may also see the same release as a `DeviceEvent`, so this prevents double-drop.
@@ -2923,6 +2957,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
             is_suspended: false,
+            #[cfg(target_os = "android")]
+            android_app: None,
             renderdoc: None,
             context: None,
             renderer: None,
@@ -2932,11 +2968,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             system_font_rescan_pending: false,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
+            #[cfg(feature = "webview-wry")]
+            webviews_wry: fret_webview_wry::wry_host::WryWebViewHost::new(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
             menu_bar: None,
             windows_pending_front: HashMap::new(),
+            windows_z_order: Vec::new(),
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
             dock_tearoff_follow: None,
@@ -2969,6 +3008,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
+        }
+    }
+
+    #[cfg(target_os = "android")]
+    fn set_android_app(&mut self, app: winit::platform::android::activity::AndroidApp) {
+        self.android_app = Some(app);
+    }
+
+    #[cfg(target_os = "android")]
+    fn android_force_soft_input(&self, enabled: bool) {
+        let Some(app) = self.android_app.as_ref() else {
+            return;
+        };
+
+        // Some OEM builds appear to ignore "implicit" IME show requests. When a text input is
+        // focused we want the keyboard to appear reliably.
+        if enabled {
+            app.show_soft_input(false);
+        } else {
+            app.hide_soft_input(false);
         }
     }
 
@@ -3627,6 +3686,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
+        self.bump_window_z_order(id);
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -3803,6 +3863,37 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.internal_drag_pointer_id = None;
         }
 
+        #[cfg(feature = "webview-wry")]
+        {
+            let events = self.webviews_wry.destroy_all_for_window(window);
+            let mut ids = Vec::new();
+            for ev in &events {
+                if let fret_webview::WebViewEvent::Destroyed { id } = ev {
+                    ids.push(*id);
+                }
+            }
+
+            if !events.is_empty() {
+                fret_webview::webview_push_events(&mut self.app, events);
+            }
+
+            // Clear any registered surfaces (even if no backend instance was created yet).
+            let removed = fret_webview::webview_remove_surfaces_for_window(&mut self.app, window);
+            ids.extend(removed.into_iter().map(|s| s.id));
+            ids.sort_by_key(|id| id.0);
+            ids.dedup();
+
+            // Drop any queued requests for this window/ids to avoid requeue loops (e.g. a `Create`
+            // request for a closed window).
+            if !ids.is_empty() {
+                let _ = fret_webview::webview_drop_requests_for_window_close(
+                    &mut self.app,
+                    window,
+                    &ids,
+                );
+            }
+        }
+
         {
             use fret_runtime::DragHost as _;
             use std::collections::HashSet;
@@ -3829,6 +3920,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.remove(window) else {
             return false;
         };
+        self.windows_z_order.retain(|w| *w != window);
         #[cfg(windows)]
         windows_menu::unregister_window(state.window.as_ref());
         #[cfg(target_os = "macos")]
@@ -4429,6 +4521,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         if let Some(state) = self.windows.get_mut(window)
                             && state.platform.set_ime_allowed(enabled)
                         {
+                            #[cfg(target_os = "android")]
+                            self.android_force_soft_input(enabled);
                             window_state_dirty.insert(window);
                         }
                     }
@@ -5583,13 +5677,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         true
     }
 
-    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
-        let Some(state) = self.windows.get(window) else {
-            return;
-        };
-        let _ = bring_window_to_front(state.window.as_ref(), None);
-    }
-
     fn enqueue_window_front(
         &mut self,
         window: fret_core::AppWindowId,
@@ -6065,7 +6152,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
         let mut fallback: Option<fret_core::AppWindowId> = None;
+        for &w in self.windows_z_order.iter().rev() {
+            let Some(state) = self.windows.get(w) else {
+                continue;
+            };
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
+            let size = state.window.surface_size();
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
+            let right = left + size.width as f64;
+            let bottom = top + size.height as f64;
+            if screen_pos.x >= left
+                && screen_pos.x < right
+                && screen_pos.y >= top
+                && screen_pos.y < bottom
+            {
+                if prefer_not.is_some_and(|p| p == w) {
+                    fallback = Some(w);
+                    continue;
+                }
+                return Some(w);
+            }
+        }
+        // Fallback if the z-order list has drifted.
         for w in self.windows.keys() {
+            if self.windows_z_order.iter().any(|tracked| *tracked == w) {
+                continue;
+            }
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
@@ -6091,6 +6207,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
         fallback
+    }
+
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        if self.windows.get(window).is_none() {
+            return;
+        }
+        self.windows_z_order.retain(|w| *w != window);
+        self.windows_z_order.push(window);
+
+        #[cfg(target_os = "macos")]
+        {
+            self.enqueue_window_front(window, None, None, Instant::now());
+        }
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {

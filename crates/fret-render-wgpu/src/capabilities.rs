@@ -23,6 +23,7 @@ pub struct RendererCapabilities {
     pub adapter: AdapterCapabilities,
     pub max_texture_dimension_2d: u32,
     pub streaming_images: StreamingImageCapabilities,
+    pub sampled_materials_catalog_textures: bool,
 }
 
 impl RendererCapabilities {
@@ -47,6 +48,7 @@ impl RendererCapabilities {
             },
             max_texture_dimension_2d: ctx.device.limits().max_texture_dimension_2d,
             streaming_images,
+            sampled_materials_catalog_textures: supports_material_catalog_textures(&ctx.adapter),
         }
     }
 }
@@ -77,4 +79,17 @@ fn supports_nv12_gpu_convert(adapter: &wgpu::Adapter) -> bool {
     }
 
     true
+}
+
+fn supports_material_catalog_textures(adapter: &wgpu::Adapter) -> bool {
+    // v2 catalog textures use a conservative and widely supported format.
+    let f = adapter.get_texture_format_features(wgpu::TextureFormat::Rgba8Unorm);
+    if !f
+        .allowed_usages
+        .contains(wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST)
+    {
+        return false;
+    }
+    f.flags
+        .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
 }

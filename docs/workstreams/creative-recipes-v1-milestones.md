@@ -13,6 +13,15 @@ See:
 - Keep existing public helpers (e.g. glass/pixelate wrappers) stable; migrate internals only.
 - Add a minimal diagnostics sink seam for “recipe degraded” events (best-effort).
 
+Status: Landed
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/recipes/resolve.rs`
+- `ecosystem/fret-ui-kit/src/recipes/catalog.rs`
+- `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+- `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
+
 ## M1 — Paint v1 (gradients)
 
 - Land `Paint` and gradient evaluation (ADR 0233) and wire it to `SceneOp::Quad` (and optionally `Path`).
@@ -47,20 +56,79 @@ Evidence:
 - Land `PushMask/PopMask` (ADR 0239) with gradient-only sources.
 - Add conformance tests for coverage correctness and clip/effect interaction boundaries.
 
+Status: Landed
+
+Evidence:
+
+- `crates/fret-core/src/scene/mask.rs`
+- `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushMask/PopMask`)
+- `crates/fret-render-wgpu/tests/mask_gradient_conformance.rs`
+
 ## M4 — Compositing groups v1 (blend modes)
 
-- Land `PushCompositeGroup/PopCompositeGroup` (ADR 0241) with a small blend vocabulary.
-- Budget intermediates and deterministic degradation (ADR 0118).
+- Land `PushCompositeGroup/PopCompositeGroup` (ADR 0247) with a small blend vocabulary.
+- Budget intermediates and deterministic degradation.
+
+Status: Landed
+
+Evidence:
+
+- `crates/fret-core/src/scene/composite.rs`
+- `crates/fret-core/src/scene/mod.rs` (`SceneOp::PushCompositeGroup/PopCompositeGroup`)
+- `crates/fret-render-wgpu/tests/composite_group_conformance.rs`
+
+## M4a — UI authoring seams (mask + composite)
+
+Land `fret-ui` declarative authoring surfaces that expose the kernel mask/composite primitives to
+ecosystem recipes without canvas-only hacks.
+
+- Add a `MaskLayer` element that emits `SceneOp::PushMask/PopMask` (ADR 0239).
+- Add a `CompositeGroup` element that emits `SceneOp::PushCompositeGroup/PopCompositeGroup` (ADR 0247).
+
+Status: Landed
+
+Evidence:
+
+- `crates/fret-ui/src/element.rs` (`MaskLayerProps` / `CompositeGroupProps`)
+- `crates/fret-ui/src/elements/cx.rs` (`mask_layer` / `composite_group`)
+- `crates/fret-ui/src/declarative/host_widget/paint.rs` (SceneOp emission)
+- `crates/fret-ui/src/declarative/tests/core.rs` (stack op emission tests)
 
 ## M5 — Motion + pointer snapshots
 
 - Land frame clock reads (non-reactive) and pointer motion snapshot seam (ADR 0240 / ADR 0243).
 - Add a reduced-motion policy helper in `fret-ui-kit` and verify fallback behavior.
 
+Status: Landed
+
+Evidence:
+
+- `crates/fret-core/src/window.rs` (`WindowFrameClockService`)
+- `crates/fret-ui/src/pointer_motion.rs`
+- `crates/fret-ui/src/widget.rs` (widget-facing read helpers)
+- `ecosystem/fret-ui-kit/src/declarative/reduced_motion_queries.rs`
+
 ## M6 — Effect steps extension
 
 - Land `ColorMatrix` and `AlphaThreshold` effect steps (ADR 0236) with conformance tests.
 - Provide a “bloom-like” Tier B recipe example using threshold + blur + additive composite (depends on M4).
+
+Status: Landed (bloom recipe pending)
+
+Evidence:
+
+- `crates/fret-core/src/scene/mod.rs` (`EffectStep::ColorMatrix` / `EffectStep::AlphaThreshold`)
+- `crates/fret-core/src/scene/validate.rs`
+- `crates/fret-core/src/scene/fingerprint.rs`
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
+- `crates/fret-render-wgpu/src/renderer/render_scene/render.rs`
+- `crates/fret-render-wgpu/src/renderer/pipelines/{color_matrix.rs,alpha_threshold.rs}`
+- `crates/fret-render-wgpu/src/renderer/shaders.rs`
+- `crates/fret-render-wgpu/tests/{effect_color_matrix_conformance.rs,effect_alpha_threshold_conformance.rs}`
+
+Evidence (planned):
+
+- `ecosystem/fret-ui-kit/src/recipes/bloom.rs` (or equivalent) + UI gallery/diag evidence
 
 ## M7 — Sampled materials v2a (catalog textures)
 
@@ -70,3 +138,79 @@ catalog texture selected at registration time (no per-instance `ImageId` yet).
 - Land `BindingShape::ParamsPlusCatalogTexture` in the renderer registry and capability-gate it.
 - Ship at least one baked catalog texture (blue-noise/dither) and a sampled baseline material.
 - Add a conformance test for sampled materials and deterministic fallback behavior.
+
+Status: Landed
+
+Evidence:
+
+- `docs/adr/0242-sampled-materials-and-fixed-binding-shapes-v2.md`
+- `crates/fret-core/src/materials.rs` (`MaterialBindingShape` + `MaterialCatalogTextureKind`)
+- `crates/fret-render-wgpu/src/renderer/services.rs` (`MaterialService` capability gating)
+- `crates/fret-render-wgpu/src/renderer/resources.rs` (catalog texture upload/lifetime + bind group shape)
+- `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs` (registration-time selection encoded per draw)
+- `crates/fret-render-wgpu/src/renderer/shaders.rs` (sampled Noise path)
+- `crates/fret-render-wgpu/tests/materials_sampled_conformance.rs`
+
+## M8 — `fret-ui-magic` (Phase 0)
+
+- Land `ecosystem/fret-ui-magic` as a MagicUI-aligned wrapper crate.
+- Implement 3–5 seed components (Lens/MagicCard/BorderBeam/Marquee/Dock).
+- Add UI gallery entries and `fretboard diag` scripts for each seed component.
+
+Status: In progress
+
+Done (so far):
+
+- Seed components: `Lens`, `MagicCard`, `Marquee`, `BorderBeam`, `Dock`
+- UI gallery pages + diag scripts exist for the above (see Evidence below)
+
+Evidence (planned):
+
+- `ecosystem/fret-ui-magic/` (crate surface + recipes)
+- `apps/fret-ui-gallery/` (entries)
+- `tools/diag-scripts/` (scripts)
+
+Evidence (partial):
+
+- `ecosystem/fret-ui-magic/src/lens.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_LENS`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_lens`)
+- `tools/diag-scripts/ui-gallery-magic-lens-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/border_beam.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_BORDER_BEAM`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_border_beam`)
+- `tools/diag-scripts/ui-gallery-magic-border-beam-steady.json`
+- `ecosystem/fret-ui-magic/src/marquee.rs`
+- `ecosystem/fret-ui-magic/src/magic_card.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_MARQUEE`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_marquee`)
+- `tools/diag-scripts/ui-gallery-magic-marquee-steady.json`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_CARD`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_card`)
+- `tools/diag-scripts/ui-gallery-magic-card-pointer-follow.json`
+- `ecosystem/fret-ui-magic/src/dock.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_DOCK`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_dock`)
+- `tools/diag-scripts/ui-gallery-magic-dock-pointer-follow.json`
+
+Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
+
+- Next creative parity targets:
+  - Patterns (dot/grid/stripe + animated variants)
+  - `SparklesText`
+- Verification:
+  - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time)
+
+## M9 — External texture imports (v1)
+
+- Land a “contract-path demo” for imported GPU textures wired to `ViewportSurface` (ADR 0234).
+- Add at least one capability-gated real backend path (web or native) plus a clear copy/zero-copy policy.
+
+Status: Not started
+
+Evidence (planned):
+
+- `docs/adr/0234-imported-render-targets-and-external-texture-imports-v1.md`
+- `crates/fret-render-wgpu/src/renderer/render_targets.rs` / `ImportedViewportRenderTarget`
+- `apps/fret-demo*` or `apps/fretboard` (contract-path demo)
+- `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md` (cap gating notes)

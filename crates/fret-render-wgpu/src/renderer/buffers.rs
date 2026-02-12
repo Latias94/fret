@@ -115,6 +115,24 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let material_catalog_view =
+            self.material_catalog_texture
+                .create_view(&wgpu::TextureViewDescriptor {
+                    label: Some("fret material catalog texture array view (resized)"),
+                    dimension: Some(wgpu::TextureViewDimension::D2Array),
+                    ..Default::default()
+                });
+        let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret material catalog sampler (resized)"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret uniforms bind group (resized)"),
             layout: &self.uniform_bind_group_layout,
@@ -142,6 +160,14 @@ impl Renderer {
                         offset: 0,
                         size: None,
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
             ],
         });
@@ -185,6 +211,24 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let material_catalog_view =
+            self.material_catalog_texture
+                .create_view(&wgpu::TextureViewDescriptor {
+                    label: Some("fret material catalog texture array view (resized clip buffer)"),
+                    dimension: Some(wgpu::TextureViewDimension::D2Array),
+                    ..Default::default()
+                });
+        let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret material catalog sampler (resized clip buffer)"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fret uniforms bind group (resized clip buffer)"),
@@ -214,6 +258,14 @@ impl Renderer {
                         size: None,
                     }),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
+                },
             ],
         });
 
@@ -236,6 +288,24 @@ impl Renderer {
             size: mask_entry_size.saturating_mul(new_capacity as u64).max(4),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
+        });
+
+        let material_catalog_view =
+            self.material_catalog_texture
+                .create_view(&wgpu::TextureViewDescriptor {
+                    label: Some("fret material catalog texture array view (resized mask buffer)"),
+                    dimension: Some(wgpu::TextureViewDimension::D2Array),
+                    ..Default::default()
+                });
+        let material_catalog_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("fret material catalog sampler (resized mask buffer)"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
         });
 
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -266,6 +336,14 @@ impl Renderer {
                         offset: 0,
                         size: None,
                     }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&material_catalog_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(&material_catalog_sampler),
                 },
             ],
         });

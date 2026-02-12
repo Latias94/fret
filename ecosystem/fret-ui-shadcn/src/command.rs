@@ -255,6 +255,35 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn sanitize_test_id_segment(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut prev_dash = false;
+
+    for ch in raw.chars() {
+        let c = ch.to_ascii_lowercase();
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+            prev_dash = false;
+        } else if !prev_dash {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+
+    while out.starts_with('-') {
+        out.remove(0);
+    }
+    while out.ends_with('-') {
+        out.pop();
+    }
+
+    if out.is_empty() {
+        out.push_str("item");
+    }
+
+    out
+}
+
 fn command_text_input<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
@@ -1300,6 +1329,8 @@ pub struct CommandPalette {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
+    test_id_input: Option<Arc<str>>,
+    test_id_item_prefix: Option<Arc<str>>,
 }
 
 #[derive(Clone)]
@@ -1502,6 +1533,14 @@ impl std::fmt::Debug for CommandPalette {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("scroll", &self.scroll)
+            .field(
+                "test_id_input",
+                &self.test_id_input.as_ref().map(|s| s.as_ref()),
+            )
+            .field(
+                "test_id_item_prefix",
+                &self.test_id_item_prefix.as_ref().map(|s| s.as_ref()),
+            )
             .finish()
     }
 }
@@ -1531,6 +1570,8 @@ impl CommandPalette {
                 .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
+            test_id_input: None,
+            test_id_item_prefix: None,
         }
     }
 
@@ -1611,6 +1652,18 @@ impl CommandPalette {
         self
     }
 
+    /// Installs a stable `test_id` on the command input (for automation).
+    pub fn test_id_input(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_input = Some(id.into());
+        self
+    }
+
+    /// Installs stable `test_id`s on item rows using `{prefix}{sanitized_value}`.
+    pub fn test_id_item_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_item_prefix = Some(prefix.into());
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -1661,6 +1714,8 @@ impl CommandPalette {
 
             let disabled = self.disabled;
             let wrap = self.wrap;
+            let test_id_input = self.test_id_input;
+            let test_id_item_prefix = self.test_id_item_prefix;
             let query = cx
                 .watch_model(&self.model)
                 .layout()
@@ -1923,7 +1978,17 @@ impl CommandPalette {
                             let children = item.children;
                             let text_style = text_style.clone();
 
-                            let row = cx.pressable(
+                            let test_id_for_row = test_id_item_prefix.clone().map(|prefix| {
+                                let seg = sanitize_test_id_segment(value.as_ref());
+                                let id = if occ == 0 {
+                                    format!("{}{}", prefix, seg)
+                                } else {
+                                    format!("{}{}-{}", prefix, seg, occ)
+                                };
+                                Arc::<str>::from(id)
+                            });
+
+                            let mut row = cx.pressable(
                                 PressableProps {
                                     layout: item_layout,
                                     enabled,
@@ -2075,6 +2140,12 @@ impl CommandPalette {
                                 },
                             );
 
+                            if let Some(test_id) = test_id_for_row {
+                                row = row.attach_semantics(
+                                    SemanticsDecoration::default().test_id(test_id),
+                                );
+                            }
+
                             row_ids.push(row.id);
                             row
                         })
@@ -2126,7 +2197,7 @@ impl CommandPalette {
             };
 
             let a11y_label = self.a11y_label.clone();
-            let input = command_text_input(
+            let mut input = command_text_input(
                 cx,
                 self.model.clone(),
                 a11y_label,
@@ -2136,6 +2207,9 @@ impl CommandPalette {
                 self.input_expanded,
                 input_h,
             );
+            if let Some(test_id) = test_id_input.clone() {
+                input = input.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+            }
             let input_id = input.id;
 
             let icon_fg = theme.color_required("muted-foreground");

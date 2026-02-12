@@ -77,18 +77,26 @@ When missing/tofu glyphs happen, engineers need a portable artifact that answers
 - which families the shaper actually used for the blob,
 - which families produced missing glyphs.
 
+We also need to know **which fallback policy was in effect** (locale + common-fallback injection mode + candidate lists),
+otherwise traces are hard to interpret when debugging “why did this glyph pick this family?” regressions.
+
 Decision:
 
 - The renderer records a **bounded, per-frame trace** of prepared text blobs, primarily when missing glyphs are
   observed.
 - The runner serializes this trace into the diagnostics bundle (`bundle.json`) so regressions are shareable and
   scriptable.
+- The renderer also provides a per-frame snapshot of the effective fallback policy.
 
 Implementation anchors:
 
 - Core types: `crates/fret-core/src/render_text.rs` (`RendererTextFontTraceSnapshot`, entries + family usage).
 - Renderer capture: `crates/fret-render-wgpu/src/text/mod.rs` (trace ring + snapshot export).
 - Bundle serialization: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiRendererTextFontTraceSnapshotV1`).
+- Fallback policy snapshot:
+  - `crates/fret-core/src/render_text.rs` (`RendererTextFallbackPolicySnapshot`)
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`TextSystem::fallback_policy_snapshot`, `fallback_policy_key`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiRendererTextFallbackPolicySnapshotV1`)
 
 ### 1) Define a renderer-owned “font instance identity” and include it in glyph keys
 
@@ -142,6 +150,12 @@ Font selection uses three layers:
    - used to keep wasm deterministic and to allow apps to enforce “no tofu” baselines.
    - controlled by `TextFontFamilyConfig.common_fallback_injection` (platform default prefers system fallback on desktop).
 
+Implementation note:
+
+- The renderer’s explicit per-style “common fallback stack suffix” (used for named-family shaping) is derived from the
+  configured/curated candidate list by filtering to families that actually resolve in the current font DB, and is kept
+  bounded via `FRET_TEXT_COMMON_FALLBACK_MAX_FAMILIES` (default: `64`).
+
 The effective fallback policy (including locale) must participate in `TextFontStackKey` so cached text cannot reuse
 stale selection behavior.
 
@@ -161,6 +175,29 @@ This ADR does not mandate that font enumeration is stable across machines, but i
 - a monotonic revision that bumps when the underlying font collection changes.
 
 Follow-up (recommended): extend the catalog to a `FontCatalogEntry` list that can carry metadata such as axis presence.
+
+### 5) Expose per-span variable font axis overrides (advanced)
+
+To support editor-grade typography and deterministic debugging, the portable text contract exposes a minimal, advanced
+surface for variable font axes:
+
+- `fret-core::TextShapingStyle.axes: Vec<TextFontAxisSetting>`
+- Each `TextFontAxisSetting` is `{ tag: String, value: f32 }`, where `tag` is the 4-byte OpenType axis tag (e.g. `wght`,
+  `opsz`).
+
+Rationale:
+
+- Parley/fontique and Swash already support variable fonts; the missing piece is a portable way to express axis intent in
+  attributed spans without leaking backend indexes.
+- This allows experiments like optical sizing (`opsz`) and non-weight axes without requiring a full end-user UI yet.
+
+Semantics (v1):
+
+- Axis settings are best-effort: unsupported tags are ignored by the shaping backend.
+- Tags must be exactly 4 bytes (after trimming) and values must be finite; invalid entries are ignored.
+- For duplicate tags, last-write-wins (canonicalized for cache keys).
+- Axis overrides participate in shaping cache keys (span shaping fingerprints) so glyph caches cannot alias across axis
+  changes.
 
 ## Consequences
 
@@ -186,3 +223,13 @@ See `docs/audits/font-system-parley-zed-xilem-2026-02.md` for a focused comparis
 - Zed/GPUI’s cosmic-text-based system and caching patterns,
 - Parley/fontique’s design goals and fallback model,
 - Xilem’s Parley-based variable font usage.
+
+## Implementation anchors
+
+- Public axis surface:
+  - `crates/fret-core/src/text/mod.rs` (`TextShapingStyle.axes`, `TextFontAxisSetting`)
+- Parley style mapping:
+  - `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`StyleProperty::FontVariations`)
+- Cache keys and conformance tests:
+  - `crates/fret-render-wgpu/src/text/mod.rs` (`spans_shaping_fingerprint`,
+    `variable_font_axis_overrides_participate_in_face_key_and_raster_output`)

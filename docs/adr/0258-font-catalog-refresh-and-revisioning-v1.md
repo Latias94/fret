@@ -8,7 +8,7 @@
 Fret exposes a best-effort font catalog to settings UIs via runtime globals:
 
 - `FontCatalog` (family list + revision)
-- `FontCatalogMetadata` (entry list + revision, including best-effort axis/monospace hints)
+- `FontCatalogMetadata` (entry list + revision, including best-effort axis ranges + monospace hints)
 - `FontCatalogCache` (UI-friendly `Arc<[Arc<str>]>` derived from `FontCatalog`)
 
 These globals are populated by runners from the renderer’s text backend (Parley/fontique).
@@ -71,6 +71,19 @@ Runners should refresh the catalog only on:
 - an explicit “rescan system fonts” operation (native-only; may be async).
 
 No periodic scanning is implied by this ADR.
+
+### 4) Catalog metadata probes must remain best-effort and budgetable
+
+Some picker-facing metadata requires reading additional font tables (e.g. monospace hints). These probes:
+
+- may be expensive on large font catalogs,
+- must remain best-effort (safe to omit or default),
+- should be controllable via debug/env knobs when diagnosing stalls.
+
+Current knobs:
+
+- `FRET_TEXT_FONT_CATALOG_MONOSPACE_PROBE=0` disables `post` table reads used to populate
+  `FontCatalogEntry{is_monospace_candidate}`.
 
 ## Evidence: current refresh triggers (implementation)
 
