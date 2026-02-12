@@ -119,6 +119,11 @@ If typed templates are used (scriptgen):
 
 - `scriptgen write <name> --out <tmp>` then `diag script normalize --check` against the committed script.
 
+In-repo suites can also be checked as a closure (“template ↔ JSON”):
+
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
+- `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
+
 The goal is to treat scripts like compiled assets: authored or generated, but always reviewable and reproducible.
 
 ## Bundle lint (post-run sanity checks)

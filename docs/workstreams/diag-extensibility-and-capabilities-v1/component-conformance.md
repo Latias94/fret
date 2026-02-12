@@ -117,3 +117,4 @@ When you need a placement/collision matrix (many cases):
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - `tools/diag-scripts/ui-gallery-select-*.json`
+- `tools/diag-scripts/ui-gallery-combobox-*.json`

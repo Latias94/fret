@@ -104,6 +104,9 @@ Definition of done:
   - [x] `--script-dir <path>`,
   - [x] `--glob <pattern>`,
   - [ ] multiple directories (workspace + `.fret/diag/scripts` + external).
+- [x] Add starter built-in component conformance suites:
+  - [x] `ui-gallery-select`
+  - [x] `ui-gallery-combobox`
 - [ ] Add a recommended “smoke” suite definition that is stable across platforms.
 - [ ] Make suites evidence-first by default:
   - [x] run `diag lint` for every captured bundle (fail on error-level findings; use `--no-lint` to disable),
