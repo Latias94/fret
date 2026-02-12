@@ -2460,10 +2460,11 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles,
-        ExternalDragKind, ExternalDropToken, Modifiers, MouseButton, PathCommand, PathConstraints,
-        PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent, PointerId, PointerType,
-        Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
-        TextService,
+        ExternalDragKind, ExternalDropToken, MaterialDescriptor, MaterialId,
+        MaterialRegistrationError, MaterialService, Modifiers, MouseButton, PathCommand,
+        PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, PointerEvent,
+        PointerId, PointerType, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextInput, TextMetrics, TextService,
     };
     use fret_ui::UiTree;
     use fret_ui::declarative::render_root;
@@ -2510,6 +2511,19 @@ mod tests {
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            false
         }
     }
 
