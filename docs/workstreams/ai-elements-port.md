@@ -759,15 +759,16 @@ Legend:
 | `voice-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/voice_selector.rs` | Prototype | UI-only chrome. UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-voice-selector-demo-select.json`. |
 | `speech-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/speech_input.rs` | Prototype | UI-only chrome. UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-speech-input-demo-toggle.json`. |
 | `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Prototype | Segment surface + seek seam (`on_seek`) + UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-transcription-demo-seek.json`. Playback timing remains app-owned. |
-| `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
+| `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/controls.rs` | Prototype | Workflow controls chrome (UI-only). Demo + gates: `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
 | `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`. |
 | `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Prototype | Context usage hovercard: percent trigger + progress + compact counts. Usage data model remains app-owned. |
 | `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Prototype | Provider dropdown menu; selecting an entry emits `Effect::OpenUrl`. Demo + diag gate exist. |
 | `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/workflow/panel.rs` | Prototype | Workflow chrome wrapper (UI-only). Upstream uses `@xyflow/react` `Panel`; Fret port is composition-only. |
-| `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |
-| `node.tsx` / `edge.tsx` | `fret-node` + `fret-ui-ai` | `ecosystem/fret-node` (core) + `fret-ui-ai` chrome | Defer | Same. |
+| `canvas.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/canvas.rs` | Planned (M4/M6) | Chrome-only wrapper; apps own canvas/graph engines (likely reuse `fret-canvas`, `fret-node`, docking/viewports). |
+| `node.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/node.rs` | Prototype | UI-only node chrome + handle indicators. Demo + gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`. |
+| `edge.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` | Planned (M4/M6) | Chrome-only wrapper; apps own graph engines. |
 | `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Done | Commit disclosure surface + copy feedback + UI Gallery demo + diag gate. |
-| `connection.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/connection.rs` | Defer | Workflow-specific. |
+| `connection.tsx` | `fret-ui-ai` (chrome) | `ecosystem/fret-ui-ai/src/elements/workflow/connection.rs` | Planned (M4/M6) | Chrome-only wrapper; upstream is SVG connection line. |
 | `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Done | Workflow-specific; not core chat UI. Gated: `tools/diag-scripts/ui-gallery-ai-environment-variables-demo-toggle-copy.json`. |
 | `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Prototype | Package info card surface (name + change badge + version row + deps list building blocks) + UI Gallery demo + diag gate. |
 

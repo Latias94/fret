@@ -171,7 +171,16 @@ Acceptance criteria:
 
 - No “new engines” in `fret-ui-ai`; only composition/policy wrappers.
 
-Status: Planned (chrome-only; feature-gate heavy integrations).
+Status: In progress (chrome-only; feature-gate heavy integrations).
+
+Progress:
+
+- `WorkflowPanel` / `WorkflowToolbar` / `WorkflowControls` chrome are ported and demoed on
+  `PAGE_AI_WORKFLOW_CHROME_DEMO` with gates:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+  - `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
+- `WorkflowNode` chrome is ported and demoed on the same page with gate:
+  - `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
 
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
@@ -201,7 +210,7 @@ Acceptance criteria:
   (diag script preferred for interactive surfaces).
 - Heavy dependencies and backends are feature-gated; UI surfaces remain intent-driven.
 
-Status: Planned (workflow wrappers remain).
+Status: In progress (remaining workflow wrappers: `canvas.tsx`, `edge.tsx`, `connection.tsx`).
 
 ## Next-step checklist (recommended weekly cadence)
 
