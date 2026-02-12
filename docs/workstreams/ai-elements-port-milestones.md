@@ -186,6 +186,8 @@ Progress:
   - `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
 - Temporary edge dash outcome (`strokeDasharray: "5, 5"`) is implemented via polyline dashing
   helpers in `ecosystem/fret-canvas/src/wires.rs` and applied in `WorkflowEdgeTemporary`.
+- Animated edge `markerEnd` (arrowhead) outcome is implemented via `arrowhead_triangle` in
+  `ecosystem/fret-canvas/src/wires.rs` and applied in `WorkflowEdgeAnimated`.
 - `WorkflowCanvas` chrome host is ported and demoed on the same page with gate:
   - `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
 - Optional: an engine-backed reference integration exists (reuse `fret-node` for interaction + `fret-ui-ai` chrome)

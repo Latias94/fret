@@ -51,14 +51,9 @@ experience (nodes as element subtrees, marquee selection, input filtering), trac
 - [x] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
   - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`dash_polyline_segments`)
   - Applied to AI Elements workflow temporary edge: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
-- [ ] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
-  - Plan:
-    - Add a small geometry helper in `ecosystem/fret-canvas/src/wires.rs` (or sibling module) that
-      produces an arrowhead triangle from an endpoint + tangent direction.
-    - Apply it to `WorkflowEdgeAnimated` (and any other edge variant that needs `markerEnd` parity).
-  - Non-goals (for this item):
-    - No renderer-level marker system; keep this as “draw an extra filled path” until we have a
-      stronger vector-path abstraction for markers.
+- [x] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
+  - Geometry helper: `ecosystem/fret-canvas/src/wires.rs` (`arrowhead_triangle`)
+  - Applied to `WorkflowEdgeAnimated`: `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs`
 
 ### M0 — Foundations (composition + gates)
 

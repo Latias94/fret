@@ -172,6 +172,9 @@ In Fret today:
 
 - `WorkflowEdge*` and `WorkflowConnection` are intentionally minimal canvas renderers.
 - `fret-node` has much more advanced routing math, but it is not packaged as a general “edge kit”.
+- A minimal arrowhead primitive exists and is used for AI Elements parity:
+  - `ecosystem/fret-canvas/src/wires.rs` (`arrowhead_triangle`)
+  - `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` (`WorkflowEdgeAnimated`)
 
 Recommendation:
 
