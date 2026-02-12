@@ -4758,7 +4758,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::ClipboardGetText { window, token } => {
-                        if self.diag_clipboard_force_unavailable_windows.contains(&window) {
+                        if self
+                            .diag_clipboard_force_unavailable_windows
+                            .contains(&window)
+                        {
                             self.deliver_window_event_now(
                                 window,
                                 &Event::ClipboardTextUnavailable { token },
@@ -4791,7 +4794,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::PrimarySelectionGetText { window, token } => {
-                        if self.diag_clipboard_force_unavailable_windows.contains(&window) {
+                        if self
+                            .diag_clipboard_force_unavailable_windows
+                            .contains(&window)
+                        {
                             self.deliver_window_event_now(
                                 window,
                                 &Event::PrimarySelectionTextUnavailable { token },
@@ -4827,7 +4833,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         if enabled {
                             self.diag_clipboard_force_unavailable_windows.insert(window);
                         } else {
-                            self.diag_clipboard_force_unavailable_windows.remove(&window);
+                            self.diag_clipboard_force_unavailable_windows
+                                .remove(&window);
                         }
                     }
                     Effect::DiagIncomingOpenInject { window, items } => {
@@ -4835,7 +4842,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let token = fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
+                        let token =
+                            fret_core::IncomingOpenToken(self.diag_incoming_open_next_token);
                         self.diag_incoming_open_next_token =
                             self.diag_incoming_open_next_token.saturating_add(1);
 
@@ -4946,7 +4954,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             tracing::debug!(?err, url = %url, "failed to open url");
                         }
                     }
-                    Effect::ShareSheetShow { window, token, items } => {
+                    Effect::ShareSheetShow {
+                        window,
+                        token,
+                        items,
+                    } => {
                         if self.windows.get(window).is_none() {
                             continue;
                         }
