@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: drag a torn-off tab back to the main window",
+    "tags": ["docking", "multiwindow", "drag", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This script exercises a cross-window tab drag: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
+      "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
+      "Note: cursor overrides are expressed in window-client physical pixels."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 140
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 30 },
+
+    {
+      "type": "set_window_outer_position",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 180.0,
+      "y_px": 180.0
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "click",
+      "window": { "kind": "last_seen_other" },
+      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "raise_window", "window": { "kind": "last_seen_other" } },
+    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 640.0, "y_px": 260.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "drag_pointer_until",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "delta_x": 20.0,
+      "delta_y": 0.0,
+      "steps": 12,
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "click",
+      "window": { "kind": "last_seen_other" },
+      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main" },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}
+
