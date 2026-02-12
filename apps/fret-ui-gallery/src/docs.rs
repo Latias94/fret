@@ -185,6 +185,33 @@ let dot = magic::dot_pattern(cx, magic::DotPatternProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_MAGIC_SPARKLES_TEXT: &str = r#"
+## SparklesText (fret-ui-magic)
+
+This is a Phase 0 “SparklesText-like” wrapper inspired by MagicUI.
+
+The v1 implementation:
+
+- draws a deterministic sparkle field procedural material (Tier B, ADR 0235),
+- animates using the runner-owned frame clock (ADR 0240) when motion is allowed,
+- respects `prefers-reduced-motion` (static sparkle field),
+- uses additive compositing (ADR 0247) to layer sparkles over the child content.
+
+Non-goals (v1):
+
+- Clipping sparkles to glyph alpha (requires a richer alpha mask substrate than v1 gradient masks).
+"#;
+
+pub(crate) const USAGE_MAGIC_SPARKLES_TEXT: &str = r#"
+```rust
+use fret_ui_magic as magic;
+
+let sparkle = magic::sparkles_text(cx, magic::SparklesTextProps::default(), |cx| {
+    vec![cx.text(\"Sparkles\")]
+});
+```
+"#;
+
 pub(crate) const DOC_MAGIC_BLOOM: &str = r#"
 ## Bloom (fret-ui-kit recipe)
 

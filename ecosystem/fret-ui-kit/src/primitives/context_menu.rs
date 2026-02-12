@@ -329,6 +329,10 @@ mod tests {
         fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
             self.app.next_clipboard_token()
         }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
     }
 
     impl UiFocusActionHost for PointerHost {

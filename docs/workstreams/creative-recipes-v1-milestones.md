@@ -201,11 +201,14 @@ Evidence (partial):
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_PATTERNS`)
 - `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_patterns`)
 - `tools/diag-scripts/ui-gallery-magic-patterns-steady.json`
+- `ecosystem/fret-ui-magic/src/sparkles_text.rs`
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MAGIC_SPARKLES_TEXT`)
+- `apps/fret-ui-gallery/src/ui/previews/magic.rs` (`preview_magic_sparkles_text`)
+- `tools/diag-scripts/ui-gallery-magic-sparkles-text-steady.json`
 
 Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
 
-- Next creative parity targets:
-  - `SparklesText`
+- None (M8 complete).
 - Verification:
   - deterministic behavior under `--fixed-frame-delta-ms` (diag-controlled time): Landed
     - Evidence:
@@ -213,6 +216,7 @@ Remaining (tracked in `docs/workstreams/creative-recipes-v1-todo.md`):
       - `tools/diag-scripts/ui-gallery-magic-marquee-fixed-frame-delta.json`
       - `tools/diag-scripts/ui-gallery-magic-border-beam-fixed-frame-delta.json`
       - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
+      - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
 
 ## M9 — External texture imports (v1)
 

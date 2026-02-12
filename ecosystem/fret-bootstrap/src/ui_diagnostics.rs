@@ -5147,6 +5147,10 @@ impl UiDiagnosticsService {
             .global::<fret_runtime::WindowTextInputSnapshotService>()
             .and_then(|svc| svc.snapshot(window));
 
+        let wgpu_adapter = app
+            .global::<fret_render::WgpuAdapterSelectionSnapshot>()
+            .and_then(|snapshot| serde_json::to_value(snapshot).ok());
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -5183,6 +5187,7 @@ impl UiDiagnosticsService {
                 shell_share_sheet: c.caps.shell.share_sheet,
                 shell_incoming_open: c.caps.shell.incoming_open,
             }),
+            wgpu_adapter,
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -6087,6 +6092,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub primary_pointer_type: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub caps: Option<UiPlatformCapabilitiesSummaryV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wgpu_adapter: Option<serde_json::Value>,
 
     pub debug: UiTreeDebugSnapshotV1,
 }

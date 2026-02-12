@@ -77,6 +77,38 @@ These are useful for aligning design intent, not for copying code:
   - Local (repo-ref checkout): `F:\SourceCodes\Rust\fret\repo-ref\dockview\`
   - `repo-ref/dockview/packages/dockview-core/src/dockview/dockviewComponent.ts`
 
+### Floating model comparison (Fret vs dockview vs ImGui)
+
+This workstream is primarily about N-ary splits (shares + canonical form), but “floating” is the
+adjacent UX surface that tends to get entangled with split semantics and preview geometry.
+
+High-level mapping:
+
+- Fret (core + runtime):
+  - In-window floating is modeled as a stable container node (`DockNode::Floating { child }`) with
+    per-window floating metadata stored alongside the graph (`DockGraph::floating_windows`).
+  - Persisted in-window floating rects live under `DockLayoutWindow.floatings[]` and are stored in
+    **logical pixels relative to the host window’s inner content origin**.
+  - Tear-off to a new OS window is modeled as an op (`DockOp::RequestFloatPanelToNewWindow`) that
+    the runtime translates into `WindowRequest::Create(CreateWindowKind::DockFloating { .. })`.
+
+- Dockview (reference):
+  - `SerializedDockview.floatingGroups[]`: in-window floating groups with an anchored position.
+  - `SerializedDockview.popoutGroups[]`: out-of-window “popout” groups with their own window + URL.
+  - Dockview also separates the layout tree from the `panels` map, which makes “panel identity”
+    stable even when the layout tree is rewritten.
+
+- ImGui docking (reference):
+  - With viewports disabled: undocking creates a floating node inside the host window.
+  - With viewports enabled: floating payloads may become platform windows (viewports), and correct
+    hovered-viewport selection becomes a prerequisite for reliable cross-window hover/drop routing.
+
+Evidence anchors:
+
+- Fret core floating model: `crates/fret-core/src/dock/mod.rs`, `crates/fret-core/src/dock/layout.rs`
+- Fret tear-off integration: `ecosystem/fret-docking/src/runtime.rs`
+- Dockview serialization: `repo-ref/dockview/packages/dockview-core/src/dockview/dockviewComponent.ts`
+
 ## Current implementation map (evidence anchors)
 
 Core graph and ops:

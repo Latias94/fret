@@ -40,6 +40,18 @@ Therefore:
 - Explicit override wins (`FRET_WGPU_BACKEND`).
 - Fallback/downlevel is opt-in (dev only) and must be fully diagnosable.
 
+## Developer knobs (v1)
+
+- `FRET_WGPU_BACKEND`: explicit backend override (fail-fast if invalid or unsupported).
+- `FRET_WGPU_ALLOW_FALLBACK=1`: enables fallback backend attempts in **debug builds only**.
+  Release builds remain fail-fast.
+
+## Minimum renderer gate (v1)
+
+The default renderer requires `wgpu::DownlevelFlags::VERTEX_STORAGE` (storage buffers in vertex
+shaders). If the selected adapter does not satisfy this, initialization fails fast so we avoid
+late validation panics during pipeline creation.
+
 ## Deliverables
 
 - A stable “backend selection story” for mobile bring-up, documented and testable.
@@ -50,4 +62,3 @@ Therefore:
 
 - Perfect emulator support across host GPUs/SDK versions.
 - A complete Android GPU compatibility database.
-

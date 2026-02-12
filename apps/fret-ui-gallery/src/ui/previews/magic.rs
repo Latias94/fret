@@ -533,3 +533,86 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
         .test_id("ui-gallery-magic-patterns"),
     ]
 }
+
+pub(in crate::ui) fn preview_magic_sparkles_text(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_required("card"));
+    let border = cx.with_theme(|theme| theme.color_required("border"));
+    let ring = cx.with_theme(|theme| theme.color_required("ring"));
+
+    let mut surface_layout = LayoutStyle::default();
+    surface_layout.size.width = Length::Px(Px(560.0));
+    surface_layout.size.height = Length::Px(Px(220.0));
+
+    let surface = ContainerProps {
+        layout: surface_layout,
+        background: Some(base),
+        border: Edges::all(Px(1.0)),
+        border_color: Some(border),
+        corner_radii: Corners::all(Px(14.0)),
+        ..Default::default()
+    };
+
+    let sparkles_color = {
+        let mut c = ring;
+        c.a = (c.a * 0.55).clamp(0.0, 1.0);
+        c
+    };
+
+    let mut inner_layout = LayoutStyle::default();
+    inner_layout.size.width = Length::Fill;
+    inner_layout.size.height = Length::Fill;
+
+    let sparkles = magic::sparkles_text(
+        cx,
+        magic::SparklesTextProps {
+            layout: inner_layout,
+            padding: Edges::all(Px(20.0)),
+            corner_radii: Corners::all(Px(14.0)),
+            base: fret_core::Color::TRANSPARENT,
+            sparkles: sparkles_color,
+            seed: 42,
+            ..Default::default()
+        },
+        |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_start(),
+                |cx| {
+                    vec![
+                        shadcn::typography::h3(cx, "SparklesText")
+                            .test_id("ui-gallery-magic-sparkles-text-title"),
+                        shadcn::typography::p(
+                            cx,
+                            "Phase 0: a deterministic sparkle field composited over text content. \
+                                 Future: clip to glyph alpha when alpha masks mature.",
+                        ),
+                    ]
+                },
+            )]
+        },
+    )
+    .test_id("ui-gallery-magic-sparkles-text");
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start(),
+        |cx| {
+            vec![
+                shadcn::typography::h4(cx, "SparklesText (Phase 0)"),
+                shadcn::typography::p(
+                    cx,
+                    "Built from Tier B materials + additive compositing, with explicit seed/time and reduced-motion gating.",
+                ),
+                cx.container(surface, |_cx| vec![sparkles]),
+            ]
+        },
+    )]
+}

@@ -4,10 +4,14 @@ set -euo pipefail
 profile="debug"
 device=""
 no_logcat=""
+backend=""
+allow_fallback=""
+diag=""
+diag_dir=""
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--release] [--device <serial>] [--no-logcat]
+Usage: $(basename "$0") [--release] [--device <serial>] [--backend <vk|gl|...>] [--allow-fallback] [--diag] [--diag-dir <path>] [--no-logcat]
 
 Builds and runs the Android APK using the Gradle GameActivity wrapper:
   apps/fret-ui-gallery-mobile/android
@@ -20,6 +24,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --release) profile="release"; shift ;;
     --device|-d) device="$2"; shift 2 ;;
+    --backend) backend="$2"; shift 2 ;;
+    --allow-fallback) allow_fallback="1"; shift ;;
+    --diag) diag="1"; shift ;;
+    --diag-dir) diag_dir="$2"; shift 2 ;;
     --no-logcat) no_logcat="1"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
@@ -90,13 +98,34 @@ if [[ "${profile}" == "release" ]]; then
 fi
 
 set -x
-(cd "${gradle_dir}" && ./gradlew ":app:${gradle_task}")
+
+if [[ "${profile}" == "debug" && -n "${device}" ]]; then
+  # Gradle's `installDebug` installs to *all* connected devices, which is undesirable when the
+  # user selects a specific target. Assemble once, then install via `adb -s <serial>`.
+  (cd "${gradle_dir}" && ./gradlew ":app:assembleDebug")
+  apk="${gradle_dir}/app/build/outputs/apk/debug/app-debug.apk"
+  adb "${adb_args[@]}" install -r "${apk}" >/dev/null
+else
+  (cd "${gradle_dir}" && ./gradlew ":app:${gradle_task}")
+fi
 
 if [[ "${profile}" == "debug" ]]; then
-  adb "${adb_args[@]}" shell am start -n "dev.fret.ui_gallery/dev.fret.ui_gallery.MainActivity" >/dev/null
+  am_args=(shell am start -n "dev.fret.ui_gallery/dev.fret.ui_gallery.MainActivity")
+  if [[ -n "${backend}" ]]; then
+    am_args+=(--es "FRET_WGPU_BACKEND" "${backend}")
+  fi
+  if [[ -n "${allow_fallback}" ]]; then
+    am_args+=(--es "FRET_WGPU_ALLOW_FALLBACK" "1")
+  fi
+  if [[ -n "${diag}" ]]; then
+    am_args+=(--es "FRET_DIAG" "1")
+  fi
+  if [[ -n "${diag_dir}" ]]; then
+    am_args+=(--es "FRET_DIAG_DIR" "${diag_dir}")
+  fi
+  adb "${adb_args[@]}" "${am_args[@]}" >/dev/null
 fi
 
 if [[ -z "${no_logcat}" ]]; then
   adb "${adb_args[@]}" logcat -s "fret:*" "*:S"
 fi
-

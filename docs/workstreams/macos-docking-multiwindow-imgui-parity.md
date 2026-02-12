@@ -99,24 +99,27 @@ These are the user-visible outcomes we want to guarantee on macOS:
 ### macOS runner window ordering and drag reliability
 
 - Hide-on-create for DockFloating (avoid flash behind):
-  - `crates/fret-launch/src/runner/desktop/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs`
     - `create_window_from_request(...)` sets `spec.visible=false` on macOS for DockFloating in a specific path
 - Bring-to-front and ordering retries:
-  - `crates/fret-launch/src/runner/desktop/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/window.rs`
     - `bring_window_to_front(...)` uses AppKit `activateIgnoringOtherApps_` + ordering calls
+  - `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs`
     - `enqueue_window_front(...)` + `process_pending_front_requests(...)`
 - Release-outside completion:
-  - `crates/fret-launch/src/runner/desktop/mod.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/docking.rs`
     - `maybe_finish_dock_drag_released_outside(...)` uses `pressedMouseButtons` to detect release and
       dispatches a cursor-based internal-drop
 - Cursor screen position for cross-window routing:
-  - `crates/fret-launch/src/runner/desktop/app_handler.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
     - `WindowEvent::PointerMoved` computes `cursor_screen_pos` from outer + surface + local position
     - `WindowEvent::PointerButton` also bootstraps `cursor_screen_pos` + cursor calibration (avoids requiring a move)
-  - `crates/fret-launch/src/runner/desktop/app_handler.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
     - `DeviceEvent::PointerMotion` updates `cursor_screen_pos` and drives hover/drop routing for dock drags
-  - `crates/fret-launch/src/runner/desktop/mod.rs`
-    - `MacCursorTransformTable` maps `mouseLocation` per screen; `route_internal_drag_*` refreshes before routing
+  - `crates/fret-launch/src/runner/desktop/runner/macos_cursor.rs`
+    - `MacCursorTransformTable` maps `mouseLocation` per screen; `macos_refresh_cursor_screen_pos_for_dock_drag` refreshes before routing
+  - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+    - `route_internal_drag_*` calls `macos_refresh_cursor_screen_pos_for_dock_drag` before routing
 
 ### Cross-window internal-drag routing mechanics
 
@@ -193,8 +196,8 @@ Recommended approach:
 
 Expected touch points:
 
-- `crates/fret-launch/src/runner/desktop/app_handler.rs` (device event path and cursor updates)
-- `crates/fret-launch/src/runner/desktop/mod.rs` (drop/hover routing uses `cursor_screen_pos`)
+- `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` (device event path and cursor updates)
+- `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (drop/hover routing uses `cursor_screen_pos`)
 
 Acceptance checks:
 
@@ -223,8 +226,8 @@ Non-normative guidance:
 
 Implementation anchors:
 
-- Parent window handle selection (DockFloating only): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_window_from_request`)
-- Create-time wiring via winit `with_parent_window(...)`: `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`)
+- Parent window handle selection (DockFloating only): `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_window_from_request`)
+- Create-time wiring via winit `with_parent_window(...)`: `crates/fret-launch/src/runner/desktop/runner/window_lifecycle.rs` (`create_os_window`)
 
 Acceptance checks:
 
