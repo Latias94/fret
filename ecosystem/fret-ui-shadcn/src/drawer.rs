@@ -12,7 +12,8 @@ use fret_ui::element::{
     RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_headless::motion::friction::FrictionSimulation;
+use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
+use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::spring::SpringDescription;
 use fret_ui_headless::motion::tolerance::Tolerance;
 
@@ -809,14 +810,21 @@ impl Drawer {
                 let projected_offset = if velocity_is_measured
                     && velocity.abs() >= DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC
                 {
-                    let sim = FrictionSimulation::new(
-                        DRAWER_DRAG_FLING_DRAG,
+                    let sim = InertiaSimulation::new(
                         offset.0 as f64,
                         velocity as f64,
-                        0.0,
+                        DRAWER_DRAG_FLING_DRAG,
+                        Some(InertiaBounds {
+                            min: 0.0,
+                            max: window_height.0 as f64,
+                        }),
+                        SpringDescription::with_duration_and_bounce(
+                            DRAWER_SNAP_SETTLE_SPRING_DURATION,
+                            0.25,
+                        ),
                         Tolerance::default(),
                     );
-                    Px(sim.final_x() as f32)
+                    Px(sim.x(DRAWER_DRAG_FLING_PROJECTION_TIME) as f32)
                 } else {
                     offset
                 };
@@ -931,6 +939,8 @@ const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
 const DRAWER_DRAG_FLING_DRAG: f64 = 0.135;
 const DRAWER_DRAG_FLING_MIN_VELOCITY_PX_PER_SEC: f32 = 450.0;
+const DRAWER_DRAG_FLING_PROJECTION_TIME: std::time::Duration =
+    std::time::Duration::from_millis(200);
 
 #[derive(Debug, Clone, Copy)]
 struct DrawerDragRuntime {
