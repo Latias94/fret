@@ -19,6 +19,20 @@ Docking is a “policy-heavy” editor feature. In Fret it is intentionally spli
 - **UI + interaction arbitration:** `ecosystem/fret-docking` (DockSpace, drag policies, indicators)
 - **Runner/windowing:** `crates/fret-launch`, `crates/fret-runner-winit` (multi-window lifecycle, DPI)
 
+## Inputs to collect (ask the user)
+
+Ask these before touching docking code (most bugs are “arbitration contracts”):
+
+- Which demo/app reproduces it (prefer `docking_arbitration_demo`)?
+- What is the expected invariant: where should the drag land / what should capture input / what should dismiss?
+- Multi-window involvement: does it require tear-off / re-dock across windows?
+- Viewport involvement: are embedded viewports (canvas/editor) capturing pointer/keyboard?
+- Evidence needs: do we need a scripted repro + bundle, or also screenshots?
+
+Defaults if unclear:
+
+- Reproduce in `docking_arbitration_demo`, add/keep a `tools/diag-scripts/*.json` gate, and prefer invariants over pixels.
+
 ## What to optimize for
 
 - Deterministic drag + input arbitration (dock drag vs viewport capture).
@@ -46,6 +60,15 @@ Docking is a “policy-heavy” editor feature. In Fret it is intentionally spli
 - When a bug is fixed, keep the script as a gate (prefer invariants over pixels).
 
 See: `fret-diag-workflow`.
+
+## Definition of done (what to leave behind)
+
+- The issue reproduces in the smallest docking demo target and is captured by a stable `tools/diag-scripts/*.json`.
+- IDs are stable across reorder/tear-off (persistence and state do not “stick to positions”).
+- Multi-window behavior is correct (tear-off creates a new window; re-dock restores expected layout).
+- Drag arbitration is deterministic (dock drag vs viewport capture vs modal barriers).
+- At least one evidence artifact exists for review:
+  - bundle + triage output, and optionally screenshots if they add signal.
 
 ## Evidence anchors
 

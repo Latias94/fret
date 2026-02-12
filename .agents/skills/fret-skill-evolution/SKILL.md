@@ -15,6 +15,19 @@ Use this skill after you:
 
 Goal: convert “we figured it out once” into “the agent can do it reliably next time”.
 
+## Inputs to collect (ask the user)
+
+Ask these before writing (so the result stays lean and reusable):
+
+- What was the original bug/pattern and what is the stable invariant?
+- Which “owner skill” should absorb the knowledge (diag/perf/shadcn/text/layout/etc)?
+- What is the smallest reproducible target (demo/gallery page) and what gate should exist?
+- What evidence anchors should be cited (docs/ADR + key code paths + tests/scripts)?
+
+Defaults if unclear:
+
+- Put the workflow into the most specific existing skill, add one repro gate, and keep the SKILL.md summary short.
+
 ## Quick start
 
 1. Identify the “owner skill” (diag/perf/shadcn/text/etc).
@@ -80,6 +93,13 @@ Keep SKILL bodies short. Prefer “just enough workflow” + evidence anchors.
 - Prefer the **smallest** reproducible target (UI gallery page or demo binary).
 - Prefer stable selectors (`test_id` / semantics) over pixel coordinates.
 - Land at least one “red-to-green” artifact: test, script, or parity gate.
+
+## Definition of done (what to leave behind)
+
+- The reusable invariant is stated clearly (“what must always be true”).
+- A regression artifact exists (test/script/parity case) that fails before and passes after.
+- The skill update points to 1–3 evidence anchors (paths/functions/tests) so future readers can trust it.
+- The update is placed in the right skill (minimal duplication; long writeups live in `references/`).
 
 ## Evidence anchors
 

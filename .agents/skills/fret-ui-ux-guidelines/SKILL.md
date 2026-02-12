@@ -64,6 +64,14 @@ python scripts/stylegen.py --style editor-compact > theme_overrides.json
 3. Compose screens using a small set of repeatable patterns (workspace shell, inspector, toolbars).
 4. Add stable `test_id` to interactive affordances and keep one repro script for any tricky interaction.
 
+## Definition of done (what to leave behind)
+
+- The target surface has a clear hierarchy (3 surface layers) and consistent spacing rhythm (tokened, not magic numbers).
+- Density and focus visuals are coherent across the surface (control heights, ring width/offset).
+- Interactive affordances are keyboard-first (focus-visible everywhere; no hover-only essential actions).
+- Tricky interactions (menus/select/combobox/docking) have stable `test_id` and at least one repro gate (diag script or invariant test).
+- Any style changes are expressed as `ThemeConfig` overrides or shared recipes (not per-component drift).
+
 ## Visual hierarchy playbook
 
 Aim for **3 surface layers** (consistent across the app):

@@ -23,6 +23,20 @@ Keep in Rust instead:
 - Cases requiring closures/async hooks or bespoke host wiring.
 - Tests where compile-time types are the primary safety net (fixtures would weaken intent).
 
+## Inputs to collect (ask the user)
+
+Ask these before extracting fixtures (so you don’t over-fit the schema):
+
+- What is the repeated dimension (inputs, expected outputs, environment knobs)?
+- Does each case share the same runner/harness, or do you need multiple harnesses?
+- What must be stable IDs (case id, scenario id, golden id)?
+- Do you need deterministic geometry (avoid floats) or will tolerances be required?
+- How should failures be reported (case-id-addressable, diff-friendly output)?
+
+Defaults if unclear:
+
+- Start with a single fixture file with `schema_version` + stable `cases[].id`, and a thin harness that prints failing ids.
+
 ## Quick start
 
 1. Pick a single “god test” to extract first (keep the old test while mirroring).
@@ -103,6 +117,14 @@ Minimal pattern:
 - Inner loop: `cargo nextest run -p <crate>`
 - Refactor boundary changes: `python3 tools/check_layering.py`
 - If fixtures are large and frequently edited: consider splitting into multiple files by subsystem.
+
+## Definition of done (what to leave behind)
+
+- Fixture suite has `schema_version` and stable case `id` keys.
+- Harness is thin (parse → run_case → asserts) and does not depend on `cwd`.
+- Failing output is case-id-addressable (reviewers can locate the exact case quickly).
+- Old “god test” is removed only after the fixture harness is green and reviewed.
+- If the fixture suite is part of a contract/parity surface, it is wired into the relevant workstream gate.
 
 ## Evidence anchors
 

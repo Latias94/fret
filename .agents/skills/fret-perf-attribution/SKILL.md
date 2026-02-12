@@ -18,6 +18,20 @@ Companion skills:
 - If you need **numbers/baselines/gates**, start with `fret-perf-workflow`.
 - If you need a **minimal repro script / bundle packaging**, use `fret-diag-workflow`.
 
+## Inputs to collect (ask the user)
+
+Ask these before digging into bundles (so you don’t attribute the wrong metric):
+
+- What probe/suite failed (resize/scroll/pointer-move) and which threshold key?
+- Where are the artifacts (`<out-dir>`, worst bundle paths, baseline file if used)?
+- Is this a regression vs a known flaky tail (what changed, which commit range)?
+- Which axis matters: max total frame time, or max of a specific metric (solve/paint/invalidation)?
+- Platform context: native vs web; any GPU/driver differences suspected?
+
+Defaults if unclear:
+
+- Start from `check.perf_thresholds.json`, pick the metric that failed, then locate the frame that maxes that metric in the bundle.
+
 ---
 
 ## Quick start (from a failing gate)
@@ -36,8 +50,8 @@ cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 
 3) Decide the axis of work:
 
-- If `layout.solve_us` dominates: focus on layout roots + text measure/shaping reuse.
-- If `paint` dominates: focus on text prepare churn, scene-op rebuilds (Canvas), and cache replay hit rate.
+- If `debug.stats.layout_engine_solve_time_us` dominates: focus on layout roots + text measure/shaping reuse.
+- If `debug.stats.paint_time_us` dominates: focus on text prepare churn, scene-op rebuilds (Canvas), and cache replay hit rate.
 - If CPU looks low but it still hitches: capture a trace (see sections below).
 
 Record the result in the perf log:
@@ -58,16 +72,17 @@ Record the result in the perf log:
 
 The `top` row includes:
 
-- `time.us(total/layout/prepaint/paint)` — the CPU frame budget split.
-- `layout.solve_us` — layout engine solve cost.
-- `paint_text_prepare.us(time/calls)` and `paint_text_prepare.reasons(...)` — text prepare churn (often width/wrap).
+- `debug.stats.layout_time_us` / `debug.stats.prepaint_time_us` / `debug.stats.paint_time_us` — the CPU frame budget split.
+- `debug.stats.layout_engine_solve_time_us` — layout engine solve cost.
+- `debug.stats.paint_text_prepare_time_us` + `debug.stats.paint_text_prepare_calls` — text prepare churn (often width/wrap).
+- `debug.stats.paint_text_prepare_reason_width_changed` (and sibling counters) — why prepare work happened.
 - `paint_widget_hotspots` — “which element kind dominates paint”.
 - `top_layout_engine_solves` — multi-root solves (viewport roots), and `measure.*` stats.
 
 Heuristics:
 
-- **High `layout.solve_us` + high `measure.calls`**: text measure/shaping is likely the driver.
-- **High `paint_text_prepare` with `reasons=width`** during resize jitter: wrapped text width churn.
+- **High `layout_engine_solve_time_us` + high measure calls**: text measure/shaping is likely the driver.
+- **High `paint_text_prepare_time_us` + high `paint_text_prepare_reason_width_changed`** during resize jitter: wrapped text width churn.
 - **Canvas dominates `paint_widget_hotspots`**: scene-op rebuild; investigate replay boundaries.
 - **Large `layout.nodes` / `paint.nodes` swings**: invalidation scope may be too broad.
 
@@ -206,6 +221,7 @@ When you finish attribution:
 
 - Perf gates + baselines: `.agents/skills/fret-perf-workflow/SKILL.md`, `docs/workstreams/perf-baselines/`
 - Bundle inspection: `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+- Stats extraction and field mapping: `crates/fret-diag/src/stats.rs`
 - Tracing/captures: `docs/tracy.md`, `docs/renderdoc-inspection.md`
 
 ## Common pitfalls
@@ -213,6 +229,14 @@ When you finish attribution:
 - Looking only at the “worst total” frame when the threshold is max-of-metric.
 - Doing attribution on a noisy protocol (mixed diffs, changing env knobs in a reused process).
 - Changing behavior without recording the failing bundle path and command (not reversible).
+
+## Definition of done (what to leave behind)
+
+- The failing threshold key is identified and mapped to a specific bundle metric.
+- The exact frame that maxes the failing metric is identified (not just “worst total time”).
+- A hitch class is named (layout vs paint vs renderer/cache vs allocator/GPU) with concrete evidence.
+- The next measurement step is chosen to reduce uncertainty (trace/allocs/GPU capture) if needed.
+- Evidence is recorded in a commit-addressable log (command, out-dir, worst bundle path, conclusion).
 
 ## Related skills
 

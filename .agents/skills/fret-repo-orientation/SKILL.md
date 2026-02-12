@@ -14,6 +14,20 @@ Fret is intentionally layered: **mechanism** lives in `crates/`, while **policy 
 - You are building an app *outside* the Fret repo and need to locate sources/contracts quickly.
 - You need the smallest runnable repro target (demo/gallery) before touching code.
 
+## Inputs to collect (ask the user)
+
+Ask these before you start searching (saves hours of wrong-layer edits):
+
+- What change are we trying to make (bug fix vs new feature vs refactor)?
+- What user-facing invariant should change (behavior/UX/perf/contract)?
+- What environment: native vs web; which runner; any platform constraints?
+- Do we need a runnable repro target (which demo/gallery page) or is this purely contract/doc work?
+- What regression artifact is expected (test, diag script, perf gate, ADR alignment)?
+
+Defaults if unclear:
+
+- Pick the smallest runnable demo target and start from architecture/ADR contracts first.
+
 ## Quick start
 
 1. Read the “contracts first” docs:
@@ -85,6 +99,13 @@ If you are changing layout/style parity:
 
 - Add a small invariant test and/or parity harness case (`fret-shadcn-source-alignment`).
 
+## Definition of done (what to leave behind)
+
+- The change is mapped to the correct layer/crate (mechanism vs policy vs recipe) with a short rationale.
+- A smallest runnable target is chosen (demo/gallery) when behavior is involved.
+- The key evidence anchors are identified (docs/ADRs + entry points) so reviewers can verify the rationale quickly.
+- A regression artifact exists for any behavior change (test and/or diag script and/or perf gate).
+
 ## Evidence anchors
 
 - Repo positioning: `README.md`
@@ -105,4 +126,3 @@ If you are changing layout/style parity:
 - `fret-shadcn-app-recipes`
 - `fret-shadcn-source-alignment`
 - `fret-diag-workflow`
-
