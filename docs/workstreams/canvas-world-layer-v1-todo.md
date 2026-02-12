@@ -15,12 +15,15 @@ See also:
 
 ## M0 — Spike (prove composition is viable)
 
-- [ ] CWL-M0-001 Add a minimal `CanvasWorld` host surface (API sketch; crate location TBD).
-- [ ] CWL-M0-002 Add a UI Gallery spike demo page:
+- [x] CWL-M0-001 Add a minimal `CanvasWorld` host surface (API sketch; crate location TBD).
+  - Evidence: `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel`)
+- [x] CWL-M0-002 Add a UI Gallery spike demo page:
   - place 2–3 node subtrees at world coords,
   - allow wheel zoom + pan drag,
   - show overlay chrome above the world layer.
-- [ ] CWL-M0-003 Add a `fretboard diag` script capturing the spike page bundle.
+  - Evidence: `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs`
+- [x] CWL-M0-003 Add a `fretboard diag` script capturing the spike page bundle.
+  - Evidence: `tools/diag-scripts/ui-gallery-ai-canvas-world-layer-spike.json`
 
 ## M1 — Correctness (hit-testing + scaling modes)
 
@@ -39,4 +42,3 @@ See also:
 - [ ] CWL-M2-002 Decide where selection-on-drag lives:
   - reuse `fret-canvas/ui` marquee recipe,
   - or provide a world-layer aware wrapper.
-
