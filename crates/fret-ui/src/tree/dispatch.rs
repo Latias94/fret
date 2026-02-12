@@ -171,6 +171,10 @@ impl<H: UiHost> UiTree<H> {
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
             }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
+            }
         }
 
         let mut host = PressableHoverHookHost {
@@ -678,6 +682,10 @@ impl<H: UiHost> UiTree<H> {
 
             fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                 self.app.next_clipboard_token()
+            }
+
+            fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                self.app.next_share_sheet_token()
             }
         }
 
@@ -2858,6 +2866,10 @@ impl<H: UiHost> UiTree<H> {
 
                     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                         self.app.next_clipboard_token()
+                    }
+
+                    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                        self.app.next_share_sheet_token()
                     }
                 }
 

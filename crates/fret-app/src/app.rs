@@ -5,7 +5,9 @@ use std::{
 };
 
 use fret_core::{AppWindowId, NodeId, PointerId};
-use fret_runtime::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken};
+use fret_runtime::{
+    ClipboardToken, FrameId, ImageUploadToken, ShareSheetToken, TickId, TimerToken,
+};
 
 use crate::drag::{DragKindId, DragSession, DragSessionId};
 use fret_runtime::{
@@ -40,6 +42,7 @@ pub struct App {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_share_sheet_token: u64,
     next_image_upload_token: u64,
 }
 
@@ -69,6 +72,7 @@ impl App {
             frame_id: FrameId::default(),
             next_timer_token: 1,
             next_clipboard_token: 1,
+            next_share_sheet_token: 1,
             next_image_upload_token: 1,
         };
 
@@ -372,6 +376,12 @@ impl App {
     pub fn next_clipboard_token(&mut self) -> ClipboardToken {
         let token = ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        token
+    }
+
+    pub fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        let token = ShareSheetToken(self.next_share_sheet_token);
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
         token
     }
 

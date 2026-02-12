@@ -282,6 +282,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
                     self.app.next_clipboard_token()
                 }
+
+                fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+                    self.app.next_share_sheet_token()
+                }
             }
 
             impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {

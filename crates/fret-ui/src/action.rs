@@ -238,6 +238,7 @@ pub trait UiActionHost {
     fn request_redraw(&mut self, window: AppWindowId);
     fn next_timer_token(&mut self) -> TimerToken;
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken;
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken;
 
     /// Publish router navigation availability for the given window.
     ///
@@ -388,6 +389,10 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
+    }
+
+    fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+        self.app.next_share_sheet_token()
     }
 
     fn set_router_command_availability(

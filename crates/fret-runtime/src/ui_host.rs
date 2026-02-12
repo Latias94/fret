@@ -1,6 +1,6 @@
 use std::any::{Any, TypeId};
 
-use crate::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken};
+use crate::{ClipboardToken, FrameId, ImageUploadToken, ShareSheetToken, TickId, TimerToken};
 use fret_core::{AppWindowId, Point, PointerId};
 
 use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId};
@@ -67,6 +67,7 @@ pub trait TimeHost {
     fn frame_id(&self) -> FrameId;
     fn next_timer_token(&mut self) -> TimerToken;
     fn next_clipboard_token(&mut self) -> ClipboardToken;
+    fn next_share_sheet_token(&mut self) -> ShareSheetToken;
     fn next_image_upload_token(&mut self) -> ImageUploadToken;
 }
 
