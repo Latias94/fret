@@ -21,6 +21,7 @@ Related workstreams:
 
 - WebView backend plan (native, `wry`): `docs/workstreams/webview-wry-v1.md` and
   `docs/workstreams/webview-wry-v1-todo.md`.
+- XYFlow/ReactFlow backend gap analysis (workflow editor substrate): `docs/workstreams/xyflow-gap-analysis.md`.
 
 ## Next up (priority order)
 

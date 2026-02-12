@@ -36,6 +36,16 @@ Each TODO is labeled:
   - Done: `canvas.tsx` → `workflow/canvas.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
 - [x] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
 
+## Post-port (optional): XYFlow parity gaps
+
+AI Elements is now fully accounted for. If we want an XYFlow/ReactFlow-like workflow editor
+experience (nodes as element subtrees, marquee selection, input filtering), track it separately:
+
+- [ ] AIEL-FLOW-001 Define a declarative “world layer” contract for canvas-space element subtrees.
+- [ ] AIEL-FLOW-002 Add `fret-canvas/ui` recipes for selection-on-drag + filter exemptions (noWheel/noPan equivalents).
+- [ ] AIEL-FLOW-003 Add dash-pattern support for stroked paths (temporary edges).
+- [ ] AIEL-FLOW-004 Add marker end caps (arrowheads) helpers for workflow edges.
+
 ### M0 — Foundations (composition + gates)
 
 - [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
