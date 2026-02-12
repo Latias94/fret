@@ -191,12 +191,12 @@ impl AlertDialog {
             let prev_content_element =
                 cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
 
-            let motion = OverlayController::transition_with_durations_and_easing_duration(
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_DURATION_200,
-                overlay_motion::SHADCN_MOTION_DURATION_200,
-                overlay_motion::shadcn_ease,
+                overlay_motion::shadcn_motion_duration_200(cx),
+                overlay_motion::shadcn_motion_duration_200(cx),
+                overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let (open_change, open_change_complete) =
                 cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
