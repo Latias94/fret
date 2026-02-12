@@ -475,6 +475,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     "wgpu adapter selected"
                 );
 
+                let downlevel = context.adapter.get_downlevel_capabilities();
+                if !downlevel.is_webgpu_compliant() {
+                    tracing::warn!(
+                        flags = ?downlevel.flags,
+                        "wgpu adapter is downlevel (not fully WebGPU compliant)"
+                    );
+                }
+
                 let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
                     let trimmed = v.trim();
                     (!trimmed.is_empty()).then(|| trimmed.to_string())
@@ -664,6 +672,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 device = info.device,
                 "wgpu adapter selected"
             );
+
+            let downlevel = context.adapter.get_downlevel_capabilities();
+            if !downlevel.is_webgpu_compliant() {
+                tracing::warn!(
+                    flags = ?downlevel.flags,
+                    "wgpu adapter is downlevel (not fully WebGPU compliant)"
+                );
+            }
 
             let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
                 let trimmed = v.trim();
