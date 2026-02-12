@@ -15,6 +15,7 @@ public class MainActivity extends GameActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         String diag = getIntent().getStringExtra("FRET_DIAG");
+        boolean diagEnabled = diag != null && !diag.trim().isEmpty();
         if (diag != null && !diag.trim().isEmpty()) {
             try {
                 Os.setenv("FRET_DIAG", diag.trim(), true);
@@ -24,6 +25,9 @@ public class MainActivity extends GameActivity {
         }
 
         String diagDir = getIntent().getStringExtra("FRET_DIAG_DIR");
+        if (diagEnabled && (diagDir == null || diagDir.trim().isEmpty())) {
+            diagDir = getFilesDir().getAbsolutePath() + "/fret-diag";
+        }
         if (diagDir != null && !diagDir.trim().isEmpty()) {
             try {
                 Os.setenv("FRET_DIAG_DIR", diagDir.trim(), true);
