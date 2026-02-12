@@ -39,6 +39,43 @@ pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WgpuAdapterSelectionSnapshot {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub requested_backend: Option<String>,
+    pub requested_backend_is_override: bool,
+    pub selected_backend: String,
+    pub adapter_name: String,
+    pub driver: String,
+    pub driver_info: String,
+    pub vendor: u32,
+    pub device: u32,
+    pub is_webgpu_compliant: bool,
+    pub downlevel_flags: String,
+}
+
+impl WgpuAdapterSelectionSnapshot {
+    pub fn from_adapter(adapter: &wgpu::Adapter, requested_backend: Option<String>) -> Self {
+        let info = adapter.get_info();
+        let downlevel = adapter.get_downlevel_capabilities();
+
+        Self {
+            schema_version: 1,
+            requested_backend_is_override: requested_backend.is_some(),
+            requested_backend,
+            selected_backend: format!("{:?}", info.backend),
+            adapter_name: info.name,
+            driver: info.driver,
+            driver_info: info.driver_info,
+            vendor: info.vendor,
+            device: info.device,
+            is_webgpu_compliant: downlevel.is_webgpu_compliant(),
+            downlevel_flags: format!("{:?}", downlevel.flags),
+        }
+    }
+}
+
 fn parse_wgpu_backends(raw: &str) -> Option<wgpu::Backends> {
     let mut backends = wgpu::Backends::empty();
 

@@ -18,10 +18,10 @@ Workstream entry:
 
 ## Runner behavior (Android/iOS)
 
-- [ ] Record backend selection provenance:
+- [x] Record backend selection provenance:
   - explicit override vs automatic,
   - attempted backends and failure reasons (when fallback is enabled).
-- [ ] Capture adapter/backend metadata into diag bundles (when enabled).
+- [x] Capture adapter/backend metadata into diag bundles (when enabled).
 - [ ] Define a “fail-fast by default” posture for CI and release builds.
 
 ## Developer knobs
@@ -35,4 +35,3 @@ Workstream entry:
 
 - [ ] Android real-device smoke test recipe (Pixel + one non-Pixel GPU class if possible).
 - [ ] iOS simulator + real-device notes (backend selection is mostly Metal, but still record metadata).
-

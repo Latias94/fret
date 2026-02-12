@@ -475,6 +475,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     "wgpu adapter selected"
                 );
 
+                let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
+                    let trimmed = v.trim();
+                    (!trimmed.is_empty()).then(|| trimmed.to_string())
+                });
+                self.app
+                    .set_global::<fret_render::WgpuAdapterSelectionSnapshot>(
+                        fret_render::WgpuAdapterSelectionSnapshot::from_adapter(
+                            &context.adapter,
+                            requested_backend,
+                        ),
+                    );
+
                 let mut renderer = Renderer::new(&context.adapter, &context.device);
 
                 let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
@@ -652,6 +664,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 device = info.device,
                 "wgpu adapter selected"
             );
+
+            let requested_backend = std::env::var("FRET_WGPU_BACKEND").ok().and_then(|v| {
+                let trimmed = v.trim();
+                (!trimmed.is_empty()).then(|| trimmed.to_string())
+            });
+            self.app
+                .set_global::<fret_render::WgpuAdapterSelectionSnapshot>(
+                    fret_render::WgpuAdapterSelectionSnapshot::from_adapter(
+                        &context.adapter,
+                        requested_backend,
+                    ),
+                );
 
             let mut renderer = Renderer::new(&context.adapter, &context.device);
 
