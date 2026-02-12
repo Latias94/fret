@@ -2,7 +2,8 @@
   "meta": {
     "required_capabilities": [
       "diag.script_v2",
-      "diag.inject_ime"
+      "diag.inject_ime",
+      "diag.shortcut_routing_trace"
     ]
   },
   "schema_version": 2,
@@ -164,6 +165,16 @@
       },
       "repeat": false,
       "type": "press_key"
+    },
+    {
+      "query": {
+        "focus_is_text_input": true,
+        "ime_composing": true,
+        "key": "Tab",
+        "outcome": "reserved_for_ime"
+      },
+      "timeout_frames": 120,
+      "type": "wait_shortcut_routing_trace"
     },
     {
       "predicate": {

@@ -14,8 +14,8 @@ use fret_diag_protocol::{
     UiOverlayPlacementTraceEntryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
     UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEvidenceV1,
     UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
-    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -738,6 +738,7 @@ impl UiDiagnosticsService {
                     last_injected_step: None,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    wait_shortcut_routing_trace: None,
                     screenshot_wait: None,
                     v2_step_state: None,
                     last_reported_step: Some(0),
@@ -857,6 +858,9 @@ impl UiDiagnosticsService {
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;
+        }
+        if !matches!(&step, UiActionStepV2::WaitShortcutRoutingTrace { .. }) {
+            active.wait_shortcut_routing_trace = None;
         }
 
         match step {
@@ -1259,6 +1263,51 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                     active.wait_until = None;
                     active.screenshot_wait = None;
+                }
+            }
+            UiActionStepV2::WaitShortcutRoutingTrace {
+                query,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let state = match active.wait_shortcut_routing_trace.take() {
+                    Some(mut state) if state.step_index == step_index => {
+                        state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                        state
+                    }
+                    _ => WaitShortcutRoutingTraceState {
+                        step_index,
+                        remaining_frames: timeout_frames,
+                        start_frame_id: app.frame_id().0.saturating_sub(1),
+                    },
+                };
+
+                let found = active.shortcut_routing_trace.iter().any(|entry| {
+                    entry.frame_id >= state.start_frame_id
+                        && shortcut_routing_trace_entry_matches_query(entry, &query)
+                });
+
+                if found {
+                    active.wait_shortcut_routing_trace = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else if state.remaining_frames == 0 {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-wait_shortcut_routing_trace-timeout"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("wait_shortcut_routing_trace_timeout".to_string());
+                    active.wait_shortcut_routing_trace = None;
+                    output.request_redraw = true;
+                } else {
+                    active.wait_shortcut_routing_trace = Some(WaitShortcutRoutingTraceState {
+                        step_index: state.step_index,
+                        remaining_frames: state.remaining_frames.saturating_sub(1),
+                        start_frame_id: state.start_frame_id,
+                    });
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Assert { predicate } => {
@@ -4967,6 +5016,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::Ime { .. }
         | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::WaitShortcutRoutingTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. } => false,
@@ -6206,6 +6256,7 @@ struct ActiveScript {
     last_injected_step: Option<u32>,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    wait_shortcut_routing_trace: Option<WaitShortcutRoutingTraceState>,
     screenshot_wait: Option<ScreenshotWaitState>,
     v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
@@ -6377,6 +6428,13 @@ struct V2MovePointerSweepState {
 struct WaitUntilState {
     step_index: usize,
     remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct WaitShortcutRoutingTraceState {
+    step_index: usize,
+    remaining_frames: u32,
+    start_frame_id: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -11100,6 +11158,43 @@ fn push_shortcut_routing_trace(
             .saturating_sub(MAX_SHORTCUT_ROUTING_TRACE_ENTRIES);
         trace.drain(0..extra);
     }
+}
+
+fn shortcut_routing_trace_entry_matches_query(
+    entry: &UiShortcutRoutingTraceEntryV1,
+    query: &UiShortcutRoutingTraceQueryV1,
+) -> bool {
+    if let Some(phase) = &query.phase
+        && entry.phase != *phase
+    {
+        return false;
+    }
+    if let Some(outcome) = &query.outcome
+        && entry.outcome != *outcome
+    {
+        return false;
+    }
+    if let Some(key) = &query.key
+        && entry.key != *key
+    {
+        return false;
+    }
+    if let Some(command) = &query.command
+        && entry.command.as_deref() != Some(command.as_str())
+    {
+        return false;
+    }
+    if let Some(ime_composing) = query.ime_composing
+        && entry.ime_composing != ime_composing
+    {
+        return false;
+    }
+    if let Some(focus_is_text_input) = query.focus_is_text_input
+        && entry.focus_is_text_input != focus_is_text_input
+    {
+        return false;
+    }
+    true
 }
 
 fn overlay_placement_trace_entry_eq(

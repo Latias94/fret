@@ -104,7 +104,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/text-and-ime.md`
 - [ ] Add at least one stable script gate for:
   - [x] word boundary (double click),
   - [x] line boundary (triple click),
-  - [ ] “composition not stolen by shortcuts” (prefer: assert `shortcut_routing_trace` reserved-for-IME).
+  - [x] “composition not stolen by shortcuts” (assert `wait_shortcut_routing_trace` finds `outcome=reserved_for_ime`).
 
 ## Determinism (flake triage)
 

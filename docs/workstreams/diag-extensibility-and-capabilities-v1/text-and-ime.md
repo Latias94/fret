@@ -59,13 +59,14 @@ Start with “portable, low-flake” gates:
   - after navigation keys, caret rect remains within window bounds.
 - `composition_not_stolen_by_shortcuts`:
   - while composing, press keys that normally trigger global shortcuts,
-  - assert the trace shows `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
+  - assert `wait_shortcut_routing_trace` finds `outcome=reserved_for_ime` (or `consumed_by_widget`), not `command_dispatched`.
 
 For deterministic scripts, prefer injecting IME events explicitly (instead of relying on a platform IME):
 
 - Use `UiActionStepV2::Ime` (script v2) to inject `preedit` / `commit` / `enabled` / `disabled` /
   `delete_surrounding` events.
 - Declare `diag.inject_ime` in `meta.required_capabilities` for scripts that use IME injection.
+- Declare `diag.shortcut_routing_trace` for scripts that assert `wait_shortcut_routing_trace`.
 
 In-repo examples:
 
@@ -73,6 +74,8 @@ In-repo examples:
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
 - Line boundary (triple click):
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
+- Composition not stolen by shortcuts:
+  - `tools/diag-scripts/ui-gallery-input-ime-tab-suppressed.json`
 
 Run the suite (native):
 

@@ -488,9 +488,11 @@ Supported selectors (v1 MVP):
 - `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
   modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
+- `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
 - `wait_until`
+- `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
 - `assert`
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
@@ -504,6 +506,8 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `text_composition_is` (assert whether a text surface is currently composing via IME)
+- `wait_shortcut_routing_trace` (assert keyboard routing outcomes like `reserved_for_ime`)
 
 Notes:
 

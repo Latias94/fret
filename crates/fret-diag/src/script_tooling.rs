@@ -267,6 +267,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::Ime { .. }) {
             push_cap(&mut caps, "diag.inject_ime");
         }
+        if matches!(step, UiActionStepV2::WaitShortcutRoutingTrace { .. }) {
+            push_cap(&mut caps, "diag.shortcut_routing_trace");
+        }
     }
     caps
 }

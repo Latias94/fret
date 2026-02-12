@@ -4,7 +4,8 @@ use std::process::ExitCode;
 
 use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 use fret_diag_protocol::{
-    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
+    UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiPredicateV1, UiScriptMetaV1,
+    UiSelectorV1, UiShortcutRoutingTraceQueryV1,
 };
 
 fn main() -> ExitCode {
@@ -360,6 +361,16 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
             timeout_frames: 240,
         })
         .press_key("tab")
+        .wait_shortcut_routing_trace(
+            UiShortcutRoutingTraceQueryV1 {
+                outcome: Some("reserved_for_ime".to_string()),
+                key: Some("Tab".to_string()),
+                ime_composing: Some(true),
+                focus_is_text_input: Some(true),
+                ..UiShortcutRoutingTraceQueryV1::default()
+            },
+            120,
+        )
         .assert_focus_is(input.clone())
         .assert(text_composition_is(input.clone(), true))
         .ime_commit("東京")
@@ -372,7 +383,14 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
         })
         .capture_bundle(Some("ui-gallery-input-ime-tab-suppressed".to_string()))
         .build();
-    with_required_caps(script, &["diag.script_v2", "diag.inject_ime"])
+    with_required_caps(
+        script,
+        &[
+            "diag.script_v2",
+            "diag.inject_ime",
+            "diag.shortcut_routing_trace",
+        ],
+    )
 }
 
 fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {

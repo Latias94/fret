@@ -271,6 +271,15 @@ pub enum UiActionStepV2 {
         predicate: UiPredicateV1,
         timeout_frames: u32,
     },
+    /// Wait until the shortcut routing diagnostics trace contains an entry matching `query`.
+    ///
+    /// This is intended for deterministic scripts that need to assert keyboard routing outcomes
+    /// (e.g. reserved-for-IME) without depending on screenshots or ad-hoc logs.
+    WaitShortcutRoutingTrace {
+        query: UiShortcutRoutingTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     Assert {
         predicate: UiPredicateV1,
     },
@@ -1091,6 +1100,22 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub command_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending_sequence_len: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiShortcutRoutingTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phase: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_composing: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_is_text_input: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

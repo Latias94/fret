@@ -7,7 +7,7 @@
 
 use crate::{
     UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiKeyModifiersV1, UiMouseButtonV1,
-    UiPredicateV1, UiSelectorV1,
+    UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -194,6 +194,17 @@ impl ScriptV2Builder {
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {
         self.push(UiActionStepV2::WaitUntil {
             predicate,
+            timeout_frames,
+        })
+    }
+
+    pub fn wait_shortcut_routing_trace(
+        self,
+        query: UiShortcutRoutingTraceQueryV1,
+        timeout_frames: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::WaitShortcutRoutingTrace {
+            query,
             timeout_frames,
         })
     }
