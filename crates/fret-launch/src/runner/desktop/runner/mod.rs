@@ -51,7 +51,9 @@ mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
 mod dispatcher;
+mod docking;
 mod effects;
+mod event_routing;
 #[cfg(target_os = "ios")]
 mod ios_keyboard;
 #[cfg(target_os = "macos")]
@@ -72,6 +74,7 @@ mod timers;
 #[cfg(target_os = "windows")]
 mod win32;
 mod window;
+mod window_lifecycle;
 
 pub use event_loop::RunnerUserEvent;
 #[cfg(windows)]
@@ -1572,26 +1575,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         true
     }
 
-    fn deliver_window_event_now(&mut self, window: fret_core::AppWindowId, event: &Event) {
-        if self.maybe_handle_hotpatch_event(window, event) {
-            return;
-        }
-        let Some(state) = self.windows.get_mut(window) else {
-            return;
-        };
-        fret_runtime::apply_window_metrics_event(&mut self.app, window, event);
-        let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
-        self.driver.handle_event(
-            WinitEventContext {
-                app: &mut self.app,
-                services,
-                window,
-                state: &mut state.user,
-            },
-            event,
-        );
-    }
-
     fn maybe_handle_hotpatch_event(
         &mut self,
         _window: fret_core::AppWindowId,
@@ -1731,33 +1714,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
-    fn deliver_platform_completion_now(
-        &mut self,
-        window: fret_core::AppWindowId,
-        completion: PlatformCompletion,
-    ) {
-        match completion {
-            PlatformCompletion::ClipboardText { token, text } => {
-                self.deliver_window_event_now(window, &Event::ClipboardText { token, text });
-            }
-            PlatformCompletion::ClipboardTextUnavailable { token } => {
-                self.deliver_window_event_now(window, &Event::ClipboardTextUnavailable { token });
-            }
-            PlatformCompletion::ExternalDropData(data) => {
-                self.deliver_window_event_now(window, &Event::ExternalDropData(data));
-            }
-            PlatformCompletion::FileDialogSelection(selection) => {
-                self.deliver_window_event_now(window, &Event::FileDialogSelection(selection));
-            }
-            PlatformCompletion::FileDialogData(data) => {
-                self.deliver_window_event_now(window, &Event::FileDialogData(data));
-            }
-            PlatformCompletion::FileDialogCanceled => {
-                self.deliver_window_event_now(window, &Event::FileDialogCanceled);
-            }
-        }
-    }
-
     fn ui_services_mut<'a>(
         renderer: &'a mut Option<Renderer>,
         no_services: &'a mut NoUiServices,
@@ -1833,126 +1789,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         Ok((window, accessibility))
-    }
-
-    fn insert_window(
-        &mut self,
-        window: Arc<dyn Window>,
-        accessibility: Option<accessibility::WinitAccessibility>,
-        surface: wgpu::Surface<'static>,
-    ) -> Result<fret_core::AppWindowId, RunnerError> {
-        let Some(context) = self.context.as_ref() else {
-            return Err(RunnerError::WgpuNotInitialized);
-        };
-
-        let size = window.surface_size();
-        let surface_usage = {
-            let base = self.diag_bundle_screenshots.surface_usage();
-            #[cfg(feature = "diag-screenshots")]
-            {
-                if self.diag_screenshots.is_some() {
-                    base | wgpu::TextureUsages::COPY_SRC
-                } else {
-                    base
-                }
-            }
-            #[cfg(not(feature = "diag-screenshots"))]
-            {
-                base
-            }
-        };
-        let surface = SurfaceState::new_with_usage(
-            &context.adapter,
-            &context.device,
-            surface,
-            size.width,
-            size.height,
-            surface_usage,
-        )?;
-
-        let id = self.windows.insert_with_key(|id| {
-            let user = self.driver.create_window_state(&mut self.app, id);
-            WindowRuntime {
-                window,
-                accessibility,
-                last_accessibility_snapshot: None,
-                surface: Some(surface),
-                scene: Scene::default(),
-                platform: fret_runner_winit::WinitPlatform {
-                    wheel: fret_runner_winit::WheelConfig {
-                        line_delta_px: self.config.wheel_line_delta_px,
-                        pixel_delta_scale: self.config.wheel_pixel_delta_scale,
-                    },
-                    ..Default::default()
-                },
-                #[cfg(target_os = "android")]
-                android_bottom_inset_baseline: None,
-                pending_surface_resize: None,
-                last_delivered_window_resized: None,
-                is_focused: false,
-                external_drag_files: Vec::new(),
-                external_drag_token: None,
-                user,
-                #[cfg(windows)]
-                os_menu: None,
-            }
-        });
-
-        if let Some(state) = self.windows.get(id) {
-            let size_phys = state.window.surface_size();
-            let size_logical: winit::dpi::LogicalSize<f32> =
-                size_phys.to_logical(state.window.scale_factor());
-            fret_runtime::apply_window_metrics_event(
-                &mut self.app,
-                id,
-                &Event::WindowResized {
-                    width: Px(size_logical.width),
-                    height: Px(size_logical.height),
-                },
-            );
-            fret_runtime::apply_window_metrics_event(
-                &mut self.app,
-                id,
-                &Event::WindowScaleFactorChanged(state.window.scale_factor() as f32),
-            );
-        }
-        let window_ref = self.windows.get(id).map(|s| s.window.clone());
-        if let Some(window_ref) = window_ref {
-            if self.update_window_environment_for_window_ref(id, window_ref.as_ref()) {
-                self.app.request_redraw(id);
-            }
-        }
-
-        let winit_id = self.windows[id].window.id();
-        self.window_registry.insert(winit_id, id);
-        self.bump_window_z_order(id);
-
-        #[cfg(windows)]
-        windows_menu::register_window(self.windows[id].window.as_ref(), id);
-        #[cfg(target_os = "macos")]
-        macos_menu::register_window(self.windows[id].window.as_ref(), id);
-
-        #[cfg(windows)]
-        if let Some(menu_bar) = self.menu_bar.as_ref()
-            && let Some(state) = self.windows.get_mut(id)
-            && let Some(menu) =
-                windows_menu::set_window_menu_bar(&self.app, state.window.as_ref(), id, menu_bar)
-        {
-            state.os_menu = Some(menu);
-        }
-
-        // Ensure the window draws at least one frame after creation.
-        //
-        // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
-        // install the `WindowId` -> `AppWindowId` mapping *before* requesting the redraw. Otherwise, the first
-        // redraw can be dropped and the window may appear blank until another event arrives.
-        if let Some(state) = self.windows.get(id) {
-            state.window.request_redraw();
-            // `request_redraw()` alone may not wake the event loop on some platforms; schedule a
-            // one-shot RAF so the initial frame presents without requiring any user input.
-            self.raf_windows.insert(id);
-        }
-        Ok(id)
     }
 
     fn update_window_environment_for_window_ref(
@@ -2063,154 +1899,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         }
         surface.resize(&context.device, width, height);
-    }
-
-    fn close_window(&mut self, window: fret_core::AppWindowId) -> bool {
-        self.close_window_impl(window, true)
-    }
-
-    fn force_close_window(&mut self, window: fret_core::AppWindowId) -> bool {
-        self.close_window_impl(window, false)
-    }
-
-    fn close_window_impl(
-        &mut self,
-        window: fret_core::AppWindowId,
-        check_before_close: bool,
-    ) -> bool {
-        if !self.windows.contains_key(window) {
-            return false;
-        }
-
-        if check_before_close {
-            let should_close = self.driver.before_close_window(&mut self.app, window);
-            if !should_close {
-                return false;
-            }
-        }
-
-        if self
-            .dock_tearoff_follow
-            .is_some_and(|f| f.window == window || f.source_window == window)
-        {
-            self.stop_dock_tearoff_follow(Instant::now(), false);
-        }
-
-        if self.internal_drag_hover_window == Some(window) {
-            self.internal_drag_hover_window = None;
-            self.internal_drag_hover_pos = None;
-            self.internal_drag_pointer_id = None;
-        }
-
-        #[cfg(feature = "webview-wry")]
-        {
-            let events = self.webviews_wry.destroy_all_for_window(window);
-            let mut ids = Vec::new();
-            for ev in &events {
-                if let fret_webview::WebViewEvent::Destroyed { id } = ev {
-                    ids.push(*id);
-                }
-            }
-
-            if !events.is_empty() {
-                fret_webview::webview_push_events(&mut self.app, events);
-            }
-
-            // Clear any registered surfaces (even if no backend instance was created yet).
-            let removed = fret_webview::webview_remove_surfaces_for_window(&mut self.app, window);
-            ids.extend(removed.into_iter().map(|s| s.id));
-            ids.sort_by_key(|id| id.0);
-            ids.dedup();
-
-            // Drop any queued requests for this window/ids to avoid requeue loops (e.g. a `Create`
-            // request for a closed window).
-            if !ids.is_empty() {
-                let _ = fret_webview::webview_drop_requests_for_window_close(
-                    &mut self.app,
-                    window,
-                    &ids,
-                );
-            }
-        }
-
-        {
-            use fret_runtime::DragHost as _;
-            use std::collections::HashSet;
-
-            let mut visited: HashSet<fret_core::PointerId> = HashSet::new();
-            while let Some(pointer_id) = self.app.find_drag_pointer_id(|d| {
-                !visited.contains(&d.pointer_id) && d.source_window == window
-            }) {
-                visited.insert(pointer_id);
-                self.app.cancel_drag(pointer_id);
-            }
-
-            let mut visited: HashSet<fret_core::PointerId> = HashSet::new();
-            while let Some(pointer_id) = self.app.find_drag_pointer_id(|d| {
-                !visited.contains(&d.pointer_id) && d.current_window == window
-            }) {
-                visited.insert(pointer_id);
-                if let Some(drag) = self.app.drag_mut(pointer_id) {
-                    drag.current_window = drag.source_window;
-                }
-            }
-        }
-
-        let Some(state) = self.windows.remove(window) else {
-            return false;
-        };
-        self.windows_z_order.retain(|w| *w != window);
-        #[cfg(windows)]
-        windows_menu::unregister_window(state.window.as_ref());
-        #[cfg(target_os = "macos")]
-        macos_menu::unregister_window(state.window.as_ref());
-        self.window_registry.remove(state.window.id());
-
-        self.app.with_global_mut(
-            fret_runtime::WindowInputContextService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowCommandActionAvailabilityService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowCommandAvailabilityService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowCommandEnabledService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowCommandGatingService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowTextInputSnapshotService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app
-            .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                svc.remove(window);
-            });
-        if Some(window) == self.main_window {
-            self.main_window = None;
-        }
-
-        true
     }
 
     fn compute_window_position_from_anchor(&self, anchor: WindowAnchor) -> Option<Position> {
@@ -2596,65 +2284,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .filter(|r| r.attempts_left > 0)
             .map(|r| r.next_attempt_at)
             .min()
-    }
-
-    fn dock_drag_pointer_id(&self) -> Option<fret_core::PointerId> {
-        use fret_runtime::DragHost as _;
-        self.app.find_drag_pointer_id(|d| {
-            d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-        })
-    }
-
-    #[cfg(target_os = "macos")]
-    fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
-        let Some(pointer_id) = self.dock_drag_pointer_id() else {
-            return false;
-        };
-
-        let (source_window, current_window, dragging) = {
-            let Some(drag) = self.app.drag(pointer_id) else {
-                return false;
-            };
-            if !drag.cross_window_hover
-                || drag.kind != fret_app::DRAG_KIND_DOCK_PANEL
-                || macos_is_left_mouse_down()
-                || self.saw_left_mouse_release_this_turn
-            {
-                return false;
-            }
-            (drag.source_window, drag.current_window, drag.dragging)
-        };
-
-        dock_tearoff_log(format_args!(
-            "[poll-up] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
-            pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
-        ));
-
-        // If the mouse was released outside any window, winit may not deliver a `MouseInput`
-        // event to any window. Use the regular cursor-based drop routing so docking back into an
-        // existing window still works (ImGui-style).
-        if let Some(d) = self.app.drag_mut(pointer_id)
-            && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-        {
-            d.dragging = true;
-        }
-
-        self.route_internal_drag_drop_from_cursor();
-        dock_tearoff_log(format_args!(
-            "[poll-drop] dispatched target={:?}",
-            source_window
-        ));
-
-        if self
-            .app
-            .drag(pointer_id)
-            .is_some_and(|d| d.cross_window_hover)
-        {
-            self.app.cancel_drag(pointer_id);
-            let _ = self.clear_internal_drag_hover_if_needed();
-        }
-
-        true
     }
 
     fn dispatch_internal_drag_event(
@@ -3057,122 +2686,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .windows
                 .get(window)
                 .is_some_and(|w| w.platform.input.pressed_buttons.left)
-    }
-
-    fn update_dock_tearoff_follow(&mut self) -> bool {
-        if self.dock_tearoff_follow.is_some() && self.dock_drag_pointer_id().is_none() {
-            // If the dock drag session was canceled (e.g. Escape), ensure we do not keep moving a
-            // dock tear-off window indefinitely.
-            self.stop_dock_tearoff_follow(Instant::now(), false);
-            return true;
-        }
-
-        let (window, grab_offset, manual_follow, last_outer_pos) = match self.dock_tearoff_follow {
-            Some(follow) => (
-                follow.window,
-                follow.grab_offset,
-                follow.manual_follow,
-                follow.last_outer_pos,
-            ),
-            None => return false,
-        };
-
-        if !manual_follow {
-            return false;
-        }
-
-        let caps = self
-            .app
-            .global::<PlatformCapabilities>()
-            .cloned()
-            .unwrap_or_default();
-        if caps.ui.window_set_outer_position
-            != fret_runtime::WindowSetOuterPositionQuality::Reliable
-        {
-            return false;
-        }
-
-        if self.windows.get(window).is_none() {
-            self.dock_tearoff_follow = None;
-            return false;
-        }
-
-        let Some(pos) = self.compute_window_outer_position_from_cursor_grab(window, grab_offset)
-        else {
-            return false;
-        };
-
-        let next_phys = {
-            let Some(state) = self.windows.get(window) else {
-                self.dock_tearoff_follow = None;
-                return false;
-            };
-            let scale_factor = state.window.scale_factor();
-            match pos {
-                Position::Physical(p) => p,
-                Position::Logical(p) => p.to_physical::<i32>(scale_factor),
-            }
-        };
-
-        // Avoid spamming redundant position updates (helps reduce stutter on high-frequency
-        // input devices).
-        if last_outer_pos.is_some_and(|prev| prev == next_phys) {
-            return false;
-        }
-
-        if let Some(state) = self.windows.get(window) {
-            // Keep the moving window visible while docking back into another window (ImGui-style).
-            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
-                state.window.set_window_level(WindowLevel::AlwaysOnTop);
-            }
-            state.window.set_outer_position(pos);
-        }
-
-        dock_tearoff_log(format_args!(
-            "[follow-move] window={:?} cursor={:?} outer_pos={:?}",
-            window, self.cursor_screen_pos, next_phys
-        ));
-
-        if let Some(follow) = self.dock_tearoff_follow.as_mut() {
-            follow.last_outer_pos = Some(next_phys);
-        }
-
-        true
-    }
-
-    fn stop_dock_tearoff_follow(&mut self, _now: Instant, _raise_on_macos: bool) {
-        let Some(follow) = self.dock_tearoff_follow.take() else {
-            return;
-        };
-
-        dock_tearoff_log(format_args!(
-            "[follow-stop] window={:?} source={:?} cursor={:?} raise_on_macos={}",
-            follow.window, follow.source_window, self.cursor_screen_pos, _raise_on_macos
-        ));
-
-        let caps = self
-            .app
-            .global::<PlatformCapabilities>()
-            .cloned()
-            .unwrap_or_default();
-
-        if let Some(state) = self.windows.get(follow.window) {
-            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
-                state.window.set_window_level(WindowLevel::Normal);
-            }
-            if caps.ui.window_set_outer_position
-                == fret_runtime::WindowSetOuterPositionQuality::Reliable
-                && let Some(pos) =
-                    self.settle_window_outer_position(state.window.as_ref(), self.cursor_screen_pos)
-            {
-                state.window.set_outer_position(Position::Physical(pos));
-            }
-        }
-
-        #[cfg(target_os = "macos")]
-        if _raise_on_macos {
-            self.enqueue_window_front(follow.window, Some(follow.source_window), None, _now);
-        }
     }
 }
 
