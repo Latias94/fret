@@ -56,6 +56,8 @@ pub struct FsCapabilities {
 #[serde(default)]
 pub struct ShellCapabilities {
     pub open_url: bool,
+    pub share_sheet: bool,
+    pub incoming_open: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

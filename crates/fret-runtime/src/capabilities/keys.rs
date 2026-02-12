@@ -31,6 +31,8 @@ pub const FS_REAL_PATHS: &str = "fs.real_paths";
 pub const FS_FILE_DIALOGS: &str = "fs.file_dialogs";
 
 pub const SHELL_OPEN_URL: &str = "shell.open_url";
+pub const SHELL_SHARE_SHEET: &str = "shell.share_sheet";
+pub const SHELL_INCOMING_OPEN: &str = "shell.incoming_open";
 
 pub const GFX_WEBGPU: &str = "gfx.webgpu";
 /// Indicates that a native GPU rendering backend is available.

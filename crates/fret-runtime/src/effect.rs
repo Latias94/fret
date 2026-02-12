@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     ClipboardToken, ExternalDropToken, FileDialogToken, ImageUpdateToken, ImageUploadToken,
-    TimerToken,
+    IncomingOpenToken, ShareSheetToken, TimerToken,
 };
 use fret_core::{
     AlphaMode, AppWindowId, CursorIcon, Edges, ExternalDropReadLimits, FileDialogOptions,
@@ -98,6 +98,12 @@ pub enum Effect {
         target: Option<String>,
         rel: Option<String>,
     },
+    /// Show the platform-native share sheet (best-effort).
+    ShareSheetShow {
+        window: AppWindowId,
+        token: ShareSheetToken,
+        items: Vec<fret_core::ShareItem>,
+    },
     FileDialogOpen {
         window: AppWindowId,
         options: FileDialogOptions,
@@ -113,6 +119,19 @@ pub enum Effect {
     },
     FileDialogRelease {
         token: FileDialogToken,
+    },
+    /// Read all data associated with an incoming-open token (best-effort).
+    IncomingOpenReadAll {
+        window: AppWindowId,
+        token: IncomingOpenToken,
+    },
+    IncomingOpenReadAllWithLimits {
+        window: AppWindowId,
+        token: IncomingOpenToken,
+        limits: ExternalDropReadLimits,
+    },
+    IncomingOpenRelease {
+        token: IncomingOpenToken,
     },
     /// Add font bytes (TTF/OTF/TTC) to the renderer text system.
     ///

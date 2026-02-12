@@ -506,6 +506,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::Dock(op) => {
                     self.driver.dock_op(&mut self.app, op);
                 }
+                Effect::ShareSheetShow {
+                    window: target_window,
+                    token,
+                    items: _,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events.push(Event::ShareSheetCompleted {
+                        token,
+                        outcome: fret_core::ShareSheetOutcome::Unavailable,
+                    });
+                    window.request_redraw();
+                }
                 Effect::Window(req) => match req {
                     WindowRequest::Close(target) => {
                         if target != self.app_window {
@@ -557,6 +571,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         window.request_redraw();
                     }
                 }
+                Effect::IncomingOpenReadAll {
+                    window: target_window,
+                    token,
+                }
+                | Effect::IncomingOpenReadAllWithLimits {
+                    window: target_window,
+                    token,
+                    limits: _,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    self.pending_events
+                        .push(Event::IncomingOpenUnavailable { token });
+                    window.request_redraw();
+                }
+                Effect::IncomingOpenRelease { token: _ } => {}
                 _ => {}
             }
         }

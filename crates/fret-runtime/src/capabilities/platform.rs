@@ -61,7 +61,11 @@ impl Default for PlatformCapabilities {
                 real_paths: true,
                 file_dialogs: true,
             },
-            shell: ShellCapabilities { open_url: true },
+            shell: ShellCapabilities {
+                open_url: true,
+                share_sheet: false,
+                incoming_open: false,
+            },
             gfx: GfxCapabilities {
                 webgpu: false,
                 native_gpu: true,
@@ -85,6 +89,8 @@ impl PlatformCapabilities {
             keys::FS_REAL_PATHS => Some(self.fs.real_paths),
             keys::FS_FILE_DIALOGS => Some(self.fs.file_dialogs),
             keys::SHELL_OPEN_URL => Some(self.shell.open_url),
+            keys::SHELL_SHARE_SHEET => Some(self.shell.share_sheet),
+            keys::SHELL_INCOMING_OPEN => Some(self.shell.incoming_open),
             keys::GFX_WEBGPU => Some(self.gfx.webgpu),
             keys::GFX_NATIVE_GPU => Some(self.gfx.native_gpu),
             _ => None,
