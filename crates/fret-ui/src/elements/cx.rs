@@ -8,7 +8,9 @@ use smallvec::SmallVec;
 
 use fret_core::input::PointerType;
 use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
-use fret_core::{AppWindowId, Color, Edges, EffectChain, EffectMode, NodeId, Px, Rect};
+use fret_core::{
+    AppWindowId, Color, Edges, EffectChain, EffectMode, EffectQuality, NodeId, Px, Rect,
+};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -23,13 +25,14 @@ use crate::action::{
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
-    AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
-    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, OpacityProps, PointerRegionProps,
-    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
-    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
-    SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
-    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
+    AnyElement, CanvasProps, ColumnProps, CompositeGroupProps, ContainerProps, EffectLayerProps,
+    ElementKind, FlexProps, FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps,
+    ImageProps, InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps,
+    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
+    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
+    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
+    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -1158,6 +1161,77 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let built = f(cx);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::EffectLayer(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn mask_layer<I>(
+        &mut self,
+        mask: fret_core::scene::Mask,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.mask_layer_props(
+            MaskLayerProps {
+                layout: LayoutStyle::default(),
+                mask,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn mask_layer_props<I>(
+        &mut self,
+        props: MaskLayerProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::MaskLayer(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn composite_group<I>(
+        &mut self,
+        mode: fret_core::scene::BlendMode,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.composite_group_props(
+            CompositeGroupProps {
+                layout: LayoutStyle::default(),
+                mode,
+                quality: EffectQuality::Auto,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn composite_group_props<I>(
+        &mut self,
+        props: CompositeGroupProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::CompositeGroup(props), children)
         })
     }
 

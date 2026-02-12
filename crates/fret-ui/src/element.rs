@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
-use fret_core::scene::Paint;
+use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
     ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
@@ -99,6 +99,16 @@ pub enum ElementKind {
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0117).
     EffectLayer(EffectLayerProps),
+    /// A scoped alpha mask layer wrapper (ADR 0239).
+    ///
+    /// This emits a `SceneOp::PushMask/PopMask` pair around the subtree during painting. The
+    /// mask's computation bounds are the wrapper's final layout bounds.
+    MaskLayer(MaskLayerProps),
+    /// A scoped isolated compositing group wrapper (ADR 0247).
+    ///
+    /// This emits a `SceneOp::PushCompositeGroup/PopCompositeGroup` pair around the subtree during
+    /// painting. The compositing group's computation bounds are the wrapper's final layout bounds.
+    CompositeGroup(CompositeGroupProps),
     /// Experimental view-level cache boundary wrapper.
     ///
     /// When enabled by the runtime, this marks a subtree as a cache root for range-replay and
@@ -760,6 +770,37 @@ impl Default for EffectLayerProps {
             layout: LayoutStyle::default(),
             mode: EffectMode::FilterContent,
             chain: EffectChain::EMPTY,
+            quality: EffectQuality::Auto,
+        }
+    }
+}
+
+/// Scoped alpha mask wrapper for declarative element subtrees (ADR 0239).
+///
+/// This emits a `SceneOp::PushMask/PopMask` pair around the subtree during painting. The mask's
+/// computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MaskLayerProps {
+    pub layout: LayoutStyle,
+    pub mask: Mask,
+}
+
+/// Scoped isolated compositing group wrapper for declarative element subtrees (ADR 0247).
+///
+/// This emits a `SceneOp::PushCompositeGroup/PopCompositeGroup` pair around the subtree during
+/// painting. The group's computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CompositeGroupProps {
+    pub layout: LayoutStyle,
+    pub mode: BlendMode,
+    pub quality: EffectQuality,
+}
+
+impl Default for CompositeGroupProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            mode: BlendMode::Over,
             quality: EffectQuality::Auto,
         }
     }

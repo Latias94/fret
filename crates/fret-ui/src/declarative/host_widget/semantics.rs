@@ -270,6 +270,8 @@ impl ElementHostWidget {
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::EffectLayer(_)
+            | ElementInstance::MaskLayer(_)
+            | ElementInstance::CompositeGroup(_)
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::FractionalRenderTransform(_)

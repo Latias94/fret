@@ -181,6 +181,130 @@ fn effect_layer_element_emits_effect_stack_ops() {
 }
 
 #[test]
+fn mask_layer_element_emits_mask_stack_ops() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "mask-layer-element-emits-ops",
+        |cx| {
+            let mut stops = [fret_core::scene::GradientStop::new(0.0, Color::TRANSPARENT);
+                fret_core::scene::MAX_STOPS];
+            stops[0] = fret_core::scene::GradientStop::new(
+                0.0,
+                Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+            );
+            stops[1] = fret_core::scene::GradientStop::new(
+                1.0,
+                Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                },
+            );
+
+            let g = fret_core::scene::LinearGradient {
+                start: fret_core::Point::new(Px(0.0), Px(0.0)),
+                end: fret_core::Point::new(Px(100.0), Px(0.0)),
+                tile_mode: fret_core::scene::TileMode::Clamp,
+                color_space: fret_core::scene::ColorSpace::Srgb,
+                stop_count: 2,
+                stops,
+            };
+            let mask = fret_core::scene::Mask::linear_gradient(g);
+            vec![cx.mask_layer(mask, |cx| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+                props.background = Some(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                });
+                vec![cx.container(props, |_| Vec::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(scene.ops_len(), 3);
+    assert!(matches!(scene.ops()[0], SceneOp::PushMask { .. }));
+    assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+    assert!(matches!(scene.ops()[2], SceneOp::PopMask));
+}
+
+#[test]
+fn composite_group_element_emits_composite_stack_ops() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "composite-group-element-emits-ops",
+        |cx| {
+            vec![cx.composite_group(fret_core::scene::BlendMode::Add, |cx| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+                props.background = Some(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                });
+                vec![cx.container(props, |_| Vec::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(scene.ops_len(), 3);
+    assert!(matches!(scene.ops()[0], SceneOp::PushCompositeGroup { .. }));
+    assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+    assert!(matches!(scene.ops()[2], SceneOp::PopCompositeGroup));
+}
+
+#[test]
 fn visual_transform_element_emits_transform_stack_ops() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

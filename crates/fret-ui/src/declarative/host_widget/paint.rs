@@ -198,6 +198,46 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopOpacity);
                 }
             }
+            ElementInstance::MaskLayer(props) => {
+                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let mask = props.mask.sanitize();
+                if let Some(mask) = mask {
+                    cx.scene.push(SceneOp::PushMask {
+                        bounds: cx.bounds,
+                        mask,
+                    });
+                }
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                if mask.is_some() {
+                    cx.scene.push(SceneOp::PopMask);
+                }
+            }
+            ElementInstance::CompositeGroup(props) => {
+                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let desc =
+                    fret_core::scene::CompositeGroupDesc::new(cx.bounds, props.mode, props.quality);
+                cx.scene.push(SceneOp::PushCompositeGroup { desc });
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                cx.scene.push(SceneOp::PopCompositeGroup);
+            }
             ElementInstance::EffectLayer(props) => {
                 if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
                     return;
