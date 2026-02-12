@@ -83,10 +83,21 @@ backend crate. Avoid accumulating ad-hoc utilities in launch.
 - No `fret-ui` public surface creep driven by component policy.
 - Tests pass for touched crates (at least `nextest` for `fret-ui` / `fret-launch`).
 
+## Baseline (2026-02-12)
+
+Captured via `tools/audit_crate.ps1`:
+
+- `fret-ui` top files:
+  - `crates/fret-ui/src/tree/mod.rs` (~7723 lines)
+  - `crates/fret-ui/src/elements/cx.rs` (~3680 lines)
+  - `crates/fret-ui/src/tree/dispatch.rs` (~3627 lines)
+  - `crates/fret-ui/src/tree/layout.rs` (~2800 lines)
+- `fret-launch` top files:
+  - `crates/fret-launch/src/runner/desktop/mod.rs` (~6654 lines)
+
 ## Track C (Follow-up, optional)
 
 After Track B stabilizes seams, consider:
 
 - splitting `fret-launch` into `fret-launch-desktop` and `fret-launch-web`, with `fret-launch` as a thin facade,
 - or renaming runner/backends for clearer user cognition.
-
