@@ -1384,6 +1384,11 @@ impl WindowElementState {
         self.committed_occlusion_insets
     }
 
+    pub(crate) fn occlusion_insets_changed_this_frame(&self) -> bool {
+        self.environment_changed_this_frame
+            .contains(&EnvironmentQueryKey::OcclusionInsets)
+    }
+
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
         if self.committed_prefers_reduced_motion == value {
             return;

@@ -64,3 +64,10 @@ windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Graphic
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "linux"))'.dependencies]
 zbus.workspace = true
+
+[target.'cfg(all(not(target_arch = "wasm32"), target_os = "ios"))'.dependencies]
+block2 = "0.6.1"
+objc2 = { version = "0.6.3", features = ["relax-sign-encoding"] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "block2", "NSDictionary", "NSNotification", "NSString", "NSOperation"] }
+objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std", "objc2-core-foundation", "UIApplication", "UIView", "UIWindow", "UIGeometry", "UIResponder"] }

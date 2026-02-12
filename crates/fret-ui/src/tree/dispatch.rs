@@ -1461,6 +1461,10 @@ impl<H: UiHost> UiTree<H> {
                     input_ctx: &input_ctx,
                     barrier_root,
                     focus_is_text_input,
+                    #[cfg(feature = "diagnostics")]
+                    phase: fret_runtime::ShortcutRoutingPhase::PreDispatch,
+                    #[cfg(feature = "diagnostics")]
+                    deferred: false,
                     key: *key,
                     modifiers: *modifiers,
                     repeat: *repeat,
@@ -2911,6 +2915,10 @@ impl<H: UiHost> UiTree<H> {
                         input_ctx: &input_ctx_for_shortcuts,
                         barrier_root,
                         focus_is_text_input,
+                        #[cfg(feature = "diagnostics")]
+                        phase: fret_runtime::ShortcutRoutingPhase::PostDispatch,
+                        #[cfg(feature = "diagnostics")]
+                        deferred: true,
                         key: *key,
                         modifiers: *modifiers,
                         repeat: *repeat,

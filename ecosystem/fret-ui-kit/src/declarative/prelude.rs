@@ -10,6 +10,7 @@ pub use super::container_queries::{
 pub use super::contrast_queries::{contrast_preference, prefers_more_contrast};
 pub use super::forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use super::global_watch::GlobalWatchExt;
+pub use super::keyboard_avoidance::window_insets_padding_refinement_or_zero;
 pub use super::model_watch::ModelWatchExt;
 pub use super::occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use super::pointer_queries::{

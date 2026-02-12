@@ -70,7 +70,10 @@ pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, Viewpor
 pub use layout_direction::LayoutDirection;
 pub use materials::{MaterialDescriptor, MaterialKind, MaterialRegistrationError, MaterialService};
 pub use panels::{PanelKey, PanelKind};
-pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
+pub use render_text::{
+    RendererGlyphAtlasPerfSnapshot, RendererTextFontTraceEntry, RendererTextFontTraceFamilyClass,
+    RendererTextFontTraceFamilyUsage, RendererTextFontTraceSnapshot, RendererTextPerfSnapshot,
+};
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
     EffectMode, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS, MaterialParams,
@@ -86,9 +89,9 @@ pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     AttributedText, CaretAffinity, DecorationLineStyle, FontWeight, HitTestResult,
-    StrikethroughStyle, TextConstraints, TextFontFamilyConfig, TextInput, TextInputRef,
-    TextMetrics, TextOverflow, TextPaintStyle, TextService, TextShapingStyle, TextSlant, TextSpan,
-    TextStyle, TextWrap, UnderlineStyle,
+    StrikethroughStyle, TextCommonFallbackInjection, TextConstraints, TextFontFamilyConfig,
+    TextInput, TextInputRef, TextMetrics, TextOverflow, TextPaintStyle, TextService,
+    TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 pub use vector_path::{
     FillRule, FillStyle, PathCommand, PathConstraints, PathMetrics, PathService, PathStyle,

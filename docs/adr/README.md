@@ -100,8 +100,9 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Font discovery + user font loading + stable IDs**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Update: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
+  - Proposed: `docs/adr/0257-font-selection-fallback-and-variable-font-instances-v1.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
-  - Implement: `crates/fret-render-wgpu/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
+  - Implement: `crates/fret-render-wgpu/src/text/mod.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
 
 - **Docking keep-alive + early submission + programmatic close without flicker**
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`

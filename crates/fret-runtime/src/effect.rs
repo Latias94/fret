@@ -5,8 +5,8 @@ use crate::{
     TimerToken,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorInfo,
-    ImageId, Rect, RectPx, WindowAnchor,
+    AlphaMode, AppWindowId, CursorIcon, Edges, ExternalDropReadLimits, FileDialogOptions,
+    ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::{CommandId, MenuBar};
@@ -121,6 +121,17 @@ pub enum Effect {
     TextAddFonts {
         fonts: Vec<Vec<u8>>,
     },
+    /// Request a best-effort rescan of system-installed fonts (native-only).
+    ///
+    /// Web/WASM runners should ignore this effect, as they cannot access system font databases.
+    ///
+    /// Semantics:
+    /// - This is an explicit, user-initiated refresh hook (ADR 0258).
+    /// - Runners should re-enumerate the font catalog and republish `FontCatalogMetadata` if
+    ///   changes are observed.
+    /// - Runners should also bump renderer text invalidation keys (e.g. `TextFontStackKey`) so
+    ///   cached shaping/rasterization results cannot be reused after a rescan attempt.
+    TextRescanSystemFonts,
     ViewportInput(fret_core::ViewportInputEvent),
     Dock(fret_core::DockOp),
     ImeAllow {
@@ -130,6 +141,20 @@ pub enum Effect {
     ImeSetCursorArea {
         window: AppWindowId,
         rect: Rect,
+    },
+    /// Override window insets in `WindowMetricsService` (safe area / occlusion).
+    ///
+    /// This is primarily used by diagnostics/scripted repros to simulate keyboard occlusion on
+    /// platforms where the real OS insets are not available in CI.
+    ///
+    /// Semantics:
+    /// - `None` means "no change".
+    /// - `Some(None)` clears the insets but still marks them as "known".
+    /// - `Some(Some(v))` sets the insets to `v`.
+    WindowMetricsSetInsets {
+        window: AppWindowId,
+        safe_area_insets: Option<Option<Edges>>,
+        occlusion_insets: Option<Option<Edges>>,
     },
     CursorSetIcon {
         window: AppWindowId,

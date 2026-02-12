@@ -292,9 +292,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is useful for "probe" passes that need to build a subtree (e.g. to inspect focus) but
     /// must not perturb the element-id derivation of the main render pass.
     pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
-        let snapshot = self.callsite_counters.clone();
+        let prev_stack = self.stack.clone();
+        let prev_counters = self.callsite_counters.clone();
+
         let out = f(self);
-        self.callsite_counters = snapshot;
+
+        self.stack = prev_stack;
+        self.callsite_counters = prev_counters;
         debug_assert_eq!(self.callsite_counters.len(), self.stack.len());
         out
     }

@@ -10,7 +10,7 @@ panel if desired).
 
 ## Mermaid
 
-By default, fenced code blocks with language `mermaid` are rendered as SVG via `merman` (headless).
+When the `mermaid` feature is enabled, fenced code blocks with language `mermaid` are rendered as SVG via `merman` (headless).
 Rendering runs in the background and is cached via `fret-query`.
 Note: Mermaid SVG often uses `<foreignObject>` for labels; `fret-markdown` uses a best-effort
 text overlay fallback so diagrams remain readable in headless renderers.
@@ -18,16 +18,10 @@ text overlay fallback so diagrams remain readable in headless renderers.
 Note: `merman` is currently pulled in as a workspace path dependency (`../merman`). Clone the
 `merman` repo next to `fret` (same parent directory) to build Mermaid support.
 
-- Disable Mermaid rendering:
+- Enable Mermaid explicitly:
 
 ```toml
-fret-markdown = { path = "...", default-features = false }
-```
-
-- Re-enable Mermaid explicitly:
-
-```toml
-fret-markdown = { path = "...", default-features = false, features = ["mermaid"] }
+fret-markdown = { path = "...", features = ["mermaid"] }
 ```
 
 ## Usage

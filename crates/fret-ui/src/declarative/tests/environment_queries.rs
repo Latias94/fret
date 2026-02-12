@@ -1,7 +1,9 @@
 use super::*;
 
+use fret_core::Edges;
 use fret_runtime::GlobalsHost;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
@@ -89,6 +91,56 @@ fn environment_query_change_invalidates_view_cache_subtree() {
         1,
         "expected view-cache subtree without environment dependencies to reuse"
     );
+}
+
+#[test]
+fn window_metrics_service_insets_commit_to_environment_queries() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let safe_area = Edges::all(Px(4.0));
+    let occlusion = Edges {
+        top: Px(0.0),
+        right: Px(0.0),
+        bottom: Px(16.0),
+        left: Px(0.0),
+    };
+    app.with_global_mut_untracked(
+        fret_core::window::WindowMetricsService::default,
+        |svc, _| {
+            svc.set_safe_area_insets(window, Some(safe_area));
+            svc.set_occlusion_insets(window, Some(occlusion));
+        },
+    );
+
+    let observed: Arc<Mutex<Option<(Option<Edges>, Option<Edges>)>>> = Arc::new(Mutex::new(None));
+    let observed_ref = observed.clone();
+    render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "environment-window-insets",
+        move |cx| {
+            let safe = cx.environment_safe_area_insets(Invalidation::Layout);
+            let occlusion = cx.environment_occlusion_insets(Invalidation::Layout);
+            *observed_ref.lock().unwrap() = Some((safe, occlusion));
+            vec![cx.text("probe")]
+        },
+    );
+
+    let (seen_safe, seen_occlusion) = observed.lock().unwrap().unwrap();
+    assert_eq!(seen_safe, Some(safe_area));
+    assert_eq!(seen_occlusion, Some(occlusion));
 }
 
 #[test]

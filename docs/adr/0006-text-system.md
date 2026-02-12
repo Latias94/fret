@@ -58,7 +58,8 @@ Scale factor note:
 
 ## Consequences
 
-- Property-panel text can start with a minimal implementation and be upgraded to `cosmic-text` later without changing `UiTree` or `SceneOp`.
+- Property-panel text can start with a minimal implementation and be upgraded to a more capable shaping/raster backend
+  later (without changing `UiTree` or `SceneOp`).
 - The code editor becomes “just another consumer” of the same text contract, with more sophisticated caching.
 - `fret-core` stays wgpu-free; all GPU specifics live in `fret-render`.
 

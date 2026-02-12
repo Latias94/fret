@@ -123,7 +123,7 @@ We keep an explicit conformance surface for polychrome correctness:
 
 Current implementation already follows this direction in the renderer:
 
-- Glyph content classification + dedicated atlases live in `crates/fret-render-wgpu/src/text.rs`.
+- Glyph content classification + dedicated atlases live in `crates/fret-render-wgpu/src/text/mod.rs`.
 - The conformance harness is `apps/fret-examples/src/emoji_conformance_demo.rs`.
 
 ## Follow-ups
@@ -138,4 +138,3 @@ Current implementation already follows this direction in the renderer:
 - Text system v2 (Parley + spans): `docs/adr/0142-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
 - Font bootstrap + invalidation: `docs/adr/0147-font-stack-bootstrap-and-textfontstackkey-v1.md`
 - Emoji conformance demo: `apps/fret-examples/src/emoji_conformance_demo.rs`
-

@@ -269,12 +269,22 @@ pub(crate) fn content_view(
     let content = content_inner.test_id("ui-gallery-content-scroll");
 
     cx.named("ui_gallery.content_view_root", |cx| {
+        let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
+        let chrome = ChromeRefinement {
+            padding: Some(
+                fret_ui_kit::declarative::window_insets_padding_refinement_or_zero(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    base_padding,
+                ),
+            ),
+            background: Some(ColorRef::Color(theme.color_required("background"))),
+            ..ChromeRefinement::default()
+        };
         cx.container(
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
+                chrome,
                 LayoutRefinement::default().w_full().h_full(),
             ),
             |_cx| [content],
