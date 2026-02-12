@@ -456,7 +456,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             );
         } else {
             // Font catalog refresh trigger (ADR 0258): initial renderer availability (startup).
-            super::super::font_catalog::apply_renderer_font_catalog_update(
+            super::super::super::font_catalog::apply_renderer_font_catalog_update(
                 &mut self.app,
                 &mut renderer,
                 fret_runtime::FontFamilyDefaultsPolicy::None,
