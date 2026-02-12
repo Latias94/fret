@@ -4110,6 +4110,24 @@ impl UiDiagnosticsService {
                 })
             });
 
+        let (safe_area_insets, occlusion_insets) = app
+            .global::<fret_core::WindowMetricsService>()
+            .map(|svc| {
+                (
+                    svc.safe_area_insets(window).map(ui_edges_from_edges),
+                    svc.occlusion_insets(window).map(ui_edges_from_edges),
+                )
+            })
+            .unwrap_or((None, None));
+
+        let input_ctx = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window));
+
+        let window_text_input_snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -4128,6 +4146,24 @@ impl UiDiagnosticsService {
             changed_model_sources_top,
             resource_caches,
             app_snapshot,
+            safe_area_insets,
+            occlusion_insets,
+            focus_is_text_input: input_ctx.map(|c| c.focus_is_text_input),
+            is_composing: window_text_input_snapshot.map(|s| s.is_composing),
+            primary_pointer_type: ring
+                .last_pointer_type
+                .map(|t| viewport_pointer_type_label(t).to_string()),
+            caps: input_ctx.map(|c| UiPlatformCapabilitiesSummaryV1 {
+                platform: c.platform.as_str().to_string(),
+                ui_window_hover_detection: c.caps.ui.window_hover_detection.as_str().to_string(),
+                clipboard_text: c.caps.clipboard.text,
+                clipboard_primary_text: c.caps.clipboard.primary_text,
+                ime: c.caps.ime.enabled,
+                ime_set_cursor_area: c.caps.ime.set_cursor_area,
+                fs_file_dialogs: c.caps.fs.file_dialogs,
+                shell_share_sheet: c.caps.shell.share_sheet,
+                shell_incoming_open: c.caps.shell.incoming_open,
+            }),
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -4770,6 +4806,7 @@ struct PendingPick {
 #[derive(Default)]
 struct WindowRing {
     last_pointer_position: Option<Point>,
+    last_pointer_type: Option<fret_core::PointerType>,
     events: VecDeque<RecordedUiEventV1>,
     snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
     viewport_input_this_frame: Vec<UiViewportInputEventV1>,
@@ -4779,14 +4816,22 @@ struct WindowRing {
 
 impl WindowRing {
     fn update_pointer_position(&mut self, event: &Event) {
-        let Some(pointer) = event.pointer_event() else {
-            return;
-        };
-        self.last_pointer_position = Some(pointer.position());
+        match event {
+            Event::Pointer(e) => {
+                self.last_pointer_position = Some(e.position());
+                self.last_pointer_type = Some(e.pointer_type());
+            }
+            Event::PointerCancel(e) => {
+                self.last_pointer_position = Some(e.position);
+                self.last_pointer_type = Some(e.pointer_type);
+            }
+            _ => {}
+        }
     }
 
     fn clear(&mut self) {
         self.last_pointer_position = None;
+        self.last_pointer_type = None;
         self.events.clear();
         self.snapshots.clear();
         self.viewport_input_this_frame.clear();
@@ -4950,7 +4995,33 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_snapshot: Option<serde_json::Value>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_area_insets: Option<UiEdgesV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occlusion_insets: Option<UiEdgesV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_is_text_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_composing: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_pointer_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub caps: Option<UiPlatformCapabilitiesSummaryV1>,
+
     pub debug: UiTreeDebugSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPlatformCapabilitiesSummaryV1 {
+    pub platform: String,
+    pub ui_window_hover_detection: String,
+    pub clipboard_text: bool,
+    pub clipboard_primary_text: bool,
+    pub ime: bool,
+    pub ime_set_cursor_area: bool,
+    pub fs_file_dialogs: bool,
+    pub shell_share_sheet: bool,
+    pub shell_incoming_open: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

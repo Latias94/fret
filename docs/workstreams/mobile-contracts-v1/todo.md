@@ -25,7 +25,7 @@ Workstream entry:
 - [x] Add/confirm a scripted diag scenario that simulates `OcclusionInsets.bottom > 0` and asserts a
       focused input remains visible (CI-friendly):
       - `tools/diag-scripts/ui-gallery-window-insets-safe-area-and-keyboard-avoidance.json`
-- [ ] Add a diag bundle snapshot field that prints:
+- [x] Add a diag bundle snapshot field that prints:
   - committed safe-area + occlusion insets,
   - `focus_is_text_input` and composing state,
   - primary pointer type/capabilities.
