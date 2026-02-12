@@ -35,6 +35,9 @@ Each TODO is labeled:
   - Done: `connection.tsx` → `workflow/connection.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
   - Done: `canvas.tsx` → `workflow/canvas.rs` + gate `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
 - [x] AIEL-MVP6-closure-004 Add UI Gallery demos + at least one diag gate per new surface family.
+- [x] AIEL-MVP7-workflow-001 Add an engine-backed workflow demo (reuse `fret-node`) gated via diag.
+  - Demo: `apps/fret-ui-gallery` page `ai_workflow_node_graph_demo`
+  - Gate: `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
 
 ## Post-port (optional): XYFlow parity gaps
 
@@ -119,7 +122,7 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Partial | `fret-ui-ai` (wrappers) | `panel` + `toolbar` + `controls` chrome are ported (UI-only). Demo + gates: `PAGE_AI_WORKFLOW_CHROME_DEMO`, `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`, `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
+| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Prototype | `fret-ui-ai` (wrappers) | Chrome-only wrappers are ported + gated on `PAGE_AI_WORKFLOW_CHROME_DEMO`. An engine-backed reference integration exists in UI Gallery (`ai_workflow_node_graph_demo`) to validate the recommended layering (`fret-node` engine + `fret-ui-ai` chrome). |
 
 ### Voice
 
@@ -198,6 +201,15 @@ Existing gates (UI Gallery `ai_stack_trace_demo`):
 Existing gates (UI Gallery `ai_stack_trace_large_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-stack-trace-large-scroll.json`
+
+Existing gates (UI Gallery workflow):
+
+- `tools/diag-scripts/ui-gallery-ai-workflow-chrome-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-node-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
+- `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
 
 Existing gates (UI Gallery `ai_test_results_demo`):
 

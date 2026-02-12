@@ -25,18 +25,20 @@ Related workstreams:
 
 ## Next up (priority order)
 
-The port goal is **full upstream coverage** (every upstream `.tsx` has a corresponding Rust surface),
-while keeping Fret’s layering boundaries intact:
+Upstream coverage is now **complete at the “ported (prototype)” level** (see
+`docs/workstreams/ai-elements-upstream-alignment.md`). The next focus is tightening parity and
+providing engine-backed demos without breaking layering:
 
-1. Port the remaining upstream “shell” components (`agent`, `persona`, `sandbox`) as **UI-first,
-   intent-driven** surfaces (effects remain app-owned; heavy dependencies are feature-gated).
-2. Port remaining voice surfaces (`mic-selector`, `speech-input`, `voice-selector`) as **UI-only**
-   chrome with explicit seams (capture/ASR backends are app-owned).
-3. Port workflow wrappers (`canvas/node/edge/panel/toolbar/controls/connection`) as **chrome-only**
-   wrappers over existing ecosystem crates (`fret-canvas`, `fret-node`, docking/viewports), not as
-   new engines inside `fret-ui-ai`.
-4. Tighten contract docs for **keyed identity** and selectors (see “MessageId contract” below), so
-   long transcripts + virtualization remain reliable under inserts/streaming.
+1. Keep iterating on component **outcomes parity** (layout + states + selectors) and add missing
+   diag gates for previously un-gated edge cases.
+2. For workflow editor experiences, prefer **reusing existing engines**:
+   - `fret-node` for graph interaction, and
+   - `fret-canvas/ui` for host surfaces/recipes.
+   A reference integration exists in UI Gallery: `ai_workflow_node_graph_demo` (gated via
+   `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`).
+3. Track deeper XYFlow/ReactFlow parity gaps (world-layer element subtrees, dash patterns, markers)
+   as a separate optional workstream (`docs/workstreams/xyflow-gap-analysis.md`).
+4. Keep “heavy” backends app-owned and feature-gated (`webview`, audio playback, PTY/terminal).
 
 ## Version stamp (upstream reference)
 
@@ -169,7 +171,8 @@ an interactive chat demo:
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
-This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
+This is a good foundation. Upstream `.tsx` surfaces are all represented in `fret-ui-ai`, but many
+remain at “ported (prototype)” fidelity and still need parity passes + polish.
 
 ## Alignment notes (code artifacts)
 

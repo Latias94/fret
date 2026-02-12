@@ -186,6 +186,10 @@ Progress:
   - `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`
 - `WorkflowCanvas` chrome host is ported and demoed on the same page with gate:
   - `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`
+- Optional: an engine-backed reference integration exists (reuse `fret-node` for interaction + `fret-ui-ai` chrome)
+  and is gated:
+  - UI Gallery page: `ai_workflow_node_graph_demo`
+  - `tools/diag-scripts/ui-gallery-ai-workflow-node-graph-demo.json`
 
 ### M5 — Voice surfaces (defer until there is a concrete consumer)
 
