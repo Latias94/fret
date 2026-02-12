@@ -14,7 +14,7 @@ use fret_diag_protocol::{
     UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
     UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
     UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1, UiSizeV1,
-    UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiTextInputSnapshotV1, UiWebImeTraceEntryV1, UiWindowTargetV1,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -232,6 +232,7 @@ impl Default for UiDiagnosticsConfig {
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
     per_window: HashMap<AppWindowId, WindowRing>,
+    known_windows: Vec<AppWindowId>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
@@ -284,6 +285,40 @@ struct InspectToast {
 }
 
 impl UiDiagnosticsService {
+    fn note_window_seen(&mut self, window: AppWindowId) {
+        if self.known_windows.contains(&window) {
+            return;
+        }
+        self.known_windows.push(window);
+    }
+
+    fn resolve_window_target(
+        &self,
+        current_window: AppWindowId,
+        target: Option<&UiWindowTargetV1>,
+    ) -> Option<AppWindowId> {
+        match target.copied().unwrap_or(UiWindowTargetV1::Current) {
+            UiWindowTargetV1::Current => Some(current_window),
+            UiWindowTargetV1::FirstSeen => self.known_windows.first().copied(),
+            UiWindowTargetV1::FirstSeenOther => self
+                .known_windows
+                .iter()
+                .copied()
+                .find(|w| *w != current_window),
+            UiWindowTargetV1::LastSeen => self.known_windows.last().copied(),
+            UiWindowTargetV1::LastSeenOther => self
+                .known_windows
+                .iter()
+                .rev()
+                .copied()
+                .find(|w| *w != current_window),
+            UiWindowTargetV1::WindowFfi { window } => {
+                let want = AppWindowId::from(KeyData::from_ffi(window));
+                self.known_windows.contains(&want).then_some(want)
+            }
+        }
+    }
+
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
     }
@@ -316,6 +351,8 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return false;
         }
+
+        self.note_window_seen(window);
 
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
@@ -710,6 +747,8 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         }
 
+        self.note_window_seen(window);
+
         self.ensure_ready_file();
         self.poll_script_trigger();
 
@@ -841,35 +880,69 @@ impl UiDiagnosticsService {
 
         match step {
             UiActionStepV2::SetWindowInnerSize {
+                window: target_window,
                 width_px,
                 height_px,
             } => {
-                let size = fret_core::Size::new(fret_core::Px(width_px), fret_core::Px(height_px));
-                output
-                    .effects
-                    .push(Effect::Window(fret_app::WindowRequest::SetInnerSize {
-                        window,
-                        size,
-                    }));
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    let size =
+                        fret_core::Size::new(fret_core::Px(width_px), fret_core::Px(height_px));
+                    output
+                        .effects
+                        .push(Effect::Window(fret_app::WindowRequest::SetInnerSize {
+                            window: target_window,
+                            size,
+                        }));
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_window_inner_size-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
             }
-            UiActionStepV2::SetWindowOuterPosition { x_px, y_px } => {
-                output
-                    .effects
-                    .push(Effect::Window(fret_app::WindowRequest::SetOuterPosition {
-                        window,
-                        position: fret_core::WindowLogicalPosition {
-                            x: x_px.round() as i32,
-                            y: y_px.round() as i32,
+            UiActionStepV2::SetWindowOuterPosition {
+                window: target_window,
+                x_px,
+                y_px,
+            } => {
+                if let Some(target_window) =
+                    self.resolve_window_target(window, target_window.as_ref())
+                {
+                    output.effects.push(Effect::Window(
+                        fret_app::WindowRequest::SetOuterPosition {
+                            window: target_window,
+                            position: fret_core::WindowLogicalPosition {
+                                x: x_px.round() as i32,
+                                y: y_px.round() as i32,
+                            },
                         },
-                    }));
-                active.wait_until = None;
-                active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
+                    ));
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_window_outer_position-window-not-found"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("window_target_unresolved".to_string());
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
             }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
@@ -3524,6 +3597,7 @@ impl UiDiagnosticsService {
 
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
+        self.known_windows.retain(|w| *w != window);
         self.active_scripts.remove(&window);
         self.last_picked_node_id.remove(&window);
         self.last_picked_selector_json.remove(&window);
@@ -11667,6 +11741,7 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
     match reason {
         "no_semantics_snapshot" => Some("semantics.missing"),
         "assert_failed" => Some("assert.failed"),
+        "window_target_unresolved" => Some("window.target_unresolved"),
         _ if reason.contains("focus") => Some("focus.mismatch"),
         _ if reason.ends_with("_timeout") => Some("timeout"),
         _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {

@@ -171,6 +171,23 @@ impl UiPaddingInsetsV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowTargetV1 {
+    /// Target the window currently driving the script step.
+    Current,
+    /// Target the first window observed by the diagnostics runtime.
+    FirstSeen,
+    /// Target the first observed window that is not the current window.
+    FirstSeenOther,
+    /// Target the most recently observed window.
+    LastSeen,
+    /// Target the most recently observed window that is not the current window.
+    LastSeenOther,
+    /// Target a specific window by its FFI handle/id as reported in bundles and script results.
+    WindowFfi { window: u64 },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
@@ -343,6 +360,8 @@ pub enum UiActionStepV2 {
         drag_steps: u32,
     },
     SetWindowInnerSize {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         width_px: f32,
         height_px: f32,
     },
@@ -351,6 +370,8 @@ pub enum UiActionStepV2 {
     /// This is intended for deterministically arranging windows in scripted repros and for
     /// best-effort placement restoration (ADR 0017).
     SetWindowOuterPosition {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         x_px: f32,
         y_px: f32,
     },

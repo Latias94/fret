@@ -254,3 +254,37 @@ fn script_v2_roundtrip_set_window_outer_position() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_set_window_outer_position_last_seen() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_outer_position",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 10.0,
+      "y_px": 20.0
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_set_window_inner_size_first_seen() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_inner_size",
+      "window": { "kind": "first_seen" },
+      "width_px": 800.0,
+      "height_px": 600.0
+    }
+  ]
+}"#,
+    );
+}
