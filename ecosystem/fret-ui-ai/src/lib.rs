@@ -144,12 +144,13 @@ pub use elements::{
     VoiceSelectorButton, VoiceSelectorContent, VoiceSelectorController, VoiceSelectorInput,
     VoiceSelectorList, VoiceSelectorValue, VoiceSelectorVoice, WebPreview, WebPreviewBody,
     WebPreviewConsole, WebPreviewConsoleLog, WebPreviewConsoleLogLevel, WebPreviewController,
-    WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewUrl, parse_stack_trace,
-    use_audio_player_controller, use_chain_of_thought_controller,
-    use_environment_variables_controller, use_mic_selector_controller, use_open_in_controller,
-    use_package_info_controller, use_plan_controller, use_prompt_input_config,
-    use_prompt_input_controller, use_prompt_input_referenced_sources, use_task_controller,
-    use_transcription_controller, use_voice_selector_controller, use_web_preview_controller,
+    WebPreviewNavigation, WebPreviewNavigationButton, WebPreviewUrl, WorkflowPanel,
+    WorkflowToolbar, parse_stack_trace, use_audio_player_controller,
+    use_chain_of_thought_controller, use_environment_variables_controller,
+    use_mic_selector_controller, use_open_in_controller, use_package_info_controller,
+    use_plan_controller, use_prompt_input_config, use_prompt_input_controller,
+    use_prompt_input_referenced_sources, use_task_controller, use_transcription_controller,
+    use_voice_selector_controller, use_web_preview_controller,
 };
 pub use export::messages_to_markdown;
 pub use model::{

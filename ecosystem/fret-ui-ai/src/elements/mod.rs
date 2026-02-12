@@ -49,6 +49,7 @@ mod tool_call_block;
 mod transcription;
 mod voice_selector;
 mod web_preview;
+mod workflow;
 
 pub use agent::*;
 pub use ai_chat::*;
@@ -101,3 +102,4 @@ pub use tool_call_block::*;
 pub use transcription::*;
 pub use voice_selector::*;
 pub use web_preview::*;
+pub use workflow::*;
