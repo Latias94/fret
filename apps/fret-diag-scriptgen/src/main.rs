@@ -147,6 +147,7 @@ fn template_names() -> &'static [&'static str] {
         "ui-gallery-combobox-escape-dismiss-focus-restore-v2",
         "ui-gallery-combobox-dismiss-outside-press-v2",
         "ui-gallery-combobox-roving-skips-disabled-v2",
+        "ui-gallery-combobox-flip-tight-window-v2",
         "ui-gallery-select-commit-and-label-update-bundle-v2",
         "ui-gallery-select-keyboard-commit-apple-v2",
         "ui-gallery-select-typeahead-commit-banana-v2",
@@ -185,6 +186,9 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
         }
         "ui-gallery-combobox-roving-skips-disabled-v2" => {
             Ok(ui_gallery_combobox_roving_skips_disabled_v2())
+        }
+        "ui-gallery-combobox-flip-tight-window-v2" => {
+            Ok(ui_gallery_combobox_flip_tight_window_v2())
         }
         "ui-gallery-select-commit-and-label-update-bundle-v2" => {
             Ok(ui_gallery_select_commit_and_label_update_bundle_v2())
@@ -399,6 +403,15 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -427,7 +440,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-open-select-focus-restore".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
@@ -435,6 +448,15 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -471,7 +493,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-keyboard-commit-apple".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
@@ -479,6 +501,15 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -516,7 +547,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-typeahead-commit-banana".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
@@ -524,6 +555,15 @@ fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -541,7 +581,7 @@ fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-escape-dismiss-focus-restore".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
@@ -549,6 +589,15 @@ fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -566,7 +615,7 @@ fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-dismiss-outside-press".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
@@ -574,6 +623,15 @@ fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-input"), 240)
         .wait_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-demo-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-demo-listbox".to_string()),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
         .push(wait_bounds_within_window_step(
             test_id("ui-gallery-combobox-demo-listbox"),
             240,
@@ -594,7 +652,47 @@ fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
             "ui-gallery-combobox-roving-skips-disabled".to_string(),
         ))
         .build();
-    with_required_caps(script, &["diag.script_v2"])
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
+}
+
+fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
+    let rtl_trigger = test_id("ui-gallery-combobox-rtl-trigger");
+    let rtl_listbox = test_id("ui-gallery-combobox-rtl-listbox");
+
+    let script = ui_gallery_nav_to_combobox_page()
+        .push(UiActionStepV2::SetWindowInnerSize {
+            width_px: 420.0,
+            height_px: 240.0,
+        })
+        .push(UiActionStepV2::ScrollIntoView {
+            container: test_id("ui-gallery-page-combobox"),
+            target: rtl_trigger.clone(),
+            delta_x: 0.0,
+            delta_y: -720.0,
+            require_fully_within_container: false,
+            require_fully_within_window: true,
+            padding_px: 2.0,
+            padding_insets_px: None,
+            timeout_frames: 240,
+        })
+        .click_stable(rtl_trigger.clone())
+        .wait_exists(test_id("ui-gallery-combobox-rtl-input"), 240)
+        .wait_exists(rtl_listbox.clone(), 240)
+        .wait_overlay_placement_trace(
+            UiOverlayPlacementTraceQueryV1 {
+                kind: Some(UiOverlayPlacementTraceKindV1::AnchoredPanel),
+                anchor_test_id: Some("ui-gallery-combobox-rtl-trigger".to_string()),
+                content_test_id: Some("ui-gallery-combobox-rtl-listbox".to_string()),
+                flipped: Some(true),
+                ..UiOverlayPlacementTraceQueryV1::default()
+            },
+            240,
+        )
+        .push(wait_bounds_within_window_step(rtl_listbox, 240))
+        .capture_bundle(Some("ui-gallery-combobox-flip-tight-window".to_string()))
+        .build();
+
+    with_required_caps(script, &["diag.script_v2", "diag.overlay_placement_trace"])
 }
 
 fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {

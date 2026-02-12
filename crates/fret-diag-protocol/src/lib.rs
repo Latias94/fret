@@ -1112,7 +1112,7 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub pending_sequence_len: Option<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlayPlacementTraceKindV1 {
     AnchoredPanel,
@@ -1142,7 +1142,7 @@ pub enum UiLayoutDirectionV1 {
     Rtl,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlaySideV1 {
     Top,
@@ -1151,7 +1151,7 @@ pub enum UiOverlaySideV1 {
     Right,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlayAlignV1 {
     Start,
@@ -1159,7 +1159,7 @@ pub enum UiOverlayAlignV1 {
     End,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiOverlayStickyModeV1 {
     Partial,
@@ -1294,6 +1294,10 @@ pub struct UiOverlayPlacementTraceQueryV1 {
     pub preferred_side: Option<UiOverlaySideV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chosen_side: Option<UiOverlaySideV1>,
+    /// For `kind=anchored_panel`, whether the solver flipped away from `preferred_side`.
+    /// Equivalent to `chosen_side != preferred_side` when both are available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flipped: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<UiOverlayAlignV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

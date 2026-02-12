@@ -656,6 +656,7 @@ pub(super) fn preview_combobox(
                 .width(Px(260.0))
                 .placeholder("???? ???? ?????")
                 .query_model(rtl_query.clone())
+                .test_id_prefix("ui-gallery-combobox-rtl")
                 .items([
                     shadcn::ComboboxItem::new("next", "Next.js"),
                     shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),

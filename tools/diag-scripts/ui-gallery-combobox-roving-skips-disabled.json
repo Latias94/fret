@@ -1,231 +1,241 @@
 {
-  "schema_version": 2,
   "meta": {
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.overlay_placement_trace"
     ]
   },
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-search"
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "press_key",
       "key": "escape",
       "modifiers": {
-        "shift": false,
-        "ctrl": false,
         "alt": false,
-        "meta": false
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "repeat": false
+      "repeat": false,
+      "type": "press_key"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "click",
+      "button": "left",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-search"
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
       },
-      "button": "left"
+      "type": "click"
     },
     {
-      "type": "press_key",
       "key": "a",
       "modifiers": {
-        "shift": false,
-        "ctrl": true,
         "alt": false,
-        "meta": false
+        "ctrl": true,
+        "meta": false,
+        "shift": false
       },
-      "repeat": false
+      "repeat": false,
+      "type": "press_key"
     },
     {
-      "type": "press_key",
       "key": "backspace",
       "modifiers": {
-        "shift": false,
-        "ctrl": false,
         "alt": false,
-        "meta": false
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "repeat": false
+      "repeat": false,
+      "type": "press_key"
     },
     {
-      "type": "type_text",
-      "text": "combobox"
+      "text": "combobox",
+      "type": "type_text"
     },
     {
-      "type": "wait_frames",
-      "n": 2
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-combobox"
+          "id": "ui-gallery-nav-combobox",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "click",
+      "button": "left",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-combobox"
+        "id": "ui-gallery-nav-combobox",
+        "kind": "test_id"
       },
-      "button": "left"
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-page-combobox"
+          "id": "ui-gallery-page-combobox",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-trigger"
+          "id": "ui-gallery-combobox-demo-trigger",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 600
+      "timeout_frames": 600,
+      "type": "wait_until"
     },
     {
-      "type": "click",
+      "button": "left",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-combobox-demo-trigger"
+        "id": "ui-gallery-combobox-demo-trigger",
+        "kind": "test_id"
       },
-      "button": "left"
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-input"
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-listbox"
+          "id": "ui-gallery-combobox-demo-listbox",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
+      "query": {
+        "anchor_test_id": "ui-gallery-combobox-demo-trigger",
+        "content_test_id": "ui-gallery-combobox-demo-listbox",
+        "kind": "anchored_panel"
+      },
+      "timeout_frames": 240,
+      "type": "wait_overlay_placement_trace"
+    },
+    {
       "predicate": {
+        "eps_px": 0.5,
         "kind": "bounds_within_window",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-listbox"
-        },
         "padding_px": 2.0,
-        "eps_px": 0.5
+        "target": {
+          "id": "ui-gallery-combobox-demo-listbox",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_bounds_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-combobox-demo-listbox"
-      },
-      "stable_frames": 2,
       "max_move_px": 1.0,
-      "timeout_frames": 180
+      "stable_frames": 2,
+      "target": {
+        "id": "ui-gallery-combobox-demo-listbox",
+        "kind": "test_id"
+      },
+      "timeout_frames": 180,
+      "type": "wait_bounds_stable"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-item-disabled"
+          "id": "ui-gallery-combobox-demo-item-disabled",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "press_key",
       "key": "end",
       "modifiers": {
-        "shift": false,
-        "ctrl": false,
         "alt": false,
-        "meta": false
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "repeat": false
+      "repeat": false,
+      "type": "press_key"
     },
     {
-      "type": "wait_until",
       "predicate": {
-        "kind": "active_item_is",
         "container": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-input"
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
         },
         "item": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-item-orange"
-        }
+          "id": "ui-gallery-combobox-demo-item-orange",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "press_key",
       "key": "escape",
       "modifiers": {
-        "shift": false,
-        "ctrl": false,
         "alt": false,
-        "meta": false
+        "ctrl": false,
+        "meta": false,
+        "shift": false
       },
-      "repeat": false
+      "repeat": false,
+      "type": "press_key"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-combobox-demo-input"
+          "id": "ui-gallery-combobox-demo-input",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "capture_bundle",
-      "label": "ui-gallery-combobox-roving-skips-disabled"
+      "label": "ui-gallery-combobox-roving-skips-disabled",
+      "type": "capture_bundle"
     }
   ]
 }

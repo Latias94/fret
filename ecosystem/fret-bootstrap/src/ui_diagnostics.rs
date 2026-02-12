@@ -11324,6 +11324,12 @@ fn overlay_placement_trace_entry_matches_query(
             {
                 return false;
             }
+            if let Some(flipped) = query.flipped {
+                let actual = *chosen_side != *preferred_side;
+                if actual != flipped {
+                    return false;
+                }
+            }
             if let Some(q) = query.align
                 && *align != q
             {
