@@ -10,7 +10,9 @@ android {
         applicationId "dev.fret.ui_gallery"
         minSdk 26
         targetSdk 34
-        versionCode 1
+        // Keep this high to avoid INSTALL_FAILED_VERSION_DOWNGRADE when iterating on real devices.
+        // Note: must fit in signed 32-bit integer.
+        versionCode 2026021201
         versionName "0.1.0"
     }
 
