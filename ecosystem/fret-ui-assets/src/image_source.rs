@@ -196,8 +196,8 @@ enum ImageSourceEntryState {
 
 #[derive(Debug)]
 struct ImageSourceEntry {
-    source: ImageSource,
     state: ImageSourceEntryState,
+    last_used_frame: u64,
 }
 
 #[derive(Debug)]
@@ -229,6 +229,7 @@ struct ImageSourceSignalHandle {
 
 pub struct ImageSourceLoader {
     runtime: Arc<ImageSourceRuntime>,
+    last_entries_gc_frame: Option<u64>,
     #[cfg(feature = "ui")]
     signal_handles: HashMap<ImageSourceRequestKey, ImageSourceSignalHandle>,
     #[cfg(feature = "ui")]
@@ -239,11 +240,47 @@ impl ImageSourceLoader {
     fn new(dispatcher: DispatcherHandle) -> Self {
         Self {
             runtime: Arc::new(ImageSourceRuntime::new(dispatcher)),
+            last_entries_gc_frame: None,
             #[cfg(feature = "ui")]
             signal_handles: HashMap::new(),
             #[cfg(feature = "ui")]
             last_signal_gc_frame: None,
         }
+    }
+
+    fn gc_entries_if_needed(&mut self, frame: u64) {
+        const GC_PERIOD_FRAMES: u64 = 300;
+        const TTL_FRAMES: u64 = 1800;
+
+        let should_gc = match self.last_entries_gc_frame {
+            None => true,
+            Some(last) => frame.saturating_sub(last) >= GC_PERIOD_FRAMES,
+        };
+        if !should_gc {
+            return;
+        }
+
+        self.last_entries_gc_frame = Some(frame);
+
+        let mut entries = self
+            .runtime
+            .entries
+            .lock()
+            .expect("poisoned ImageSourceRuntime mutex");
+        entries.retain(|_key, entry| {
+            // Never drop in-flight entries: if we do, we can lose the async completion and stall
+            // without a new signal to re-render under ViewCache.
+            match &entry.state {
+                ImageSourceEntryState::Loading { .. } | ImageSourceEntryState::Decoded { .. } => {
+                    true
+                }
+                ImageSourceEntryState::Idle
+                | ImageSourceEntryState::Ready { .. }
+                | ImageSourceEntryState::Failed { .. } => {
+                    frame.saturating_sub(entry.last_used_frame) < TTL_FRAMES
+                }
+            }
+        });
     }
 
     fn ensure_registered<H: GlobalsHost>(&mut self, host: &mut H) {
@@ -269,12 +306,10 @@ impl ImageSourceLoader {
             .lock()
             .expect("poisoned ImageSourceRuntime mutex");
         let entry = entries.entry(request).or_insert_with(|| ImageSourceEntry {
-            source: source.clone(),
             state: ImageSourceEntryState::Idle,
+            last_used_frame: frame,
         });
-
-        // Keep the latest source clone around (cheap; `Arc`-backed).
-        entry.source = source.clone();
+        entry.last_used_frame = frame;
 
         let should_start = match &entry.state {
             ImageSourceEntryState::Idle => true,
@@ -556,6 +591,7 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
 
     let Some(state) = with_image_source_loader(host, |loader, host| {
         loader.ensure_registered(host);
+        loader.gc_entries_if_needed(frame);
 
         // Take a snapshot of the current entry state.
         let snapshot = {
@@ -585,6 +621,18 @@ pub fn use_image_source_state_with_options<H: GlobalsHost + TimeHost + EffectSin
                 }
             })
         };
+
+        // Touch last-used for GC after snapshot to avoid holding a mutable borrow across clones.
+        if snapshot.is_some() {
+            let mut entries = loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            if let Some(entry) = entries.get_mut(&request) {
+                entry.last_used_frame = frame;
+            }
+        }
 
         match snapshot {
             None | Some(ImageSourceEntrySnapshot::Idle) => {
@@ -844,14 +892,48 @@ fn record_intrinsic_metadata<H: GlobalsHost>(
 mod tests {
     use std::any::{Any, TypeId};
     use std::collections::{HashMap, HashSet};
+    use std::sync::Mutex;
+    use std::time::Duration;
 
     use fret_core::{
         AppWindowId, ClipboardToken, Event, FrameId, ImageColorSpace, ImageId, ImageUploadToken,
         TimerToken,
     };
-    use fret_runtime::{Effect, GlobalsHost, TickId, TimeHost};
+    use fret_runtime::{
+        DispatchPriority, Dispatcher, DispatcherHandle, Effect, ExecCapabilities, GlobalsHost,
+        Runnable, TickId, TimeHost,
+    };
 
     use super::*;
+
+    #[derive(Default)]
+    struct QueuedDispatcher {
+        background: Mutex<Vec<Runnable>>,
+    }
+
+    impl QueuedDispatcher {
+        fn drop_background_tasks(&self) {
+            let mut tasks = self.background.lock().expect("poisoned background queue");
+            tasks.clear();
+        }
+    }
+
+    impl Dispatcher for QueuedDispatcher {
+        fn dispatch_on_main_thread(&self, _task: Runnable) {}
+
+        fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
+            let mut tasks = self.background.lock().expect("poisoned background queue");
+            tasks.push(task);
+        }
+
+        fn dispatch_after(&self, _delay: Duration, _task: Runnable) {}
+
+        fn wake(&self, _window: Option<AppWindowId>) {}
+
+        fn exec_capabilities(&self) -> ExecCapabilities {
+            ExecCapabilities::default()
+        }
+    }
 
     #[derive(Default)]
     struct TestHost {
@@ -899,6 +981,10 @@ mod tests {
             self.frame_id
         }
 
+        fn next_share_sheet_token(&mut self) -> fret_core::ShareSheetToken {
+            fret_core::ShareSheetToken(0)
+        }
+
         fn next_timer_token(&mut self) -> TimerToken {
             let token = TimerToken(self.next_timer_token);
             self.next_timer_token += 1;
@@ -925,6 +1011,12 @@ mod tests {
 
         fn push_effect(&mut self, effect: Effect) {
             self.effects.push(effect);
+        }
+    }
+
+    impl TestHost {
+        fn set_frame(&mut self, frame: u64) {
+            self.frame_id = FrameId(frame);
         }
     }
 
@@ -969,5 +1061,115 @@ mod tests {
         let state2 = use_image_source_state(&mut host, window, &src);
         assert_eq!(state2.status, ImageLoadingStatus::Loaded);
         assert_eq!(state2.image, Some(image));
+    }
+
+    #[test]
+    fn image_source_entries_gc_removes_stale_ready_entries() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+
+        let window = AppWindowId::default();
+
+        let src1: ImageSource = {
+            let bytes: Arc<[u8]> = vec![0u8; 16].into();
+            ImageSource::from_bytes(bytes)
+        };
+        let _ = use_image_source_state(&mut host, window, &src1);
+
+        let request1 = ImageSourceRequestKey {
+            source: src1.id,
+            color_space: ImageColorSpace::Srgb,
+        };
+
+        // Make entry1 eligible for GC by forcing it into a stable state.
+        with_image_source_loader(&mut host, |loader, _host| {
+            let mut entries = loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex");
+            let entry = entries.get_mut(&request1).expect("expected entry for src1");
+            entry.state = ImageSourceEntryState::Ready {
+                asset_key: ImageAssetKey::from_rgba8(1, 1, ImageColorSpace::Srgb, &[0, 0, 0, 0]),
+                intrinsic_size_px: (1, 1),
+            };
+        })
+        .expect("dispatcher installed");
+
+        let len1 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .len()
+        })
+        .unwrap();
+        assert_eq!(len1, 1);
+
+        // Advance far enough that the entry becomes stale, then create a new request to trigger GC.
+        host.set_frame(2200);
+        let src2: ImageSource = {
+            let bytes: Arc<[u8]> = vec![1u8; 16].into();
+            ImageSource::from_bytes(bytes)
+        };
+        let _ = use_image_source_state(&mut host, window, &src2);
+
+        let len2 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .len()
+        })
+        .unwrap();
+        assert_eq!(len2, 1);
+
+        let has_src1 = with_image_source_loader(&mut host, |loader, _host| {
+            loader
+                .runtime
+                .entries
+                .lock()
+                .expect("poisoned ImageSourceRuntime mutex")
+                .contains_key(&request1)
+        })
+        .unwrap();
+        assert!(!has_src1);
+    }
+
+    #[test]
+    fn image_source_does_not_retain_source_bytes_after_background_tasks_are_dropped() {
+        let dispatcher = Arc::new(QueuedDispatcher::default());
+        let mut host = TestHost {
+            frame_id: FrameId(1),
+            ..Default::default()
+        };
+        host.set_global::<DispatcherHandle>(dispatcher.clone());
+
+        let window = AppWindowId::default();
+
+        let bytes: Arc<[u8]> = vec![0u8; 1024].into();
+        let weak = Arc::downgrade(&bytes);
+        let src = ImageSource::from_bytes(bytes.clone());
+
+        let _ = use_image_source_state(&mut host, window, &src);
+        drop(src);
+        drop(bytes);
+
+        assert!(
+            weak.upgrade().is_some(),
+            "expected queued task to retain bytes"
+        );
+
+        dispatcher.drop_background_tasks();
+        assert!(
+            weak.upgrade().is_none(),
+            "expected bytes to be released after dropping queued background tasks"
+        );
     }
 }
