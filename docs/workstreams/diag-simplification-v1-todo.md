@@ -11,7 +11,7 @@ small, fearless refactors.
   - [x] `capabilities` naming (namespaced strings) and ownership
 - [x] Add/confirm a small nextest gate set for diag tooling:
   - [x] `cargo nextest run -p fret-diag-protocol`
-  - [x] `cargo nextest run -p fret-diag-ws --no-tests` (currently no tests; compile gate only)
+  - [x] `cargo nextest run -p fret-diag-ws --no-tests=pass` (currently no tests; compile gate only)
   - [x] `cargo nextest run -p fret-diag` (tooling unit tests)
 - [x] Add a minimal "WS export materialization" smoke test (tooling only; no browser required):
   - feed a `bundle.dumped` message containing embedded bundle JSON
@@ -28,9 +28,9 @@ Evidence pointers:
   - [ ] FS implementation (existing behavior)
   - [ ] WS implementation (existing behavior)
 - [ ] Make `diag run` and `diag suite` transport-agnostic:
-  - [ ] unify "wait ready" behavior
-  - [ ] unify "send script" behavior
-  - [ ] unify "read script result" behavior
+  - [x] unify "wait ready" behavior
+  - [x] unify "send script" behavior
+  - [x] unify "read script result" behavior
 - [ ] Add a transport-agnostic "streaming results" hook:
   - [ ] allow tooling to consume `script.result` updates incrementally (useful for long suites)
 

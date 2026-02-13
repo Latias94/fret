@@ -1860,6 +1860,24 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let fs_transport_cfg = crate::transport::FsDiagTransportConfig {
+        out_dir: resolved_out_dir.clone(),
+        trigger_path: resolved_trigger_path.clone(),
+        script_path: resolved_script_path.clone(),
+        script_trigger_path: resolved_script_trigger_path.clone(),
+        script_result_path: resolved_script_result_path.clone(),
+        script_result_trigger_path: resolved_script_result_trigger_path.clone(),
+        pick_trigger_path: resolved_pick_trigger_path.clone(),
+        pick_result_path: resolved_pick_result_path.clone(),
+        pick_result_trigger_path: resolved_pick_result_trigger_path.clone(),
+        inspect_path: resolved_inspect_path.clone(),
+        inspect_trigger_path: resolved_inspect_trigger_path.clone(),
+        screenshots_request_path: resolved_out_dir.join("screenshots.request.json"),
+        screenshots_trigger_path: resolved_out_dir.join("screenshots.touch"),
+        screenshots_result_path: resolved_out_dir.join("screenshots.result.json"),
+        screenshots_result_trigger_path: resolved_out_dir.join("screenshots.result.touch"),
+    };
+
     match sub.as_str() {
         "path" => {
             if pack_after_run {
@@ -2707,24 +2725,34 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_keep_alive_reuse_min.is_some()
                     || check_retained_vlist_keep_alive_budget.is_some();
 
-                let (result, bundle_path) = run_script_over_devtools_ws(
-                    &resolved_out_dir,
+                let _ = write_script(&src, &resolved_script_path);
+
+                let connected = connect_devtools_ws_tooling(
                     ws_url.as_str(),
                     token.as_str(),
                     devtools_session_id.as_deref(),
+                    timeout_ms,
+                    poll_ms,
+                )?;
+
+                let (result, bundle_path) = run_script_over_transport(
+                    &resolved_out_dir,
+                    &connected,
                     script_json,
                     wants_post_run_checks || wants_pack,
-                    exit_after_run,
+                    Some("diag-run"),
+                    None,
                     timeout_ms,
                     poll_ms,
                     &resolved_script_result_path,
                     &resolved_out_dir.join("check.capabilities.json"),
                 )?;
 
-                let _ = write_json_value(
-                    &resolved_script_result_path,
-                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-                );
+                if exit_after_run {
+                    connected
+                        .devtools
+                        .app_exit_request(None, Some("diag.run"), None);
+                }
 
                 let stage = match result.stage {
                     fret_diag_protocol::UiScriptStageV1::Passed => "passed",
@@ -2938,40 +2966,53 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })
             };
 
-            let required_caps = script_required_capabilities(&src);
-            if !required_caps.is_empty() {
-                let available_caps = read_filesystem_capabilities(&resolved_out_dir);
-                gate_required_capabilities_with_script_result(
-                    &resolved_out_dir.join("check.capabilities.json"),
-                    &resolved_script_result_path,
-                    &required_caps,
-                    &available_caps,
-                    "filesystem",
-                )?;
-            }
-            let mut result = run_script_and_wait(
-                &src,
-                &resolved_script_path,
-                &resolved_script_trigger_path,
-                &resolved_script_result_path,
-                &resolved_script_result_trigger_path,
+            let connected = connect_filesystem_tooling(
+                &fs_transport_cfg,
+                &resolved_ready_path,
                 timeout_ms,
                 poll_ms,
-            );
-            if let Ok(summary) = &result
-                && summary.stage.as_deref() == Some("failed")
-            {
+            )?;
+            let script_json: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
+            let (script_result, _bundle_path) = run_script_over_transport(
+                &resolved_out_dir,
+                &connected,
+                script_json,
+                wants_pack,
+                Some("diag-run"),
+                None,
+                timeout_ms,
+                poll_ms,
+                &resolved_script_result_path,
+                &resolved_out_dir.join("check.capabilities.json"),
+            )?;
+
+            let stage = match script_result.stage {
+                fret_diag_protocol::UiScriptStageV1::Passed => "passed",
+                fret_diag_protocol::UiScriptStageV1::Failed => "failed",
+                fret_diag_protocol::UiScriptStageV1::Queued => "queued",
+                fret_diag_protocol::UiScriptStageV1::Running => "running",
+            };
+
+            let mut result = crate::stats::ScriptResultSummary {
+                run_id: script_result.run_id,
+                stage: Some(stage.to_string()),
+                step_index: script_result.step_index.map(|n| n as u64),
+                reason_code: script_result.reason_code.clone(),
+                reason: script_result.reason.clone(),
+                last_bundle_dir: script_result.last_bundle_dir.clone(),
+            };
+
+            if result.stage.as_deref() == Some("failed") {
                 if let Some(dir) =
-                    wait_for_failure_dump_bundle(&resolved_out_dir, summary, timeout_ms, poll_ms)
+                    wait_for_failure_dump_bundle(&resolved_out_dir, &result, timeout_ms, poll_ms)
                 {
                     if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                        if let Ok(summary) = result.as_mut() {
-                            summary.last_bundle_dir = Some(name.to_string());
-                        }
+                        result.last_bundle_dir = Some(name.to_string());
                     }
                 }
             }
-            let result = result?;
             if exit_after_run {
                 let _ = touch(&resolved_exit_path);
             }
@@ -5532,10 +5573,7 @@ See: `docs/tracy.md`.\n";
                 || devtools_token.is_some()
                 || devtools_session_id.is_some();
 
-            let mut devtools_ws: Option<DevtoolsOps> = None;
-            let mut devtools_ws_selected_session_id: Option<String> = None;
-            let mut devtools_ws_available_caps: Vec<String> = Vec::new();
-            if use_devtools_ws {
+            let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
                 if launch.is_some() || reuse_launch {
                     return Err(
                         "--launch/--reuse-launch is not supported with --devtools-ws-url"
@@ -5552,18 +5590,16 @@ See: `docs/tracy.md`.\n";
                         .to_string()
                 })?;
 
-                let connected = connect_devtools_ws_tooling(
+                Some(connect_devtools_ws_tooling(
                     ws_url.as_str(),
                     token.as_str(),
                     devtools_session_id.as_deref(),
                     timeout_ms,
                     poll_ms,
-                )?;
-
-                devtools_ws_available_caps = connected.available_caps;
-                devtools_ws_selected_session_id = Some(connected.selected_session_id);
-                devtools_ws = Some(connected.devtools);
-            }
+                )?)
+            } else {
+                None
+            };
 
             let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
             let mut child = if use_devtools_ws {
@@ -5583,6 +5619,18 @@ See: `docs/tracy.md`.\n";
             } else {
                 None
             };
+
+            let connected_fs: Option<ConnectedToolingTransport> =
+                if !use_devtools_ws && reuse_process {
+                    Some(connect_filesystem_tooling(
+                        &fs_transport_cfg,
+                        &resolved_ready_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?)
+                } else {
+                    None
+                };
 
             let suite_summary_path = resolved_out_dir.join("suite.summary.json");
             let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
@@ -5609,55 +5657,32 @@ See: `docs/tracy.md`.\n";
                         poll_ms,
                     )?;
                 }
-                let mut result = if use_devtools_ws {
-                    let devtools = devtools_ws.as_ref().ok_or_else(|| {
-                        "missing DevTools WS client (this is a tooling bug)".to_string()
-                    })?;
-                    let selected_session_id =
-                        devtools_ws_selected_session_id.as_deref().ok_or_else(|| {
-                            "missing DevTools WS session id (this is a tooling bug)".to_string()
-                        })?;
+                let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
+                    let connected_fs_iter: ConnectedToolingTransport;
+                    let connected: &ConnectedToolingTransport = if use_devtools_ws {
+                        connected_ws.as_ref().ok_or_else(|| {
+                            "missing DevTools WS transport (this is a tooling bug)".to_string()
+                        })?
+                    } else if reuse_process {
+                        connected_fs.as_ref().ok_or_else(|| {
+                            "missing filesystem transport (this is a tooling bug)".to_string()
+                        })?
+                    } else {
+                        connected_fs_iter = connect_filesystem_tooling(
+                            &fs_transport_cfg,
+                            &resolved_ready_path,
+                            timeout_ms,
+                            poll_ms,
+                        )?;
+                        &connected_fs_iter
+                    };
 
                     let script_json: serde_json::Value =
                         serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
                             .map_err(|e| e.to_string())?;
 
-                    let required_caps = script_required_capabilities_value(&script_json);
-                    if !required_caps.is_empty() {
-                        gate_required_capabilities_with_script_result(
-                            &resolved_out_dir.join("check.capabilities.json"),
-                            &resolved_script_result_path,
-                            &required_caps,
-                            &devtools_ws_available_caps,
-                            "devtools_ws",
-                        )?;
-                    }
-
-                    devtools.script_run_value(None, script_json);
-                    let mut script_result =
-                        wait_for_devtools_message(devtools, timeout_ms, poll_ms, |msg| {
-                            if msg.r#type != "script.result"
-                                || msg.session_id.as_deref() != Some(selected_session_id)
-                            {
-                                return None;
-                            }
-                            let result =
-                                serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()?;
-                            match result.stage {
-                                fret_diag_protocol::UiScriptStageV1::Passed
-                                | fret_diag_protocol::UiScriptStageV1::Failed => Some(result),
-                                _ => None,
-                            }
-                        })?;
-
-                    let _ = write_json_value(
-                        &resolved_script_result_path,
-                        &serde_json::to_value(&script_result)
-                            .unwrap_or_else(|_| serde_json::json!({})),
-                    );
-
-                    // Always dump a bounded bundle for suite runs so lint and post-run checks
-                    // can operate on a local artifact (parity with filesystem mode).
+                    // Always dump a bounded bundle for suite runs so lint and post-run checks can
+                    // operate on a local artifact (parity across transports).
                     let dump_label = {
                         let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("script");
                         let mut sanitized: String = stem
@@ -5685,34 +5710,18 @@ See: `docs/tracy.md`.\n";
                         label
                     };
 
-                    devtools.bundle_dump_with_max_snapshots(None, Some(&dump_label), 30);
-                    let dumped = wait_for_devtools_message(devtools, timeout_ms, poll_ms, |msg| {
-                        if msg.r#type != "bundle.dumped"
-                            || msg.session_id.as_deref() != Some(selected_session_id)
-                        {
-                            return None;
-                        }
-                        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
-                    })?;
-
-                    let bundle_path =
-                        materialize_devtools_bundle_dumped(&resolved_out_dir, &dumped)?;
-                    let last_bundle_dir = bundle_path
-                        .parent()
-                        .and_then(|p| p.file_name())
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string());
-
-                    // Update the local `script.result.json` so it always points at a locally
-                    // materialized artifact directory in WS mode.
-                    script_result.last_bundle_dir = last_bundle_dir.clone();
-                    script_result.last_bundle_artifact =
-                        Some(artifact_stats_from_bundle_json_path(&bundle_path));
-                    let _ = write_json_value(
+                    let (script_result, _bundle_path) = run_script_over_transport(
+                        &resolved_out_dir,
+                        connected,
+                        script_json,
+                        true,
+                        Some(dump_label.as_str()),
+                        None,
+                        timeout_ms,
+                        poll_ms,
                         &resolved_script_result_path,
-                        &serde_json::to_value(&script_result)
-                            .unwrap_or_else(|_| serde_json::json!({})),
-                    );
+                        &resolved_out_dir.join("check.capabilities.json"),
+                    )?;
 
                     let stage = match script_result.stage {
                         fret_diag_protocol::UiScriptStageV1::Passed => "passed",
@@ -5727,38 +5736,10 @@ See: `docs/tracy.md`.\n";
                         step_index: script_result.step_index.map(|n| n as u64),
                         reason_code: script_result.reason_code.clone(),
                         reason: script_result.reason.clone(),
-                        last_bundle_dir,
+                        last_bundle_dir: script_result.last_bundle_dir.clone(),
                     })
-                } else {
-                    run_script_and_wait(
-                        &src,
-                        &resolved_script_path,
-                        &resolved_script_trigger_path,
-                        &resolved_script_result_path,
-                        &resolved_script_result_trigger_path,
-                        timeout_ms,
-                        poll_ms,
-                    )
-                };
-
-                if !use_devtools_ws {
-                    if let Ok(summary) = &result
-                        && summary.stage.as_deref() == Some("failed")
-                    {
-                        if let Some(dir) = wait_for_failure_dump_bundle(
-                            &resolved_out_dir,
-                            summary,
-                            timeout_ms,
-                            poll_ms,
-                        ) {
-                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                                if let Ok(summary) = result.as_mut() {
-                                    summary.last_bundle_dir = Some(name.to_string());
-                                }
-                            }
-                        }
-                    }
-                }
+                })(
+                );
 
                 let result = match result {
                     Ok(v) => v,
@@ -12126,10 +12107,11 @@ fn devtools_select_session_id(
     ))
 }
 
-struct ConnectedDevtoolsWs {
+struct ConnectedToolingTransport {
     devtools: DevtoolsOps,
     selected_session_id: String,
     available_caps: Vec<String>,
+    source: &'static str,
 }
 
 fn connect_devtools_ws_tooling(
@@ -12138,7 +12120,7 @@ fn connect_devtools_ws_tooling(
     want_session_id: Option<&str>,
     timeout_ms: u64,
     poll_ms: u64,
-) -> Result<ConnectedDevtoolsWs, String> {
+) -> Result<ConnectedToolingTransport, String> {
     use crate::transport::{
         ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
     };
@@ -12185,29 +12167,93 @@ fn connect_devtools_ws_tooling(
     available_caps.sort();
     available_caps.dedup();
 
-    Ok(ConnectedDevtoolsWs {
+    Ok(ConnectedToolingTransport {
         devtools,
         selected_session_id,
         available_caps,
+        source: "devtools_ws",
     })
 }
 
-fn run_script_over_devtools_ws(
+fn connect_filesystem_tooling(
+    cfg: &crate::transport::FsDiagTransportConfig,
+    ready_path: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<ConnectedToolingTransport, String> {
+    use crate::transport::ToolingDiagClient;
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    let mut ready = false;
+    while Instant::now() < deadline {
+        if std::fs::metadata(ready_path).is_ok() {
+            ready = true;
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    if !ready {
+        return Err(format!(
+            "timeout waiting for readiness signal (ready.touch): {}",
+            ready_path.display()
+        ));
+    }
+
+    let client = ToolingDiagClient::connect_fs(cfg.clone())?;
+    let devtools = DevtoolsOps::new(client);
+
+    let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "session.list" {
+            return None;
+        }
+        serde_json::from_value::<DevtoolsSessionListV1>(msg.payload).ok()
+    })?;
+
+    let selected_session_id = devtools_select_session_id(&sessions, None)?;
+    devtools.set_default_session_id(Some(selected_session_id.clone()));
+
+    let mut available_caps: Vec<String> = sessions
+        .sessions
+        .iter()
+        .find(|s| s.session_id == selected_session_id)
+        .map(|s| s.capabilities.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|c| normalize_capability_string(&c))
+        .collect();
+    available_caps.sort();
+    available_caps.dedup();
+
+    Ok(ConnectedToolingTransport {
+        devtools,
+        selected_session_id,
+        available_caps,
+        source: "filesystem",
+    })
+}
+
+fn run_script_over_transport(
     out_dir: &Path,
-    ws_url: &str,
-    token: &str,
-    session_id: Option<&str>,
+    connected: &ConnectedToolingTransport,
     script_json: serde_json::Value,
     dump_bundle: bool,
-    exit_after_run: bool,
+    bundle_label: Option<&str>,
+    dump_max_snapshots: Option<u32>,
     timeout_ms: u64,
     poll_ms: u64,
     script_result_path: &Path,
     capabilities_check_path: &Path,
 ) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
-    let connected = connect_devtools_ws_tooling(ws_url, token, session_id, timeout_ms, poll_ms)?;
-    let devtools = connected.devtools;
-    let selected_session_id = connected.selected_session_id;
+    fn read_prev_run_id(path: &Path) -> u64 {
+        read_json_value(path)
+            .and_then(|v| v.get("run_id").and_then(|v| v.as_u64()))
+            .unwrap_or(0)
+    }
+
+    fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
+        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
+    }
 
     let required_caps = script_required_capabilities_value(&script_json);
     if !required_caps.is_empty() {
@@ -12216,29 +12262,86 @@ fn run_script_over_devtools_ws(
             script_result_path,
             &required_caps,
             &connected.available_caps,
-            "devtools_ws",
+            connected.source,
         )?;
     }
 
-    devtools.script_run_value(None, script_json);
-    let mut result = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
-        if msg.r#type != "script.result" || msg.session_id.as_deref() != Some(&selected_session_id)
+    let prev_run_id = read_prev_run_id(script_result_path);
+    let mut target_run_id: Option<u64> = None;
+
+    let mut next_retouch_at =
+        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
+    let mut retouch_interval_ms: u64 = 2_000;
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+
+    let script_json_value = script_json;
+    connected
+        .devtools
+        .script_run_value(None, script_json_value.clone());
+
+    let mut result: Option<UiScriptResultV1> = None;
+
+    'wait: loop {
+        while let Some(msg) = connected.devtools.try_recv() {
+            if msg.r#type != "script.result"
+                || msg.session_id.as_deref() != Some(&connected.selected_session_id)
+            {
+                continue;
+            }
+            let Ok(parsed) = serde_json::from_value::<UiScriptResultV1>(msg.payload) else {
+                continue;
+            };
+
+            if target_run_id.is_none() && parsed.run_id > prev_run_id {
+                target_run_id = Some(parsed.run_id);
+            }
+            if Some(parsed.run_id) != target_run_id {
+                continue;
+            }
+
+            if matches!(
+                parsed.stage,
+                UiScriptStageV1::Passed | UiScriptStageV1::Failed
+            ) {
+                result = Some(parsed);
+                break 'wait;
+            }
+        }
+
+        if Instant::now() >= deadline {
+            return Err("timeout waiting for script result".to_string());
+        }
+
+        if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
+            && target_run_id.is_none()
+            && Instant::now() >= next_retouch_at
         {
-            return None;
+            // Give the app a chance to observe the initial trigger file stamp baseline before
+            // consuming a stamp as "the trigger". Retrying by re-sending the same script payload
+            // mitigates the baseline race without requiring in-app changes.
+            connected
+                .devtools
+                .script_run_value(None, script_json_value.clone());
+            retouch_interval_ms = (retouch_interval_ms.saturating_mul(2)).min(10_000);
+            next_retouch_at = Instant::now() + Duration::from_millis(retouch_interval_ms);
         }
-        let result = serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()?;
-        match result.stage {
-            fret_diag_protocol::UiScriptStageV1::Passed
-            | fret_diag_protocol::UiScriptStageV1::Failed => Some(result),
-            _ => None,
-        }
-    })?;
+
+        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+    }
+
+    let mut result = result.ok_or_else(|| "missing script result".to_string())?;
 
     let bundle_path = if dump_bundle {
-        devtools.bundle_dump(None, Some("diag-run"));
-        let dumped = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+        if let Some(max) = dump_max_snapshots {
+            connected
+                .devtools
+                .bundle_dump_with_max_snapshots(None, bundle_label, max);
+        } else {
+            connected.devtools.bundle_dump(None, bundle_label);
+        }
+        let dumped = wait_for_devtools_message(&connected.devtools, timeout_ms, poll_ms, |msg| {
             if msg.r#type != "bundle.dumped"
-                || msg.session_id.as_deref() != Some(&selected_session_id)
+                || msg.session_id.as_deref() != Some(&connected.selected_session_id)
             {
                 return None;
             }
@@ -12246,8 +12349,6 @@ fn run_script_over_devtools_ws(
         })?;
 
         let bundle_path = materialize_devtools_bundle_dumped(out_dir, &dumped)?;
-        // Ensure `script.result.json` points at a locally materialized artifact directory in WS
-        // mode, even if the runtime also dumped other bundles during the script run.
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));
         result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(&bundle_path));
         Some(bundle_path)
@@ -12255,9 +12356,10 @@ fn run_script_over_devtools_ws(
         None
     };
 
-    if exit_after_run {
-        devtools.app_exit_request(None, Some("diag.run"), None);
-    }
+    let _ = write_json_value(
+        script_result_path,
+        &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+    );
 
     Ok((result, bundle_path))
 }
