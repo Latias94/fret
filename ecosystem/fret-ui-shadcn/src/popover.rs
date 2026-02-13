@@ -689,15 +689,16 @@ impl Popover {
                 radix_popover::popover_root_name(trigger_id)
             };
 
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                cx,
-                is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
-                overlay_motion::shadcn_ease,
-            );
+            let motion =
+                radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
+                    cx,
+                    is_open,
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    overlay_motion::shadcn_motion_duration_100(cx),
+                    0.95,
+                    1.0,
+                    overlay_motion::shadcn_motion_ease_bezier(cx),
+                );
             let (open_change, open_change_complete) =
                 cx.with_state(PopoverOpenChangeCallbackState::default, |state| {
                     popover_open_change_events(state, is_open, motion.present, motion.animating)
