@@ -14,12 +14,13 @@ pub use error::RunnerError;
 pub use stacksafe_config::configure_stacksafe_from_env;
 
 pub use runner::{
-    EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget, RenderTargetUpdate,
-    ViewportOverlay3dHooks, ViewportOverlay3dHooksService, ViewportOverlay3dImmediateService,
-    ViewportRenderTarget, ViewportRenderTargetWithDepth, WgpuInit, WindowCreateSpec,
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
-    WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
-    install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
+    EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, ImportedViewportRenderTarget,
+    NativeExternalImportError, NativeExternalImportedFrame, NativeExternalTextureFrame,
+    RenderTargetUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
+    ViewportOverlay3dImmediateService, ViewportRenderTarget, ViewportRenderTargetWithDepth,
+    WgpuInit, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig,
+    WinitWindowContext, install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
     run_app_with_event_loop, upload_viewport_overlay_3d_immediate,
 };
 
