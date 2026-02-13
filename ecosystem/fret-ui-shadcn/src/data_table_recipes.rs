@@ -1059,7 +1059,7 @@ impl<TData> DataTableToolbar<TData> {
                         },
                         move |cx| {
                             let theme = Theme::global(&*cx.app).clone();
-                            let transparent = theme.color_token("transparent");
+                            let transparent = fret_core::Color::TRANSPARENT;
 
                             let items: Vec<CommandEntry> = faceted_items_for_content
                                 .iter()
