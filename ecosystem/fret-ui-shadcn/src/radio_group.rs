@@ -12,6 +12,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
@@ -336,6 +337,8 @@ impl RadioGroup {
                 default_value.clone()
             })
             .model();
+            let is_rtl = direction_prim::use_direction_in_scope(cx, None)
+                == direction_prim::LayoutDirection::Rtl;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
@@ -372,6 +375,10 @@ impl RadioGroup {
                 RovingFlexProps {
                     flex: FlexProps {
                         layout: list_layout,
+                        direction: match orientation {
+                            RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                            RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                        },
                         gap: match orientation {
                             RadioGroupOrientation::Vertical => gap_y,
                             RadioGroupOrientation::Horizontal => gap_x,
@@ -568,13 +575,23 @@ impl RadioGroup {
                                             )]
                                             });
 
+                                        let justify = if is_rtl
+                                            && matches!(
+                                                item_variant,
+                                                RadioGroupItemVariant::Default
+                                            ) {
+                                            MainAlign::End
+                                        } else {
+                                            MainAlign::Start
+                                        };
+
                                         let item_content = cx.flex(
                                             FlexProps {
                                                 layout: row_layout,
                                                 direction: fret_core::Axis::Horizontal,
                                                 gap: gap_x,
                                                 padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
+                                                justify,
                                                 align: CrossAlign::Center,
                                                 wrap: false,
                                             },
@@ -583,13 +600,17 @@ impl RadioGroup {
 
                                                 match item_variant {
                                                     RadioGroupItemVariant::Default => {
-                                                        out.push(icon_element.clone());
                                                         if let Some(children) =
                                                             item_children.clone()
                                                         {
                                                             out.extend(children);
                                                         } else {
                                                             out.push(cx.text_props(label_props));
+                                                        }
+                                                        if is_rtl {
+                                                            out.push(icon_element.clone());
+                                                        } else {
+                                                            out.insert(0, icon_element.clone());
                                                         }
                                                     }
                                                     RadioGroupItemVariant::ChoiceCard => {
