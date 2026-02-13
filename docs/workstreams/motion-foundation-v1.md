@@ -224,6 +224,8 @@ Already landed (evidence anchors):
   - `ecosystem/fret-ui-kit/src/primitives/presence.rs`
 - Shadcn overlays that use Presence now read durations/easing from theme tokens (refresh-rate stable):
   - `ecosystem/fret-ui-shadcn/src/{context_menu,dropdown_menu,hover_card,menubar,popover,select,tooltip}.rs`
+- Hover intent (tooltip/hover-card delays) scales 60Hz ticks to frame ticks for refresh-rate stability:
+  - `ecosystem/fret-ui-kit/src/declarative/hover_intent.rs`
 
 Diag gates:
 
