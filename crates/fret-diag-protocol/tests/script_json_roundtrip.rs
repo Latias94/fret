@@ -242,3 +242,58 @@ fn script_v2_roundtrip_bounds_max_size_predicate() {
 }"#,
     );
 }
+
+#[test]
+fn script_v2_roundtrip_text_font_stack_key_stable_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_font_stack_key_stable",
+        "stable_frames": 60
+      },
+      "timeout_frames": 120
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_font_catalog_populated_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "font_catalog_populated"
+      },
+      "timeout_frames": 1800
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_system_font_rescan_idle_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "system_font_rescan_idle"
+      },
+      "timeout_frames": 1800
+    }
+  ]
+}"#,
+    );
+}

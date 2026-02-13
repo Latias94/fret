@@ -242,6 +242,7 @@ impl Default for UiDiagnosticsConfig {
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
     per_window: HashMap<AppWindowId, WindowRing>,
+    text_font_stack_key_stability: HashMap<AppWindowId, TextFontStackKeyStability>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
@@ -280,6 +281,12 @@ pub struct UiDiagnosticsService {
     ws_bridge: UiDiagnosticsWsBridge,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct TextFontStackKeyStability {
+    last_key: Option<u64>,
+    stable_frames: u32,
+}
+
 #[derive(Debug, Clone, Copy)]
 enum InspectNavCommand {
     Up,
@@ -296,6 +303,30 @@ struct InspectToast {
 impl UiDiagnosticsService {
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
+    }
+
+    fn update_text_font_stack_key_stability(&mut self, app: &App, window: AppWindowId) -> u32 {
+        let key = app.global::<fret_runtime::TextFontStackKey>().map(|k| k.0);
+        let state = self
+            .text_font_stack_key_stability
+            .entry(window)
+            .or_default();
+
+        match (key, state.last_key) {
+            (Some(key), Some(prev)) if key == prev => {
+                state.stable_frames = state.stable_frames.saturating_add(1);
+            }
+            (Some(key), _) => {
+                state.last_key = Some(key);
+                state.stable_frames = 0;
+            }
+            (None, _) => {
+                state.last_key = None;
+                state.stable_frames = 0;
+            }
+        }
+
+        state.stable_frames
     }
 
     /// Returns the index of the next script step to execute for `window`, if a script is active.
@@ -719,6 +750,16 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return UiScriptFrameOutput::default();
         }
+
+        let text_font_stack_key_stable_frames =
+            self.update_text_font_stack_key_stability(app, window);
+        let font_catalog_populated = app
+            .global::<fret_runtime::FontCatalog>()
+            .is_some_and(|catalog| !catalog.families.is_empty());
+        let system_font_rescan_idle = match app.global::<fret_runtime::SystemFontRescanState>() {
+            Some(state) => !state.in_flight && !state.pending,
+            None => true,
+        };
 
         self.ensure_ready_file();
         self.poll_script_trigger();
@@ -1217,6 +1258,9 @@ impl UiDiagnosticsService {
                         element_runtime,
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &predicate,
                     ) {
                         active.wait_until = None;
@@ -1266,6 +1310,9 @@ impl UiDiagnosticsService {
                         element_runtime,
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &predicate,
                     ) {
                         active.next_step = active.next_step.saturating_add(1);
@@ -2375,6 +2422,9 @@ impl UiDiagnosticsService {
                         element_runtime,
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &predicate,
                     ) {
                         active.v2_step_state = None;
@@ -2454,6 +2504,9 @@ impl UiDiagnosticsService {
                         element_runtime,
                         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
                         &target_predicate,
                     );
                     let container_ok = if require_fully_within_container {
@@ -12040,6 +12093,9 @@ fn eval_predicate(
     element_runtime: Option<&ElementRuntime>,
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
+    text_font_stack_key_stable_frames: u32,
+    font_catalog_populated: bool,
+    system_font_rescan_idle: bool,
     pred: &UiPredicateV1,
 ) -> bool {
     match pred {
@@ -12148,6 +12204,11 @@ fn eval_predicate(
                 .iter()
                 .any(|e| e.missing_glyphs > 0 && !e.families.is_empty())
         }
+        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+            text_font_stack_key_stable_frames >= *stable_frames
+        }
+        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -13545,6 +13606,9 @@ mod tests {
             None,
             None,
             None,
+            0,
+            false,
+            true,
             &pred
         ));
 
@@ -13564,6 +13628,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected padding to shrink the allowed window rect"
@@ -13613,6 +13680,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected node to satisfy the min-size gate"
@@ -13680,6 +13750,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected roving focus to satisfy active_item_is"
@@ -13719,6 +13792,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected active_descendant to satisfy active_item_is"
@@ -13768,6 +13844,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "collapsed node should fail the min-size gate"
@@ -13834,6 +13913,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to fail"
@@ -13856,6 +13938,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to tolerate a small overlap"
@@ -13900,6 +13985,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected missing test id to satisfy NotExists"
@@ -13966,6 +14054,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected overlap (a right edge > b left edge) to pass"
@@ -13988,6 +14079,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more overlap than available"
@@ -14054,6 +14148,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected x overlap to pass even when y does not overlap"
@@ -14076,6 +14173,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more x overlap than available"
@@ -14142,6 +14242,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected y overlap to pass even when x does not overlap"
@@ -14164,6 +14267,9 @@ mod tests {
                 None,
                 None,
                 None,
+                0,
+                false,
+                true,
                 &pred
             ),
             "expected eps_px to require more y overlap than available"
@@ -14317,7 +14423,18 @@ mod tests {
         };
 
         assert!(
-            eval_predicate(&snapshot, window_bounds, window, None, None, None, &pred),
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window,
+                None,
+                None,
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
             "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
         );
 
@@ -14327,7 +14444,18 @@ mod tests {
             require_equal: Some(true),
         };
         assert!(
-            !eval_predicate(&snapshot, window_bounds, window, None, None, None, &pred),
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window,
+                None,
+                None,
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
             "expected require_equal=true to fail when the roots differ"
         );
     }

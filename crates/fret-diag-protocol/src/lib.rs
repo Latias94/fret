@@ -582,6 +582,28 @@ pub enum UiPredicateV1 {
     /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
     /// the diagnostics bundle should contain an audit trail of the selected families.
     RenderTextFontTraceCapturedWhenMissingGlyphs,
+    /// True when the runner-owned `TextFontStackKey` has not changed for `stable_frames`
+    /// consecutive frames.
+    ///
+    /// This is primarily used to keep perf suites from including one-time system font catalog
+    /// rescans (which bump `TextFontStackKey` and can trigger large relayouts) inside a measured
+    /// window.
+    TextFontStackKeyStable {
+        stable_frames: u32,
+    },
+    /// True when the runner-owned `FontCatalog` has been populated with at least one family.
+    ///
+    /// On desktop, the runner may seed an empty catalog at startup and populate it asynchronously
+    /// via the system font rescan pipeline. This predicate lets scripts wait for that one-time
+    /// async work to complete before entering a measured window.
+    FontCatalogPopulated,
+    /// True when the runner-owned system font rescan pipeline is idle (no work in flight and no
+    /// pending restart).
+    ///
+    /// Desktop runners may perform a one-time async system font rescan at startup. Applying the
+    /// result can bump `TextFontStackKey` and trigger large relayouts; this predicate lets perf
+    /// suites wait for that one-time work to complete before entering a measured window.
+    SystemFontRescanIdle,
     VisibleInWindow {
         target: UiSelectorV1,
     },

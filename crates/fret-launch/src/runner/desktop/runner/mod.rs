@@ -1207,6 +1207,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     system_font_rescan_result: Arc<Mutex<Option<fret_render::SystemFontRescanResult>>>,
     system_font_rescan_in_flight: bool,
     system_font_rescan_pending: bool,
+    last_window_surface_sizes: HashMap<fret_core::AppWindowId, (u32, u32)>,
+    last_window_surface_size_changed_at: Option<Instant>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
     #[cfg(feature = "webview-wry")]
@@ -2965,7 +2967,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let dispatcher = DesktopDispatcher::new(caps.exec);
         app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
-        Self {
+        let mut runner = Self {
             config,
             app,
             driver,
@@ -2982,6 +2984,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             system_font_rescan_result: Arc::new(Mutex::new(None)),
             system_font_rescan_in_flight: false,
             system_font_rescan_pending: false,
+            last_window_surface_sizes: HashMap::new(),
+            last_window_surface_size_changed_at: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             #[cfg(feature = "webview-wry")]
@@ -3024,7 +3028,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
             #[cfg(feature = "diag-screenshots")]
             diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
-        }
+        };
+        runner.publish_system_font_rescan_state();
+        runner
     }
 
     #[cfg(target_os = "android")]
@@ -3424,6 +3430,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // Ensure pending queued work does not cross the reload boundary.
         self.dispatcher.hot_reload_boundary();
         self.system_font_rescan_in_flight = false;
+        self.publish_system_font_rescan_state();
         self.system_font_rescan_pending = false;
         if let Ok(mut slot) = self.system_font_rescan_result.lock() {
             *slot = None;
@@ -4378,6 +4385,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
+    fn publish_system_font_rescan_state(&mut self) {
+        self.app.set_global::<fret_runtime::SystemFontRescanState>(
+            fret_runtime::SystemFontRescanState {
+                in_flight: self.system_font_rescan_in_flight,
+                pending: self.system_font_rescan_pending,
+            },
+        );
+    }
+
     fn request_system_font_rescan(&mut self) {
         if !Self::system_font_rescan_async_enabled() {
             self.rescan_system_fonts_sync();
@@ -4386,6 +4402,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if self.system_font_rescan_in_flight {
             self.system_font_rescan_pending = true;
+            self.publish_system_font_rescan_state();
             return;
         }
 
@@ -4401,6 +4418,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             *slot = None;
         }
         self.system_font_rescan_in_flight = true;
+        self.publish_system_font_rescan_state();
 
         let result_slot = self.system_font_rescan_result.clone();
         let dispatcher = self.dispatcher.handle();
@@ -4435,7 +4453,42 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.request_redraw_all_windows();
     }
 
-    fn apply_pending_system_font_rescan_result(&mut self) -> bool {
+    fn observe_window_surface_sizes(&mut self, now: Instant) {
+        let mut any_changed = false;
+        for (id, state) in self.windows.iter() {
+            let size = state.window.surface_size();
+            let entry = self
+                .last_window_surface_sizes
+                .entry(id)
+                .or_insert((size.width, size.height));
+            if *entry != (size.width, size.height) {
+                *entry = (size.width, size.height);
+                any_changed = true;
+            }
+        }
+        if any_changed {
+            self.last_window_surface_size_changed_at = Some(now);
+        }
+    }
+
+    fn should_defer_system_font_rescan_apply(&self, now: Instant) -> bool {
+        let Some(changed_at) = self.last_window_surface_size_changed_at else {
+            return false;
+        };
+        // Give resize-driven layout a brief window to settle before applying the font update.
+        // This is intentionally long enough to cover a few slow frames during interactive resize,
+        // so a completed rescan is less likely to land inside a measured perf window.
+        now < changed_at + Duration::from_millis(200)
+    }
+
+    fn apply_pending_system_font_rescan_result(&mut self, now: Instant) -> bool {
+        // Avoid applying a completed system font rescan while the user is actively resizing the
+        // window. Applying the rescan bumps `TextFontStackKey` and can trigger large relayouts.
+        self.observe_window_surface_sizes(now);
+        if self.should_defer_system_font_rescan_apply(now) {
+            return false;
+        }
+
         let result = self
             .system_font_rescan_result
             .lock()
@@ -4465,6 +4518,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let should_restart = self.system_font_rescan_pending;
         self.system_font_rescan_pending = false;
+        self.publish_system_font_rescan_state();
         if should_restart {
             self.request_system_font_rescan();
         }
@@ -4479,7 +4533,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let now = Instant::now();
             let mut did_work = self.dispatcher.drain_turn(now);
             did_work |= self.drain_inboxes(None);
-            did_work |= self.apply_pending_system_font_rescan_result();
+            did_work |= self.apply_pending_system_font_rescan_result(now);
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
